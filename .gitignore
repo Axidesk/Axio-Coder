@@ -32,10 +32,11 @@ node_modules/
 out/
 
 # Custom
-*.json
+
 .ai_memory/
 chats/
 CANVAS/
 BACKUP/
 teste/
 "@
+emerald-caster-473903-q9-357e5f7ca06d.json

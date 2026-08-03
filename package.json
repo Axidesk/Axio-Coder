@@ -1,0 +1,12 @@
+{
+  "name": "agente-coder-ui",
+  "version": "1.0.0",
+  "description": "Interface moderna para o Agente Coder",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^34.0.0"
+  }
+}
