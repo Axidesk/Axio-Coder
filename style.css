@@ -1,0 +1,245 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #333;
+}
+
+#btn-select-folder {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    outline: none;
+}
+
+#btn-select-folder:hover {
+    background-color: #45a049;
+}
+
+#lbl-folder {
+    margin-left: 15px;
+    color: #aaa;
+    font-size: 0.9em;
+}
+
+.metrics {
+    font-family: 'Consolas', monospace;
+    font-size: 0.85em;
+    color: #ffaa00;
+}
+
+.chat-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.message {
+    max-width: 85%;
+    padding: 12px 18px;
+    border-radius: 15px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.message.user {
+    align-self: flex-end;
+    background-color: #2b5278;
+    color: #fff;
+    border-bottom-right-radius: 2px;
+}
+
+.message.ai {
+    align-self: flex-start;
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-bottom-left-radius: 2px;
+    width: 100%;
+    max-width: 100%;
+    text-align: justify;
+}
+
+.message.system {
+    align-self: center;
+    background-color: transparent;
+    color: #86fca4;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+/* Balão expansível para ações/diffs */
+.action-balloon {
+    margin-top: 10px;
+    background-color: #1e1e1e;
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.action-header {
+    padding: 12px 20px;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #aaa;
+    transition: background-color 0.2s;
+}
+
+.action-header:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.action-content-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease-out;
+}
+
+.action-content-wrapper.expanded {
+    grid-template-rows: 1fr;
+}
+
+.action-content {
+    overflow: hidden;
+}
+
+.action-content-inner {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Consolas', monospace;
+    font-size: 0.9em;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+/* Cores para diffs */
+.diff-unmodified {
+    color: #888888; /* Cinza */
+}
+
+.diff-modified {
+    color: #00ffff; /* Ciano */
+}
+
+.diff-deleted {
+    color: #ff5555; /* Vermelho */
+    text-decoration: line-through;
+}
+
+.diff-added {
+    color: #00ffff; /* Ciano */
+}
+
+.status-bar {
+    padding: 8px 20px;
+    background-color: #1e1e1e;
+    font-family: 'Consolas', monospace;
+    font-size: 0.85em;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid #333;
+}
+
+#lbl-status {
+    color: #86fca4;
+}
+
+.executing-function {
+    color: #ffaa00;
+    font-style: italic;
+}
+
+.input-area {
+    display: flex;
+    padding: 15px 20px;
+    background-color: #1e1e1e;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+#input-text {
+    flex: 1;
+    background-color: #2d2d2d;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 1em;
+    resize: none;
+    outline: none;
+    height: 45px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#input-text::placeholder {
+    color: #888;
+}
+
+#btn-send {
+    background-color: #007ACC;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    outline: none;
+    height: 45px;
+}
+
+#btn-send:hover {
+    background-color: #005f9e;
+}
+
+/* Scrollbar customizada */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #121212;
+}
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

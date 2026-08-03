@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente Coder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Scrollbar transparente para o input */
+        textarea::-webkit-scrollbar-track { background: transparent; }
+        
+        /* Chat messages styling to match dark theme */
+        .message { margin-bottom: 1.5rem; line-height: 1.6; }
+        .message.user { 
+            color: #888888; 
+            font-weight: normal; 
+            white-space: pre-wrap; 
+            word-break: break-word; 
+            padding-bottom: 2rem; 
+            border-bottom: 1px solid #333; 
+        }
+        
+        .message.user:last-child {
+            border-bottom: none;
+        }
+        .message.ai { 
+            color: #ffffff; 
+            padding-bottom: 2rem; 
+            border-bottom: 1px solid #333; 
+            text-align: left !important;
+        }
+        
+        .message.ai:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .message.system { color: #6b7280; font-style: italic; font-size: 0.875rem; text-align: center; align-self: center; width: 100%; }
+        
+        .diff-added { color: rgb(144, 160, 21); font-weight: bold; }
+        .diff-deleted { color: #f43f5e; }
+        .diff-modified { color: #0ea5e9; }
+        .diff-unmodified { color: #6b7280; }
+        
+        /* Remove outline from textarea */
+        textarea:focus { outline: none; }
+
+        /* Ajustes do bloco de código gerado pela IA */
+        .code-block-container *::-webkit-scrollbar { height: 4px; }
+        .code-block-container *::-webkit-scrollbar-track { background: transparent !important; }
+        .code-block-container *::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        .code-block-container *::-webkit-scrollbar-thumb:hover { background: #777; }
+        .code-block-container pre { margin: 0; overflow-x: auto; }
+        .code-block-container code { background: transparent !important; padding: 0 !important; font-size: 0.85em; font-weight: normal; }
+    </style>
+</head>
+<body class="bg-[#121212] text-gray-300 h-screen flex flex-col overflow-hidden font-sans relative">
+
+    <!-- Hidden elements to prevent renderer.js from crashing -->
+    <div id="lbl-folder" class="hidden"></div>
+    <div id="lbl-metrics" class="hidden"></div>
+
+
+
+    <!-- Popup de Alerta -->
+    <div id="alert-popup" class="opacity-0 pointer-events-none transition-opacity duration-300 fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex justify-center items-center p-6">
+        <div id="alert-popup-content" class="bg-[#1e1e1e] rounded-lg shadow-2xl p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+            <p class="text-gray-300 mb-6">Por favor, selecione a pasta raiz do seu projeto.</p>
+            <button id="btn-close-alert" class="bg-[#333] hover:bg-[#444] text-white font-medium py-2 px-4 rounded transition-colors w-full">
+                Ok
+            </button>
+        </div>
+    </div>
+
+    <!-- Sliding Panel Container -->
+    <div id="sliding-panel-container" class="fixed top-0 left-0 pl-14 h-full z-30 flex flex-row transition-transform duration-300 -translate-x-full shadow-2xl max-w-[100vw] overflow-x-auto">
+        <!-- Col 1: Logs -->
+        <div id="panel-col-1" class="w-80 shrink-0 bg-[#1e1e1e]/95 backdrop-blur-md border-r border-[#333] h-full flex flex-col">
+            <div class="flex justify-between items-center p-4">
+                <h2 class="text-lg font-semibold text-gray-200">Logs da Sessão</h2>
+                <button id="btn-close-panel" class="text-gray-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="log-list-container" class="flex-1 overflow-y-auto p-2 space-y-2" style="scrollbar-gutter: stable;">
+                <!-- Logs list -->
+            </div>
+        </div>
+        
+        <!-- Col 2: Files -->
+        <div id="panel-col-2" class="w-80 shrink-0 bg-[#1e1e1e]/95 backdrop-blur-md border-r border-[#333] h-full flex flex-col hidden">
+            <div class="p-4 flex justify-between items-center border-b border-[#333]">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <h2 class="text-lg font-semibold text-gray-200">Arquivos</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-show-thoughts" class="text-gray-500 hover:text-blue-400 transition-colors focus:outline-none" title="Ver raciocínio da IA (Chain of Thought)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                        </button>
+                        <button id="btn-show-tools" class="text-gray-500 hover:text-[rgb(144,160,21)] transition-colors focus:outline-none" title="Ver ferramentas usadas nesta resposta">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.373 8.373a1 1 0 1 1-1.414-1.414L13.586 10.586"/><path d="m18.293 11.707 1.414-1.414a1 1 0 0 0 0-1.414l-4.586-4.586a1 1 0 0 0-1.414 0l-1.414 1.414a1 1 0 0 0 0 1.414l4.586 4.586a1 1 0 0 0 1.414 0Z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <button id="btn-close-col-2" class="text-gray-400 hover:text-white transition-colors shrink-0 ml-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="files-list-container" class="flex-1 overflow-y-auto p-2 space-y-2" style="scrollbar-gutter: stable;">
+                </div>
+        </div>
+
+        <div id="panel-col-3" class="w-[calc(100vw-43.5rem)] shrink-0 bg-[#1e1e1e]/95 backdrop-blur-md border-r border-[#333] h-full flex flex-col hidden">
+            <div class="p-4 flex justify-between items-center border-b border-[#333]">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <h2 id="col-3-title" class="text-lg font-semibold text-gray-200 truncate">Código</h2>
+                    <button id="btn-copy-tools" class="hidden text-gray-400 hover:text-white transition-colors focus:outline-none" title="Copiar log de ferramentas">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                </div>
+                <button id="btn-close-col-3" class="text-gray-400 hover:text-white transition-colors shrink-0 ml-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="code-view-container" class="flex-1 overflow-y-auto p-2 font-mono text-sm whitespace-pre-wrap" style="scrollbar-gutter: stable;">
+                </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex flex-row w-full overflow-hidden relative">
+        <!-- Sidebar -->
+        <div class="w-14 shrink-0 bg-[#1e1e1e] flex flex-col items-center py-6 gap-6 z-40">
+            <button id="btn-select-folder" class="text-white hover:text-gray-300 transition-colors" title="Selecionar Pasta">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+            </button>
+            <button id="btn-open-log" class="text-white hover:text-gray-300 transition-colors" title="Ver Log de Alterações">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </button>
+            <div class="relative">
+                <button id="btn-mode-select" class="text-white hover:text-gray-300 transition-colors" title="Modo de Operação: Automático">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </button>
+                <div id="mode-popup" class="absolute top-0 left-full ml-2 w-48 bg-[#2d2d2d] border border-[#444] rounded-lg shadow-xl hidden z-50">
+                    <ul class="py-1 text-sm text-gray-300">
+                        <li><button class="w-full text-left px-4 py-2 hover:bg-[#444] mode-option" data-mode="auto">Automático</button></li>
+                        <li><button class="w-full text-left px-4 py-2 hover:bg-[#444] mode-option" data-mode="semi">Semi-Automático</button></li>
+                        <li><button class="w-full text-left px-4 py-2 hover:bg-[#444] mode-option" data-mode="guided">Orientado</button></li>
+                    </ul>
+                </div>
+            </div>
+            <button id="btn-counselor" class="text-white hover:text-blue-400 transition-colors" title="Modo Conselheiro (DeepSeek)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                </svg>
+            </button>
+            <button id="btn-settings" class="text-white hover:text-gray-300 transition-colors mt-auto" title="Configurações">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Left Column: User Chat & Input -->
+        <div class="w-[35%] shrink-0 flex flex-col border-r border-[#333] relative">
+            <main id="chat-container-left" class="flex-1 overflow-y-auto pt-4 pb-28 px-6">
+                <div id="chat-inner-left" class="w-full flex flex-col">
+                    <!-- User messages -->
+                </div>
+            </main>
+            <!-- Input Flutuante -->
+            <footer id="input-footer" class="absolute bottom-0 left-0 w-[calc(100%-8px)] px-6 pb-8 pt-6 bg-[#121212] pointer-events-none transition-opacity duration-300 z-10">
+                <div id="input-footer-inner" class="w-full relative pointer-events-auto transition-opacity duration-300">
+                    <div class="bg-[#222222] rounded-3xl px-4 py-3 shadow-lg border border-[#333] flex flex-col relative">
+                        <div id="image-preview-container" class="hidden mb-2 flex flex-wrap gap-2">
+                            <!-- Imagens anexadas aparecerão aqui -->
+                        </div>
+                        <div class="flex items-start w-full">
+                            <input type="file" id="file-input" accept="image/*" class="hidden">
+                            <button id="btn-attach" class="text-gray-400 hover:text-white transition-colors flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#333] mt-0.5 mr-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                            </button>
+                            <textarea id="input-text" rows="1" class="flex-1 bg-transparent text-gray-200 font-normal placeholder-gray-400 focus:placeholder-transparent resize-none max-h-32 pl-2 py-1 mr-2" placeholder="Digite seu comando aqui"></textarea>
+                            <button id="btn-send" class="text-gray-400 hover:text-white transition-colors flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#333] mt-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-90" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="text-center mt-3">
+                        <span id="lbl-status" class="text-white text-xs italic">Aguardando seleção do diretório</span>
+                        <span id="lbl-executing" class="text-white text-xs italic ml-1"></span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Right Column: AI Chat -->
+        <div class="flex-1 flex flex-col relative w-full min-w-0">
+            <main id="chat-container-right" class="flex-1 overflow-y-auto pt-4 pb-0 px-6">
+                <div id="chat-inner-right" class="w-full flex flex-col">
+                    </div>
+            </main>
+        </div>
+        </div>
+    </div>
+
+    <!-- Modal de Imagem Expandida -->
+    <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] hidden cursor-zoom-out" onclick="this.classList.add('hidden')">
+        <img id="expanded-image" class="max-w-[90%] max-h-[90%] object-contain rounded-lg shadow-2xl" src="" alt="Expanded Image">
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
