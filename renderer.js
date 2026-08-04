@@ -908,14 +908,32 @@ async function sendMessage() {
         let currentGroupContentInner = null;
 
         eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+            // Ignora heartbeats SSE (comentários sem data)
+            if (!event.data || event.data.trim() === '') return;
+            
+            let data;
+            try {
+                data = JSON.parse(event.data);
+            } catch (e) {
+                return; // ignora payloads inválidos (heartbeats, etc)
+            }
                         
         if (data.type === 'status') {
-                if (data.message === " ") {
-                    lblStatus.textContent = '';
-                    lblExecuting.textContent = '';
-                    lblExecuting.classList.remove('animate-pulse');
-                    window.lastStatusError = false;
+                // Cancela qualquer debounce pendente de limpeza
+                if (window._statusClearTimeout) {
+                    clearTimeout(window._statusClearTimeout);
+                    window._statusClearTimeout = null;
+                }
+                
+                if (data.message === " " || data.message === "") {
+                    // DEBOUNCE: só limpa após 400ms sem novo status
+                    window._statusClearTimeout = setTimeout(() => {
+                        lblStatus.textContent = '';
+                        lblExecuting.textContent = '';
+                        lblExecuting.classList.remove('animate-pulse');
+                        window.lastStatusError = false;
+                        window._statusClearTimeout = null;
+                    }, 400);
                 } else if (data.message) {
                     lblExecuting.textContent = '';
                     lblExecuting.classList.remove('animate-pulse');
@@ -925,6 +943,12 @@ async function sendMessage() {
                     if (text.startsWith("Erro:")) {
                         lblStatus.innerHTML = `<span class="text-red-400 font-bold">${escapeHtml(text)}</span>`;
                         window.lastStatusError = true;
+                    } else if (text.startsWith("Navegando: ")) {
+                        lblStatus.innerHTML = `Navegando: <span class="text-[rgb(144,160,21)]">${escapeHtml(text.substring(11))}</span>`;
+                        window.lastStatusError = false;
+                    } else if (text.startsWith("Extraindo informação: ")) {
+                        lblStatus.innerHTML = `Extraindo informação: <span class="text-[rgb(144,160,21)]">${escapeHtml(text.substring(23))}</span>`;
+                        window.lastStatusError = false;
                     } else {
                         lblStatus.textContent = text;
                         window.lastStatusError = false;
@@ -935,7 +959,7 @@ async function sendMessage() {
                             lblStatus.textContent = '';
                             lblExecuting.classList.add('animate-pulse');
                         } else {
-                            lblStatus.innerHTML = '<span class="animate-pulse text-[#00ffff]">Axio está raciocinando...</span>';
+                            lblStatus.innerHTML = '<span class="animate-pulse text-[#00ffff]">Gerando resposta...</span>';
                         }
                     }
                 }
