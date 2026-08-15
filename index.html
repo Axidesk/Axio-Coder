@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agente Coder</title>
+    <title>Axio Coder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -48,6 +48,18 @@
         .diff-deleted { color: #f43f5e; }
         .diff-modified { color: #0ea5e9; }
         .diff-unmodified { color: #6b7280; }
+
+        /* Undo/redo: item riscado quando desfeito */
+        .undo-struck { opacity: 0.45; }
+        .undo-struck .undo-title { text-decoration: line-through; color: #6b7280; }
+
+        /* Item da pilha de edições selecionado (hover persistente de seleção) */
+        .diff-selected > div:first-child {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+        .diff-selected .undo-title {
+            color: #ffffff !important;
+        }
         
         /* Remove outline from textarea */
         textarea:focus { outline: none; }
@@ -59,9 +71,175 @@
         .code-block-container *::-webkit-scrollbar-thumb:hover { background: #777; }
         .code-block-container pre { margin: 0; overflow-x: auto; }
         .code-block-container code { background: transparent !important; padding: 0 !important; font-size: 0.85em; font-weight: normal; }
+
+        /* Spinner de carregamento (círculo girando) ao lado de "Logs da Sessão" */
+        .logs-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(144, 160, 21, 0.22);
+            border-top-color: rgb(144, 160, 21);
+            border-radius: 50%;
+            animation: logs-spin 1.4s linear infinite;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+        @keyframes logs-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Card do log pulsando suavemente enquanto está em processamento.
+           O pulso usa um overlay (::after) próprio para não conflitar com a
+           seleção (log-card-active): "pulsando" ≠ "selecionado". O overlay
+           respira entre transparente e a cor de hover (0.05), ficando mais
+           fraco que a seleção (0.08) e permitindo acumular os dois estados. */
+        .log-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: rgba(255, 255, 255, 0.05);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+            transition: opacity 0.2s;
+        }
+        .log-card.log-pulsing::after {
+            animation: logs-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes logs-pulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* Diff de duas colunas (Código Substituído) sem overflow horizontal */
+        .diff-two-col {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            align-items: start;
+            max-width: 100%;
+        }
+        .diff-two-col > .diff-col {
+            min-width: 0;
+        }
+        .diff-two-col > .diff-col:first-child {
+            padding-right: 0.75rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .diff-two-col > .diff-col:last-child {
+            padding-left: 0.75rem;
+        }
+        .diff-two-col .diff-col-text {
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        /* Fontes e card de log no padrão da versão canvas */
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        .log-card {
+            background: transparent;
+            transition: background 0.15s;
+        }
+        .log-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .log-card.log-card-active {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .log-card.log-card-active:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        /* Seleção padronizada dos cards do histórico (fundo cinza, sem contorno) */
+        .history-round-selected {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+        /* Header do card de sessão no histórico: mesmo padrão suave do .log-card */
+        .session-history-header {
+            background: transparent;
+            transition: background 0.15s ease;
+        }
+        .session-history-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .session-history-header.session-history-active,
+        .session-history-header.session-history-active:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        /* Card do histórico: linha divisória fina cinzenta apenas quando expandido */
+        .session-history-card {
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.15s ease;
+        }
+        .session-history-card.session-history-expanded {
+            border-bottom-color: #444;
+        }
+        /* Sub-card de rodada do histórico: mesmo padrão suave do .log-card */
+        .history-round-card {
+            background: transparent;
+            transition: background 0.15s ease;
+        }
+        .history-round-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .history-round-card.history-round-selected,
+        .history-round-card.history-round-selected:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        /* Cards de arquivo no padrão dos cards de log (sem fundo, hover/seleção sutis) */
+        .file-card-header {
+            background: transparent;
+            transition: background 0.15s;
+        }
+        .file-card-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .file-card-header.file-card-selected {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .panel-empty {
+            color: #777;
+            font-style: italic;
+            font-size: 13px;
+            padding: 16px;
+            text-align: center;
+        }
+        /* Seleção para exclusão via Ctrl+clique: borda de destaque fina, sem poluir */
+        .log-card.log-delete-selected,
+        .session-history-header.log-delete-selected,
+        .history-round-card.log-delete-selected {
+            box-shadow: inset 0 0 0 1px rgb(144, 160, 21);
+        }
+        #sliding-panel-container {
+            transition: transform 0.4s ease;
+        }
+        /* Transição suave entre os cards de log e do histórico */
+        @keyframes logsFadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes logsFadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-6px); }
+        }
+        .logs-fade-in {
+            animation: logsFadeIn 0.25s ease;
+        }
+        .logs-fade-out {
+            animation: logsFadeOut 0.2s ease forwards;
+        }
+        /* Camada GPU para o wrapper dos logs, evitando "engasgo" no fade
+           (o translateY da animação sobe/desce os cards de forma fluida). */
+        .logs-wrapper {
+            will-change: transform, opacity;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
     </style>
 </head>
-<body class="bg-[#121212] text-gray-300 h-screen flex flex-col overflow-hidden font-sans relative">
+<body class="bg-[#121212] text-gray-300 h-screen flex flex-col overflow-hidden relative">
 
     <!-- Hidden elements to prevent renderer.js from crashing -->
     <div id="lbl-folder" class="hidden"></div>
@@ -79,20 +257,40 @@
         </div>
     </div>
 
+    <!-- Popup de Confirmação de Exclusão -->
+    <div id="confirm-delete-popup" class="opacity-0 pointer-events-none transition-opacity duration-300 fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex justify-center items-center p-6">
+        <div id="confirm-delete-content" class="bg-[#1e1e1e] rounded-lg shadow-2xl p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+            <p id="lbl-delete-message" class="text-gray-300 mb-6">Tem certeza que deseja excluir os registros selecionados?</p>
+            <div class="flex gap-3">
+                <button id="btn-cancel-delete" class="bg-[#333] hover:bg-[#444] text-white font-medium py-2 px-4 rounded transition-colors flex-1">Cancelar</button>
+                <button id="btn-confirm-delete-yes" class="bg-[#b91c1c] hover:bg-[#dc2626] text-white font-medium py-2 px-4 rounded transition-colors flex-1">Excluir</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sliding Panel Container -->
     <div id="sliding-panel-container" class="fixed top-0 left-0 pl-14 h-full z-30 flex flex-row transition-transform duration-300 -translate-x-full shadow-2xl max-w-[100vw] overflow-x-auto">
         <!-- Col 1: Logs -->
         <div id="panel-col-1" class="w-80 shrink-0 bg-[#1e1e1e]/95 backdrop-blur-md border-r border-[#333] h-full flex flex-col">
-            <div class="flex justify-between items-center p-4">
-                <h2 class="text-lg font-semibold text-gray-200">Logs da Sessão</h2>
+            <div class="flex justify-between items-center p-4 border-b border-[#333]">
+                <div class="flex items-center gap-3">
+                    <h2 id="panel-title" class="text-lg font-semibold text-gray-200">Logs da Sessão</h2>
+                </div>
                 <button id="btn-close-panel" class="text-gray-400 hover:text-white transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
-            <div id="log-list-container" class="flex-1 overflow-y-auto p-2 space-y-2" style="scrollbar-gutter: stable;">
-                <!-- Logs list -->
+            <div id="log-list-container" class="flex-1 overflow-y-auto p-2" style="scrollbar-gutter: stable;">
+                <div id="current-logs-wrapper" class="logs-wrapper space-y-2"></div>
+                <div id="history-logs-wrapper" class="logs-wrapper hidden space-y-2"></div>
+            </div>
+            <div id="log-delete-bar" class="hidden border-t border-[#333] p-3 bg-[#1e1e1e]">
+                <div class="flex items-center gap-3">
+                    <span id="lbl-delete-count" class="text-xs text-gray-400 font-mono flex-1">0 selecionado(s)</span>
+                    <button id="btn-confirm-delete" class="bg-[#b91c1c] hover:bg-[#dc2626] text-white text-sm font-medium py-1.5 px-3 rounded transition-colors">Excluir</button>
+                </div>
             </div>
         </div>
         
@@ -102,11 +300,15 @@
                 <div class="flex items-center gap-3 flex-1 min-w-0">
                     <h2 class="text-lg font-semibold text-gray-200">Arquivos</h2>
                     <div class="flex items-center gap-2">
-                        <button id="btn-show-thoughts" class="text-gray-500 hover:text-blue-400 transition-colors focus:outline-none" title="Ver raciocínio da IA (Chain of Thought)">
+                        <button id="btn-show-thoughts" class="text-gray-500 hover:text-[#3b82f6] transition-colors focus:outline-none" title="Ver raciocínio da IA (Chain of Thought)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
                         </button>
                         <button id="btn-show-tools" class="text-gray-500 hover:text-[rgb(144,160,21)] transition-colors focus:outline-none" title="Ver ferramentas usadas nesta resposta">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.373 8.373a1 1 0 1 1-1.414-1.414L13.586 10.586"/><path d="m18.293 11.707 1.414-1.414a1 1 0 0 0 0-1.414l-4.586-4.586a1 1 0 0 0-1.414 0l-1.414 1.414a1 1 0 0 0 0 1.414l4.586 4.586a1 1 0 0 0 1.414 0Z"/></svg>
+                        </button>
+                        <button id="btn-eye-diff" class="hidden text-gray-500 hover:text-[rgb(144,160,21)] transition-colors focus:outline-none" title="Modo foco: exibir apenas trechos alterados">
+                            <svg id="eye-on" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg id="eye-off" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                         </button>
                     </div>
                 </div>
@@ -124,17 +326,27 @@
             <div class="p-4 flex justify-between items-center border-b border-[#333]">
                 <div class="flex items-center gap-2 flex-1 min-w-0">
                     <h2 id="col-3-title" class="text-lg font-semibold text-gray-200 truncate">Código</h2>
+                    <button id="btn-undo" class="hidden text-gray-400 hover:text-[rgb(144,160,21)] transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed" title="Desfazer última edição">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l-4-4 4-4m-4 4h11a5 5 0 015 5v1a5 5 0 01-5 5H7" /></svg>
+                    </button>
+                    <span id="lbl-undo-count" class="hidden text-xs text-gray-400 font-mono mr-2" title="Edições que podem ser desfeitas"></span>
+                    <button id="btn-redo" class="hidden text-gray-400 hover:text-[rgb(144,160,21)] transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed" title="Refazer edição">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 14l4-4-4-4m4 4H8a5 5 0 00-5 5v1a5 5 0 005 5h9" /></svg>
+                    </button>
+                    <span id="lbl-redo-count" class="hidden text-xs text-gray-400 font-mono" title="Edições que podem ser refeitas"></span>
                     <button id="btn-copy-tools" class="hidden text-gray-400 hover:text-white transition-colors focus:outline-none" title="Copiar log de ferramentas">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                     </button>
                 </div>
-                <button id="btn-close-col-3" class="text-gray-400 hover:text-white transition-colors shrink-0 ml-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                <div class="flex items-center gap-2 shrink-0 ml-4">
+                    <button id="btn-close-col-3" class="text-gray-400 hover:text-white transition-colors shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <div id="code-view-container" class="flex-1 overflow-y-auto p-2 font-mono text-sm whitespace-pre-wrap" style="scrollbar-gutter: stable;">
+            <div id="code-view-container" class="flex-1 overflow-y-auto overflow-x-hidden p-2 font-mono text-sm whitespace-pre-wrap" style="scrollbar-gutter: stable;">
                 </div>
         </div>
         </div>
@@ -149,13 +361,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
             </button>
-            <button id="btn-open-log" class="text-white hover:text-gray-300 transition-colors" title="Ver Log de Alterações">
+            <button id="btn-open-log" class="text-white hover:text-[#3b82f6] transition-colors" title="Ver Log de Alterações">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
             </button>
             <div class="relative">
-                <button id="btn-mode-select" class="text-white hover:text-gray-300 transition-colors" title="Modo de Operação: Automático">
+                <button id="btn-mode-select" class="text-white hover:text-[#3b82f6] transition-colors" title="Modo de Operação: Automático">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
@@ -168,10 +380,13 @@
                     </ul>
                 </div>
             </div>
-            <button id="btn-counselor" class="text-white hover:text-blue-400 transition-colors" title="Modo Conselheiro (DeepSeek)">
+            <button id="btn-counselor" class="text-white hover:text-[#3b82f6] transition-colors" title="Modo Conselheiro (DeepSeek)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                 </svg>
+            </button>
+            <button id="btn-session-history" class="text-white hover:text-[#3b82f6] transition-colors" title="Ver histórico de sessões anteriores">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-[23px] w-[23px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             </button>
             <button id="btn-settings" class="text-white hover:text-gray-300 transition-colors mt-auto" title="Configurações">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
