@@ -66,8 +66,25 @@ estado = {
     "stats": {"rpd": 0},
     "uso_minuto": [],
     "event_queue": queue.Queue(),
-    "historico_chat": []
+    "historico_chat": [],
+    # Histórico de desfazer/refazer por arquivo: {caminho: {"undo": [...], "redo": [...]}}
+    # Cada arquivo tem a própria pilha, permitindo desfazer/refazer de forma independente.
+    "file_history": {},
+    # Identificador da sessão atual de logs (gerado ao selecionar a pasta).
+    # Todas as edições feitas enquanto o programa está aberto no mesmo projeto
+    # são acumuladas neste mesmo id, formando UMA sessão no histórico.
+    "session_id_atual": "",
+    # Modo semi-automático: bloqueia as ferramentas de edição na FASE 1 até que
+    # a IA chame 'tool_aprovar_plano' após perceber a aprovação do usuário.
+    "bloquear_edicao": False
 }
+
+# Limite de edi\u00e7\u00f5es mantidas no hist\u00f3rico de desfazer/refazer
+MAX_UNDO = 100
+
+# Serializa a mineração do mempalace: evita que dois processos "mine"
+# rodem ao mesmo tempo e disputem o lock de arquivo (deadlock no Windows).
+_mineracao_lock = threading.Lock()
 
 def emit_event(event_type, **kwargs):
     data = {"type": event_type}
@@ -105,6 +122,52 @@ def gerar_diff(texto_antigo, texto_novo):
         elif tag == 'insert':
             diff.append({"type": "added", "text": "".join(linhas_novas[j1:j2])})
     return diff
+
+def _aplicar_snapshot(entrada, reverso):
+    """Aplica um snapshot de arquivo (usado por undo/redo).
+
+    reverso=True  -> restaura o estado ANTES da edi\u00e7\u00e3o
+    reverso=False -> reaplica o estado DEPOIS da edi\u00e7\u00e3o
+    """
+    caminho = entrada["caminho"]
+    conteudo = entrada["antes"] if reverso else entrada["depois"]
+
+    if conteudo is None:
+        # O arquivo n\u00e3o existia antes da edi\u00e7\u00e3o -> remove para desfazer a cria\u00e7\u00e3o
+        if os.path.exists(caminho):
+            os.remove(caminho)
+        return
+
+    diretorio = os.path.dirname(caminho)
+    if diretorio:
+        os.makedirs(diretorio, exist_ok=True)
+    with open(caminho, 'w', encoding='utf-8') as f:
+        f.write(conteudo)
+
+
+def registrar_edicao(caminho_absoluto, antes, depois):
+    """Registra uma edi\u00e7\u00e3o no hist\u00f3rico de desfazer/refazer.
+
+    'antes' \u00e9 None quando o arquivo n\u00e3o existia antes da edi\u00e7\u00e3o.
+    """
+    if antes is not None and antes == depois:
+        return  # Sem mudan\u00e7a efetiva, n\u00e3o registra
+
+    hist = estado["file_history"].setdefault(caminho_absoluto, {"undo": [], "redo": []})
+
+    hist["undo"].append({
+        "caminho": caminho_absoluto,
+        "antes": antes,
+        "depois": depois,
+    })
+
+    # Mant\u00e9m apenas as MAX_UNDO edi\u00e7\u00f5es mais recentes
+    if len(hist["undo"]) > MAX_UNDO:
+        hist["undo"] = hist["undo"][-MAX_UNDO:]
+
+    # Uma nova edi\u00e7\u00e3o invalida o hist\u00f3rico de redo
+    hist["redo"].clear()
+
 
 def garantir_pasta_memoria():
     pasta = os.path.join(estado["pasta_raiz"], ".ai_memory")
@@ -224,6 +287,8 @@ def tool_ler_trecho_arquivo(caminho_relativo: str, linha_inicio: int, linha_fim:
     except Exception as e: return f"ERRO: {str(e)}"
 
 def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: str):
+    if estado.get("bloquear_edicao"):
+        return "BLOQUEADO (FASE 1): Voc\u00ea est\u00e1 em modo semi-autom\u00e1tico e ainda n\u00e3o recebeu aprova\u00e7\u00e3o para editar. Apresente seu plano e pergunte ao usu\u00e1rio se pode aplicar. Ap\u00f3s a aprova\u00e7\u00e3o, chame 'tool_aprovar_plano' para destravar a edi\u00e7\u00e3o."
     emit_event("executing", function=f"Substituindo texto: {caminho_relativo}")
     caminho_absoluto = os.path.join(estado["pasta_raiz"], caminho_relativo)
     if not os.path.exists(caminho_absoluto): return f"ERRO: O arquivo '{caminho_relativo}' não existe."
@@ -235,21 +300,24 @@ def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: 
         elif ocorrencias > 1: return f"ERRO: O 'texto_antigo' ocorre {ocorrencias} vezes no arquivo. A âncora é ambígua. Forneça um trecho maior ou mais específico para garantir que apenas o local correto seja alterado."
         
         novo_conteudo = conteudo.replace(texto_antigo, texto_novo)
+        registrar_edicao(caminho_absoluto, conteudo, novo_conteudo)
         with open(caminho_absoluto, 'w', encoding='utf-8') as f:
             f.write(novo_conteudo)
             
-        # Enviar diff para a UI
-        diff = gerar_diff(texto_antigo, texto_novo)
+        # Enviar diff para a UI (arquivo completo, para evidenciar o trecho no código inteiro)
+        diff = gerar_diff(conteudo, novo_conteudo)
         emit_event("action_diff", actionName=f"Modificado: {caminho_relativo}", diff=diff)
         
         return f"SUCESSO: Trecho substituído em '{caminho_relativo}'."
     except Exception as e: return f"ERRO: {str(e)}"
 
 def tool_salvar_arquivo(caminho_relativo: str, conteudo: str):
+    if estado.get("bloquear_edicao"):
+        return "BLOQUEADO (FASE 1): Voc\u00ea est\u00e1 em modo semi-autom\u00e1tico e ainda n\u00e3o recebeu aprova\u00e7\u00e3o para editar. Apresente seu plano e pergunte ao usu\u00e1rio se pode aplicar. Ap\u00f3s a aprova\u00e7\u00e3o, chame 'tool_aprovar_plano' para destravar a edi\u00e7\u00e3o."
     emit_event("executing", function=f"Salvando Arquivo: {caminho_relativo}")
     caminho_absoluto = os.path.join(estado["pasta_raiz"], caminho_relativo)
     try:
-        texto_antigo = ""
+        texto_antigo = None
         if os.path.exists(caminho_absoluto):
             with open(caminho_absoluto, 'r', encoding='utf-8') as f:
                 texto_antigo = f.read()
@@ -257,6 +325,8 @@ def tool_salvar_arquivo(caminho_relativo: str, conteudo: str):
         os.makedirs(os.path.dirname(caminho_absoluto), exist_ok=True)
         with open(caminho_absoluto, 'w', encoding='utf-8') as f:
             f.write(conteudo)
+
+        registrar_edicao(caminho_absoluto, texto_antigo, conteudo)
             
         if texto_antigo:
             diff = gerar_diff(texto_antigo, conteudo)
@@ -364,6 +434,8 @@ def tool_analisar_simbolo(caminho_relativo: str, termo: str):
         return f"Clangd não respondeu. Use tool_pesquisar_no_projeto para busca textual de '{termo}'."
 
 def tool_substituir_tudo(caminho_relativo: str, texto_antigo: str, texto_novo: str):
+    if estado.get("bloquear_edicao"):
+        return "BLOQUEADO (FASE 1): Voc\u00ea est\u00e1 em modo semi-autom\u00e1tico e ainda n\u00e3o recebeu aprova\u00e7\u00e3o para editar. Apresente seu plano e pergunte ao usu\u00e1rio se pode aplicar. Ap\u00f3s a aprova\u00e7\u00e3o, chame 'tool_aprovar_plano' para destravar a edi\u00e7\u00e3o."
     emit_event("executing", function=f"Substituindo tudo em: {caminho_relativo}")
     caminho_absoluto = os.path.join(estado["pasta_raiz"], caminho_relativo)
     if not os.path.exists(caminho_absoluto): return f"ERRO: O arquivo '{caminho_relativo}' não existe."
@@ -373,12 +445,19 @@ def tool_substituir_tudo(caminho_relativo: str, texto_antigo: str, texto_novo: s
         ocorrencias = conteudo.count(texto_antigo)
         if ocorrencias == 0: return "ERRO: O 'texto_antigo' não foi encontrado. Nenhuma substituição feita."
         novo_conteudo = conteudo.replace(texto_antigo, texto_novo)
+        registrar_edicao(caminho_absoluto, conteudo, novo_conteudo)
         with open(caminho_absoluto, 'w', encoding='utf-8') as f:
             f.write(novo_conteudo)
-        diff = gerar_diff(texto_antigo, texto_novo)
+        diff = gerar_diff(conteudo, novo_conteudo)
         emit_event("action_diff", actionName=f"Substituição Global: {caminho_relativo}", diff=diff)
         return f"SUCESSO: Substituição global realizada. {ocorrencias} ocorrências de '{texto_antigo}' foram substituídas no arquivo '{caminho_relativo}'."
     except Exception as e: return f"ERRO ao realizar substituição global: {str(e)}"
+
+def tool_aprovar_plano():
+    """Destrava a edição no modo semi-automático após a IA perceber a aprovação do usuário."""
+    emit_event("executing", function="Aprovação registrada: liberando edição")
+    estado["bloquear_edicao"] = False
+    return "APROVAÇÃO REGISTRADA: você está autorizado a editar os arquivos agora. Execute exatamente o plano aprovado."
 
 def _conteudo_ilegivel(conteudo):
     """Detecta se o conteúdo extraído está ilegível/garbled (ex: Shiki, JS toggles).
@@ -522,6 +601,9 @@ def tool_buscar_web(query="", url_especifica=""):
                 contexto += f"⚠️ CONTEÚDO ILEGÍVEL ({motivo}). NÃO INVENTE CÓDIGO — avise o usuário que esta fonte não pôde ser extraída corretamente.\n"
             contexto += f"{conteudo[:30000]}\n\n"
         
+        # Emite as URLs visitadas para o log de ferramentas da interface
+        emit_event("tool_sources", urls=fontes)
+        
         # Salva log COMPLETO (raw_content integral) para debug
         debug_path = os.path.join(estado["pasta_raiz"], "busca.txt")
         with open(debug_path, "w", encoding="utf-8") as f:
@@ -639,12 +721,15 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
 
                     # 2. Se for uma mensagem normal (User ou Assistant/Model)
                     texto_bruto = ""
+                    reasoning_bruto = ""
                     tool_calls = []
                     func_call_index = 0
                     for p in h.parts:
                         if hasattr(p, 'text') and p.text:
                             texto_bruto += p.text
-                        elif hasattr(p, 'function_call') and p.function_call:
+                        if hasattr(p, 'reasoning_content') and p.reasoning_content:
+                            reasoning_bruto += p.reasoning_content
+                        if hasattr(p, 'function_call') and p.function_call:
                             tool_calls.append({
                                 "id": f"call_{i}_{func_call_index}",
                                 "type": "function",
@@ -656,10 +741,14 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                             func_call_index += 1
 
                     # Limpeza de Pensamento (Thinking)
-                    pensamento = ""
-                    if "<think>" in texto_bruto:
-                        partes = texto_bruto.split("</think>")
-                        pensamento = partes[0].replace("<think>", "").strip()
+                    # Prioriza o campo reasoning_content preservado pelo MockResponse;
+                    # se ausente, extrai das tags <think>...</think> legadas.
+                    pensamento = reasoning_bruto.strip()
+                    if "<think>" in texto_bruto and "</think>" in texto_bruto:
+                        partes = texto_bruto.split("</think>", 1)
+                        pensamento_tag = partes[0].replace("<think>", "").strip()
+                        if pensamento_tag:
+                            pensamento = pensamento_tag
                         conteudo_limpo = partes[1].strip() if len(partes) > 1 else ""
                     else:
                         conteudo_limpo = texto_bruto.strip()
@@ -670,7 +759,9 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                     # DeepSeek: Se houver tool_calls ou reasoning, content não pode ser None
                     msg_dict["content"] = conteudo_limpo if (conteudo_limpo or not tool_calls) else ""
                     
-                    if pensamento and role == "assistant":
+                    # DeepSeek exige que TODO assistant com tool_calls reenvie o reasoning_content
+                    # (mesmo vazio) em toda request subsequente; sem isso retorna erro 400.
+                    if role == "assistant" and (pensamento or tool_calls):
                         msg_dict["reasoning_content"] = pensamento
                     
                     if tool_calls:
@@ -708,7 +799,10 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                         parts = []
                         
                         if self.reasoning_content:
-                            parts.append(type('obj', (object,), {'text': f"<think>\n{self.reasoning_content}\n</think>\n"}))
+                            parts.append(type('obj', (object,), {
+                                'text': f"<think>\n{self.reasoning_content}\n</think>\n",
+                                'reasoning_content': self.reasoning_content
+                            }))
                         
                         parts.append(type('obj', (object,), {'text': self.text}))
 
@@ -759,23 +853,200 @@ def carregar_log_arquitetura():
             return f"Erro ao ler log: {str(e)}"
     return "O arquivo LOG_CONTEXTO.md ainda não existe ou está vazio."
 
+PALAVRAS_CONTINUACAO = (
+    "continue", "continua", "retoma", "prossiga",
+    "de onde parou", "de onde parei", "onde parou", "onde parei",
+)
+
+def _eh_pedido_continuacao(prompt):
+    p = (prompt or "").lower()
+    for palavra in PALAVRAS_CONTINUACAO:
+        if " " in palavra:
+            # Frases (ex: "de onde parou"): match por substring.
+            if palavra in p:
+                return True
+        # Palavra única: exige início de palavra (\b) para não casar
+        # com sufixos de outras (ex: "segue" dentro de "consegue").
+        elif re.search(rf"\b{re.escape(palavra)}", p):
+            return True
+    return False
+
+def _caminho_checkpoint():
+    return os.path.join(estado["pasta_raiz"], "chats", "checkpoint.json")
+
+CHECKPOINT_TTL_SEGUNDOS = 30 * 60  # 30 minutos
+
+def carregar_checkpoint():
+    """Lê e remove o checkpoint de continuidade (se existir e for recente). Retorna dict ou None."""
+    if not estado["pasta_raiz"]:
+        return None
+    caminho = _caminho_checkpoint()
+    if not os.path.exists(caminho):
+        return None
+    try:
+        with open(caminho, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+        # 1. Evita vazamento entre projetos: checkpoint só vale para a pasta onde foi gravado.
+        pasta_origem = dados.get("pasta_raiz")
+        if pasta_origem and pasta_origem != estado["pasta_raiz"]:
+            return None
+        # 2. Evita falso positivo: um checkpoint antigo (de outra tarefa/sessão)
+        # não deve ser injetado quando o usuário disser "continue/continua" em frase normal.
+        ts = int(dados.get("timestamp", 0) or 0)
+        if ts and (time.time() - ts) > CHECKPOINT_TTL_SEGUNDOS:
+            os.remove(caminho)
+            return None
+        os.remove(caminho)
+        return dados
+    except Exception as e:
+        print(f"Erro ao ler checkpoint: {e}")
+        return None
+
+def salvar_checkpoint(prompt, use_deepseek, erro, ferramentas_usadas, historico_sessao):
+    """Grava o ponto exato de parada quando um erro interrompe o loop."""
+    if not estado["pasta_raiz"]:
+        return
+    try:
+        pasta_chats = os.path.join(estado["pasta_raiz"], "chats")
+        os.makedirs(pasta_chats, exist_ok=True)
+        caminho = _caminho_checkpoint()
+
+        ultimo_historico = []
+        for content in historico_sessao[-8:]:
+            textos = []
+            for part in getattr(content, "parts", []):
+                texto = getattr(part, "text", None)
+                if texto:
+                    textos.append(texto[:500])
+            if textos:
+                ultimo_historico.append({
+                    "role": getattr(content, "role", "?"),
+                    "texto": "\n".join(textos)
+                })
+
+        dados = {
+            "prompt": prompt,
+            "agente": "counselor" if use_deepseek else "coder",
+            "erro": str(erro),
+            "ferramentas_usadas": ferramentas_usadas,
+            "ultimo_historico": ultimo_historico,
+            "pasta_raiz": estado["pasta_raiz"],
+            "timestamp": str(int(time.time()))
+        }
+        with open(caminho, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Erro ao salvar checkpoint: {e}")
+
+def formatar_checkpoint(dados):
+    """Transforma o checkpoint em um bloco de texto para injetar no contexto."""
+    if not dados:
+        return ""
+    linhas = [
+        "Você foi interrompido por um erro antes de terminar a tarefa. Retome exatamente de onde parou.",
+        f"- Tarefa original: {dados.get('prompt', '')}",
+        f"- Agente: {dados.get('agente', '?')}",
+    ]
+    ferramentas = dados.get("ferramentas_usadas", [])
+    if ferramentas:
+        linhas.append("- Ferramentas já usadas:")
+        for fer in ferramentas:
+            linhas.append(f"    * {fer}")
+    linhas.append(f"- Erro que interrompeu: {dados.get('erro', '?')}")
+    historico = dados.get("ultimo_historico", [])
+    if historico:
+        linhas.append("- Últimas mensagens da sessão:")
+        for h in historico:
+            linhas.append(f"    * [{h.get('role', '?')}]: {h.get('texto', '')}")
+    linhas.append("Não repita o que já foi feito. Continue a partir do próximo passo.")
+    return "\n".join(linhas)
+
+def _wing_da_pasta(pasta_raiz):
+    """Deriva um wing (namespace de memória) estável e único por projeto."""
+    if not pasta_raiz:
+        return None
+    nome = os.path.basename(os.path.normpath(pasta_raiz)).strip().lower()
+    if not nome:
+        return None
+    slug = re.sub(r"[^a-z0-9]+", "-", nome).strip("-")
+    return slug or None
+
+
+def _minerar_em_segundo_plano(pasta_chats, wing_atual):
+    """Roda o minerador do mempalace em background, serializado.
+
+    O Popen sozinho permitia que várias respostas disparassem vários
+    processos "mine" simultâneos. Como todos disputam o mesmo lock de
+    arquivo (msvcrt.locking), isso causava "Resource deadlock avoided".
+    Aqui cada chamada roda em thread própria, mas um lock global garante
+    que apenas UM minerador execute por vez.
+    """
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    cmd_mine = ["python", "-m", "mempalace", "mine", pasta_chats, "--mode", "convos"]
+    if wing_atual:
+        cmd_mine += ["--wing", wing_atual]
+
+    with _mineracao_lock:
+        subprocess.run(cmd_mine, env=env)
+
+
+def _buscar_memorias_com_timeout(query, palace_path, wing, n_results=5, timeout=8.0):
+    """Roda search_memories com timeout para o ChromaDB nunca congelar a UI.
+
+    O ChromaDB (PersistentClient) pode travar ao abrir um palace cujo
+    chroma.sqlite3 ficou com lock pendente de um processo anterior morto de
+    forma abrupta (ex.: minerador orfao apos fechar o app). Como a busca roda
+    dentro da thread do loop de IA, um hang aqui congela a interface. Com
+    timeout, degradamos para "sem contexto" e seguimos respondendo.
+    """
+    resultado = {}
+
+    def _trabalho():
+        try:
+            resultado["data"] = search_memories(
+                query=query,
+                palace_path=palace_path,
+                wing=wing,
+                n_results=n_results,
+            )
+        except Exception as e:
+            resultado["error"] = str(e)
+
+    t = threading.Thread(target=_trabalho, daemon=True)
+    t.start()
+    t.join(timeout)
+
+    if t.is_alive():
+        return {"error": "timeout ao acessar banco de memorias"}
+    if "error" in resultado:
+        return {"error": resultado["error"]}
+    return resultado.get("data", {})
+
+
 def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepseek=False):
+    # Modo semi: cada turno começa com a edição bloqueada. Só é liberada se a IA
+    # chamar 'tool_aprovar_plano' após perceber a aprovação do usuário (FASE 2).
+    estado["bloquear_edicao"] = (modo == "semi")
+
     emit_event("status", message="Consultando memórias...")
     
     palace_path = os.path.expanduser("~/.mempalace/palace")
     contexto_memoria = ""
+    wing_atual = _wing_da_pasta(estado["pasta_raiz"])
     
     if os.path.exists(palace_path):
-        try:
-            resultados = search_memories(
-                query=prompt_usuario,
-                palace_path=palace_path,
-                n_results=5
-            )
-            contexto_memoria = "\n".join([hit['text'] for hit in resultados.get("results", [])])
-        except Exception as e:
-            print(f"Erro no mempalace: {e}")
+        resultados = _buscar_memorias_com_timeout(
+            query=prompt_usuario,
+            palace_path=palace_path,
+            wing=wing_atual,
+            n_results=5,
+        )
+        if resultados.get("error"):
+            print(f"Erro no mempalace: {resultados['error']}")
             contexto_memoria = "Erro ao acessar banco de memórias. Iniciando sem contexto."
+        else:
+            contexto_memoria = "\n".join([hit['text'] for hit in resultados.get("results", [])])
     else:
         contexto_memoria = "Nenhuma memória encontrada. Esta é a primeira interação."
 
@@ -785,18 +1056,40 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
         emit_event("cancel")
         return
 
+    contexto_continuidade = ""
+    bloco_continuidade = ""
+    if _eh_pedido_continuacao(prompt_usuario):
+        checkpoint = carregar_checkpoint()
+        if checkpoint:
+            contexto_continuidade = formatar_checkpoint(checkpoint)
+            bloco_continuidade = f"=== ESTADO DE CONTINUIDADE ===\n{contexto_continuidade}\n"
+
     instrucao_modo = ""
     if modo == "auto":
         instrucao_modo = "MODO AUTOMÁTICO: Você deve transcrever e aplicar o código diretamente usando as ferramentas, sem pedir autorização prévia. Execute as ações de forma autônoma."
     elif modo == "semi":
         instrucao_modo = (
-            "MODO SEMI-AUTOMÁTICO (ESTADOS ESTRITOS):\n"
-            "Você opera em 2 fases inquebráveis:\n"
-            "FASE 1 (PLANEJAMENTO): Quando receber uma nova tarefa, use APENAS ferramentas de leitura. Crie o plano, PERGUNTE se pode executar e PARE.\n"
-            "FASE 2 (AÇÃO): Se a mensagem do usuário for uma APROVAÇÃO do plano, você DEVE OBRIGATORIAMENTE acionar as ferramentas de modificação."
+            "MODO SEMI-AUTOMÁTICO (2 FASES INQUEBRÁVEIS):\n"
+            "FASE 1 (ANÁLISE E PLANO): Ao receber qualquer tarefa de código, use SOMENTE ferramentas de LEITURA "
+            "(tool_mapear_codigo, tool_ler_trecho_arquivo, tool_pesquisar_no_projeto, etc.) para analisar o código real. "
+            "NUNCA modifique nada nesta fase (as ferramentas de edição estão bloqueadas e vão recusar qualquer tentativa). "
+            "Então DEVOLVA OBRIGATORIAMENTE ao usuário: (1) a análise do código atual, "
+            "(2) o plano de alteração e (3) uma pergunta explícita perguntando se ele autoriza você a aplicar. PARE e aguarde a resposta.\n"
+            "FASE 2 (AÇÃO): Somente se a mensagem do usuário for uma APROVAÇÃO/CONFIRMAÇÃO do plano (perceba a intenção, "
+            "não exija palavras específicas), chame PRIMEIRO 'tool_aprovar_plano' para destravar a edição e DEPOIS acione "
+            "as ferramentas de modificação (tool_substituir_texto, tool_salvar_arquivo, etc.) para executar a alteração aprovada."
         )
     elif modo == "guided":
-        instrucao_modo = "MODO ORIENTADO: Você NÃO deve usar ferramentas de modificação de código. Envie o código no chat de forma objetiva."
+        instrucao_modo = (
+            "MODO ORIENTADO (SOMENTE LEITURA E ORIENTAÇÃO):\n"
+            "Você está PROIBIDO de usar qualquer ferramenta de MODIFICAÇÃO de arquivo (tool_substituir_texto, tool_salvar_arquivo, tool_substituir_tudo). "
+            "Nesta rodada, use apenas ferramentas de LEITURA para analisar o código e, em seguida, responda no chat de forma objetiva.\n"
+            "OBRIGAÇÕES neste modo:\n"
+            "1. AVISE no início da sua resposta que você está em MODO ORIENTADO e explique rapidamente o que isso significa.\n"
+            "2. NUNCA afirme que aplicou, salvou ou alterou qualquer arquivo. Você não pode fazê-lo neste modo.\n"
+            "3. ENTREGUE no chat o código completo do arquivo ou os trechos exatos (com a localização/linha) para o usuário aplicar MANUALMENTE.\n"
+            "4. Seja honesto: se não conseguir ler algo, diga que não conseguiu em vez de inventar."
+        )
 
     instrucoes_de_performance = (
         "\n[DIRETRIZES DE FLUXO]\n"
@@ -824,6 +1117,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
         f"Você se chama {nome_agente}, um Engenheiro de Software Sênior especialista em C++, Vulkan, Python e todo tipo de programação.\n"
         f"Você trabalha em equipe com o {outro_agente}. No histórico, as respostas anteriores podem ter sido dadas por ele. Preste atenção aos prefixos [Axio Coder]: ou [Axio Counselor]: nas mensagens do assistente para saber quem disse o quê. IMPORTANTE: Você NÃO deve incluir esse prefixo na sua própria resposta, o sistema fará isso automaticamente. Se você for o conselheiro, É ESTRITAMENTE PROIBIDO perguntar ao usuário se ele quer que o Coder aplique as alterações ou sugerir que o Coder faça algo. Apenas dê sua análise e encerre a resposta. Mas se o usuário pedir ajustes, mesmo sendo o conselheiro, execute. \n"
         f"=== CONTEXTO DE MEMÓRIAS RECUPERADAS ===\n{contexto_memoria}\n"
+        f"{bloco_continuidade}"
         f"=== MODO DE OPERAÇÃO ATUAL ===\n{instrucao_modo}\n==============================\n\n"
 
         f"=== PERFORMANCE ===\n{instrucoes_de_performance}\n==============================\n\n"
@@ -875,7 +1169,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
         types.FunctionDeclaration(name="tool_analisar_simbolo", description="Usa o clangd para verificar erros de sintaxe após você fazer uma edição.", parameters=types.Schema(type="OBJECT", properties={"caminho_relativo": types.Schema(type="STRING"), "termo": types.Schema(type="STRING")}, required=["caminho_relativo", "termo"])),
         types.FunctionDeclaration(name="tool_gerenciar_memoria", description="Acessa memória persistente.", parameters=types.Schema(type="OBJECT", properties={"acao": types.Schema(type="STRING", enum=["ler", "escrever", "listar"]), "titulo": types.Schema(type="STRING"), "conteudo": types.Schema(type="STRING")}, required=["acao"])),
         types.FunctionDeclaration(name="tool_gerenciar_banco_vetorial", description="Gerencia o banco de dados vetorial do mempalace.", parameters=types.Schema(type="OBJECT", properties={"acao": types.Schema(type="STRING", enum=["ler", "escrever", "listar", "deletar"]), "caminho_relativo": types.Schema(type="STRING"), "conteudo": types.Schema(type="STRING")}, required=["acao"])),
-        types.FunctionDeclaration(name="tool_buscar_web", description="Pesquisa na internet ou extrai conteúdo de uma URL específica. Use 'query' para buscar por termo ou 'url_especifica' para extrair uma página. O conteúdo bruto completo fica em 'busca.txt'.", parameters=types.Schema(type="OBJECT", properties={"query": types.Schema(type="STRING", description="Termo de busca na web"), "url_especifica": types.Schema(type="STRING", description="URL específica para extrair conteúdo")}))
+        types.FunctionDeclaration(name="tool_buscar_web", description="Pesquisa na internet ou extrai conteúdo de uma URL específica. Use 'query' para buscar por termo ou 'url_especifica' para extrair uma página. O conteúdo bruto completo fica em 'busca.txt'. Priorize documentações de apis dos sites oficiais caso o scrap esteja disponível.", parameters=types.Schema(type="OBJECT", properties={"query": types.Schema(type="STRING", description="Termo de busca na web"), "url_especifica": types.Schema(type="STRING", description="URL específica para extrair conteúdo")}))
     ]
 
     if modo != "guided":
@@ -884,6 +1178,14 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
             types.FunctionDeclaration(name="tool_salvar_arquivo", description="Salva arquivo.", parameters=types.Schema(type="OBJECT", properties={"caminho_relativo": types.Schema(type="STRING"), "conteudo": types.Schema(type="STRING")}, required=["caminho_relativo", "conteudo"])),
             types.FunctionDeclaration(name="tool_substituir_tudo", description="Substitui tudo.", parameters=types.Schema(type="OBJECT", properties={"caminho_relativo": types.Schema(type="STRING"), "texto_antigo": types.Schema(type="STRING"), "texto_novo": types.Schema(type="STRING")}, required=["caminho_relativo", "texto_antigo", "texto_novo"]))
         ])
+
+    if modo == "semi":
+        ferramentas_base.append(
+            types.FunctionDeclaration(
+                name="tool_aprovar_plano",
+                description="Destrava as ferramentas de edição no modo semi-automático. Chame apenas quando perceber que o usuário aprovou/confirmou o plano (qualquer forma de 'sim', 'pode', 'aplica', etc.)."
+            )
+        )
 
     declaracao_ferramentas = types.Tool(function_declarations=ferramentas_base)
     
@@ -936,36 +1238,43 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
             if response.candidates and response.candidates[0].content.parts:
                 partes = response.candidates[0].content.parts
                 for i, p in enumerate(partes):
-                    if hasattr(p, 'text') and p.text:
-                        texto = p.text
-                        if '<think>' in texto:
-                            match = re.search(r'<think>(.*?)</think>', texto, re.DOTALL)
-                            if match:
-                                pensamentos.append(match.group(1).strip())
-                                texto_sem_think = re.sub(r'<think>.*?</think>', '', texto, flags=re.DOTALL).strip()
-                                if texto_sem_think:
-                                    textos_finais.append(texto_sem_think)
-                            else:
-                                partes_think = texto.split('<think>')
-                                if len(partes_think) > 1:
-                                    pensamentos.append(partes_think[1].strip())
-                                if partes_think[0].strip():
-                                    textos_finais.append(partes_think[0].strip())
-                        elif getattr(p, 'thought', False) or getattr(p, 'is_thought', False):
-                            pensamentos.append(texto)
-                        elif len(partes) > 1 and i == 0 and not response.function_calls:
-                            # Se tem mais de uma parte, não é chamada de função, e é a primeira parte
-                            # Verifica se a próxima parte também é texto. Se for, a primeira é pensamento.
-                            tem_outro_texto = any(hasattr(p_next, 'text') and p_next.text for p_next in partes[i+1:])
-                            if tem_outro_texto:
-                                pensamentos.append(texto)
-                            else:
-                                textos_finais.append(texto)
-                        elif len(partes) > 1 and i == 0 and response.function_calls:
-                            # Se tem chamada de função, a primeira parte de texto geralmente é o pensamento
+                    # 1. Raciocínio explícito preservado (DeepSeek): campo próprio, nunca vai pro texto final.
+                    rc = getattr(p, 'reasoning_content', None)
+                    if rc:
+                        pensamentos.append(rc.strip())
+                        continue
+                    if not (hasattr(p, 'text') and p.text):
+                        continue
+                    texto = p.text
+                    # 2. Parte marcada como pensamento (Gemini).
+                    if getattr(p, 'thought', False) or getattr(p, 'is_thought', False):
+                        pensamentos.append(texto)
+                    elif '<think>' in texto:
+                        match = re.search(r'<think>(.*?)</think>', texto, re.DOTALL)
+                        if match:
+                            pensamentos.append(match.group(1).strip())
+                            texto_sem_think = re.sub(r'<think>.*?</think>', '', texto, flags=re.DOTALL).strip()
+                            if texto_sem_think:
+                                textos_finais.append(texto_sem_think)
+                        else:
+                            partes_think = texto.split('<think>')
+                            if len(partes_think) > 1:
+                                pensamentos.append(partes_think[1].strip())
+                            if partes_think[0].strip():
+                                textos_finais.append(partes_think[0].strip())
+                    elif len(partes) > 1 and i == 0 and not response.function_calls:
+                        # Se tem mais de uma parte, não é chamada de função, e é a primeira parte
+                        # Verifica se a próxima parte também é texto. Se for, a primeira é pensamento.
+                        tem_outro_texto = any(hasattr(p_next, 'text') and p_next.text for p_next in partes[i+1:])
+                        if tem_outro_texto:
                             pensamentos.append(texto)
                         else:
                             textos_finais.append(texto)
+                    elif len(partes) > 1 and i == 0 and response.function_calls:
+                        # Se tem chamada de função, a primeira parte de texto geralmente é o pensamento
+                        pensamentos.append(texto)
+                    else:
+                        textos_finais.append(texto)
                             
             if pensamentos:
                 emit_event("ai_thought", text="\n\n".join(pensamentos))
@@ -987,6 +1296,15 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                     # LOG PARA A INTERFACE
                     if nome_func == "tool_executar_comando":
                         emit_event("status", message=" ")
+                    elif nome_func == "tool_buscar_web":
+                        url_esp = args.get("url_especifica", "") or ""
+                        query = args.get("query", "") or ""
+                        if url_esp:
+                            emit_event("status", message=f"Navegando: {url_esp}")
+                        elif query:
+                            emit_event("status", message=f"Navegando: pesquisando '{query[:60]}'...")
+                        else:
+                            emit_event("status", message="Navegando: ...")
                     elif nome_func in ("tool_ler_trecho_arquivo", "tool_ler_arquivo") and args.get("caminho_relativo", "") in ("busca.txt", "debug_tavily.txt"):
                         alvo = args.get("caminho_relativo", "")
                         emit_event("status", message=f"Extraindo informa\u00e7\u00e3o: {alvo}")
@@ -1024,6 +1342,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                     elif nome_func == "tool_indexar_projeto": resultado = tool_indexar_projeto()
                     elif nome_func == "tool_analisar_simbolo": resultado = tool_analisar_simbolo(caminho, args.get("termo", ""))
                     elif nome_func == "tool_substituir_tudo": resultado = tool_substituir_tudo(caminho, args.get("texto_antigo", ""), args.get("texto_novo", ""))
+                    elif nome_func == "tool_aprovar_plano": resultado = tool_aprovar_plano()
                     elif nome_func == "tool_gerenciar_memoria": resultado = tool_gerenciar_memoria(args.get("acao"), args.get("titulo"), args.get("conteudo"))
                     elif nome_func == "tool_gerenciar_banco_vetorial": resultado = tool_gerenciar_banco_vetorial(args.get("acao"), args.get("caminho_relativo", ""), args.get("conteudo"))
                     elif nome_func == "tool_buscar_web": resultado = tool_buscar_web(args.get("query", ""), args.get("url_especifica", ""))
@@ -1071,17 +1390,21 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                 with open(caminho_memo, "w", encoding="utf-8") as f:
                     f.write(f"Humano: {prompt_usuario}\nIA: {texto_final}\n")
                 
-                # 5. Roda o minerador em segundo plano
-                env = os.environ.copy()
-                env["PYTHONIOENCODING"] = "utf-8"
-                subprocess.run(["python", "-m", "mempalace", "mine", pasta_chats, "--mode", "convos"], env=env)
-
-                # 6. Finaliza a comunicação com o Front-end
                 emit_event("ai_response", message=texto_final)
+                # Registra a pergunta enviada pelo usuário no log da sessão, para o
+                # ícone de "pergunta do usuário" na aba de Arquivos (e no histórico).
+                emit_event("ai_question", text=prompt_usuario)
                 emit_event("done")
+
+                threading.Thread(
+                    target=_minerar_em_segundo_plano,
+                    args=(pasta_chats, wing_atual),
+                    daemon=True,
+                ).start()
                 break
                 
         except Exception as e:
+            salvar_checkpoint(prompt_usuario, use_deepseek, e, ferramentas_usadas_rodada, historico_sessao)
             emit_event("status", message=f"Erro: {str(e)}")
             emit_event("done")
             break
@@ -1092,8 +1415,17 @@ def set_folder():
     data = request.json
     pasta = data.get("folder")
     if pasta:
+        pasta_anterior = estado.get("pasta_raiz", "")
         estado["pasta_raiz"] = pasta
         estado["historico_chat"] = []
+        estado["file_history"] = {}
+        # Nova sessão de logs: trocar de pasta (ou reiniciar o programa) inicia outra sessão.
+        # Re-selecionar a MESMA pasta mantém a sessão em andamento.
+        if pasta != pasta_anterior:
+            estado["session_id_atual"] = str(int(time.time() * 1000))
+            # Cria já o arquivo vazio da sessão para o card "em andamento" surgir
+            # no histórico imediatamente, e a sessão anterior virar "anteriores".
+            _criar_sessao_vazia(pasta, estado["session_id_atual"])
         
         # Tentar carregar o histórico da sessão mais recente
         pasta_chats = os.path.join(pasta, "chats")
@@ -1143,6 +1475,451 @@ def chat():
 def cancel():
     estado["cancel_requested"] = True
     return jsonify({"status": "cancelled"})
+
+@app.route('/api/undo_redo_status', methods=['GET'])
+def undo_redo_status():
+    files = []
+    pasta_raiz = estado.get("pasta_raiz", "")
+    for caminho, hist in estado["file_history"].items():
+        if hist["undo"] or hist["redo"]:
+            files.append({
+                "caminho": caminho,
+                "nome": os.path.basename(caminho),
+                "caminho_relativo": (os.path.relpath(caminho, pasta_raiz).replace("\\", "/") if pasta_raiz else caminho.replace("\\", "/")),
+                "can_undo": len(hist["undo"]) > 0,
+                "can_redo": len(hist["redo"]) > 0,
+                "undo_count": len(hist["undo"]),
+                "redo_count": len(hist["redo"]),
+            })
+    # Ordena pelo nome para facilitar a localização
+    files.sort(key=lambda f: f["nome"].lower())
+    return jsonify({"files": files})
+
+@app.route('/api/undo', methods=['POST'])
+def undo():
+    data = request.json or {}
+    caminho = data.get("caminho")
+    hist = estado["file_history"].get(caminho) if caminho else None
+
+    if not hist or not hist["undo"]:
+        return jsonify({"status": "empty", "message": "Nada para desfazer neste arquivo."})
+
+    entrada = hist["undo"].pop()
+    try:
+        _aplicar_snapshot(entrada, reverso=True)
+    except Exception as e:
+        # Em caso de falha, devolve a entrada para a pilha
+        hist["undo"].append(entrada)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    hist["redo"].append(entrada)
+    nome = os.path.basename(entrada["caminho"])
+    return jsonify({"status": "ok", "message": f"Desfeito: {nome}"})
+
+@app.route('/api/redo', methods=['POST'])
+def redo():
+    data = request.json or {}
+    caminho = data.get("caminho")
+    hist = estado["file_history"].get(caminho) if caminho else None
+
+    if not hist or not hist["redo"]:
+        return jsonify({"status": "empty", "message": "Nada para refazer neste arquivo."})
+
+    entrada = hist["redo"].pop()
+    try:
+        _aplicar_snapshot(entrada, reverso=False)
+    except Exception as e:
+        hist["redo"].append(entrada)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    hist["undo"].append(entrada)
+    nome = os.path.basename(entrada["caminho"])
+    return jsonify({"status": "ok", "message": f"Refeito: {nome}"})
+
+@app.route('/api/file_content', methods=['GET'])
+def file_content():
+    caminho = request.args.get("caminho")
+    if not caminho:
+        return jsonify({"error": "caminho não informado"}), 400
+    try:
+        with open(caminho, 'r', encoding='utf-8') as f:
+            conteudo = f.read()
+        return jsonify({"caminho": caminho, "conteudo": conteudo})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+@app.route('/api/file_original', methods=['GET'])
+def file_original():
+    """Retorna o conteúdo original (antes da primeira edição registrada) do arquivo.
+
+    Usado pela coluna 3 para exibir o estado inicial na ordem cronológica das
+    edições da pilha. Se o arquivo foi criado na sessão, retorna criado=True.
+    """
+    caminho = request.args.get("caminho")
+    if not caminho:
+        return jsonify({"error": "caminho não informado"}), 400
+
+    hist = estado["file_history"].get(caminho)
+    original = None
+    criado = False
+
+    if hist and hist["undo"]:
+        primeira = hist["undo"][0]
+        original = primeira.get("antes")
+        criado = original is None
+    elif hist and hist["redo"]:
+        # Arquivo desfeito até o estado original: a edição mais antiga é a última
+        # desfeita (topo invertido da pilha de redo), então usamos hist["redo"][-1].
+        primeira = hist["redo"][-1]
+        original = primeira.get("antes")
+        criado = original is None
+
+    if original is None:
+        if criado:
+            original = ""
+        else:
+            # Sem registro de criação, tenta ler o conteúdo atual do disco.
+            try:
+                with open(caminho, 'r', encoding='utf-8') as f:
+                    original = f.read()
+            except Exception:
+                original = ""
+
+    return jsonify({"caminho": caminho, "conteudo": original, "criado": criado})
+
+def _pasta_session_logs():
+    pasta_raiz = estado.get("pasta_raiz", "")
+    return os.path.join(pasta_raiz, "chats", "session_logs") if pasta_raiz else ""
+
+
+def _ts_de_arquivo_log(nome):
+    try:
+        return int(nome.replace("sessionlog_", "").replace(".json", ""))
+    except ValueError:
+        return 0
+
+
+def _prune_session_logs(pasta_logs, manter_dias=3):
+    """Mantém apenas as sessões de log dos últimos N dias distintos (por data)."""
+    try:
+        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
+    except OSError:
+        return
+
+    infos = []
+    for arq in arquivos:
+        ts = _ts_de_arquivo_log(arq)
+        dia = ""
+        caminho = os.path.join(pasta_logs, arq)
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+            dia = (dados.get("datetime") or "").split(" ")[0]
+        except Exception:
+            dia = ""
+        if not dia and ts:
+            dia = time.strftime("%d/%m/%Y", time.localtime(ts / 1000))
+        infos.append((dia, ts, arq))
+
+    infos.sort(key=lambda x: x[1], reverse=True)
+
+    # Descobre os N dias distintos mais recentes.
+    dias_recentes = []
+    for dia, ts, arq in infos:
+        if dia and dia not in dias_recentes:
+            dias_recentes.append(dia)
+        if len(dias_recentes) >= manter_dias:
+            break
+    dias_recentes = set(dias_recentes)
+
+    for dia, ts, arq in infos:
+        if dia and dia in dias_recentes:
+            continue
+        try:
+            os.remove(os.path.join(pasta_logs, arq))
+        except OSError:
+            pass
+
+
+def _criar_sessao_vazia(pasta_raiz, session_id):
+    """Cria o arquivo de log vazio da sessão para o card "em andamento" já
+    aparecer no histórico assim que a sessão inicia (sem esperar a 1ª edição)."""
+    try:
+        pasta_logs = os.path.join(pasta_raiz, "chats", "session_logs")
+        os.makedirs(pasta_logs, exist_ok=True)
+        caminho = os.path.join(pasta_logs, f"sessionlog_{session_id}.json")
+        if os.path.exists(caminho):
+            return
+        ts = int(session_id)
+        payload = {
+            "timestamp": ts,
+            "datetime": time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(ts / 1000)),
+            "summary": "",
+            "logs": [],
+        }
+        with open(caminho, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except (OSError, ValueError) as e:
+        print(f"Erro ao criar sessão vazia {session_id}: {e}")
+
+
+def _summary_de_logs(logs):
+    """Gera um resumo simples a partir dos nomes de arquivos editados na sessão."""
+    nomes = []
+    for grupo in logs:
+        for f in grupo.get("files", []):
+            nome = f.get("name", "")
+            if nome and nome not in nomes:
+                nomes.append(nome)
+    resumo = ", ".join(nomes[:3])
+    return resumo[:160]
+
+
+@app.route('/api/session_log/save', methods=['POST'])
+def session_log_save():
+    pasta_raiz = estado.get("pasta_raiz", "")
+    if not pasta_raiz:
+        return jsonify({"status": "error", "message": "Nenhuma pasta selecionada"}), 400
+
+    data = request.json or {}
+    logs = data.get("logs") or []
+    if not logs:
+        return jsonify({"status": "empty"})
+
+    pasta_logs = os.path.join(pasta_raiz, "chats", "session_logs")
+    try:
+        os.makedirs(pasta_logs, exist_ok=True)
+    except OSError as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    # Sessão atual: um único id por execução do programa + pasta selecionada.
+    # Diferente de antes, NÃO criamos um arquivo novo por turno — acumulamos tudo aqui.
+    session_id = estado.get("session_id_atual") or ""
+    if not session_id:
+        session_id = str(int(time.time() * 1000))
+        estado["session_id_atual"] = session_id
+
+    caminho = os.path.join(pasta_logs, f"sessionlog_{session_id}.json")
+
+    # Se a sessão já existe (edições anteriores do mesmo projeto em aberto), faz merge.
+    payload = None
+    if os.path.exists(caminho):
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except Exception:
+            payload = None
+
+    # Rotação por dia: se virou a meia-noite (data de hoje != data de criação da
+    # sessão em andamento), abrimos uma nova sessão com a data de hoje. A sessão
+    # antiga permanece intacta no histórico. O "Log da Sessão" (painel lateral) é
+    # alimentado em memória no frontend, então continua acumulando normalmente,
+    # inclusive os turnos do dia anterior — só o card de dia no Histórico muda.
+    hoje = time.strftime("%d/%m/%Y")
+    if payload is not None:
+        data_sessao = (payload.get("datetime") or "").split(" ")[0]
+        if data_sessao and data_sessao != hoje:
+            session_id = str(int(time.time() * 1000))
+            estado["session_id_atual"] = session_id
+            caminho = os.path.join(pasta_logs, f"sessionlog_{session_id}.json")
+            payload = None
+
+    if payload is None:
+        ts_criacao = int(session_id)
+        payload = {
+            "timestamp": ts_criacao,
+            "datetime": time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(ts_criacao / 1000)),
+            "summary": "",
+            "logs": [],
+        }
+
+    # Acumula os novos cards de log na mesma sessão.
+    payload["logs"].extend(logs)
+    payload["summary"] = _summary_de_logs(payload["logs"]) or (data.get("summary") or "").strip()[:160]
+
+    try:
+        with open(caminho, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    # Mantém apenas os logs dos últimos 3 dias distintos (substitui os mais antigos).
+    _prune_session_logs(pasta_logs, manter_dias=3)
+    return jsonify({"status": "ok", "filename": f"sessionlog_{session_id}.json"})
+
+
+@app.route('/api/session_history', methods=['GET'])
+def session_history():
+    pasta_logs = _pasta_session_logs()
+    if not pasta_logs or not os.path.exists(pasta_logs):
+        return jsonify({"sessions": []})
+
+    try:
+        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
+    except OSError:
+        return jsonify({"sessions": []})
+
+    arquivos.sort(key=_ts_de_arquivo_log, reverse=True)
+
+    # Mostra TODAS as sessões (incluindo a em andamento). O prune já limita os
+    # arquivos em disco aos últimos 3 dias, então devolvemos todos sem cortar
+    # (assim um dia com várias sessões não esconde um dia mais antigo).
+    recentes = arquivos
+
+    session_id_atual = estado.get("session_id_atual") or ""
+    arquivo_atual = f"sessionlog_{session_id_atual}.json" if session_id_atual else ""
+
+    sessoes = []
+    for arq in recentes:
+        caminho = os.path.join(pasta_logs, arq)
+        ts = _ts_de_arquivo_log(arq)
+        data_hora = ""
+        preview = ""
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+            ts = dados.get("timestamp", ts)
+            data_hora = dados.get("datetime", "")
+            preview = dados.get("summary", "")
+            if not data_hora and ts:
+                data_hora = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(ts / 1000))
+        except Exception as e:
+            print(f"Erro ao ler log de sessão {arq}: {e}")
+            if ts:
+                data_hora = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(ts / 1000))
+
+        sessoes.append({
+            "filename": arq,
+            "timestamp": ts,
+            "datetime": data_hora,
+            "preview": preview,
+            "current": arq == arquivo_atual
+        })
+
+    return jsonify({"sessions": sessoes})
+
+
+@app.route('/api/session_detail', methods=['GET'])
+def session_detail():
+    filename = request.args.get("file", "")
+    pasta_logs = _pasta_session_logs()
+    if not pasta_logs or not filename:
+        return jsonify({"error": "parâmetro inválido"}), 400
+
+    filename = os.path.basename(filename)
+    caminho = os.path.join(pasta_logs, filename)
+    if not os.path.exists(caminho):
+        return jsonify({"error": "sessão não encontrada"}), 404
+
+    try:
+        with open(caminho, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({
+        "filename": filename,
+        "datetime": dados.get("datetime", ""),
+        "summary": dados.get("summary", ""),
+        "logs": dados.get("logs", [])
+    })
+
+@app.route('/api/session_log/delete', methods=['POST'])
+def session_log_delete():
+    """Exclui logs de sessão (arquivos inteiros do histórico) e/ou cards (turnos)
+    individuais da sessão atual, conforme os ids/filenames recebidos do frontend."""
+    pasta_logs = _pasta_session_logs()
+    if not pasta_logs or not os.path.exists(pasta_logs):
+        return jsonify({"status": "error", "message": "Nenhum log para excluir"}), 400
+
+    data = request.json or {}
+    files = data.get("files") or []
+    turn_ids = [str(x) for x in (data.get("turn_ids") or [])]
+
+    deletados = 0
+
+    # 1) Exclui sessões inteiras (histórico).
+    for nome in files:
+        nome = os.path.basename(nome)
+        if not (nome.startswith("sessionlog_") and nome.endswith(".json")):
+            continue
+        caminho = os.path.join(pasta_logs, nome)
+        try:
+            if os.path.exists(caminho):
+                os.remove(caminho)
+                deletados += 1
+                # Se apagou a sessão em andamento, recomeça uma sessão nova no próximo turno.
+                if nome == f"sessionlog_{estado.get('session_id_atual', '')}.json":
+                    estado["session_id_atual"] = ""
+        except OSError as e:
+            print(f"Erro ao excluir sessão {nome}: {e}")
+
+    # 2) Exclui cards (turnos) individuais da sessão atual.
+    if turn_ids:
+        session_id = estado.get("session_id_atual") or ""
+        if session_id:
+            caminho = os.path.join(pasta_logs, f"sessionlog_{session_id}.json")
+            if os.path.exists(caminho):
+                try:
+                    with open(caminho, "r", encoding="utf-8") as f:
+                        payload = json.load(f)
+                    logs = payload.get("logs", [])
+                    antes = len(logs)
+                    ids = set(turn_ids)
+                    payload["logs"] = [g for g in logs if str(g.get("id")) not in ids]
+                    payload["summary"] = _summary_de_logs(payload["logs"])
+                    with open(caminho, "w", encoding="utf-8") as f:
+                        json.dump(payload, f, ensure_ascii=False, indent=2)
+                    deletados += antes - len(payload["logs"])
+                except Exception as e:
+                    print(f"Erro ao excluir turnos da sessão atual: {e}")
+
+    return jsonify({"status": "ok", "deleted": deletados})
+
+
+@app.route('/api/session_log/rename', methods=['POST'])
+def session_log_rename():
+    """Renomeia uma rodada (card de log) pelo id, persistindo o nome personalizado."""
+    pasta_logs = _pasta_session_logs()
+    if not pasta_logs or not os.path.exists(pasta_logs):
+        return jsonify({"status": "error", "message": "Nenhum log para renomear"}), 400
+
+    data = request.json or {}
+    round_id = str(data.get("round_id") or "")
+    name = (data.get("name") or "").strip()
+    if not round_id or not name:
+        return jsonify({"status": "error", "message": "round_id e name são obrigatórios"}), 400
+
+    try:
+        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
+    except OSError as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    for arq in arquivos:
+        caminho = os.path.join(pasta_logs, arq)
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except Exception:
+            continue
+
+        logs = payload.get("logs", [])
+        alterado = False
+        for grupo in logs:
+            if str(grupo.get("id")) == round_id:
+                grupo["name"] = name
+                alterado = True
+
+        if alterado:
+            try:
+                with open(caminho, "w", encoding="utf-8") as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2)
+            except OSError as e:
+                return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "ok", "name": name})
+
+    return jsonify({"status": "error", "message": "Tarefa não encontrada"}), 404
+
 
 @app.route('/api/stream')
 def stream():

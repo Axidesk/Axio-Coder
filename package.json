@@ -1,7 +1,8 @@
 {
-  "name": "agente-coder-ui",
+  "name": "axio-coder",
   "version": "1.0.0",
-  "description": "Interface moderna para o Agente Coder",
+  "productName": "Axio Coder",
+  "description": "Interface moderna para o Axio Coder",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
