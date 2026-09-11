@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axio Coder</title>
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="http://127.0.0.1:5000/monaco/vs/editor/editor.main.css">
+    <link rel="stylesheet" data-name="xterm" href="http://127.0.0.1:5000/xterm/xterm/css/xterm.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body class="bg-[var(--bg)] text-[var(--text-claro)] h-screen flex flex-col overflow-hidden relative">
+
+    <div id="inspect-tooltip" class="balao hidden"></div>
+
+    <!-- Hidden elements to prevent renderer.js from crashing -->
+    <div id="lbl-folder" class="hidden"></div>
+    <div id="lbl-metrics" class="hidden"></div>
+
+    <!-- Popup de Alerta -->
+    <div id="alert-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[60] flex justify-center items-center p-6">
+        <div id="alert-popup-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
+            <div id="lbl-alert-message" class="text-[var(--text-claro)] mb-6 text-sm">Por favor, selecione a pasta raiz do seu projeto.</div>
+            <button id="btn-close-alert" class="bg-[var(--border)] hover:bg-[var(--border-suave)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors w-full">
+                Ok
+            </button>
+        </div>
+    </div>
+
+    <!-- Popup de Confirmação de Exclusão -->
+    <div id="confirm-delete-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[70] flex justify-center items-center p-6">
+        <div id="confirm-delete-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
+            <p id="lbl-delete-message" class="text-[var(--text-claro)] mb-6">Tem certeza que deseja excluir os registros selecionados?</p>
+            <div class="flex gap-3">
+                <button id="btn-cancel-delete" class="bg-[var(--border)] hover:bg-[var(--border-suave)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors flex-1">Cancelar</button>
+                <button id="btn-confirm-delete-yes" class="bg-[var(--vermelho-excluir)] hover:bg-[var(--vermelho-excluir-hover)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors flex-1">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de Confirmação de Restauração -->
+    <div id="restore-confirm-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[75] flex justify-center items-center p-6">
+        <div id="restore-confirm-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-md w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
+            <div id="lbl-restore-message" class="text-[var(--text-claro)] mb-6 text-sm text-left whitespace-pre-wrap"></div>
+            <div class="flex gap-3">
+                <button id="btn-cancel-restore" class="bg-[var(--border)] hover:bg-[var(--border-suave)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors flex-1">Cancelar</button>
+                <button id="btn-confirm-restore-yes" class="bg-[var(--oliva)] hover:bg-[var(--oliva-hover)] text-[var(--preto)] font-medium py-2 px-4 rounded transition-colors flex-1">Restaurar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de Confirmação de Limpeza de Contexto -->
+    <div id="confirm-clear-context-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[72] flex justify-center items-center p-6">
+        <div id="confirm-clear-context-content" class="modal-card p-6 max-w-md w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
+            <p id="lbl-clear-context-message" class="text-[var(--text-claro)] mb-6 text-sm text-left">Deseja apagar a memória de contexto acumulada? Isso fará com que o modelo esqueça o que foi feito (ferramentas usadas, ficheiros editados etc) desde o início da sessão.</p>
+            <div class="flex gap-3">
+                <button id="btn-cancel-clear-context" class="bg-[var(--border)] hover:bg-[var(--border-suave)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors flex-1">Cancelar</button>
+                <button id="btn-confirm-clear-context" class="bg-[var(--vermelho-excluir)] hover:bg-[var(--vermelho-excluir-hover)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors flex-1">Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sliding Panel Container -->
+    <div id="sliding-panel-container" class="fixed top-0 left-0 pl-14 h-full z-30 flex flex-row shadow-[var(--sombra-card)] max-w-[100vw] overflow-x-auto dock-closed">
+        <!-- Historico -->
+        <div id="panel-col-1" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[var(--border)]">
+                <div class="flex items-center gap-3">
+                    <h2 id="panel-title" class="text-lg font-semibold text-[var(--text)]">Historico</h2>
+                    <button id="btn-history-search" class="hidden text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Buscar nas conversas">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                        </svg>
+                    </button>
+                    <button id="btn-restore-task" disabled class="hidden text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none disabled:opacity-40 disabled:cursor-default disabled:hover:text-[var(--text-mutado)]" title="Restaurar tarefa selecionada">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                    <button id="btn-save-task" disabled class="hidden text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none disabled:opacity-40 disabled:cursor-default disabled:hover:text-[var(--text-mutado)]" title="Salvar tarefa selecionada">
+                        <svg id="btn-save-task-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 2h12a2 2 0 0 1 2 2v18l-8-4-8 4V4a2 2 0 0 1 2-2z" />
+                        </svg>
+                    </button>
+                    <button id="btn-delete-task" disabled class="hidden text-[var(--text-mutado)] hover:text-[var(--vermelho-excluir-hover)] transition-colors focus:outline-none disabled:opacity-40 disabled:cursor-default disabled:hover:text-[var(--text-mutado)]" title="Excluir tarefa selecionada">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="log-list-container" class="flex-1 overflow-y-auto p-2" style="scrollbar-gutter: stable;">
+                <div id="history-logs-wrapper" class="logs-wrapper space-y-2"></div>
+            </div>
+            <div id="history-search-panel" class="hidden flex-1 min-h-0 flex flex-col">
+                <div class="p-3 shrink-0 border-b border-[var(--border)]">
+                    <div class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-mutado)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                        </svg>
+                        <input id="history-search-input-inline" type="text" placeholder="O que está procurando?"
+                            class="w-full bg-[var(--bg)] rounded-2xl pl-9 pr-3 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text-mutado)] focus:outline-none transition-colors">
+                    </div>
+                </div>
+                <div id="history-search-results-inline" class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2"></div>
+            </div>
+
+        </div>
+        
+        <!-- Col 2: Files -->
+        <div id="panel-col-2" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+            <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <button id="btn-show-question" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver pergunta e resposta">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        </button>
+                        <button id="btn-show-thoughts" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver raciocínio da IA (Chain of Thought)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                        </button>
+                        <button id="btn-show-tools" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver ferramentas usadas nesta resposta">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.373 8.373a1 1 0 1 1-1.414-1.414L13.586 10.586"/><path d="m18.293 11.707 1.414-1.414a1 1 0 0 0 0-1.414l-4.586-4.586a1 1 0 0 0-1.414 0l-1.414 1.414a1 1 0 0 0 0 1.414l4.586 4.586a1 1 0 0 0 1.414 0Z"/></svg>
+                        </button>
+                        <button id="btn-eye-diff" class="hidden text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Modo foco: exibir apenas trechos alterados">
+                            <svg id="eye-on" class="h-5 w-5 icon-header-action" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg id="eye-off" class="h-5 w-5 icon-header-action hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                        </button>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0 ml-3">
+                    <button id="btn-undo" class="hidden text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-default" title="Desfazer última edição">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l-4-4 4-4m-4 4h11a5 5 0 015 5v1a5 5 0 01-5 5H7" /></svg>
+                    </button>
+                    <span id="lbl-undo-count" class="hidden text-xs text-[var(--text-suave)] font-mono" title="Edições que podem ser desfeitas"></span>
+                    <button id="btn-redo" class="hidden text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-default" title="Refazer edição">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 14l4-4-4-4m4 4H8a5 5 0 00-5 5v1a5 5 0 005 5h9" /></svg>
+                    </button>
+                    <span id="lbl-redo-count" class="hidden text-xs text-[var(--text-suave)] font-mono" title="Edições que podem ser refeitas"></span>
+                    <button id="btn-close-col-2" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors shrink-0" title="Fechar Arquivos">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="files-list-container" class="flex-1 overflow-y-auto p-2 space-y-2" style="scrollbar-gutter: stable;">
+                </div>
+        </div>
+
+        <div id="panel-col-3" class="shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+            <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <h2 id="col-3-title" class="text-lg font-semibold text-[var(--text)] truncate">Código</h2>
+                    <button id="btn-copy-tools" class="hidden text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors focus:outline-none" title="Copiar log de ferramentas">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 ml-4">
+                    <button id="btn-close-col-3" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="code-view-container" class="flex-1 overflow-y-auto overflow-x-hidden p-4 font-mono text-sm whitespace-pre-wrap" style="scrollbar-gutter: stable;">
+                </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex flex-row w-full overflow-hidden relative">
+        <!-- Sidebar -->
+        <div class="w-14 shrink-0 bg-[var(--bg-panel)] flex flex-col items-center py-6 gap-6 z-40">
+            <button id="btn-select-folder" class="sidebar-btn" title="Selecionar Pasta">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+            </button>
+            <button id="btn-open-log" class="hidden sidebar-btn" title="Ver Log de Alterações">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </button>
+            <button id="btn-session-history" class="sidebar-btn" title="Ver histórico de sessões anteriores">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon-sidebar-clock" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            </button>
+            <button id="btn-workspace" class="sidebar-btn" title="Terminal">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+            </button>
+            <button id="btn-editor" class="sidebar-btn" title="Editor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </button>
+            <button id="btn-inspect" class="sidebar-btn" title="Modo inspecionar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.5"/><line x1="12" y1="3" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21"/><line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/></svg>
+            </button>
+            <div id="context-usage" class="context-usage mt-auto">
+                <svg class="context-usage-ring" viewBox="0 0 36 36">
+                    <circle class="context-usage-track" cx="18" cy="18" r="15.915"></circle>
+                    <circle id="context-usage-fill" class="context-usage-fill" cx="18" cy="18" r="15.915"></circle>
+                </svg>
+            </div>
+            <button id="btn-settings" class="sidebar-btn" title="Configurações">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Left Column: Chat <-> Terminal -->
+        <div class="w-[35%] shrink-0 flex flex-col border-r border-[var(--border)] relative">
+            <!-- Modo Chat (padrão) -->
+            <div id="chat-mode" class="absolute inset-0 flex flex-col">
+            <main id="chat-container-left" class="flex-1 overflow-y-auto pt-4 pb-28 px-6">
+                <div id="chat-inner-left" class="w-full flex flex-col">
+                    <!-- User messages -->
+                </div>
+            </main>
+            <!-- Input Flutuante -->
+            <footer id="input-footer" class="absolute bottom-0 left-0 w-[calc(100%-8px)] px-6 pb-2 pt-6 bg-[var(--bg)] pointer-events-none transition-opacity duration-[var(--dur-7)] z-10">
+                <div id="input-footer-inner" class="w-full relative pointer-events-auto transition-opacity duration-[var(--dur-7)]">
+                    <div id="glossary-chip" class="balao balao-fade"></div>
+                    <div id="context-usage-label" class="balao balao-fade"></div>
+                    <div id="context-usage-popup" class="balao balao-fade context-usage-popup">
+                        <button id="btn-clear-context" class="context-popup-x" type="button" title="Zerar memória acumulada">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                        <div class="context-popup-section">
+                            <div class="context-popup-row">
+                                <span class="context-popup-label">Memória da rodada atual:</span>
+                                <span class="context-popup-info" data-info-target="context-info-sessao">i</span>
+                            </div>
+                            <div class="context-popup-bar context-popup-bar-sessao">
+                                <div id="context-sessao-fill" class="context-popup-fill context-popup-fill-sessao"></div>
+                            </div>
+                            <div class="context-popup-info-text" id="context-info-sessao"><div class="context-popup-usage" id="context-usage-sessao"></div>Essa é a memória que o Axio utiliza para manter o contexto enquanto lê sua resposta, trechos de código e executa ferramentas. Quanto mais trechos de código e ferramentas o Axio consumir, maior será o consumo de tokens na rodada. Ao atingir 200 mil tokens (cerca de 140 mil palavras), ele começa a substituir e resumir o conteúdo mais antigo pelo novo, e poderá não se lembrar do que já foi substituído.</div>
+                        </div>
+                        <div class="context-popup-section">
+                            <div class="context-popup-row">
+                                <span class="context-popup-label">Memória Acumulada:</span>
+                                <span class="context-popup-info" data-info-target="context-info-acumulada">i</span>
+                            </div>
+                            <div class="context-popup-bar context-popup-bar-acumulada">
+                                <div id="context-acumulada-fill" class="context-popup-fill context-popup-fill-acumulada"></div>
+                            </div>
+                            <div class="context-popup-info-text" id="context-info-acumulada"><div class="context-popup-usage" id="context-usage-acumulada"></div>É o acúmulo do contexto absorvido pela memória da sessão: as perguntas e respostas das rodadas anteriores, além do resumo das ferramentas usadas e do que foi feito. Essa memória é reinjetada na memória da sessão a cada nova rodada.</div>
+                        </div>
+                    </div>
+                    <div class="bg-[var(--bg-input)] rounded-3xl px-4 py-3 shadow-[var(--sombra-input)] border border-[var(--border)] flex flex-col relative">
+                        <div id="image-preview-container" class="hidden mb-2 flex flex-wrap gap-2">
+                            <!-- Imagens anexadas aparecerão aqui -->
+                        </div>
+                        <div class="flex items-start w-full">
+                            <input type="file" id="file-input" accept="image/*" class="hidden">
+                            <div class="relative flex-shrink-0">
+                                <button id="btn-plus" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors flex items-center justify-center w-8 h-8 rounded-full hover:bg-[var(--border)] mt-0.5 mr-2" title="Menu">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                                </button>
+                                <div id="plus-menu" class="balao absolute bottom-full left-0 mb-4 w-60 rounded-lg z-50">
+                                    <ul class="py-1 text-sm text-[var(--text-claro)]">
+                                        <li>
+                                            <button id="btn-attach-image" class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] flex items-center gap-2" title="Anexar imagens">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                                                <span>Carregar Ficheiros</span>
+                                            </button>
+                                        </li>
+                                        <li class="relative">
+                                            <button id="btn-mode-select" class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] flex items-center justify-between gap-2">
+                                                <span class="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                    <span>Modo de Operação</span>
+                                                </span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-mutado)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                                            </button>
+                                            <div id="mode-submenu" class="balao absolute top-0 left-full ml-1 w-44 rounded-lg">
+                                                <ul class="py-1 text-sm text-[var(--text-claro)]">
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] mode-option" data-mode="auto">Automático</button></li>
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] mode-option" data-mode="semi">Semi-Automático</button></li>
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] mode-option" data-mode="guided">Orientado</button></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li class="relative">
+                                            <button id="btn-ai-select" class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] flex items-center justify-between gap-2">
+                                                <span class="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="10" y="10" width="4" height="4"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>
+                                                    <span>Seleção da IA</span>
+                                                </span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-mutado)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                                            </button>
+                                            <div id="ai-submenu" class="balao absolute top-0 left-full ml-1 w-44 rounded-lg">
+                                                <ul class="py-1 text-sm text-[var(--text-claro)]">
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] ai-option" data-model="deepseek" title="Mais preciso">DeepSeek</button></li>
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] ai-option" data-model="gemini" title="Mais ágil">Google Gemini</button></li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <textarea id="input-text" rows="1" class="flex-1 bg-transparent text-[var(--text)] font-normal placeholder-[var(--text-suave)] focus:placeholder-transparent resize-none max-h-32 pl-2 py-1 mr-2" placeholder="Digite seu comando aqui"></textarea>
+                            <button id="btn-send" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full hover:bg-[var(--border)] mt-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-90" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="text-center mt-3">
+                        <span id="lbl-status" class="text-[var(--text-branco)] text-xs italic">Selecione o diretório</span>
+                        <span id="lbl-executing" class="text-[var(--text-branco)] text-xs italic ml-1"></span>
+                    </div>
+
+                </div>
+            </footer>
+            </div>
+
+            <!-- Modo Terminal (workspace ativado) -->
+            <div id="terminal-mode" class="absolute inset-0 flex-col hidden">
+                <div id="term-top-bar" class="h-10 bg-[var(--bg-panel)] border-b border-[var(--border)] flex items-center px-4 gap-2 shrink-0">
+                    <span class="text-xs text-[var(--text-suave)] font-semibold tracking-wider">TERMINAL</span>
+                    <span class="text-xs text-[var(--text-mutado-escuro)]">|</span>
+                    <span id="ws-status" class="hidden"></span>
+                    <div id="ws-shell" class="relative flex items-center">
+                        <button id="ws-shell-btn" class="flex items-center gap-1 text-xs text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors" title="Trocar terminal">
+                            <span id="ws-shell-label" class="ws-shell-label">cmd</span>
+                        </button>
+                        <div id="ws-shell-menu" class="ws-shell-menu"></div>
+                        <span id="ws-shell-arrow" class="ws-shell-arrow">></span>
+                    </div>
+                    <button id="btn-clear" class="ml-auto text-[var(--text-mutado)] hover:text-[var(--text-branco)] transition-colors flex items-center justify-center w-6 h-6 rounded-full hover:bg-[var(--border)]" title="Limpar terminal">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+                    </button>
+                </div>
+                <div id="term-log" class="flex-1 min-h-0 relative overflow-hidden"></div>
+                <footer id="term-input-footer" class="absolute bottom-0 left-0 w-[calc(100%-8px)] px-6 pb-8 pt-6 pointer-events-none transition-opacity duration-[var(--dur-7)] z-10">
+                    <div id="term-input-footer-inner" class="w-full relative pointer-events-auto transition-opacity duration-[var(--dur-7)]">
+                        <div id="term-venv-popup" class="term-venv-popup">Ambiente virtual não detectado ou inativo.</div>
+                        <div class="term-input-box bg-[var(--bg-input)] rounded-3xl px-4 py-3 shadow-[var(--sombra-input)] border border-[var(--border)] flex items-center relative">
+                            <span id="term-venv-name" class="term-venv-name"></span>
+                            <span id="term-prompt-arrow" class="text-[var(--terminal)] font-mono text-sm select-none flex-shrink-0 flex items-center justify-center cursor-pointer" title="Ambiente virtual">></span>
+                            <input id="term-input" class="flex-1 bg-transparent text-[var(--text)] font-normal placeholder-[var(--text-suave)] focus:placeholder-transparent focus:outline-none py-1" placeholder="Prompt..." autocomplete="off" spellcheck="false" />
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+
+        <!-- Right Column: abas (chat / editor / preview) + barra superior -->
+        <div class="flex-1 flex flex-col relative w-full min-w-0">
+            <!-- Barra superior: editor / preview (apenas no modo Workspace) -->
+            <div id="ws-top-bar" class="h-10 shrink-0 bg-[var(--bg-panel)] border-b border-[var(--border)] flex items-center gap-2 px-4 hidden">
+                <button id="btn-create-file" class="text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors shrink-0 flex items-center justify-center w-6 h-6 rounded-full hover:bg-[var(--border)]" title="Novo ficheiro">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div id="editor-tabs" class="flex items-center gap-1 overflow-hidden min-w-0 flex-1"></div>
+                <div class="flex items-center gap-6 shrink-0 ml-auto">
+                    <button id="btn-log-toggle" class="hidden text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Sair do modo log (voltar a editar)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                    </button>
+                    <button id="btn-preview" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Preview">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 min-h-0 relative">
+                <!-- Aba Chat (respostas da IA) -->
+                <div id="chat-view" class="absolute inset-0 flex flex-col">
+                    <main id="chat-container-right" class="flex-1 overflow-y-auto pt-4 pb-0 px-6 relative z-10">
+                        <div id="chat-inner-right" class="w-full flex flex-col">
+                            </div>
+                    </main>
+                </div>
+                <!-- Aba Editor (código em cima + pastas embaixo) -->
+                <div id="editor-view" class="absolute inset-x-0 top-10 bottom-0 hidden flex-col overflow-hidden">
+                    <div id="editor-panel" class="flex-1 min-h-0 min-w-0 dock-bottom">
+                        <div id="editor-host-wrap" class="relative flex-1 min-h-0 min-w-0">
+                            <div id="editor-host" class="absolute inset-0 overflow-hidden"></div>
+                            <div id="diff-host" class="absolute inset-0 overflow-hidden hidden">
+                                <div id="diff-original-host" class="h-full w-1/2 min-w-0 border-r border-[var(--border)]"></div>
+                                <div id="diff-modified-host" class="h-full w-1/2 min-w-0"></div>
+                            </div>
+                            <div id="editor-image-host" class="absolute inset-0 overflow-hidden z-[5] flex items-center justify-center bg-[var(--bg-panel-2)]" style="display: none;"></div>
+                            <div id="editor-watermark" class="editor-watermark">
+                                <div class="editor-watermark-title">AXIO</div>
+                                <div class="editor-watermark-sub">CONTROLE, EXECUÇÃO, RESULTADO.</div>
+                            </div>
+                        </div>
+                        <div id="explorer-resizer"></div>
+                        <div id="dock-bottom-row">
+                            <div id="log-dock" class="">
+                                <div id="panel-log-session" class="w-80 shrink-0 bg-[var(--bg-panel)]/95 border-r border-[var(--border)] h-full flex flex-col">
+                                    <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
+                                        <h2 class="text-lg font-semibold text-[var(--text)]">Logs da Sessão</h2>
+                                        <button id="btn-close-log-session" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Fechar Log da Sessão">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
+                                    <div id="current-logs-list" class="flex-1 overflow-y-auto p-2" style="scrollbar-gutter: stable;">
+                                        <div id="current-logs-wrapper" class="logs-wrapper space-y-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="explorer-view" class="shrink-0 bg-[var(--bg-panel-2)] flex flex-col min-h-0 overflow-hidden">
+                            <div id="explorer-header" class="h-8 shrink-0 flex items-center justify-between px-3 relative">
+                                <div class="flex items-center gap-1 min-w-0 flex-1 relative">
+                                    <button id="btn-explorer-search" class="explorer-search-trigger text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors shrink-0" title="Buscar no código">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                                    </button>
+                                    <div id="explorer-nav" class="relative flex-1 min-w-0 h-6 overflow-hidden">
+                                        <div id="explorer-path" class="explorer-path w-full h-6 text-xs font-mono flex items-center leading-6 overflow-hidden whitespace-nowrap" title="Abrir pasta no Windows">raiz</div>
+                                    </div>
+                                    <div id="explorer-search-box" class="absolute inset-0">
+                                        <div id="explorer-search-field" class="explorer-search-field">
+                                            <svg id="explorer-search-lupa" class="explorer-search-lupa" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                                            <input id="explorer-search-input" type="text"  class="explorer-search-input" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button id="btn-dock-log-session" class="hidden text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Logs da Sessão">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </button>
+                                    <button id="btn-dock-files" class="hidden text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Arquivos">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                    </button>
+                                    <button id="btn-dock-code" class="hidden text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Código">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                    </button>
+                                    <button id="btn-line-numbers" class="text-[var(--text-branco)] hover:text-[var(--azul-acao)] transition-colors" title="Exibir numeração e linhas de identação">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+                                    </button>
+                                    <button id="btn-trash" class="text-[var(--text-branco)] hover:text-[var(--azul-acao)] transition-colors" title="Abrir lixeira">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    </button>
+                                    <button id="btn-dock-right" class="text-[var(--text-branco)] hover:text-[var(--azul-acao)] transition-colors" title="Mover dock para a direita">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="explorer-body" class="flex-1 min-h-0 flex flex-row relative">
+                                <div id="explorer-tree" class="flex-1 overflow-y-auto py-1 min-h-0"></div>
+                                <div id="explorer-search-results" class="hidden flex-1 overflow-y-auto py-1 min-h-0"></div>
+                                <div id="trash-view" class="trash-view trash-closed">
+                                    <div class="trash-view-title">Lixeira</div>
+                                    <div id="trash-list" class="trash-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                <!-- Aba Preview -->
+                <div id="preview-view" class="absolute inset-x-0 top-10 bottom-0 hidden flex-col overflow-hidden">
+                    <div class="flex-1 flex items-center justify-center text-[var(--text-mutado-escuro)] text-sm italic">Preview (Fase 4 - em breve)</div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div id="fs-context-menu" class="balao fixed z-40 w-48 rounded-lg py-1">
+        <button data-fs-ctx="file" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Criar Ficheiro
+        </button>
+        <button data-fs-ctx="dir" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--alerta)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg>
+            Criar Pasta
+        </button>
+        <button id="fs-ctx-rename" data-fs-ctx="rename" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 22h-1a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h1"/><path d="M7 22h1a4 4 0 0 0 4-4V6a4 4 0 0 0-4-4H7"/></svg>
+            Renomear
+        </button>
+        <button id="fs-ctx-delete" data-fs-ctx="delete" class="hidden w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--vermelho-excluir-hover)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Excluir
+        </button>
+        <button id="fs-ctx-restore" data-fs-ctx="restore" class="hidden w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restaurar
+        </button>
+        <button id="fs-ctx-purge" data-fs-ctx="purge" class="hidden w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--vermelho-excluir-hover)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+            Excluir definitivamente
+        </button>
+    </div>
+
+    <!-- Modal de Confirmação do Explorer (excluir arquivo) -->
+    <div id="fs-confirm-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[80] flex justify-center items-center p-6">
+        <div id="fs-confirm-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
+            <p id="fs-confirm-message" class="text-[var(--text-claro)] mb-6 text-sm">Excluir este item?</p>
+            <div class="flex gap-3 justify-center">
+                <button id="fs-confirm-cancel" class="bg-[var(--border)] hover:bg-[var(--border-suave)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors">Cancelar</button>
+                <button id="fs-confirm-yes" class="bg-[var(--vermelho-excluir)] hover:bg-[var(--vermelho-excluir-hover)] text-[var(--text-branco)] font-medium py-2 px-4 rounded transition-colors">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Imagem Expandida -->
+    <div id="image-modal" class="fixed inset-0 bg-[var(--overlay-forte)] flex items-center justify-center z-[60] hidden cursor-zoom-out" onclick="this.classList.add('hidden')">
+        <img id="expanded-image" class="max-w-[90%] max-h-[90%] object-contain rounded-lg shadow-[var(--sombra-card)]" src="" alt="Expanded Image">
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="settings-modal" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[55] flex justify-center items-center p-6">
+        <div id="settings-modal-content" class="bg-[var(--bg-panel)] rounded-2xl shadow-[var(--sombra-card)] w-full max-w-3xl h-[540px] flex overflow-hidden transform scale-95 transition-transform duration-[var(--dur-7)]">
+            <!-- Menu lateral -->
+            <aside class="w-56 shrink-0 bg-[var(--bg-panel-2)] flex flex-col">
+                <div class="px-5 pt-[18px] flex items-start justify-between">
+                    <h2 class="text-base font-semibold text-[var(--text)]">Configurações</h2>
+                </div>
+                <nav class="flex-1 pt-[6px] pb-3 px-2 overflow-y-auto">
+                    <div class="relative flex items-center">
+                        <button class="settings-nav-item active w-full text-left px-3 py-2.5 text-sm text-[var(--text-claro)] transition-colors flex items-center gap-3 rounded-[10px]" data-settings-tab="apis">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z"/><path d="M12 3v2M12 15v2M3 12h2M19 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4"/><circle cx="12" cy="12" r="3"/></svg>
+                            <span>APIs</span>
+                        </button>
+                        <button id="btn-reveal-keys" class="absolute right-2 settings-folder-btn" title="Mostrar chaves" aria-pressed="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </nav>
+            </aside>
+            <!-- Conteúdo -->
+            <div class="flex-1 flex flex-col min-w-0">
+                <div class="flex-1 overflow-y-auto px-6 pt-[18px] pb-5 space-y-8 settings-scroll">
+                    <!-- DeepSeek -->
+                    <div>
+                        <div class="settings-label-row">
+                            <label id="label-deepseek" for="input-deepseek-key" class="settings-label">DeepSeek</label>
+                            <span class="settings-info" data-info-target="info-deepseek" title="Sobre a chave">i</span>
+                        </div>
+                        <div class="settings-info-text" id="info-deepseek"><div class="settings-info-text-inner">Para obter a chave API do Deepseek, acesse o <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">site</a>, crie uma conta, insira os dados de faturamento e acesse a página <strong>API Keys</strong>, gere uma nova chave, copie a API Key, insira no campo abaixo e <strong>ative o botão</strong>. Opcionalmente, configure a API do Tavily para ativar a navegação web no Deepseek.</div></div>
+                        <div class="flex items-center gap-2">
+                            <div id="deepseek-field" class="settings-swap-field flex-1 active">
+                                <div class="settings-input-wrap">
+                                    <input id="input-deepseek-key" type="password" placeholder="sk-..." autocomplete="off" class="settings-input" />
+                                </div>
+                            </div>
+                            <div id="tavily-field" class="settings-swap-field flex-1">
+                                <div class="settings-input-wrap">
+                                    <input id="input-tavily-key" type="password" placeholder="tvly-..." autocomplete="off" class="settings-input" />
+                                </div>
+                            </div>
+                            <button id="btn-nav-toggle" class="settings-folder-btn" title="Tavily" aria-pressed="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            </button>
+                            <button id="btn-deepseek-toggle" class="settings-toggle" role="switch" aria-checked="false" title="Ativar">
+                                <span class="settings-toggle-knob"></span>
+                            </button>
+                        </div>
+                        <div id="deepseek-error" class="settings-input-error hidden">Digite uma chave API válida.</div>
+                        <div id="tavily-error" class="settings-input-error hidden">Digite uma chave API válida.</div>
+                    </div>
+                    <!-- Google Gemini -->
+                    <div>
+                        <div class="settings-label-row">
+                            <label id="label-gemini" for="input-gemini-key" class="settings-label">Google Gemini</label>
+                            <span class="settings-info" data-info-target="info-gemini" title="Sobre as chaves do Gemini">i</span>
+                        </div>
+                        <div class="settings-info-text" id="info-gemini"><div class="settings-info-text-inner"></div></div>
+                        <div class="flex items-center gap-2">
+                            <div id="studio-field" class="settings-swap-field flex-1 active">
+                                <div class="settings-input-wrap">
+                                    <input id="input-gemini-key" type="password" placeholder="AQ.Ab8..." autocomplete="off" class="settings-input" />
+                                </div>
+                            </div>
+                            <div id="vertex-field" class="settings-swap-field flex-1">
+                                <div class="settings-input-wrap">
+                                    <input id="input-vertex-key" type="text" placeholder="projeto-id-xxxxxxxxxxxx.json (clique para selecionar o arquivo)" autocomplete="off" class="settings-input settings-input-has-clear" readonly />
+                                    <button id="btn-vertex-clear" class="settings-input-clear" type="button" title="Remover arquivo" aria-label="Remover arquivo">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <button id="btn-switch-model" class="settings-folder-btn" title="Vertex AI" aria-pressed="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                            </button>
+                            <button id="btn-gemini-toggle" class="settings-toggle" role="switch" aria-checked="false" title="Ativar">
+                                <span class="settings-toggle-knob"></span>
+                            </button>
+                        </div>
+                        <div id="gemini-error" class="settings-input-error hidden">Digite uma chave API válida ou selecione o json.</div>
+                        <input type="file" id="vertex-json-input" accept=".json,application/json" class="hidden" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/vendor/socket.io.js"></script>
+    <script type="module" src="/editor/state.js"></script>
+    <script type="module" src="/editor/workspace.js"></script>
+    <script type="module" src="/editor/terminal.js"></script>
+    <script type="module" src="/editor/explorer.js"></script>
+    <script type="module" src="/editor/monaco.js"></script>
+    <script type="module" src="/editor/findbar.js"></script>
+    <script type="module" src="/editor/highlight.js"></script>
+    <script type="module" src="/editor/themes.js"></script>
+    <script type="module" src="/editor/diff.js"></script>
+    <script type="module" src="/editor/editor.js"></script>
+    <script type="module" src="/editor/scroll.js"></script>
+    <script type="module" src="/chat/renderer.js"></script>
+</body>
+</html>

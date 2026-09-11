@@ -1,0 +1,621 @@
+{
+  "termos": [
+    {
+      "termo": "barra dos ficheiros abertos",
+      "aliases": [
+        "tabs",
+        "aba dos ficheiros abertos",
+        "barra superior",
+        "nomes dos ficheiros abertos",
+        "ws-top-bar"
+      ],
+      "identificador": "#ws-top-bar",
+      "descricao": "Barra superior do workspace que lista os ficheiros abertos",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1207
+      }
+    },
+    {
+      "termo": "janela dos ficheiros",
+      "aliases": [
+        "doc dos ficheiros",
+        "painel de ficheiros",
+        "explorer",
+        "arvore de ficheiros",
+        "explorer-view"
+      ],
+      "identificador": "#explorer-view",
+      "descricao": "Janela/painel do workspace que mostra a arvore de ficheiros",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1262
+      }
+    },
+    {
+      "termo": "janela do log da sessao",
+      "aliases": [
+        "log da sessao",
+        "painel do log",
+        "logs da sessao",
+        "panel-log-session"
+      ],
+      "identificador": "#panel-log-session",
+      "descricao": "Primeira janela do dock, mostra os logs da sessao atual",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1250
+      }
+    },
+    {
+      "termo": "dock das janelas",
+      "aliases": [
+        "dock",
+        "log-dock",
+        "janela do log"
+      ],
+      "identificador": "#log-dock",
+      "descricao": "Container do dock que agrupa as janelas de log/arquivos/codigo",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1249
+      }
+    },
+    {
+      "termo": "janela de arquivos",
+      "aliases": [
+        "coluna de arquivos",
+        "col 2",
+        "panel-col-2",
+        "segunda janela"
+      ],
+      "identificador": "#panel-col-2",
+      "descricao": "Segunda coluna do dock, mostra os arquivos editados da sessao",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1015
+      }
+    },
+    {
+      "termo": "janela de codigo",
+      "aliases": [
+        "terceira janela",
+        "col 3",
+        "panel-col-3",
+        "janela do editor",
+        "codigo substituido"
+      ],
+      "identificador": "#panel-col-3",
+      "descricao": "Terceira coluna do dock, mostra o codigo/editor",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1045
+      }
+    },
+    {
+      "termo": "menu lateral do historico",
+      "aliases": [
+        "historico",
+        "menu lateral",
+        "sliding-panel-container",
+        "painel de historico"
+      ],
+      "identificador": "#sliding-panel-container",
+      "descricao": "Overlay deslizante do historico de sessoes",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 975
+      }
+    },
+    {
+      "termo": "terminal",
+      "aliases": [
+        "modo terminal",
+        "terminal-mode",
+        "janela do terminal",
+        "term-log"
+      ],
+      "identificador": "#terminal-mode",
+      "descricao": "Modo terminal do workspace (janela de comandos)",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1188
+      }
+    },
+    {
+      "termo": "campo de mensagem",
+      "aliases": [
+        "input",
+        "caixa de texto",
+        "textarea",
+        "input-text",
+        "digite seu comando"
+      ],
+      "identificador": "#input-text",
+      "descricao": "Campo onde o usuario digita a mensagem para a IA",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1166
+      }
+    },
+    {
+      "termo": "lixeira",
+      "aliases": [
+        "botao da lixeira",
+        "btn-trash",
+        "janela da lixeira",
+        "trash-view"
+      ],
+      "identificador": "#btn-trash",
+      "descricao": "Botao que abre/fecha a janela da lixeira no explorer",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1272
+      }
+    },
+    {
+      "termo": "mover dock",
+      "aliases": [
+        "mover dock para direita",
+        "btn-dock-right",
+        "dock vertical",
+        "dock a direita",
+        "dock na lateral",
+        "formato vertical do dock",
+        "doc vertical",
+        "doc horizontal",
+        "doc a direita",
+        "doc em baixo",
+        "dock em baixo",
+        "formato horizontal do dock"
+      ],
+      "identificador": "#btn-dock-right",
+      "descricao": "Botao que alterna o dock entre inferior (dock-bottom, padrao, formato horizontal) e lateral direita (dock-right, formato vertical). applyDockLayout (src/frontend/js/editor/workspace.js:208) aplica as classes dock-right/dock-bottom no #editor-panel, no modo direita o eixo redimensionavel passa de height para WIDTH (applyExplorerSize) e o explorer entra em modo arvore (applyFilesLayout remove a classe files-vertical). O layout do Monaco e diferido com setTimeout(layoutAllEditors, DOCK_ANIM_MS) porque a row tem transition de width/height de 0.4s. Estado persistido em localStorage (chave axio-dock-prefs) por persistDockPrefs/initDockPrefs.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 441
+      }
+    },
+    {
+      "termo": "editor de codigo",
+      "aliases": [
+        "modo editor",
+        "icone do editor",
+        "janela do editor de codigo",
+        "btn-editor"
+      ],
+      "identificador": "#btn-editor",
+      "descricao": "Icone/botao da sidebar que abre o editor de codigo (Monaco)",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1145
+      }
+    },
+    {
+      "termo": "modo inspecionar",
+      "aliases": [
+        "inspecionar",
+        "inspecao visual",
+        "mira",
+        "modo inspetor",
+        "btn-inspect"
+      ],
+      "identificador": "#btn-inspect",
+      "descricao": "Icone/botao da sidebar que ativa o modo inspecionar (identificar elementos)",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1148
+      }
+    },
+    {
+      "termo": "janela do monaco",
+      "aliases": [
+        "monaco",
+        "area do monaco",
+        "editor monaco",
+        "editor-host",
+        "view-lines"
+      ],
+      "identificador": "#editor-host",
+      "descricao": "Area onde o editor Monaco renderiza o codigo",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1291
+      }
+    },
+    {
+      "termo": "busca nas conversas",
+      "aliases": [
+        "buscar nas conversas",
+        "pesquisa no historico",
+        "lupa do historico",
+        "btn-history-search",
+        "history-search-results",
+        "history-logs-wrapper"
+      ],
+      "identificador": "#btn-history-search",
+      "descricao": "Botao que abre a busca nas conversas do historico",
+      "localizacao": {
+        "arquivo": "index.html",
+        "linha": 1051
+      }
+    },
+    {
+      "termo": "status",
+      "aliases": [
+        "label de status",
+        "mensagem de status",
+        "barra de status",
+        "texto de status",
+        "status da barra"
+      ],
+      "identificador": "#lbl-status",
+      "descricao": "Label que exibe o status atual da IA no rodape (ex: Processando..., Pensando..., Navegando...).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 316
+      }
+    },
+    {
+      "termo": "botão de enviar",
+      "aliases": [
+        "botao de enviar",
+        "botao de parar",
+        "botao de pausar",
+        "botao de interromper",
+        "botao stop",
+        "botao pause",
+        "btn-send",
+        "botao de mandar mensagem"
+      ],
+      "identificador": "#btn-send",
+      "descricao": "Botao que alterna entre enviar mensagem e parar/interromper a geracao (vira pause/stop durante a resposta)",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 306
+      }
+    },
+    {
+      "termo": "olhinho",
+      "aliases": [
+        "mostrar chaves",
+        "revelar chaves",
+        "ocultar chaves",
+        "btn-reveal-keys",
+        "botao do olho"
+      ],
+      "identificador": "#btn-reveal-keys",
+      "descricao": "Botao com icone de olho nas Configuracoes que alterna entre mostrar (olho aberto) e ocultar (olho riscado) as chaves de API dos inputs.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 550
+      }
+    },
+    {
+      "termo": "card do contexto",
+      "aliases": [
+        "popup do contexto",
+        "card de contexto",
+        "context-usage-popup",
+        "janela de contexto",
+        "barra de tokens"
+      ],
+      "identificador": "#context-usage-popup",
+      "descricao": "Balão/popup que exibe as barras de uso de contexto (memória da rodada atual e acumulada), com botão de zerar memória",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 228
+      }
+    },
+    {
+      "termo": "card de informação das configurações",
+      "aliases": [
+        "card informativo",
+        "info das apis",
+        "tutorial das chaves",
+        "settings-info-text"
+      ],
+      "identificador": ".settings-info-text",
+      "descricao": "Cards de texto informativo (ícone \"i\") das chaves de API que expandem suavemente no modal de configurações",
+      "localizacao": {
+        "arquivo": "src/frontend/style.css",
+        "linha": 2033
+      }
+    },
+    {
+      "termo": "chain of thought",
+      "aliases": [
+        "pensamentos da ia",
+        "ver raciocínio",
+        "botão de pensamentos",
+        "btn-show-thoughts"
+      ],
+      "identificador": "#btn-show-thoughts",
+      "descricao": "Botão que expande a coluna 3 para mostrar o raciocínio (Chain of Thought) da IA",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 121
+      }
+    },
+    {
+      "termo": "reiniciar o back (backend)",
+      "aliases": [
+        "reiniciar backend",
+        "restart do back",
+        "reiniciar o servidor python",
+        "reiniciar o flask"
+      ],
+      "identificador": "restartFlask",
+      "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False.",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 212
+      }
+    },
+    {
+      "termo": "lista da lixeira",
+      "aliases": [
+        "itens da lixeira",
+        "conteudo da lixeira",
+        "trash-list",
+        "lista de ficheiros apagados"
+      ],
+      "identificador": "#trash-list",
+      "descricao": "Container que lista os itens apagados dentro do painel da lixeira (distinto do botao #btn-trash)",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 454
+      }
+    },
+    {
+      "termo": "checklist estrutural",
+      "aliases": [
+        "aviso de função nova",
+        "aviso de função removida",
+        "checklist de redundância",
+        "gate de duplicação",
+        "aviso que aparece quando crio função"
+      ],
+      "identificador": "aviso_estrutural_pos_edicao",
+      "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
+      "localizacao": {
+        "arquivo": "src/backend/tools/syntax.py",
+        "linha": 150
+      }
+    },
+    {
+      "termo": "janela do chat",
+      "aliases": [
+        "chat",
+        "painel do chat",
+        "volta pro chat",
+        "tela do chat",
+        "chat-mode"
+      ],
+      "identificador": "#chat-mode",
+      "descricao": "Lado esquerdo do workspace que mostra as mensagens do usuario e o input da IA (alterna com #terminal-mode)",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 216
+      }
+    },
+    {
+      "termo": "input do terminal",
+      "aliases": [
+        "campo do terminal",
+        "prompt do terminal",
+        "caixa do terminal",
+        "input do prompt"
+      ],
+      "identificador": "#term-input",
+      "descricao": "Campo de texto no rodape do modo terminal (placeholder \"Prompt...\") usado para enviar comandos ao PTY",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 347
+      }
+    },
+    {
+      "termo": "tracinho do terminal",
+      "aliases": [
+        "tracinho",
+        "cursor do terminal",
+        "cursor piscando",
+        "o tracinho que diz para digitar",
+        "tracinho preto"
+      ],
+      "identificador": "corDeFundoTerminal (theme.cursor)",
+      "descricao": "Cursor/caret do terminal xterm. Como a digitacao esta desligada (disableStdin), o cursor e escondido pintando-o com a cor de fundo real do painel (getComputedStyle subindo os ancestrais), porque o xterm 6.0.0 IGNORA o alpha (\"rgba(0,0,0,0)\" vira PRETO opaco).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/xterm.js",
+        "linha": 24
+      }
+    },
+    {
+      "termo": "barra de rolagem do terminal",
+      "aliases": [
+        "scrollbar do terminal",
+        "scroll bar do terminal",
+        "barra de rolagem",
+        "scroll do terminal"
+      ],
+      "identificador": "#term-log .xterm-scrollable-element > .scrollbar > .slider",
+      "descricao": "Scrollbar do terminal xterm 6: nao e a nativa, e a custom do VS Code (SmoothScrollableElement) de 14px; width/background/border-radius forcados no style.css",
+      "localizacao": {
+        "arquivo": "src/frontend/style.css",
+        "linha": 918
+      }
+    },
+    {
+      "termo": "rolagem suave do terminal",
+      "aliases": [
+        "rolagem suave",
+        "scroll suave",
+        "scroll suave do terminal",
+        "rolagem do terminal suave",
+        "animacao de rolagem do terminal"
+      ],
+      "identificador": "smoothScrollDuration",
+      "descricao": "Opcao nativa do xterm (ms) que anima a rolagem; usada com 125 para casar a sensacao do smoothScrolling do Monaco. Nome difere do Monaco: no xterm e smoothScrollDuration, nao smoothScrolling.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/xterm.js",
+        "linha": 154
+      }
+    },
+    {
+      "termo": "copiar texto do terminal",
+      "aliases": [
+        "ctrl c no terminal",
+        "copiar do terminal",
+        "copiar texto do cmd",
+        "atalho de copia do terminal",
+        "colar no terminal"
+      ],
+      "identificador": "tratarAtalhoTerminal",
+      "descricao": "Handler de Ctrl+C/Ctrl+V do terminal. Registrado com document.addEventListener(..., true) em CAPTURE porque o xterm cancela (preventDefault+stopPropagation) o ctrl+c na fase de bolha. Ctrl+C copia a selecao (termGetSelection + copiarTexto); Ctrl+V cola no #term-input (colarNoInputText).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal.js",
+        "linha": 145
+      }
+    },
+    {
+      "termo": "tipo do terminal",
+      "aliases": [
+        "tipo de terminal",
+        "qual terminal",
+        "shell ativo",
+        "terminal ativo",
+        "tipo do shell"
+      ],
+      "identificador": "detectar_shell",
+      "descricao": "Descobre o shell ativo do painel (cmd/powershell/pwsh/bash): prefere terminal_shell em RAM (escolha do dropdown), senao AXIO_TERM_SHELL, senao a preferencia persistida em data/settings.json, senao pwsh>powershell>cmd. As ferramentas (tool_executar_processo) NAO usam este shell: correm via cmd.exe (subprocess shell=True).",
+      "localizacao": {
+        "arquivo": "src/backend/services/process_manager.py",
+        "linha": 45
+      }
+    },
+    {
+      "termo": "redimensionar o explorer",
+      "aliases": [
+        "arrastar a janela do explorer",
+        "aumentar a altura do explorer",
+        "barra de redimensionar",
+        "resizer do explorer",
+        "redimensionar a janela do explorer",
+        "arrastar pra cima a janela do explorer"
+      ],
+      "identificador": "#explorer-resizer",
+      "descricao": "Barra horizontal (4px, cursor row-resize) que redimensiona a altura do explorer/dock. Handler initExplorerResizer (src/frontend/js/editor/workspace.js:~253) -> applyExplorerSize (#dock-bottom-row).className resizing desliga a transition de height durante o arrasto.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 394
+      }
+    },
+    {
+      "termo": "restrição de não digitar no terminal",
+      "aliases": [
+        "digitação desligada no terminal",
+        "não consigo digitar no terminal",
+        "terminal só leitura",
+        "trava de digitação do terminal"
+      ],
+      "identificador": "disableStdin",
+      "descricao": "Opção do xterm (disableStdin: true) que impede a digitação direta no terminal. O usuário escreve no #term-input e o comando é enviado por socket (pty:input). NÃO é a causa do Ctrl+C/Ctrl+V: a cópia usa termGetSelection() e a colagem usa o clipboard do Electron.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/xterm.js",
+        "linha": 142
+      }
+    },
+    {
+      "termo": "olhinho do modo foco",
+      "aliases": [
+        "olho do diff",
+        "olhinho do log",
+        "olhinho da janela de arquivos",
+        "icone de olho do diff",
+        "olhinho do diff"
+      ],
+      "identificador": "#btn-eye-diff",
+      "descricao": "Botao de olho no header da janela de arquivos (#panel-col-2) que alterna o modo foco (exibir apenas os trechos alterados do diff). Só aparece quando o conteudo mostrado é um diff. NAO confundir com o \"olhinho\" das Configuracoes (#btn-reveal-keys).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 126
+      }
+    },
+    {
+      "termo": "x de fechar os arquivos",
+      "aliases": [
+        "x da janela de arquivos",
+        "x de fechar a aba de arquivos",
+        "x do panel-col-2"
+      ],
+      "identificador": "#btn-close-col-2",
+      "descricao": "Botao X do header de #panel-col-2. So aparece dentro do #log-dock e fica oculto em DUAS situacoes equivalentes: (a) ha card de ficheiro selecionado (.file-card-selected, posto por marcarFileSelecionado em files.js:156); (b) a vista de ficheiro esta ativa (#btn-undo sem .hidden). Como undo/redo so aparecem com a vista de ficheiro ativa, o X nunca coexiste com eles. O X e o grupo undo/label/redo/label vivem no MESMO container direito (flex shrink-0) -> undo/redo ficam sempre justificados a direita e nao se deslocam quando o olhinho (#btn-eye-diff) aparece/some.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 140
+      }
+    },
+    {
+      "termo": "limpar lixeira",
+      "aliases": [
+        "excluir tudo",
+        "esvaziar lixeira",
+        "limpar tudo da lixeira",
+        "apagar tudo da lixeira"
+      ],
+      "identificador": "doPurgeTrash / setLimpezaLixeira",
+      "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/editor.js",
+        "linha": 566
+      }
+    },
+    {
+      "termo": "barra da memoria da sessao",
+      "aliases": [
+        "barra do contexto",
+        "barra azul do contexto",
+        "context-sessao-fill",
+        "barra da memoria da rodada",
+        "barra de uso da sessao"
+      ],
+      "identificador": "#context-sessao-fill",
+      "descricao": "Barra horizontal (6px, scaleX) da \"Memoria da rodada atual\" dentro do popup do contexto. A cor deixa de ser fixa azul: e aplicada em runtime por aplicarCorBarraContexto (src/frontend/js/chat/messages.js:19) usando corDeUsoContexto (messages.js:12) - oliva <60%, ambar 60-85%, vermelho >=85%, azul durante execucao -, os mesmos limiares do anel #context-usage-fill.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 237
+      }
+    },
+    {
+      "termo": "anel do contexto",
+      "aliases": [
+        "barra do spinner",
+        "circulo do contexto",
+        "spinner do contexto",
+        "context-usage-fill",
+        "anel de tokens"
+      ],
+      "identificador": "#context-usage-fill",
+      "descricao": "Circulo SVG (stroke-dasharray 100) que mostra o uso do contexto no botao do card. Cor definida no handler context_usage (src/frontend/js/chat/messages.js:604) via corDeUsoContexto.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 202
+      }
+    },
+    {
+      "termo": "botao de pergunta e resposta",
+      "aliases": [
+        "botao da pergunta",
+        "icone da pergunta",
+        "ver pergunta e resposta",
+        "btn-show-question"
+      ],
+      "identificador": "#btn-show-question",
+      "descricao": "Botao do header de #panel-col-2 que mostra o painel da pergunta/resposta na coluna 3. Estado ativo e hover usam a cor verde --oliva (igual a #btn-show-tools e #btn-eye-diff); a cor antiga --ambar-pergunta foi removida do projeto.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 117
+      }
+    }
+  ]
+}

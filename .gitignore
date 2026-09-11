@@ -1,11 +1,9 @@
-Set-Content .gitignore @"
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 .venv/
-.gitignore
 
 # Environment
 .env
@@ -33,11 +31,18 @@ node_modules/
 out/
 
 # Custom
-
+.axio/
 .ai_memory/
-chats/
 CANVAS/
 BACKUP/
 teste/
-"@
+busca.txt
+data/entities.json
+data/mempalace.yaml
+
 emerald-caster-473903-q9-357e5f7ca06d.json
+majestic-voice-506608-a2-7d0e60699f7d.json
+
+# Credenciais gerenciadas pelo modal de Configurações
+data/settings.json
+data/vertex_credentials.json
