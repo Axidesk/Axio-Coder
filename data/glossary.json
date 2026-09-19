@@ -3875,6 +3875,22 @@
           11756
         ]
       }
+    },
+    {
+      "termo": "deixar a imagem pronta pro git",
+      "aliases": [
+        "preparar a captura",
+        "recortar o print",
+        "reduzir a imagem do readme",
+        "imagem da pasta institucional pro repositorio",
+        "tirar o espaco vazio da captura"
+      ],
+      "identificador": "tool_preparar_captura",
+      "descricao": "Prepara uma captura de ecra para publicar: sem 'destino' devolve o mapa de atividade (grelha que mostra onde esta o conteudo aceso e onde a imagem e lisa), e com 'destino' recorta por 'caixa' (x,y,largura,altura da origem), reduz a 'largura' maxima e grava dentro do projeto. A origem pode estar fora dele (a pasta institucional); a escrita, nao. Servico em src/backend/services/capturas.py.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/vision.py",
+        "linha": 431
+      }
     }
   ]
 }

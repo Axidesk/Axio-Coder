@@ -17,6 +17,7 @@ from PIL import ImageGrab
 from src.backend.geometry.vista import EXTENSOES_MODELO, de_ficheiro, desenhar, vistas_do_pedido
 from src.backend.state import caminho_estado_projeto, emit_event, estado
 from src.backend.tools.registry import register
+from src.backend.services.capturas import mapa_de_atividade, preparar_captura
 from src.backend.services.file_service import resolver_caminho
 from src.backend.services.imagem import (
     TOKENS_POR_IMAGEM,
@@ -389,6 +390,93 @@ def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_c
     else:
         resultado["imagens"] = imagens
     return resultado
+
+
+@register(
+    "tool_preparar_captura",
+    "Prepara uma captura de ecra para publicar (README, documentacao, repositorio): diz ONDE esta o "
+    "conteudo da imagem e grava a versao final, recortada e reduzida. Sem 'destino' so mede - e esse "
+    "o primeiro passo, porque o mapa de atividade mostra o que esta aceso e o que e espaco vazio, em "
+    "vez de se recortar as cegas. Com 'destino' recorta por 'caixa' e grava. So ESCREVE dentro do "
+    "projeto: a origem pode estar fora (ex: a pasta institucional), o destino nao.",
+    {
+        "origem": {
+            "tipo": "STRING",
+            "obrig": True,
+            "padrao": "",
+            "desc": "Imagem de partida (png, jpg), no projeto ou fora dele.",
+        },
+        "destino": {
+            "tipo": "STRING",
+            "desc": "Caminho de destino DENTRO do projeto (ex: docs/interface/preview.jpg). Vazio = so medir, nao grava nada.",
+            "padrao": "",
+        },
+        "caixa": {
+            "tipo": "STRING",
+            "desc": "Recorte 'x,y,largura,altura' em pixels da ORIGEM (ex: '900,0,2931,1000'). Vazio = a imagem inteira.",
+            "padrao": "",
+        },
+        "largura": {
+            "tipo": "INTEGER",
+            "desc": "Largura maxima do ficheiro gravado: so reduz, nunca aumenta.",
+            "padrao": 1920,
+        },
+        "qualidade": {
+            "tipo": "INTEGER",
+            "desc": "Qualidade do JPEG (1-95); ignorada quando o destino e .png.",
+            "padrao": 86,
+        },
+    },
+)
+def tool_preparar_captura(origem, destino="", caixa="", largura=1920, qualidade=86):
+    emit_event("executing", function=f"Preparando captura: {origem}")
+    caminho_origem, erro = resolver_caminho(origem, permitir_extra=True)
+    if erro:
+        return erro
+    if not os.path.isfile(caminho_origem):
+        return f"ERRO: ficheiro nao encontrado: {origem}"
+    with open(caminho_origem, "rb") as ficheiro:
+        bruto = ficheiro.read()
+    try:
+        mapa = mapa_de_atividade(bruto)
+    except Exception as falha:
+        return f"ERRO: nao foi possivel ler '{origem}' ({falha})."
+    partes = [
+        f"Mapa de atividade de '{origem}': grelha de {mapa['celula']} px, "
+        f"{mapa['colunas']} colunas x {mapa['linhas']} linhas, do liso ao aceso.",
+        mapa["texto"],
+        "Legenda: ' ' e zona lisa (fundo vazio), '@' e a zona com mais conteudo.",
+    ]
+    if not destino:
+        return "\n".join(partes + ["Nada foi gravado: sem 'destino', a ferramenta so mede."])
+    caminho_destino, erro_destino = resolver_caminho(destino, permitir_extra=False,
+                                                     permitir_escrita=True)
+    if erro_destino:
+        return erro_destino
+    recorte = retangulo_da_regiao(caixa) if caixa else None
+    if caixa and not recorte:
+        return "ERRO: 'caixa' tem de ser 'x,y,largura,altura' em pixels (ex: '0,0,2200,520')."
+    try:
+        resultado = preparar_captura(caminho_origem, caminho_destino, recorte, largura, qualidade)
+    except ValueError as fora:
+        return f"ERRO: {fora}."
+    except Exception as falha:
+        return f"ERRO: nao foi possivel gravar '{destino}' ({falha})."
+    largura_origem, altura_origem = resultado["original"]
+    largura_final, altura_final = resultado["final"]
+    resumo = (f"Gravado em {_caminho_legivel(caminho_destino)}: "
+              f"{largura_origem}x{altura_origem} px -> {largura_final}x{altura_final} px, "
+              f"{resultado['bytes'] // 1024} KB.")
+    if recorte:
+        largura_recorte, altura_recorte = resultado["recortada"]
+        resumo += (f" Recorte ({recorte[0]},{recorte[1]})-({recorte[2]},{recorte[3]}) da origem:"
+                   f" ficou com {largura_recorte}x{altura_recorte} px antes da reducao.")
+    else:
+        resumo += " Sem recorte: a imagem inteira."
+    largura_antes_da_reducao = resultado["recortada"][0] if recorte else largura_origem
+    if largura_final == largura_antes_da_reducao:
+        resumo += " A largura pedida nao era menor: ficou no tamanho que tinha."
+    return "\n".join(partes + ["", resumo])
 
 
 def _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar):
