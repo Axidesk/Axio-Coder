@@ -33,9 +33,9 @@ O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a i
 | `paint foguete.jpg` | O Paint com o foguete desenhado e o raciocínio ao lado | `janela-paint.jpg` |
 | `criando desenho paint.jpg` | O Paint com a casa desenhada e a explicação do que falhou antes de sair certo | — |
 | `informacoes do projeto.jpg` | As informações do projeto: stack, dependências e a árvore com os totais | `informacoes-do-projeto.jpg` |
-| `leitura ficheiros arvore.jpg` | A resposta a um memorial com imagens e tabelas | `leitura-de-documento.jpg` |
+| `leitura ficheiros arvore.jpg` | A resposta a um memorial com imagens e tabelas | — |
 | `raciocinio.jpg` | O raciocínio do agente com o log da sessão ao lado | `raciocinio.jpg` |
 | `eureca!.jpg` | O raciocínio do agente a chegar a uma conclusão | — |
 | `Captura de tela 2026-09-01 024505.jpg`, `terminal dinamico.jpg` | Interface antiga, de setembro | substituídas pelas novas |
 
-As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos), reduzidas a 1920 px de largura e — nas duas em que a janela inteira deixava metade da imagem vazia (`notas` e `navegador no preview`) — recortadas à zona que mostra o que o README descreve. Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.
+As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos), reduzidas a 1920 px de largura. Só o `navegador no preview` é recortado: a metade esquerda daquela janela é a conversa vazia, e o texto do cartão do modo inspecionar — que é o que a imagem mostra — ficaria ilegível na largura toda. As outras vão inteiras: um recorte mais apertado chega a cortar listas a meio, e a leitura passa a ser a de um fragmento em vez da de um ecrã. Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.

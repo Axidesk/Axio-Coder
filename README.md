@@ -56,8 +56,6 @@ E cada pasta e ficheiro da árvore ganha uma **etiqueta** com o papel que cumpre
 
 **Lê o que lhe dás.** Documentos com texto, tabelas e imagens são lidos de facto, e cruzados entre si — não resumidos por alto.
 
-![Resposta a um memorial com imagens e tabelas](docs/interface/leitura-de-documento.jpg)
-
 ## O que um computer use faz, por outro caminho
 
 Os assistentes que operam o computador trabalham por captura de ecrã: tiram uma imagem, decidem onde está o botão e clicam na coordenada. É uma capacidade real — e caríssima de treinar, porque o olho que acerta no píxel calibra-se à custa de milhares de ensaios com um veredito automático a dizer se acertou.
