@@ -20,7 +20,9 @@ Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e
 
 **Vê o que constrói.** O preview é um Chromium embutido que o agente opera de verdade: carrega a página, clica, escreve nos campos, lê a consola e os pedidos falhados, extrai o desenho (medidas, cores, fontes) e devolve o mapa de tudo o que lá está. Serve os ficheiros do projeto e a internet, com abas e barra de endereço — e se algo não responde, ele vê o erro em vez de adivinhar.
 
-![O preview a navegar na web, num navegador a sério dentro da janela](docs/interface/preview-navegador.jpg)
+O mesmo olho serve para ti. Com o **modo inspecionar** ligado, passar o rato por qualquer elemento — na página do preview ou na própria interface do Axio — abre o cartão do que ele é: o seletor, a fonte, a cor, as classes e a localização no código (`src/frontend/index.html:487`, com ligação que abre o ficheiro naquela linha). A **descrição** por baixo do nome não é rótulo genérico: sai do glossário do projeto, logo explica aquele elemento naquele projeto. `Tab` anda pelos campos, `Enter` copia o valor (ou abre o ficheiro), `Shift+clique` deixa o clique passar para o elemento e `Esc` sai.
+
+![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/interface/preview-navegador.jpg)
 
 **Lê formatos de engenharia.** IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
 
@@ -40,9 +42,15 @@ Num programa de desenho complexo, o mesmo mecanismo trabalha pelo lado certo —
 
 **Conhece o que está instalado.** Um painel lê o projeto por dentro: as linguagens, as dependências com a versão que está no disco, quantas linhas tem cada pasta e a árvore inteira. Cada pacote é comparado com o registo oficial e ganha um sinal quando está atrás do último publicado — ou quando outro pacote o prende.
 
+E cada pasta e ficheiro da árvore ganha uma **etiqueta** com o papel que cumpre no projeto — `src/backend/routes` vira *endpoints http*, `src/main.js` vira *processo electron*. Quem as escreve é a IA, mas só depois de o motor determinístico medir a árvore, as linguagens e as dependências: ao modelo sobra dar um nome curto ao que já foi medido, a partir do docstring e dos imports. Etiqueta-se apenas o que falta ou mudou — a assinatura de cada nó (data do ficheiro, nomes dos filhos) diz se a etiqueta ainda serve —, a primeira etiquetagem de um projeto é automática e acontece uma só vez, e um olho ao lado do título recolhe a coluna quando não a queres à vista.
+
 ![Informações do projeto: stack, dependências e a árvore com os totais](docs/interface/informacoes-do-projeto.jpg)
 
 **Guarda memória do projeto.** Notas, glossário de termos do utilizador e transcrições de sessões ficam num banco vetorial e são recuperadas por similaridade a cada rodada, com a idade e a origem de cada memória à vista. O glossário é remedido contra o código: aponta para o sítio errado, ele avisa.
+
+**Escreve como falas — o agente traduz.** O caderno do projeto são várias notas em abas, gravadas por projeto, para apontar o que se quer sem saber o nome de nada. Ao lado do título está a varinha: ela pega no texto selecionado (ou na nota inteira) e o agente **vai consultar o código** — árvore, assinaturas, pesquisa, índice semântico — para devolver o mesmo pedido reescrito no vocabulário do projeto, com os nomes reais de funções, ficheiros e ids no lugar das descrições leigas. O glossário e o retrato do projeto vão à frente, para ele ter de procurar cada vez menos; e o texto volta marcado como reescrito pelo agente, para não haver dúvida sobre quem o escreveu.
+
+![Notas do projeto em abas, com a varinha ao lado do título](docs/interface/notas.jpg)
 
 **Guarda as tuas credenciais.** Um cofre único, fora do repositório, com identidade, contas e chaves de API. Um segredo pode ser usado sem entrar no contexto da conversa: escreve-se `{{cofre:id.campo}}` e o valor é trocado no instante de escrever no ecrã.
 

@@ -26,7 +26,8 @@ O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a i
 |---|---|---|
 | `historico.jpg` | O histórico das sessões com o diff lado a lado e o log em baixo | `historico.jpg` (capa) |
 | `plano.jpg` | O plano da tarefa em curso, com as etapas a serem riscadas | `plano-visual.jpg` |
-| `navegador no preview.jpg` | O preview a navegar na web, com abas e barra de endereço | `preview-navegador.jpg` |
+| `navegador no preview.jpg` | O preview a navegar na web (abas e barra de endereço) com o **modo inspecionar** ligado: o cartão do elemento ao lado, com nome, descrição do glossário, fonte, cor, classes e localização no código | `preview-navegador.jpg` |
+| `notas.jpg` | As abas do caderno de notas — cada assunto na sua nota — com a varinha ao lado do título, e o painel das informações do projeto ao lado | `notas.jpg` |
 | `vista ifc.jpg` | O modelo IFC da árvore, gerado pelo agente, aberto no visualizador | `visualizador-ifc.jpg` |
 | `cards.jpg` | O terminal em modo cards, cada comando no seu cartão | `terminal-cards.jpg` |
 | `paint foguete.jpg` | O Paint com o foguete desenhado e o raciocínio ao lado | `janela-paint.jpg` |
@@ -37,4 +38,4 @@ O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a i
 | `eureca!.jpg` | O raciocínio do agente a chegar a uma conclusão | — |
 | `Captura de tela 2026-09-01 024505.jpg`, `terminal dinamico.jpg` | Interface antiga, de setembro | substituídas pelas novas |
 
-As capturas usadas no README estão copiadas para `coder/docs/interface/`, reduzidas a 1920 px de largura (nomes em minúsculas, sem acentos). Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.
+As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos), reduzidas a 1920 px de largura e — nas duas em que a janela inteira deixava metade da imagem vazia (`notas` e `navegador no preview`) — recortadas à zona que mostra o que o README descreve. Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.
