@@ -802,10 +802,10 @@
       "descricao": "Decide que executaveis tool_executar_processo pode correr. Um conjunto de constantes de familia perto do topo do ficheiro (linha ~120): linguagens, gestores de pacotes (npm/yarn/pnpm/bun/deno/npx, pip/uv/poetry/pipx), compiladores, linters/testes (pytest/ruff/mypy/eslint/vite/tsc/electron...), git/nuvem/contentores, midia, rede (curl/netstat), tasklist/taskkill, sqlite3, tar/zip. FICAM DE FORA: shells (powershell/pwsh/cmd/bash/wsl), administracao do sistema (reg/winget/choco/schtasks) e o que apaga sem undo (del/rm). A familia npm e restrita por subcomando - `publish` nunca. NAO e fronteira de seguranca: tool_executar_python/executar_js correm codigo arbitrario sem passar por aqui; e um travao ergonomico. E so trava as MINHAS chamadas - routes/terminal.py:163 (iniciar_processo) nao passa por aqui, logo nunca bloqueia o utilizador. Desde 2026-09-19 tem tres pecas novas: FERRAMENTA_NATIVA (comando -> ferramenta nativa, fonte unica tambem usada por tool_executar_comando), ferramenta_nativa_do_comando (anexa \"Use: <ferramenta>.\" as recusas; python -c -> tool_executar_python, node -e -> tool_executar_js) e comando_destrutivo + COMANDOS_DESTRUTIVOS, que recusa 13 padroes irreversiveis (git reset --hard, git clean -f/-d/-x, git checkout/restore ., git push --force, git branch -D, rm -rf, del /s, rmdir /s, format X:, shutdown, docker prune, taskkill /F /IM). NAO confundir com comando_inicia_axio (src/backend/services/process_manager.py:15), que e outra lista, so para recusar arrancar um segundo Axio na raiz.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 167,
+        "linha": 168,
         "conferido": [
-          1789845122.694,
-          31105
+          1789845516.795,
+          30690
         ]
       }
     },
@@ -959,8 +959,8 @@
         "arquivo": "src/backend/services/file_service.py",
         "linha": 585,
         "conferido": [
-          1789500538.939,
-          31804
+          1789845800.272,
+          31824
         ]
       }
     },
@@ -1166,10 +1166,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1368,
+        "linha": 1362,
         "conferido": [
-          1789783019.412,
-          62088
+          1789845519.183,
+          61867
         ]
       }
     },
@@ -2237,8 +2237,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 973,
         "conferido": [
-          1789783019.412,
-          62088
+          1789845519.183,
+          61867
         ]
       }
     },
@@ -2318,10 +2318,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 299,
+        "linha": 300,
         "conferido": [
-          1789845122.694,
-          31105
+          1789845516.795,
+          30690
         ]
       }
     },
@@ -3831,6 +3831,29 @@
         "conferido": [
           1789840669.457,
           15654
+        ]
+      }
+    },
+    {
+      "termo": "manda pro git",
+      "aliases": [
+        "versiona",
+        "versiona tudo",
+        "sincroniza o repositorio",
+        "subir pro github",
+        "commitar",
+        "commit e push",
+        "mandar pro git",
+        "estado do git"
+      ],
+      "identificador": "tool_estado_git",
+      "descricao": "Retrato do repositorio numa so chamada: branch e remoto, ultimo commit, tags com o commit que apontam, o que esta em stage e o que mudou fora dele. Leitura apenas; o add/commit/push continuam pelo tool_executar_processo.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/git.py",
+        "linha": 110,
+        "conferido": [
+          1789845830.714,
+          4802
         ]
       }
     }

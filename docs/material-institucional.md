@@ -20,14 +20,21 @@ Total: cerca de 598 MB.
 
 ## Capturas
 
+O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a interface anterior saíram do repositório.
+
 | Ficheiro | O que mostra | Usada no README do projeto como |
 |---|---|---|
-| `Captura de tela 2026-09-01 024505.jpg` | Árvore de ficheiros, histórico de sessões e editor | `interface-historico.jpg` (capa) |
+| `historico.jpg` | O histórico das sessões com o diff lado a lado e o log em baixo | `historico.jpg` (capa) |
 | `plano.jpg` | O plano da tarefa em curso, com as etapas a serem riscadas | `plano-visual.jpg` |
-| `terminal dinamico.jpg` | O terminal em modo cards, cada comando no seu cartão | `terminal-cards.jpg` |
+| `navegador no preview.jpg` | O preview a navegar na web, com abas e barra de endereço | `preview-navegador.jpg` |
+| `vista ifc.jpg` | O modelo IFC da árvore, gerado pelo agente, aberto no visualizador | `visualizador-ifc.jpg` |
+| `cards.jpg` | O terminal em modo cards, cada comando no seu cartão | `terminal-cards.jpg` |
 | `paint foguete.jpg` | O Paint com o foguete desenhado e o raciocínio ao lado | `janela-paint.jpg` |
 | `criando desenho paint.jpg` | O Paint com a casa desenhada e a explicação do que falhou antes de sair certo | — |
+| `informacoes do projeto.jpg` | As informações do projeto: stack, dependências e a árvore com os totais | `informacoes-do-projeto.jpg` |
 | `leitura ficheiros arvore.jpg` | A resposta a um memorial com imagens e tabelas | `leitura-de-documento.jpg` |
-| `eureca!.jpg` | O raciocínio do agente a chegar a uma conclusão | `raciocinio.jpg` |
+| `raciocinio.jpg` | O raciocínio do agente com o log da sessão ao lado | `raciocinio.jpg` |
+| `eureca!.jpg` | O raciocínio do agente a chegar a uma conclusão | — |
+| `Captura de tela 2026-09-01 024505.jpg`, `terminal dinamico.jpg` | Interface antiga, de setembro | substituídas pelas novas |
 
-As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos). Os originais ficam aqui, com os nomes de origem.
+As capturas usadas no README estão copiadas para `coder/docs/interface/`, reduzidas a 1920 px de largura (nomes em minúsculas, sem acentos). Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.

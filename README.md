@@ -4,7 +4,9 @@ Agente de programação que vive dentro do próprio IDE: lê e edita código, co
 
 Não é um chat com uma caixa de texto ao lado do código. É uma janela de trabalho onde o agente e o utilizador mexem no mesmo projeto, com as ações dele à vista — o ficheiro que abre, o comando que corre, a página que inspeciona, o raciocínio que faz.
 
-![Árvore de ficheiros, histórico de sessões e editor](docs/interface/interface-historico.jpg)
+**A atualização que o VS Code nunca teve.** Imagine criar software completo com um único comando — o Axio Coder foi construído por um arquiteto exatamente para isso, e pensado também para quem nunca escreveu um `hello world`. Descreva o que quer, sem escrever código. **Imagine. E o Axio executa.**
+
+![Árvore de ficheiros, histórico de sessões com o diff e o editor](docs/interface/historico.jpg)
 
 ## O que ele faz
 
@@ -12,13 +14,13 @@ Não é um chat com uma caixa de texto ao lado do código. É uma janela de trab
 
 ![Plano da tarefa em curso](docs/interface/plano-visual.jpg)
 
-**Vê o que constrói.** O preview é um Chromium embutido que o agente opera de verdade: carrega a página, clica, escreve nos campos, lê a consola e os pedidos falhados, extrai o desenho (medidas, cores, fontes) e devolve o mapa de tudo o que lá está. Se algo não responde, ele vê o erro em vez de adivinhar.
+**Vê o que constrói.** O preview é um Chromium embutido que o agente opera de verdade: carrega a página, clica, escreve nos campos, lê a consola e os pedidos falhados, extrai o desenho (medidas, cores, fontes) e devolve o mapa de tudo o que lá está. Serve os ficheiros do projeto e a internet, com abas e barra de endereço — e se algo não responde, ele vê o erro em vez de adivinhar.
 
-![Página a correr no preview, com o editor ao lado](docs/interface/preview.jpg)
+![O preview a navegar na web, num navegador a sério dentro da janela](docs/interface/preview-navegador.jpg)
 
-**Lê formatos de engenharia.** IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas.
+**Lê formatos de engenharia.** IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
 
-![Visualizador de IFC, DXF, planilha, documento e apresentação](docs/interface/visualizador.jpg)
+![Modelo IFC gerado pelo agente, aberto no visualizador](docs/interface/visualizador-ifc.jpg)
 
 **Corre processos e terminais.** Servidores, instalações e comandos longos correm em segundo plano, cada um no seu cartão, com a saída acompanhada em tempo real — e um terminal PTY interativo com suporte a ConPTY.
 
@@ -31,6 +33,10 @@ Não é um chat com uma caixa de texto ao lado do código. É uma janela de trab
 Num programa de desenho complexo, o mesmo mecanismo trabalha pelo lado certo — a cena abaixo foi montada no GIMP por script, com o agente a ler a imagem de volta para conferir o resultado:
 
 ![Agente a compor no GIMP](docs/interface/gimp.jpg)
+
+**Conhece o que está instalado.** Um painel lê o projeto por dentro: as linguagens, as dependências com a versão que está no disco, quantas linhas tem cada pasta e a árvore inteira. Cada pacote é comparado com o registo oficial e ganha um sinal quando está atrás do último publicado — ou quando outro pacote o prende.
+
+![Informações do projeto: stack, dependências e a árvore com os totais](docs/interface/informacoes-do-projeto.jpg)
 
 **Guarda memória do projeto.** Notas, glossário de termos do utilizador e transcrições de sessões ficam num banco vetorial e são recuperadas por similaridade a cada rodada, com a idade e a origem de cada memória à vista. O glossário é remedido contra o código: aponta para o sítio errado, ele avisa.
 
@@ -109,15 +115,3 @@ coder/
 └── gerados/                  o que o agente produz, em pastas por assunto
 ```
 
-## O que fica fora do repositório
-
-O código está todo aqui. O que **não** entra é o que se reproduz ou é teu:
-
-- `.env`, `data/settings.json`, `data/cofre.json`, `data/vertex_credentials.json` — segredos.
-- `.axio/` — logs e transcrições das sessões.
-- `data/cache_modelos/` e `src/frontend/vendor/viewer/dist/` — caches e builds, regeneráveis.
-- `gerados/` — os modelos e documentos que o agente produz; vivem no disco, em pastas por assunto.
-
-## Demonstração
-
-Os vídeos de demonstração (refatoração de um módulo de 5 mil linhas, desenho no Paint e no GIMP, interação com o preview, visualização de IFC) são ficheiros grandes e vivem fora do repositório, na pasta institucional do projeto.
