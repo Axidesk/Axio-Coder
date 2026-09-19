@@ -560,6 +560,13 @@
         </button>
     </div>
 
+    <div id="chat-context-menu" class="balao fixed z-[90] w-60 rounded-lg py-1">
+        <button id="chat-ctx-clear" type="button" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left disabled:opacity-40 disabled:pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Limpar conversa
+        </button>
+    </div>
+
     <div id="titulo-menu" class="balao fixed z-[95] w-56 rounded-lg py-1"></div>
 
     <div id="fs-confirm-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[80] flex justify-center items-center p-6">
@@ -616,7 +623,7 @@
     </div>
 
     <div id="settings-modal" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[55] flex justify-center items-center p-6">
-        <div id="settings-modal-content" class="bg-[var(--bg-panel)] rounded-2xl shadow-[var(--sombra-card)] w-full max-w-3xl h-[540px] flex overflow-hidden transform scale-95 transition-transform duration-[var(--dur-7)]">
+        <div id="settings-modal-content" class="bg-[var(--bg-panel)] rounded-2xl shadow-[var(--sombra-card)] flex overflow-hidden transform scale-95 transition-transform duration-[var(--dur-7)]">
             <aside class="w-56 shrink-0 bg-[var(--bg-panel-2)] flex flex-col">
                 <div class="px-5 pt-[18px] flex items-start justify-between">
                     <h2 class="text-base font-semibold text-[var(--text)]">Configurações</h2>

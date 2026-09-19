@@ -42,6 +42,7 @@ export {
   sendMessage,
   startSSE,
   addMessage,
+  limparConversa,
   formatMessage,
   formatInline,
   formatInlineText,
@@ -407,12 +408,7 @@ async function tratar_context_usage(data) {
 }
 async function tratar_context_limit(data) {
     if (contextInfoLimite && data.limite) contextInfoLimite.textContent = _textoDoTeto(data.limite);
-    if (lblStatus) {
-        const razao = data.motivo ? ' · ' + data.motivo : '';
-        lblStatus.innerHTML = 'Teto de contexto: <span class="text-[var(--oliva)]">' +
-            escapeHtml(_fmtTokens(data.anterior) + ' -> ' + _fmtTokens(data.limite)) + ' tokens</span>' +
-            escapeHtml(razao);
-    }
+    if (lblStatus) lblStatus.textContent = 'Memória da rodada reajustada.';
     if (contextUsage) {
         contextUsage.classList.remove('context-usage-limite');
         void contextUsage.offsetWidth;
@@ -822,6 +818,32 @@ function resetEstadoDoTurno() {
         }
         return msgDiv;
     }
+
+    const SAIDA_CONVERSA = 300;
+
+    function limparConversa() {
+        const paineis = [
+            [chatInnerLeft, chatContainerLeft],
+            [chatInnerRight, chatContainerRight],
+        ].filter(par => par[0] && par[0].children.length);
+        if (!paineis.length) return false;
+        const saidas = paineis.map(par => {
+            const nos = Array.from(par[0].children);
+            nos.forEach(no => no.classList.add('conversa-saindo'));
+            return { nos, rolagem: par[1] };
+        });
+        currentAIMessageDiv = null;
+        currentPlanContainer = null;
+        window.currentAIMessageDiv = null;
+        setTimeout(() => {
+            saidas.forEach(saida => {
+                saida.nos.forEach(no => no.remove());
+                if (saida.rolagem) saida.rolagem.scrollTop = 0;
+            });
+        }, SAIDA_CONVERSA);
+        return true;
+    }
+
     function attachCodeBlockListeners(container) {
         const originalCodeIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>`;
         container.querySelectorAll('.copy-code-btn').forEach(btn => {

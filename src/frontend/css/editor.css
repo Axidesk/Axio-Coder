@@ -175,6 +175,12 @@
 #editor-host .monaco-editor .decorationsOverviewRuler {
     border-left: none !important;
 }
+#editor-image-host {
+    pointer-events: none;
+}
+#editor-image-host > * {
+    pointer-events: auto;
+}
 .editor-watermark {
     position: absolute;
     inset: 0;
@@ -732,6 +738,13 @@ body.theme-espacial #editor-view { background: var(--bg-panel); }
 #log-list-container {
     transform: translateZ(0);
     backface-visibility: hidden;
+}
+#chat-inner-left > .conversa-saindo,
+#chat-inner-right > .conversa-saindo {
+    transition: opacity 300ms var(--ease-fluid), transform 300ms var(--ease-fluid);
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
 }
 body.theme-espacial #ws-top-bar + div {
     background: var(--bg-panel);

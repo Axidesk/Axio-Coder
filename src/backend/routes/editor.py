@@ -99,6 +99,15 @@ def explorer():
 
 TETO_TEXTO_BYTES = 4 * 1024 * 1024
 AMOSTRA_TEXTO_BYTES = 65536
+MIME_POR_EXTENSAO = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.ico': 'image/x-icon',
+}
 
 def _parece_texto(caminho):
     with open(caminho, 'rb') as f:
@@ -109,6 +118,23 @@ def _parece_texto(caminho):
         return True
     except UnicodeDecodeError:
         return False
+
+def _aviso_nao_textual(alvo):
+    """Por que o arquivo nao pode ser mostrado como codigo; None quando e texto."""
+    if os.path.splitext(alvo)[1].lower() in MIME_POR_EXTENSAO:
+        return {"tipo": "imagem", "mensagem": "Isto e uma imagem.\nClique-a no explorador para a ver no editor."}
+    try:
+        tamanho = os.path.getsize(alvo)
+    except OSError:
+        return None
+    if tamanho > TETO_TEXTO_BYTES:
+        return {"tipo": "binario", "mensagem": f"Arquivo com {tamanho / 1048576:.1f} MB.\nDemasiado grande para exibir como codigo."}
+    try:
+        if _parece_texto(alvo):
+            return None
+    except OSError:
+        return None
+    return {"tipo": "binario", "mensagem": "Arquivo binario.\nNao e possivel exibi-lo como codigo."}
 
 @editor_bp.route('/api/file_content', methods=['GET'])
 def file_content():
@@ -122,22 +148,13 @@ def file_content():
         return jsonify({"error": str(e)}), 404
 
     ext = os.path.splitext(alvo)[1].lower()
-    img_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico'}
-    if ext in img_exts:
+    if ext in MIME_POR_EXTENSAO:
         try:
             with open(alvo, 'rb') as f:
                 raw = f.read()
         except Exception as e:
             return jsonify({"error": str(e)}), 404
-        mime = {
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.bmp': 'image/bmp',
-            '.ico': 'image/x-icon',
-        }.get(ext, 'application/octet-stream')
+        mime = MIME_POR_EXTENSAO[ext]
         return jsonify({
             "caminho": alvo,
             "tipo": "imagem",
@@ -213,7 +230,10 @@ def file_original():
             try:
                 with open(alvo, 'r', encoding='utf-8') as f:
                     original = f.read()
-            except Exception:
+            except (OSError, UnicodeDecodeError):
+                aviso = _aviso_nao_textual(alvo)
+                if aviso:
+                    return jsonify({"caminho": alvo, "conteudo": "", "criado": False, **aviso})
                 original = ""
 
     return jsonify({"caminho": alvo, "conteudo": original, "criado": criado})

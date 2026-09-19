@@ -245,6 +245,10 @@ const NL = String.fromCharCode(10);
             setCodeViewContent('<span class="text-[var(--text-mutado)] italic">(arquivo criado nesta sessão — não havia código original)</span>', false, vista);
             return;
         }
+        if (data.mensagem) {
+            setCodeViewContent(data.mensagem, true, vista);
+            return;
+        }
         setCodeViewContent(data.conteudo || '', true, vista);
     }
     function carregarConteudoOriginal(caminho, vista = vistaDock) {

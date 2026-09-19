@@ -19,8 +19,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 390,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -39,8 +39,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 437,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -58,8 +58,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 425,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -76,8 +76,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 424,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -95,8 +95,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 164,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -116,8 +116,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 201,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -135,8 +135,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 76,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -154,8 +154,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 358,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -174,8 +174,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 340,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -193,8 +193,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 479,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -220,8 +220,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 469,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -239,8 +239,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 227,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -281,8 +281,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 411,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -302,8 +302,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 81,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -322,8 +322,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 350,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -345,8 +345,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 341,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -363,10 +363,10 @@
       "descricao": "Botao com icone de olho nas Configuracoes que alterna entre mostrar (olho aberto) e ocultar (olho riscado) as chaves de API dos inputs",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 630,
+        "linha": 637,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -385,8 +385,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 263,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -402,10 +402,10 @@
       "descricao": "Cards de texto informativo (icone \"i\") das chaves de API que expandem suavemente no modal de configuracoes. O toggle e setupInfoToggles em src/frontend/js/chat/renderer.js:652. Ficou em css/geral.css depois da divisao do antigo style.css.",
       "localizacao": {
         "arquivo": "src/frontend/css/geral.css",
-        "linha": 307,
+        "linha": 312,
         "conferido": [
-          1789836550.602,
-          13529
+          1789848483.21,
+          13623
         ]
       }
     },
@@ -423,8 +423,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 170,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -485,8 +485,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 254,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -506,8 +506,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 379,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -545,8 +545,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1789771179.35,
-          10786
+          1789848912.831,
+          10836
         ]
       }
     },
@@ -626,8 +626,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 422,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -665,8 +665,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 176,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -683,8 +683,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 190,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -700,10 +700,10 @@
       "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 792,
+        "linha": 793,
         "conferido": [
-          1789775419.735,
-          32114
+          1789850171.866,
+          32267
         ]
       }
     },
@@ -722,8 +722,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 273,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -742,8 +742,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 242,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -761,8 +761,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 167,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -978,8 +978,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 236,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -997,10 +997,10 @@
       "descricao": "Painel (nao modal) que desliza da esquerda como o historico, com a largura das colunas 1+2 (35vw): Stack, Linguagens (nome completo + contagem entre parenteses, sem recolher), Dependencias (declaradas + 'usado no codigo', expandiveis com +) e Estrutura (arvore classica com guias continuas, pastas amarelas var(--alerta), contagem apos o nome). Secoes com o resumo ao lado do titulo (ex: 'Estrutura | 108 arquivos, 13 pastas'). Sem icone de recarregar: a medicao e automatica em abrirProjetoInfo. Corpo renderizado por chat/projeto.js, estilo em css/projeto.css.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 579,
+        "linha": 586,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1370,8 +1370,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 408,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1390,8 +1390,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 230,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1410,8 +1410,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 261,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1430,8 +1430,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 123,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1452,8 +1452,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 145,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1472,8 +1472,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 107,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1607,10 +1607,10 @@
       "descricao": "A troca da camada do code view pelo Monaco. REGRA: A CAMADA NAO TOCA NO MONACO AO ABRIR, SO NA ENTREGA. files.js:entregarAoMonaco(vista) le a linha do retrato (marcas [data-ln] -> linhaNoFicheiroAtual; vista de FICHEIRO -> a grelha) e chama SEMPRE workspace.js:transferirDaCamada(caminho, linha, arquivoOriginal), que sai do modo do Monaco sem fade, recarrega o ficheiro quando o modelo em maos nao e o ficheiro e alinha. O 4o argumento entrar do setCodeViewContent controla o fade de entrada (diff passa false). Duas vistas chamam isto: a doc (vistaDock) e o HISTORICO (vistaHistorico). NA DOC: o clique entrega e a camada sai em fade, sempre. NO HISTORICO (2026-09-15): (a) com CODIGO a mostra (vista de ficheiro ou diff) entrega como o dock e a camada sai - e a unica forma de ver o Monaco, porque a camada e inset 0 por cima do #editor-host-wrap; (b) com um PAINEL aberto (raciocinio, ferramentas ou pergunta) NAO fecha a camada nem le linha nenhuma (o corpo mostra o painel, nao codigo) - o guard olhava so para tools/thoughts, logo clicar no painel da PERGUNTA entregava com uma linha falsa e fechava a camada a meio da leitura. O abrirDiff do historico passou a chamar marcarLinhasAlteradas e a marcar caminhoEntrega E caminhoOriginal como o do dock (era o que deixava o diff do historico sem linha). O MONACO DEPOIS DA ENTREGA NAO FECHA O HISTORICO: entregar codigo do historico liga state.codigoDoHistoricoNoEditor, que isenta o clique no editor no clique-fora (renderer.js) - sem isso, clicar no Monaco fechava o painel do historico (closeHistoryPanel). Desliga-se no closeHistory, na entrega da doc e no axio-editor-file-open (arvore).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 370,
+        "linha": 374,
         "conferido": [
-          1789601725.435,
-          39293
+          1789850160.519,
+          39416
         ]
       }
     },
@@ -1631,8 +1631,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 160,
         "conferido": [
-          1789601725.435,
-          39293
+          1789850160.519,
+          39416
         ]
       }
     },
@@ -1741,8 +1741,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 178,
         "conferido": [
-          1789601725.435,
-          39293
+          1789850160.519,
+          39416
         ]
       }
     },
@@ -1760,10 +1760,10 @@
       "descricao": "Icone ao lado do titulo do painel de informacoes do projeto que ABRE E FECHA (toggle) a camada de notas por cima da area do Monaco: js/chat/projeto_notas.js:alternarCamadaNotas. Deixou de ser o toggle de uma pagina dentro do painel em 2026-09-15 - o painel fica SEMPRE na pagina de informacoes e o #project-panel-title nunca muda de texto. Acende (classe .ativo) enquanto a camada esta aberta e, nesse estado, so muda a COR do icone para --oliva: o fundo --bg-hover-suave foi retirado de .projeto-icon-btn.ativo (css/projeto.css) para ficar igual ao hover dos botoes do historico.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 584,
+        "linha": 591,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1781,10 +1781,10 @@
       "descricao": "Campo de escrita da camada de notas: Monaco sem enfeites (markdown, Ctrl+Z/Ctrl+Y, copia com indentacao preservada), flutuante - sem caixa nem contorno, porque o fundo do tema axio-editor (#1e1e1e) e o mesmo do painel. Grava sozinho em .axio/notas.json, por projeto, com varias abas (a versao antiga era uma nota so em .axio/notas.md, migrada na primeira leitura). O recuo de 16px e MARGEM (o Monaco mede clientWidth, que inclui padding). Desde 2026-09-15 vive na camada #panel-col-3-notes, em cima da area do Monaco, e nao dentro do painel de informacoes.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 614,
+        "linha": 621,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1802,10 +1802,10 @@
       "descricao": "Botao do CABECALHO da camada de notas (#project-notes-header, index.html:555), encostado a direita do titulo 'Notas' - deixou de viver na barra das abas em 2026-09-15 (era o que punha titulo e varinha na mesma linha das abas). Traduz o trecho selecionado (ou a nota toda, sem selecao) para o vocabulario tecnico do projeto: o agente casa o glossario, consulta os identificadores reais no codigo e reescreve o texto, sempre com um aviso no fim de que foi reescrito pelo agente e pode conter erros. Enquanto corre, o PROPRIO botao fica desativado com o spinner (.a-trabalhar troca o SVG da varinha pelo .projeto-icone-spinner) e o chat NAO e bloqueado - a traducao corre em paralelo, numa thread propria, com a barra de status silenciada.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 602,
+        "linha": 609,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1824,10 +1824,10 @@
       "descricao": "Barra das abas do caderno dentro do #project-notes-bar (index.html:564), LOGO ABAIXO do cabecalho com o titulo 'Notas': desde 2026-09-15 as abas ja nao partilham a linha com o titulo nem com a varinha. Cada aba e uma nota (titulo + texto) e usa as MESMAS classes das abas do editor de codigo (.editor-tab), de proposito. O titulo renomeia-se no clique duplo; o X fecha e a ultima nunca desaparece (fica uma Nota 1 nova). CLIQUE DIREITO numa aba abre o #notes-context-menu com 'Voltar a abrir a nota fechada': as notas fechadas vao para uma pilha (notasFechadas, em js/chat/projeto_notas.js) e reabrem uma a uma na ordem INVERSA a que foram fechadas (LIFO), sem limite de abas. Ao fechar uma nota o texto e lido do modelo ANTES de o descartar (projeto_notas.js:_guardarFechada chamada dentro de _fecharAba) - a leitura depois do dispose traria texto vazio.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 612,
+        "linha": 619,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1844,10 +1844,10 @@
       "descricao": "Barra das ABAS da camada de notas, com 34px (variavel --projeto-notas-altura, definida em #panel-col-3-notes no css/dock.css): da esquerda para a direita tem o + (#btn-notes-add) e as abas (#project-notes-tabs). Desde 2026-09-15 o titulo 'Notas' e a varinha JA NAO vivem aqui: subiram para o cabecalho de 60px #project-notes-header (index.html:555), que fica LOGO ACIMA desta barra. Geometria medida com o CSS real: cabecalho y 0..60, barra y 60..94, editor a partir de 94, aviso de campo vazio a 110.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 608,
+        "linha": 615,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1906,10 +1906,10 @@
       "descricao": "Terceira camada que abre POR CIMA da area do Monaco, gemea de #panel-col-3 (doc) e #panel-col-3-history (historico): nasce no #sliding-panel-container e e montada em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace, que tem as tres no MESMO array. Abre/fecha por opacity (position absolute, inset 0, z-index 7) com a classe .panel-col-closed, e a vista (id 'notas', criada em js/chat/projeto_notas.js) entra no mapa de colunas.js - por isso as tres camadas sao EXCLUSIVAS: abrir qualquer uma fecha as outras por colunas.js:fecharOutrasCamadas, e abrir um FICHEIRO pela arvore tambem as fecha (o listener axio-editor-file-open do renderer.js percorre ['dock','historico','notas']), senao o ficheiro recem-aberto ficava tapado por elas. Por dentro, de cima para baixo: cabecalho de 60px com o titulo 'Notas' e a varinha (#project-notes-header), barra das abas de 34px (#project-notes-bar), o Monaco das notas (#project-notes-editor) e o aviso de campo vazio (#project-notes-placeholder). ABRIR a camada RECOLHE a barra de abas do doc (layout.js:syncDocTopBar, parcela camadaNotasAberta). A camada mantem o #project-panel-container visivel e fecha quando o painel de informacoes fecha (js/chat/projeto.js:fecharProjetoInfo chama projeto_notas.js:fecharCamadaNotas).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 598,
+        "linha": 605,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1928,8 +1928,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 556,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -1998,8 +1998,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 371,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -2041,8 +2041,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 367,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -2171,8 +2171,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1789771179.35,
-          10786
+          1789848912.831,
+          10836
         ]
       }
     },
@@ -2214,8 +2214,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 362,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -2363,10 +2363,10 @@
       "descricao": "Ferramenta que tira um print do ecra e o entrega ao agente como imagem (ImageGrab, com o processo declarado consciente de DPI para nao sair esticado). Grava o PNG em .axio/prints em resolucao cheia (maximo 50 ficheiros). O TETO DE RESOLUCAO E DA API: ela reduz toda a imagem a ~800x800 px equivalentes (640 000 px, teto de 384 tokens), logo um ecra 4K chega como 1066x600 e o texto pequeno desaparece. Para ler: (a) regiao estreita abaixo de ~640 000 px chega 1:1; (b) detalhe='tiles' parte a captura em pedacos de ate 1024x625 px que chegam TODOS 1:1. 'ecra' aceita 'principal', 'todos' ou o NUMERO de um monitor, e o retorno declara sempre o mapa dos ecras (numero, tamanho, posicao) - num PC com ecras de tamanhos diferentes, 'todos' inclui faixas pretas que se pagam em pedacos vazios. Captura so o que esta VISIVEL: janela tapada ou minimizada nao aparece.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 250,
+        "linha": 251,
         "conferido": [
-          1789790080.981,
-          19285
+          1789849688.672,
+          26343
         ]
       }
     },
@@ -2408,10 +2408,10 @@
       "descricao": "Ferramenta que abre uma imagem que esta no projeto (png, jpg, gif, webp, bmp, ico) e a entrega ao agente como imagem, para ele olhar para um icone, um esquema ou um diagrama. Formato que a API nao aceita e convertido automaticamente para PNG (so a fonte que ja e JPEG continua JPEG). NAO confundir com 'print' (tool_capturar_print), que captura o ecra.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 337,
+        "linha": 338,
         "conferido": [
-          1789790080.981,
-          19285
+          1789849688.672,
+          26343
         ]
       }
     },
@@ -2473,8 +2473,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 501,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -2685,8 +2685,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 490,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -2855,8 +2855,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 487,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -2999,10 +2999,10 @@
       "descricao": "Parametro da tool_ver_imagem: entrega cada vista do modelo LADO A LADO com a imagem de referencia, na mesma imagem e na mesma altura (a referencia a esquerda). A composicao e a `lado_a_lado` de services/imagem.py. Usar sempre que se modela a partir de uma referencia visual - julgar semelhanca alternando entre duas imagens nao funciona.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 353,
+        "linha": 354,
         "conferido": [
-          1789790080.981,
-          19285
+          1789849688.672,
+          26343
         ]
       }
     },
@@ -3140,8 +3140,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 463,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -3219,10 +3219,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 652,
+        "linha": 653,
         "conferido": [
-          1789827996.595,
-          40751
+          1789848926.017,
+          41566
         ]
       }
     },
@@ -3241,8 +3241,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 26,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -3258,10 +3258,10 @@
       "descricao": "Balão fixo que serve de dropdown dos botões #title-bar-exibir e #title-bar-ferramentas. Abre pela classe .menu-open (opacity/visibility/pointer-events em workspace.css). O conteúdo é construído por titulo.js:construirItem a partir das listas itensExibir/itensFerramentas e cada clique manda menu:acao por IPC ao main (filtrado por sender). O menu nativo do Electron continua a ser construído (montarMenu) mas está escondido: existe pelos aceleradores. ATENÇÃO: é position:fixed, logo conta como camada flutuante que esconde a vista nativa do preview (preview.js:camadaFlutuante).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 563,
+        "linha": 570,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -3320,10 +3320,10 @@
       "descricao": "Aba do #editor-tabs que fica com .editor-tab-apagado (color var(--perigo) + line-through no nome) quando o ficheiro ja nao existe no disco. A marca vive no Set tabsApagadas (editor.js) e e aplicada por renderTabs. Quem a acende: marcarAbaApagada, chamada pelo trashPath (via rapida do explorer) e por reconciliarAbas, que pergunta a POST /api/fs_existem quais das abas abertas desapareceram - cobre tambem o agente a apagar, o del no terminal e o ficheiro apagado fora do Axio. Gatilhos de reconciliarAbas: agendarReconciliacaoDeAbas (debounce 300ms) no files_changed (workspace.js:handleSSE) e no focus da janela. limparAbaApagada desmarca quando o ficheiro volta (restauro da lixeira, git checkout) ou quando a aba e reaberta (openFileInEditor).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 236,
+        "linha": 237,
         "conferido": [
-          1789775419.735,
-          32114
+          1789850171.866,
+          32267
         ]
       }
     },
@@ -3500,8 +3500,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 503,
         "conferido": [
-          1789833790.889,
-          77757
+          1789848909.704,
+          78464
         ]
       }
     },
@@ -3748,10 +3748,10 @@
       "descricao": "O sinal de abrir e fechar um cartao do cofre: um + desenhado com duas barras (.cofre-sinal::before horizontal e ::after vertical); aberto, a vertical desaparece com scaleY(0). Substituiu a setinha (transform rotate).",
       "localizacao": {
         "arquivo": "src/frontend/css/geral.css",
-        "linha": 236,
+        "linha": 241,
         "conferido": [
-          1789836550.602,
-          13529
+          1789848483.21,
+          13623
         ]
       }
     },
@@ -3849,10 +3849,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 276,
+        "linha": 277,
         "conferido": [
-          1789847401.657,
-          11756
+          1789850345.008,
+          11832
         ]
       }
     },
@@ -3869,10 +3869,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 250,
+        "linha": 251,
         "conferido": [
-          1789847401.657,
-          11756
+          1789850345.008,
+          11832
         ]
       }
     },
@@ -3889,7 +3889,49 @@
       "descricao": "Prepara uma captura de ecra para publicar: sem 'destino' devolve o mapa de atividade (grelha que mostra onde esta o conteudo aceso e onde a imagem e lisa), e com 'destino' recorta por 'caixa' (x,y,largura,altura da origem), reduz a 'largura' maxima e grava dentro do projeto. A origem pode estar fora dele (a pasta institucional); a escrita, nao. Servico em src/backend/services/capturas.py.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 431
+        "linha": 431,
+        "conferido": [
+          1789849688.672,
+          26343
+        ]
+      }
+    },
+    {
+      "termo": "janela de opções",
+      "aliases": [
+        "opções",
+        "janela de opcoes",
+        "configurações",
+        "janela de configurações",
+        "modal de configurações"
+      ],
+      "identificador": "#settings-modal-content",
+      "descricao": "A janela de Configurações (APIs, Cofre): overlay #settings-modal com o painel #settings-modal-content dentro, aberto pelo #btn-settings. As medidas (90vw ate 1200px, 85vh ate 900px) vivem em src/frontend/css/geral.css.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 626,
+        "conferido": [
+          1789848909.704,
+          78464
+        ]
+      }
+    },
+    {
+      "termo": "limpar a conversa",
+      "aliases": [
+        "limpar conversa",
+        "limpar o chat",
+        "limpar a janela do texto",
+        "apagar as mensagens do chat",
+        "limpar a conversa da esquerda",
+        "limpar a conversa da direita",
+        "limpar as duas janelas de texto"
+      ],
+      "identificador": "#chat-context-menu",
+      "descricao": "Balao de contexto que abre no CLIQUE DIREITO dentro de qualquer das duas colunas de conversa (#chat-container-left, a esquerda, e #chat-container-right, o chat do doc), com uma unica opcao: 'Limpar conversa'. A opcao limpa as DUAS colunas de uma vez (decisao do utilizador de 2026-09-19: limpar uma so confundia), logo o painel clicado ja nao escolhe nada - so abre o menu no ponto do clique. Mesmo desenho e mesmo mecanismo do #notes-context-menu (classe .balao + .menu-open em css/workspace.css, no MESMO par de listas de ids); a ligacao vive em js/chat/menu_conversa.js e a limpeza em js/chat/messages.js:limparConversa (sem parametro). O item so fica desativado quando as DUAS colunas estao vazias. NAO e o mesmo que 'limpar o contexto' (#btn-clear-context, dentro do #context-usage-popup), que zera a memoria acumulada no backend: este limpa so o que esta pintado no ecra, o historico do backend (estado['historico_chat']) e o dock do log (#panel-log-session) ficam intactos - nada se perde de facto, apenas sai da vista. INVARIANTES (nao reverter): (a) so sao removidos os nos que existiam no instante do clique (Array.from antes do fade), para uma mensagem que chegue durante a animacao nao ser apagada; (b) currentAIMessageDiv/currentPlanContainer/window.currentAIMessageDiv vao a null em qualquer limpeza (antes so ao limpar a direita), senao a resposta a seguir era escrita num no ja desligado; (c) a saida e um fade de 300ms (preset .conversa-saindo em css/editor.css, casado com SAIDA_CONVERSA em messages.js) e so no fim e que os nos sao removidos; (d) o clique direito sobre um link, bloco de codigo, imagem ou campo - ou com texto selecionado dentro da coluna - devolve o menu NATIVO do browser (para copiar), por isso ai o balao nao abre e a selecao e preservada.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/menu_conversa.js",
+        "linha": ""
       }
     }
   ]

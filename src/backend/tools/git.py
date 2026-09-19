@@ -134,8 +134,9 @@ def _lista_de_ficheiros(raiz, ficheiros):
     texto = (ficheiros or "").strip()
     if not texto:
         return []
-    if "," in texto:
-        return [p.strip() for p in texto.split(",") if p.strip()]
+    for separador in (",", ";", "\n"):
+        if separador in texto:
+            return [p.strip() for p in texto.split(separador) if p.strip()]
     pedacos = texto.split()
     if len(pedacos) > 1 and os.path.exists(os.path.join(raiz, texto)):
         return [texto]
@@ -267,7 +268,7 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO):
     "nada, nem no stage. ESCREVE no repositorio: ve o que vai entrar com 'tool_estado_git' antes.",
     {
         'mensagem': {"tipo": "STRING", "desc": "Mensagem do commit (a mesma serve de mensagem a etiqueta)"},
-        'ficheiros': {"tipo": "STRING", "desc": "Caminhos a publicar, separados por espaco - ou por virgula quando o caminho tiver espacos (padrao: tudo o que mudou)", "padrao": ""},
+        'ficheiros': {"tipo": "STRING", "desc": "Caminhos a publicar, separados por espaco (ou por virgula/ponto-e-virgula quando o caminho tiver espacos) - padrao: tudo o que mudou", "padrao": ""},
         'tag': {"tipo": "STRING", "desc": "Etiqueta anotada a criar neste commit (padrao: nenhuma)", "padrao": ""},
         'empurrar': {"tipo": "BOOLEAN", "desc": "Empurrar o commit (e a etiqueta) para o remoto", "padrao": True},
         'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},

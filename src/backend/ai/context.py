@@ -78,7 +78,7 @@ def ajustar_teto_automatico(percent):
     motivo = f"a memoria da rodada chegou a {percent:.0f}% do teto"
     emit_event("context_limit", anterior=teto, limite=novo,
                maximo=LIMITE_TOKENS_HISTORICO_MAX, motivo=motivo)
-    emit_event("status", message=f"Teto de contexto: {teto:,} -> {novo:,} tokens ({motivo}).")
+    emit_event("status", message="Memória da rodada reajustada.")
     return True
 
 

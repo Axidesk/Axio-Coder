@@ -116,6 +116,7 @@ export function showEditorImage(data) {
     img.alt = basename(state.currentFile || '');
     img.draggable = false;
     img.className = 'max-w-full max-h-full object-contain';
+    img.onerror = () => showEditorBinary('Nao foi possivel desenhar esta imagem.\nO ficheiro pode estar truncado ou num formato que o editor nao le.');
     state.editorImageHost.appendChild(img);
     fadeInImageHost();
 }

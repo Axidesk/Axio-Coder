@@ -252,14 +252,14 @@
 #ws-top-bar.ws-top-bar-collapsed ~ div #preview-view { top: 0; }
 #term-top-bar { transition: opacity var(--dur-7) ease, transform var(--dur-7) ease; }
 #term-top-bar.term-top-bar-collapsed { transform: translateY(-100%) !important; opacity: 0 !important; pointer-events: none; }
-#plus-menu, #mode-submenu, #ai-submenu, #fs-context-menu, #notes-context-menu, #titulo-menu {
+#plus-menu, #mode-submenu, #ai-submenu, #fs-context-menu, #notes-context-menu, #chat-context-menu, #titulo-menu {
     opacity: 0;
     visibility: hidden;
     transform: translateY(8px);
     pointer-events: none;
     transition: opacity var(--dur-3) ease, transform var(--dur-3) ease, visibility var(--dur-3) ease;
 }
-#plus-menu.menu-open, #mode-submenu.menu-open, #ai-submenu.menu-open, #fs-context-menu.menu-open, #notes-context-menu.menu-open, #titulo-menu.menu-open {
+#plus-menu.menu-open, #mode-submenu.menu-open, #ai-submenu.menu-open, #fs-context-menu.menu-open, #notes-context-menu.menu-open, #chat-context-menu.menu-open, #titulo-menu.menu-open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);

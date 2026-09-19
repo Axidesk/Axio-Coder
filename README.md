@@ -22,7 +22,7 @@ Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e
 
 O mesmo olho serve para ti. Com o **modo inspecionar** ligado, passar o rato por qualquer elemento — na página do preview ou na própria interface do Axio — abre o cartão do que ele é: o seletor, a fonte, a cor, as classes e a localização no código (`src/frontend/index.html:487`, com ligação que abre o ficheiro naquela linha). A **descrição** por baixo do nome não é rótulo genérico: sai do glossário do projeto, logo explica aquele elemento naquele projeto. `Tab` anda pelos campos, `Enter` copia o valor (ou abre o ficheiro), `Shift+clique` deixa o clique passar para o elemento e `Esc` sai.
 
-![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/interface/preview-navegador.jpg)
+![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/interface/preview-navegador-inspecionar.jpg)
 
 **Lê formatos de engenharia.** IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
 
