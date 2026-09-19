@@ -1,7 +1,6 @@
 """Retrato do repositorio git numa so chamada: onde esta, como esta e o que falta commitar."""
 
 import io
-import json
 import os
 import re
 import tempfile
@@ -12,6 +11,7 @@ import urllib.request
 from PIL import Image
 
 from src.backend.config import APP_ROOT
+from src.backend.services import cofre, github
 from src.backend.services.file_service import git_saida, raiz_repositorio
 from src.backend.state import estado
 from src.backend.tools.registry import register
@@ -64,6 +64,17 @@ def _linhas_das_tags(pasta, quantas):
         marca = "no HEAD" if atras == "0" else f"{atras} commit(s) por cima"
         itens.append(f"{nome} -> {_curto(pasta, nome)} ({marca})")
     return [f"TAGS mostradas {len(itens)} de {len(nomes)}, da mais recente: " + " | ".join(itens)]
+
+
+def _notas_da_etiqueta(pasta, etiqueta):
+    nomes, _ = _nomes_das_tags(pasta)
+    posicao = nomes.index(etiqueta) if etiqueta in nomes else -1
+    tem_anterior = 0 <= posicao + 1 < len(nomes)
+    intervalo = f"{nomes[posicao + 1]}..{etiqueta}" if tem_anterior else etiqueta
+    saida, erro = git_saida(pasta, "log", "--no-merges", "--pretty=- %s", "--max-count=30", intervalo)
+    if erro:
+        return ""
+    return "\n".join(linha for linha in (saida or "").splitlines() if linha.strip())
 
 
 def _separar_estado(linhas):
@@ -304,6 +315,54 @@ def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="")
     return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar))
 
 
+@register(
+    "tool_publicar_release",
+    "Publica no GitHub o Release de uma etiqueta que ja existe no repositorio. E o Release que "
+    "notifica quem segue o repositorio e aparece na aba /releases - a etiqueta empurrada sozinha "
+    "fica invisivel para quem nao usa a linha de comandos. A chave do GitHub vive no cofre, no "
+    "cartao 'github' campo 'chave' (classic token com o escopo 'repo'). Sem 'notas', o corpo sai "
+    "das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta "
+    "atualiza o Release em vez de falhar.",
+    {
+        'etiqueta': {"tipo": "STRING", "desc": "Etiqueta ja empurrada para o remoto (ex: 'v3.1.3')"},
+        'titulo': {"tipo": "STRING", "desc": "Titulo do Release (padrao: a propria etiqueta)", "padrao": ""},
+        'notas': {"tipo": "STRING", "desc": "Corpo do Release em Markdown (padrao: gerado das mensagens dos commits)", "padrao": ""},
+        'rascunho': {"tipo": "BOOLEAN", "desc": "Guardar como rascunho em vez de publicar", "padrao": False},
+        'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
+    },
+)
+def tool_publicar_release(etiqueta, titulo="", notas="", rascunho=False, caminho=""):
+    if not etiqueta:
+        return "ERRO: indique a etiqueta do Release (ex: 'v3.1.3')."
+    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    raiz = raiz_repositorio(base)
+    if not raiz:
+        return f"ERRO: '{base}' nao esta dentro de um repositorio git."
+    host, slug = _slug_do_remoto(raiz)
+    if "github" not in host:
+        return (f"ERRO: o remoto 'origin' aponta para '{host or '?'}' - so o GitHub tem o objeto "
+                "Release que esta ferramenta publica.")
+    nomes, _ = _nomes_das_tags(raiz)
+    if etiqueta not in nomes:
+        return (f"ERRO: a etiqueta '{etiqueta}' nao existe neste repositorio. "
+                f"Existentes: {', '.join(nomes) if nomes else 'nenhuma'}.")
+    token = cofre.obter("github", revelar=True, campo="chave")
+    if not token:
+        return ("ERRO: falta a chave do GitHub no cofre (Configuracoes -> Cofre, cartao 'github', "
+                "campo 'chave'; classic token com o escopo 'repo'). Sem ela o GitHub recusa criar Releases.")
+    corpo = notas or _notas_da_etiqueta(raiz, etiqueta)
+    dados, erro, acao = github.publicar_release(slug, etiqueta, titulo or etiqueta, corpo, rascunho, token)
+    if erro:
+        return f"ERRO: o GitHub recusou ({erro})."
+    linhas = [f"RELEASE {acao}: {etiqueta}",
+              f"  titulo: {dados.get('name')}",
+              f"  endereco: {dados.get('html_url')}",
+              f"  notas: {len(corpo)} caracteres" + ("" if notas else " (geradas das mensagens dos commits)")]
+    if dados.get("draft"):
+        linhas.append("  AVISO: ficou como rascunho - so tu o ves ate o publicares.")
+    return "\n".join(linhas)
+
+
 def _slug_do_remoto(raiz):
     saida, erro = git_saida(raiz, "remote", "get-url", "origin")
     url = (saida or "").strip()
@@ -346,10 +405,10 @@ def _ler_remoto(leitor, url):
 
 
 def _pedido_json(url):
-    pedido = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json",
-                                                  "User-Agent": "axio"})
-    with _leitor_sem_proxy().open(pedido, timeout=25) as resposta:
-        return json.loads(resposta.read().decode("utf-8", "replace"))
+    dados, erro = github.pedido_api(url)
+    if erro:
+        raise urllib.error.URLError(erro)
+    return dados
 
 
 def _linhas_da_vitrine(raiz):
