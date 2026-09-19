@@ -17,7 +17,7 @@ from PIL import ImageGrab
 from src.backend.geometry.vista import EXTENSOES_MODELO, de_ficheiro, desenhar, vistas_do_pedido
 from src.backend.state import caminho_estado_projeto, emit_event, estado
 from src.backend.tools.registry import register
-from src.backend.services.capturas import mapa_de_atividade, preparar_captura
+from src.backend.services.capturas import fins_do_conteudo, mapa_de_atividade, preparar_captura
 from src.backend.services.file_service import resolver_caminho
 from src.backend.services.imagem import (
     TOKENS_POR_IMAGEM,
@@ -413,7 +413,7 @@ def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_c
         },
         "caixa": {
             "tipo": "STRING",
-            "desc": "Recorte 'x,y,largura,altura' em pixels da ORIGEM (ex: '900,0,2931,1000'). Vazio = a imagem inteira.",
+            "desc": "Recorte 'x,y,largura,altura' em pixels da ORIGEM (ex: '900,0,2931,1000'). Vazio = a imagem inteira. Com 'caixa', a ferramenta mede tambem a faixa do recorte: os blocos de conteudo por eixo, se a linha de corte passa a meio de um deles e a que distancia esta o conteudo seguinte.",
             "padrao": "",
         },
         "largura": {
@@ -447,15 +447,20 @@ def tool_preparar_captura(origem, destino="", caixa="", largura=1920, qualidade=
         mapa["texto"],
         "Legenda: ' ' e zona lisa (fundo vazio), '@' e a zona com mais conteudo.",
     ]
+    recorte = retangulo_da_regiao(caixa) if caixa else None
+    if caixa and not recorte:
+        return "ERRO: 'caixa' tem de ser 'x,y,largura,altura' em pixels (ex: '0,0,2200,520')."
+    if recorte:
+        try:
+            partes.append(_texto_do_conteudo(fins_do_conteudo(bruto, recorte)))
+        except Exception as falha:
+            partes.append(f"AVISO: nao foi possivel medir o conteudo do recorte ({falha}).")
     if not destino:
         return "\n".join(partes + ["Nada foi gravado: sem 'destino', a ferramenta so mede."])
     caminho_destino, erro_destino = resolver_caminho(destino, permitir_extra=False,
                                                      permitir_escrita=True)
     if erro_destino:
         return erro_destino
-    recorte = retangulo_da_regiao(caixa) if caixa else None
-    if caixa and not recorte:
-        return "ERRO: 'caixa' tem de ser 'x,y,largura,altura' em pixels (ex: '0,0,2200,520')."
     try:
         resultado = preparar_captura(caminho_origem, caminho_destino, recorte, largura, qualidade)
     except ValueError as fora:
@@ -477,6 +482,60 @@ def tool_preparar_captura(origem, destino="", caixa="", largura=1920, qualidade=
     if largura_final == largura_antes_da_reducao:
         resumo += " A largura pedida nao era menor: ficou no tamanho que tinha."
     return "\n".join(partes + ["", resumo])
+
+
+def _texto_do_conteudo(medida):
+    faixa = medida["faixa"]
+    linhas = medida["linhas"]
+    colunas = medida["colunas"]
+    if not linhas or not colunas:
+        return (f"Faixa ({faixa[0]},{faixa[1]})-({faixa[2]},{faixa[3]}): uniforme, "
+                f"sem conteudo a localizar.")
+    partes = [
+        f"Conteudo na faixa do recorte ({faixa[0]},{faixa[1]})-({faixa[2]},{faixa[3]}):",
+        f"  na vertical (colunas {faixa[0]}-{faixa[2]}): {_descricao_dos_blocos(linhas)}",
+        f"  na horizontal (linhas {faixa[1]}-{faixa[3]}): {_descricao_dos_blocos(colunas)}",
+    ]
+    corta_base = _bloco_com(linhas, faixa[3] - 1)
+    corta_direita = _bloco_com(colunas, faixa[2] - 1)
+    if corta_base:
+        partes.append(f"A base do recorte (linha {faixa[3] - 1}) cai dentro do bloco "
+                      f"{corta_base[0]}-{corta_base[1]}: o corte passa a meio. Estende a base "
+                      f"ate {corta_base[1] + 1} ou corta em {corta_base[0]}.")
+    if corta_direita:
+        partes.append(f"A direita do recorte (coluna {faixa[2] - 1}) cai dentro do bloco "
+                      f"{corta_direita[0]}-{corta_direita[1]}: o corte passa a meio.")
+    proximo_abaixo = _bloco_depois(linhas, faixa[3] - 1)
+    if proximo_abaixo:
+        partes.append(f"A base e a linha {faixa[3] - 1}: o conteudo mais proximo por baixo "
+                      f"comeca na linha {proximo_abaixo[0]}, "
+                      f"{proximo_abaixo[0] - faixa[3] + 1} px depois "
+                      f"(vai ate {proximo_abaixo[1]}).")
+    proximo_a_direita = _bloco_depois(colunas, faixa[2] - 1)
+    if proximo_a_direita:
+        partes.append(f"A direita e a coluna {faixa[2] - 1}: o conteudo mais proximo comeca na "
+                      f"coluna {proximo_a_direita[0]}, "
+                      f"{proximo_a_direita[0] - faixa[2] + 1} px depois "
+                      f"(vai ate {proximo_a_direita[1]}).")
+    return "\n".join(partes)
+
+
+def _descricao_dos_blocos(blocos):
+    return "; ".join(f"{inicio}-{fim}" for inicio, fim in blocos)
+
+
+def _bloco_com(blocos, ponto):
+    for bloco in blocos:
+        if bloco[0] <= ponto <= bloco[1]:
+            return bloco
+    return None
+
+
+def _bloco_depois(blocos, ponto):
+    for bloco in blocos:
+        if bloco[0] > ponto:
+            return bloco
+    return None
 
 
 def _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar):

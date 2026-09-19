@@ -9,10 +9,13 @@ reduz a largura maxima e grava, devolvendo as medidas do antes e do depois.
 import io
 import os
 
+import numpy as np
 from PIL import Image, ImageStat
 
 LADO_DA_CELULA = 64
 ESCALA_DO_DESVIO = 8
+LIMIAR_DO_CONTEUDO = 40
+VAO_ENTRE_BLOCOS = 24
 _NIVEIS = " .:-=+*#%@"
 
 
@@ -48,6 +51,46 @@ def mapa_de_atividade(bruto, celula=LADO_DA_CELULA):
     }
 
 
+def fins_do_conteudo(bruto, faixa=None, limiar=LIMIAR_DO_CONTEUDO):
+    """Blocos de conteudo de uma faixa, por eixo - onde o corte passa a meio e onde cai no liso."""
+    with Image.open(io.BytesIO(bruto)) as imagem:
+        cinza = imagem.convert("L")
+        largura, altura = cinza.size
+        esquerda, topo, direita, base = _dentro_da_imagem(faixa or (0, 0, largura, altura),
+                                                          largura, altura)
+        area = np.asarray(cinza).astype(int)
+    fundo = int(np.bincount(area.ravel(), minlength=256).argmax())
+    marca = np.abs(area - fundo) > limiar
+    return {
+        "faixa": (esquerda, topo, direita, base),
+        "fundo": fundo,
+        "linhas": _blocos(marca[:, esquerda:direita].any(axis=1)),
+        "colunas": _blocos(marca[topo:base, :].any(axis=0)),
+    }
+
+
+def _dentro_da_imagem(caixa, largura, altura):
+    esquerda = max(0, min(int(caixa[0]), largura - 1))
+    topo = max(0, min(int(caixa[1]), altura - 1))
+    direita = max(esquerda + 1, min(int(caixa[2]), largura))
+    base = max(topo + 1, min(int(caixa[3]), altura))
+    return esquerda, topo, direita, base
+
+
+def _blocos(perfil, vao=VAO_ENTRE_BLOCOS):
+    pontos = np.flatnonzero(perfil)
+    if not pontos.size:
+        return []
+    blocos = [[int(pontos[0]), int(pontos[0])]]
+    for ponto in pontos[1:]:
+        ponto = int(ponto)
+        if ponto - blocos[-1][1] > vao:
+            blocos.append([ponto, ponto])
+        else:
+            blocos[-1][1] = ponto
+    return [tuple(bloco) for bloco in blocos]
+
+
 def preparar_captura(origem, destino, caixa=None, largura=1920, qualidade=86):
     """Recorta, reduz e grava a captura; devolve o original, o recorte e o ficheiro gravado.
 
@@ -67,10 +110,8 @@ def preparar_captura(origem, destino, caixa=None, largura=1920, qualidade=86):
                     f"a caixa ({esquerda},{topo})-({direita},{base}) nao toca a imagem "
                     f"de {imagem.width}x{imagem.height} px"
                 )
-            esquerda = max(0, min(esquerda, imagem.width - 1))
-            topo = max(0, min(topo, imagem.height - 1))
-            direita = max(esquerda + 1, min(direita, imagem.width))
-            base = max(topo + 1, min(base, imagem.height))
+            esquerda, topo, direita, base = _dentro_da_imagem((esquerda, topo, direita, base),
+                                                              imagem.width, imagem.height)
             imagem = imagem.crop((esquerda, topo, direita, base))
             recortada = imagem.size
         escala = min(1.0, float(largura) / imagem.width)
