@@ -1,7 +1,50 @@
 import { findExplorerRow, loadTrash, openFileInEditor, pinPreview, updateExplorerToolbar } from './editor.js';
 import { appendLine, basename, enterDir, updateExplorerPath } from './terminal.js';
 import { applyTabsVisibility, layoutAllEditors } from './workspace.js';
+import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
+import { abreNoViewer } from './familia_ficheiro.js';
+
+const VALIDADE_DA_LISTA_MS = 6000;
+const MAX_PASTAS_LISTADAS = 24;
+const INTENCAO_DE_HOVER_MS = 90;
+const listasDePastas = new Map();
+const listasEmVoo = new Map();
+let prefetchTimer = null;
+let prefetchAgendado = null;
+
+function listaGuardada(chave) {
+    const guardada = listasDePastas.get(chave);
+    if (!guardada) return null;
+    if (Date.now() - guardada.ts > VALIDADE_DA_LISTA_MS) {
+        listasDePastas.delete(chave);
+        return null;
+    }
+    listasDePastas.delete(chave);
+    listasDePastas.set(chave, guardada);
+    return guardada.dados;
+}
+
+function guardarLista(chave, dados) {
+    listasDePastas.delete(chave);
+    listasDePastas.set(chave, { dados: dados, ts: Date.now() });
+    while (listasDePastas.size > MAX_PASTAS_LISTADAS) {
+        listasDePastas.delete(listasDePastas.keys().next().value);
+    }
+}
+
+function pedirLista(chave) {
+    const pedido = fetch(state.API + '/api/explorer?path=' + encodeURIComponent(chave))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.sem_raiz && !data.error) guardarLista(chave, data);
+            return data;
+        });
+    listasEmVoo.set(chave, pedido);
+    const largar = () => listasEmVoo.delete(chave);
+    pedido.then(largar, largar);
+    return pedido;
+}
 
 export function animateViewTransition(viewName, previousView, targetView, viewport, inClass, outClass, duration) {
     if (state.viewTimers[viewName]) {
@@ -31,10 +74,25 @@ export function animateViewTransition(viewName, previousView, targetView, viewpo
         }
     }
 }
+export const VISTAS_DE_TRABALHO = ['editor', 'preview'];
+
 export function setView(name) {
-    if (name !== 'preview') state.lastNonPreviewView = name;
     const previousView = state.currentView;
     if (previousView === name) return;
+    if (VISTAS_DE_TRABALHO.includes(name)) state.vistaDeTrabalho = name;
+    aplicarVista(name, previousView);
+}
+
+export function alternarDoc() {
+    setView(state.currentView === 'chat' ? state.vistaDeTrabalho : 'chat');
+}
+
+export function fecharPreview() {
+    setView('editor');
+}
+
+function aplicarVista(name, previousView) {
+    if (!name || name === state.currentView) return;
     state.currentView = name;
 
     if (name === 'editor') {
@@ -52,7 +110,7 @@ export function setView(name) {
     const blue = 'text-[var(--azul-acao)]';
     const gray = 'text-[var(--text-suave)]';
     if (state.btnEditor) {
-        state.btnEditor.classList.toggle('sidebar-active', name === 'editor');
+        state.btnEditor.classList.toggle('sidebar-active', VISTAS_DE_TRABALHO.includes(name));
     }
     if (state.btnPreview) {
         state.btnPreview.classList.remove(blue, 'text-[var(--text-branco)]', gray);
@@ -62,7 +120,10 @@ export function setView(name) {
     applyTabsVisibility();
 
     if (name === 'editor') layoutAllEditors();
+
+    window.dispatchEvent(new CustomEvent('axio-view-change', { detail: { view: name, anterior: previousView } }));
 }
+
 export function loadExplorerOnce() {
     if (!state.explorerLoaded) {
         state.explorerLoaded = true;
@@ -72,14 +133,50 @@ export function loadExplorerOnce() {
 }
 export function reloadExplorer() {
     state.explorerLoaded = true;
+    listasDePastas.clear();
     return loadExplorer();
 }
+export function prefetchPasta(chave) {
+    if (chave === undefined || chave === null) return;
+    if (listaGuardada(chave) || listasEmVoo.has(chave)) return;
+    pedirLista(chave).catch(() => {});
+}
+export function ligarPrefetchDePastas() {
+    const arvore = state.explorerTree;
+    if (!arvore || arvore.dataset.prefetch === '1') return;
+    arvore.dataset.prefetch = '1';
+    arvore.addEventListener('mouseover', (e) => {
+        const row = e.target && e.target.closest ? e.target.closest('.explorer-row') : null;
+        if (row && row.dataset.tipo === 'dir') agendarPrefetch(row.dataset.path);
+        else cancelarPrefetch();
+    });
+    arvore.addEventListener('mouseleave', cancelarPrefetch);
+}
+function agendarPrefetch(chave) {
+    if (prefetchTimer && prefetchAgendado === chave) return;
+    cancelarPrefetch();
+    prefetchAgendado = chave;
+    prefetchTimer = setTimeout(() => {
+        prefetchTimer = null;
+        prefetchPasta(chave);
+    }, INTENCAO_DE_HOVER_MS);
+}
+function cancelarPrefetch() {
+    if (!prefetchTimer) return;
+    clearTimeout(prefetchTimer);
+    prefetchTimer = null;
+    prefetchAgendado = null;
+}
 export async function loadExplorer(path) {
-    state.wsStatus.textContent = 'explorador: carregando...';
     const queryPath = path !== undefined ? path : (state.currentCwdRel || '');
+    const guardada = listaGuardada(queryPath);
+    if (guardada) {
+        renderExplorer(guardada);
+        return;
+    }
+    state.wsStatus.textContent = 'explorador: carregando...';
     try {
-        const resp = await fetch(state.API + '/api/explorer?path=' + encodeURIComponent(queryPath));
-        const data = await resp.json();
+        const data = await pedirLista(queryPath);
         if (data.sem_raiz) {
             renderEmptyExplorer();
             return;
@@ -90,7 +187,6 @@ export async function loadExplorer(path) {
             return;
         }
         renderExplorer(data);
-        state.wsStatus.textContent = 'explorador: ' + (basename(data.root) || 'raiz');
     } catch (e) {
         appendLine('[explorer] erro: ' + e.message, 'term-err');
         state.wsStatus.textContent = 'explorador: erro';
@@ -100,6 +196,7 @@ export function renderExplorer(data) {
     state.rootPath = data.root || '';
     state.currentCwd = data.cwd || '';
     state.currentCwdRel = data.path || '';
+    state.wsStatus.textContent = 'explorador: ' + (basename(data.root) || 'raiz');
     updateExplorerPath(data);
 
     const caminho = data.path || '';
@@ -139,6 +236,7 @@ export function renderExplorer(data) {
 
     highlightSelection();
     applyErrorMarkers();
+    atualizarSugestoes(caminho);
 }
 export function renderEmptyExplorer() {
     state.explorerTree.innerHTML = '';
@@ -181,8 +279,8 @@ export function staggerExplorerItems(container) {
     const items = typeof container.querySelectorAll === 'function'
         ? container.querySelectorAll('.explorer-item')
         : container;
-    const step = 0.012;
-    const max = 0.4;
+    const step = 0.006;
+    const max = 0.12;
     for (let i = 0; i < items.length; i++) {
         items[i].style.animationDelay = Math.min(i * step, max) + 's';
     }
@@ -218,15 +316,28 @@ export async function loadDirChildren(path, container) {
 export function openFile(path, row) {
     if (!row) row = findExplorerRow(path);
     selectEntry(path, 'file');
+    if (abreNoViewer(path) || /\.html?$/i.test(path)) {
+        pinPreview(path);
+        window.dispatchEvent(new CustomEvent('axio-preview-open', { detail: { path: path } }));
+        abrirCodigoDoPreview(path);
+        return;
+    }
     if (!state.monaco) {
         state.pendingFile = path;
         state.pendingLogMode = false;
         state.pendingSnippet = null;
         setView('editor');
         state.wsStatus.textContent = 'editor: carregando...';
+        anunciarArquivoAberto(path);
         return;
     }
-    openFileInEditor(path, { preview: true });
+    openFileInEditor(path, { preview: true }).then(() => anunciarArquivoAberto(path));
+}
+function anunciarArquivoAberto(path) {
+    window.dispatchEvent(new CustomEvent('axio-editor-file-open', { detail: { path: path } }));
+}
+function abrirCodigoDoPreview(path) {
+    openFileInEditor(path, { preview: true, manterVista: true }).then(() => anunciarArquivoAberto(path));
 }
 export function selectEntry(path, tipo) {
     state.selectedPath = path;
@@ -302,3 +413,6 @@ export function applyErrorMarkers() {
         }
     });
 }
+
+loadExplorerOnce();
+ligarPrefetchDePastas();

@@ -1,34 +1,32 @@
-import os
+"""Indice semantico do codigo do projeto no palace do mempalace.
+
+Segmenta cada ficheiro (por AST no Python, por tree-sitter no resto), grava os
+trechos com os embeddings e responde a busca por similaridade. O manifesto do
+indice (hash, mtime, tamanho) vive em .axio/code_index.json e e ele que torna a
+indexacao incremental - nao se reindexa o que nao mudou. tool_indexar_codigo e
+tool_buscar_codigo sao a porta do agente para este indice.
+"""
 import ast
-import json
-import time
-import sys
 import hashlib
+import json
+import os
 import threading
+import time
 
-from src.backend.state import estado, emit_event, caminho_estado_projeto, memoria_lock
+from src.backend.memory.mempalace_patch import abrir_client
 from src.backend.memory.vector import garantir_patch_mempalace, wing_da_pasta
+from src.backend.state import caminho_estado_projeto, emit_event, estado, memoria_lock
+from src.backend.tools.projeto_comum import arquivos_de_codigo, caminho_relativo
+from src.backend.tools.registry import register
 
-EXTENSOES_CODIGO = (
-    ".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
-    ".html", ".css", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".c",
-    ".java", ".rs", ".go", ".rb", ".php", ".json", ".md",
-    ".yaml", ".yml", ".toml", ".sh",
-)
-PASTAS_IGNORADAS = {
-    ".git", "node_modules", "__pycache__", ".venv", "venv", "env",
-    "dist", "build", ".axio", ".mempalace", "target", ".next",
-    ".idea", ".vscode", "coverage", ".tox", ".nox", ".pytest_cache",
-}
 TAMANHO_CHUNK = 1600
-MAX_ARQUIVOS_INDEX = 3000
-MAX_ARQUIVOS_CONTEXTO = 600
 CHUNKER_VERSION = 2
 _COLLECTION_CODIGO = "axio_code"
 
 _lock_index = threading.Lock()
 TIMEOUT_INDEXACAO = 12.0
-_cache_contexto = {"texto": "", "ts": 0.0}
+_identidade_embedder = {"status": "nao verificada"}
+_erro_colecao = {"motivo": ""}
 
 def _wing():
     return wing_da_pasta(estado.get("pasta_raiz")) or "general"
@@ -37,38 +35,93 @@ def _palace_path():
     return os.path.expanduser("~/.mempalace/palace")
 
 def _colecao_codigo(create=True):
+    """A colecao de codigo e NOSSA: abre pelo cliente do ChromaDB, nao pelo mempalace.
+
+    O mempalace 3.10 recusa qualquer nome que nao seja as duas colecoes que ele
+    proprio le (mempalace_drawers, mempalace_closets) e levanta
+    CollectionNameMismatchError - a axio_code nunca foi dele, e um indice de codigo
+    do Axio com marca 'wing' por projeto, pesquisado so pelo buscar_codigo_semantico.
+    O palace continua a ser aberto pela via do mempalace (mempalace_patch.abrir_client),
+    que e quem aplica as migracoes do chromadb; o que deixou de passar por ele foi a
+    POLITICA DE NOMES, nao o acesso ao ficheiro.
+    """
     garantir_patch_mempalace()
-    from mempalace.palace import get_collection
     if not create and not os.path.isdir(_palace_path()):
+        _erro_colecao["motivo"] = f"palace inexistente em {_palace_path()}"
         return None
     try:
-        return get_collection(_palace_path(), collection_name=_COLLECTION_CODIGO, create=create)
-    except Exception:
+        cliente = abrir_client(_palace_path())
+        col = cliente.get_or_create_collection(_COLLECTION_CODIGO) if create else cliente.get_collection(_COLLECTION_CODIGO)
+    except Exception as exc:
+        _erro_colecao["motivo"] = f"{type(exc).__name__}: {exc}"
         return None
+    _erro_colecao["motivo"] = ""
+    if create:
+        _identidade_embedder["status"] = _gravar_identidade_embedder(col)
+    return col
+
+def _gravar_identidade_embedder(col):
+    """Grava no metadata da colecao qual embedder a serve, uma vez so.
+
+    A identidade gravada converte a suposicao num facto registado: se o modelo de
+    embedding mudar, o valor que ficou aqui denuncia-o em vez de a busca degradar
+    em silencio. O metadata do chromadb e SUBSTITUIDO por inteiro no modify, nunca
+    fundido - sem o {**col.metadata} isto apagaria as chaves que la estiverem.
+    Devolve o que aconteceu em vez de engolir a falha; sai no audit da indexacao.
+    """
+    try:
+        atual = col.metadata or {}
+        if atual.get("embedder"):
+            return "ja registada"
+        col.modify(metadata={**atual, "embedder": _nome_do_embedder(col)})
+        return "registada agora"
+    except Exception as exc:
+        return f"falhou: {type(exc).__name__}: {exc}"
+
+
+def _nome_do_embedder(col):
+    nome = ""
+    try:
+        configuracao = getattr(col, "configuration", None) or {}
+        ef = configuracao.get("embedding_function") if hasattr(configuracao, "get") else None
+        nome = type(ef).__name__ if ef else ""
+    except Exception:
+        nome = ""
+    try:
+        vetores = col.peek(limit=1).get("embeddings")
+        if vetores is not None and len(vetores):
+            return f"{nome}/{len(vetores[0])}".lstrip("/")
+    except Exception:
+        pass
+    return nome or "desconhecido"
 
 def _caminho_indice():
     return caminho_estado_projeto("code_index.json")
 
-def _carregar_indice():
+def _ler_indice_bruto():
     caminho = _caminho_indice()
     if not caminho or not os.path.exists(caminho):
         return {}
     try:
         with open(caminho, "r", encoding="utf-8") as f:
             dados = json.load(f)
-        if isinstance(dados, dict) and isinstance(dados.get("arquivos"), dict):
-            return dados["arquivos"]
+        return dados if isinstance(dados, dict) else {}
     except Exception:
-        pass
-    return {}
+        return {}
 
-def _salvar_indice(indice, auditoria=None):
+def _carregar_indice():
+    arquivos = _ler_indice_bruto().get("arquivos")
+    return arquivos if isinstance(arquivos, dict) else {}
+
+def _salvar_indice(indice, auditoria=None, colecao_id=""):
     caminho = _caminho_indice()
     if not caminho:
         return
     try:
         os.makedirs(os.path.dirname(caminho), exist_ok=True)
         payload = {"arquivos": indice, "atualizado_em": time.time()}
+        if colecao_id:
+            payload["colecao_id"] = colecao_id
         if auditoria:
             payload["ultima_indexacao"] = auditoria
         with open(caminho, "w", encoding="utf-8") as f:
@@ -76,32 +129,29 @@ def _salvar_indice(indice, auditoria=None):
     except Exception:
         pass
 
-def _relativo(caminho):
-    raiz = estado.get("pasta_raiz", "")
-    if not raiz:
-        return caminho
-    return os.path.relpath(caminho, raiz).replace("\\", "/")
+def _colecao_foi_recriada(col, indice):
+    """Deteta um palace apagado/recriado por baixo do cache de indexacao.
 
-def _arquivos_de_codigo(max_arquivos=MAX_ARQUIVOS_INDEX):
-    raiz = estado.get("pasta_raiz", "")
-    if not raiz or not os.path.isdir(raiz):
-        return []
-    arquivos = []
-    for root, dirs, files in os.walk(raiz):
-        dirs[:] = [d for d in dirs if d not in PASTAS_IGNORADAS and not d.startswith(".")]
-        for name in files:
-            if not name.lower().endswith(EXTENSOES_CODIGO):
-                continue
-            caminho = os.path.join(root, name)
-            try:
-                if os.path.getsize(caminho) > 512000:
-                    continue
-            except OSError:
-                continue
-            arquivos.append(caminho)
-            if len(arquivos) >= max_arquivos:
-                return arquivos
-    return arquivos
+    O cache por hash (mtime/size/chunker_version) vive no PROJETO
+    (.axio/code_index.json) mas os vetores vivem no palace do mempalace
+    (~/.mempalace). Apagar ou reconstruir o palace nao toca no cache: ele
+    continua a afirmar que os ficheiros estao indexados, o indexador salta-os
+    todos e a busca semantica de codigo fica a servir em silencio apenas os
+    ficheiros mexidos depois disso. Dois sinais denunciam-no: a colecao ganha
+    um id novo quando e recriada, e o total de chunks cai abaixo do que o
+    proprio cache promete.
+    """
+    guardado = _ler_indice_bruto().get("colecao_id")
+    atual = getattr(col, "id", None) or getattr(col, "name", None)
+    if guardado and atual and guardado != atual:
+        return True
+    prometidos = sum(int(info.get("chunks", 0) or 0) for info in indice.values())
+    if not prometidos:
+        return False
+    try:
+        return col.count() < prometidos
+    except Exception:
+        return False
 
 def _chunkar_por_tamanho(conteudo):
     linhas = conteudo.splitlines()
@@ -303,8 +353,12 @@ def indexar_codigo_incremental(force=False):
         return {"erro": "nenhuma pasta de projeto selecionada"}
     col = _colecao_codigo(create=True)
     if col is None:
-        return {"erro": "falha ao abrir a coleção de código"}
-    arquivos = _arquivos_de_codigo()
+        return {"erro": f"falha ao abrir a coleção de código: {_erro_colecao['motivo'] or 'causa desconhecida'}"}
+    recriada = False
+    if not force and _colecao_foi_recriada(col, indice):
+        force = True
+        recriada = True
+    arquivos = arquivos_de_codigo()
     wing = _wing()
     novos = 0
     alterados = 0
@@ -313,7 +367,7 @@ def indexar_codigo_incremental(force=False):
     vistos = set()
     total_arquivos = len(arquivos)
     for pos, caminho in enumerate(arquivos, 1):
-        rel = _relativo(caminho)
+        rel = caminho_relativo(caminho)
         vistos.add(rel)
         try:
             st = os.stat(caminho)
@@ -377,9 +431,11 @@ def indexar_codigo_incremental(force=False):
         "removidos": removidos,
         "total_chunks": total_chunks,
         "total_arquivos": len(vistos),
+        "colecao_recriada": recriada,
+        "identidade_embedder": _identidade_embedder["status"],
         "timestamp": time.time(),
     }
-    _salvar_indice(indice, auditoria)
+    _salvar_indice(indice, auditoria, getattr(col, "id", ""))
     return {"novos": novos, "alterados": alterados, "removidos": removidos, "total_chunks": total_chunks}
 
 def buscar_codigo_semantico(query, n_results=5):
@@ -443,135 +499,6 @@ def buscar_codigo_relevante_para_contexto(query, n_results=3, min_similaridade=0
         linhas.append(f"[{h['arquivo']}:{h['linha']}] (similaridade {h['similaridade']})\n{h['texto']}")
     return "Trechos de código potencialmente relevantes (use tool_buscar_codigo para busca mais ampla):\n\n" + "\n\n".join(linhas)
 
-def _detectar_stack():
-    itens = [f"Python {sys.version.split()[0]}"]
-    raiz = estado.get("pasta_raiz", "")
-    if raiz:
-        pkg_path = os.path.join(raiz, "package.json")
-        if os.path.exists(pkg_path):
-            try:
-                with open(pkg_path, "r", encoding="utf-8") as f:
-                    pkg = json.load(f)
-                engines = pkg.get("engines") or {}
-                if engines.get("node"):
-                    itens.append(f"Node {engines['node']}")
-            except Exception:
-                pass
-        for nome_arq in (".nvmrc", ".node-version"):
-            caminho = os.path.join(raiz, nome_arq)
-            if os.path.exists(caminho):
-                try:
-                    with open(caminho, "r", encoding="utf-8") as f:
-                        versao = f.read().strip()
-                    if versao:
-                        itens.append(f"Node {versao}")
-                        break
-                except Exception:
-                    pass
-    return ", ".join(itens)
-
-def _dependencias(raiz):
-    linhas = []
-    req = os.path.join(raiz, "requirements.txt")
-    if os.path.exists(req):
-        try:
-            with open(req, "r", encoding="utf-8", errors="ignore") as f:
-                nomes = []
-                for l in f:
-                    l = l.strip()
-                    if not l or l.startswith("#") or l.startswith("-"):
-                        continue
-                    nome = l.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("[")[0].strip()
-                    if nome:
-                        nomes.append(nome)
-            if nomes:
-                nomes_unicos = sorted(set(nomes), key=str.lower)
-                linhas.append(f"requirements.txt ({len(nomes_unicos)} pacotes): " + ", ".join(nomes_unicos))
-        except Exception:
-            pass
-    pkg_path = os.path.join(raiz, "package.json")
-    if os.path.exists(pkg_path):
-        try:
-            with open(pkg_path, "r", encoding="utf-8") as f:
-                pkg = json.load(f)
-            deps = list((pkg.get("dependencies") or {}).keys()) + list((pkg.get("devDependencies") or {}).keys())
-            if deps:
-                linhas.append(f"package.json ({len(deps)} dependências): " + ", ".join(sorted(set(deps), key=str.lower)))
-        except Exception:
-            pass
-    pyproject = os.path.join(raiz, "pyproject.toml")
-    if os.path.exists(pyproject):
-        try:
-            with open(pyproject, "r", encoding="utf-8", errors="ignore") as f:
-                nlinhas = sum(1 for _ in f)
-            linhas.append(f"pyproject.toml presente ({nlinhas} linhas)")
-        except Exception:
-            pass
-    return "\n".join(linhas) if linhas else "(sem manifestos de dependências detectados)"
-
-def _arvore_resumida(raiz, max_prof=3, max_entradas=80):
-    linhas = []
-    contador = {"n": 0}
-    limite_dir = 30
-
-    def _walk(pasta, prefixo, prof):
-        if prof > max_prof or contador["n"] >= max_entradas:
-            return
-        try:
-            entradas = sorted(os.listdir(pasta), key=lambda n: n.lower())
-        except OSError:
-            return
-        dirs = [e for e in entradas if os.path.isdir(os.path.join(pasta, e)) and e not in PASTAS_IGNORADAS and not e.startswith(".")]
-        files = [e for e in entradas if os.path.isfile(os.path.join(pasta, e))]
-        exibir = (dirs + files)[:limite_dir]
-        for idx, e in enumerate(exibir):
-            contador["n"] += 1
-            if contador["n"] > max_entradas:
-                linhas.append(prefixo + "... (truncado)")
-                return
-            eh_ultimo = idx == len(exibir) - 1
-            ramo = "└── " if eh_ultimo else "├── "
-            caminho = os.path.join(pasta, e)
-            if os.path.isdir(caminho):
-                linhas.append(prefixo + ramo + e + "/")
-                _walk(caminho, prefixo + ("    " if eh_ultimo else "│   "), prof + 1)
-            else:
-                linhas.append(prefixo + ramo + e)
-    _walk(raiz, "", 1)
-    return "\n".join(linhas) if linhas else "(pasta vazia)"
-
-def _stats_codigo(arquivos):
-    por_ext = {}
-    for caminho in arquivos:
-        ext = os.path.splitext(caminho)[1].lower() or "(sem ext)"
-        por_ext[ext] = por_ext.get(ext, 0) + 1
-    resumo = f"{len(arquivos)} arquivos de código"
-    if por_ext:
-        topo = ", ".join(f"{k}:{v}" for k, v in sorted(por_ext.items(), key=lambda x: -x[1])[:10])
-        resumo += f" | {topo}"
-    return resumo
-
-def gerar_contexto_projeto():
-    raiz = estado.get("pasta_raiz", "")
-    if not raiz:
-        return "(nenhuma pasta de projeto selecionada)"
-    agora = time.time()
-    if _cache_contexto["texto"] and (agora - _cache_contexto["ts"]) < 120:
-        return _cache_contexto["texto"]
-    arquivos = _arquivos_de_codigo(MAX_ARQUIVOS_CONTEXTO)
-    stack = _detectar_stack()
-    partes = [
-        f"Raiz: {raiz}",
-        f"Stack: {stack}",
-        f"Arquivos: {_stats_codigo(arquivos)}",
-        f"Dependências:\n{_dependencias(raiz)}",
-        f"Estrutura:\n{_arvore_resumida(raiz)}",
-    ]
-    texto = "\n".join(partes)
-    _cache_contexto["texto"] = texto
-    _cache_contexto["ts"] = agora
-    return texto
-
 def disparar_indexacao_background():
     def _trabalho():
         if not _lock_index.acquire(blocking=False):
@@ -583,6 +510,13 @@ def disparar_indexacao_background():
 
     threading.Thread(target=_trabalho, daemon=True).start()
 
+@register(
+    "tool_indexar_codigo",
+    'Atualiza o índice semântico de código do projeto (embeddings dos trechos de código no ChromaDB). É INCREMENTAL: só reprocessa os arquivos que mudaram desde a última indexação, então normalmente termina em segundos. A indexação também roda automaticamente no início de cada rodada.',
+    {
+        'forcar': {"tipo": "BOOLEAN", "desc": 'Reconstrói o índice do zero, ignorando o cache por hash. Use raramente e só se o índice estiver corrompido — em projetos grandes isso demora minutos.', "padrao": False},
+    },
+)
 def tool_indexar_codigo(forcar=False):
     emit_event("executing", function="Indexando código do projeto")
     if not _lock_index.acquire(blocking=False):
@@ -615,13 +549,23 @@ def tool_indexar_codigo(forcar=False):
             f"{res.get('alterados', 0)} alterados, {res.get('removidos', 0)} removidos, "
             f"{res.get('total_chunks', 0)} chunks no total.")
 
+@register(
+    "tool_buscar_codigo",
+    'Busca trechos de código relevantes por similaridade semântica no índice de código do projeto (codebase indexing, como o Cursor). Use para localizar código por descrição/contexto, não por termo exato.',
+    {
+        'query': {"tipo": "STRING", "desc": 'Descrição ou contexto do que procura no código', "obrig": True, "padrao": ""},
+    },
+)
 def tool_buscar_codigo(query):
     emit_event("executing", function=f"Buscando no código: {query}")
     resultados = buscar_codigo_semantico(query, n_results=6)
     if not resultados:
+        if _erro_colecao["motivo"]:
+            return f"ERRO: não consegui abrir o índice de código: {_erro_colecao['motivo']}"
         return ("Nenhum trecho de código relevante encontrado. O índice de código pode "
                 "ainda não ter sido construído (a primeira indexação roda em background).")
     linhas = []
     for r in resultados:
         linhas.append(f"[{r['arquivo']}:{r['linha']}] (similaridade {r['similaridade']})\n{r['texto']}")
     return "Trechos de código mais relevantes:\n\n" + "\n\n".join(linhas)
+

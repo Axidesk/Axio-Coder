@@ -1,39 +1,34 @@
+import codecs
+import ctypes
+import locale
 import os
 import re
-import time
 import socket
-import shlex
-import locale
-import webbrowser
 import subprocess
 import threading
+import time
+import webbrowser
 
-from src.backend.state import estado, emit_event
-from src.backend.services.file_service import venv_projeto
+from src.backend.services.process_manager import montar_env_processo, tokenizar_linha
+from src.backend.services.sugestoes import detectar_url_na_saida
+from src.backend.state import emit_event, estado
+from src.backend.tools.registry import register
 
+@register(
+    "tool_executar_comando",
+    'Executa COMPILAÇÃO real (cmake --build build, make, g++, etc.). PROIBIDO usar para ler/editar/buscar/validar sintaxe (Python, sed, awk, grep, cat, echo, mkdir, type, node --check) — para isso use as ferramentas nativas: tool_ler_arquivo, tool_substituir_texto, tool_pesquisar_no_projeto, tool_validar_sintaxe. Use apenas para compilação que não tenha ferramenta nativa correspondente.',
+    {
+        'comando': {"tipo": "STRING", "obrig": True, "padrao": ""},
+    },
+)
 def tool_executar_comando(comando: str):
     emit_event("executing", function=f"Executando: {comando}")
-    comandos_proibidos = ['grep', 'sed', 'awk', 'cat', 'nano', 'vim', 'python', 'python3', 'py', 'powershell', 'pwsh', 'cmd', 'echo', 'mkdir', 'type']
-    sugestoes = {
-        'grep': 'tool_pesquisar_no_projeto',
-        'sed': 'tool_substituir_texto',
-        'awk': 'tool_substituir_texto',
-        'cat': 'tool_ler_arquivo',
-        'nano': 'tool_substituir_texto',
-        'vim': 'tool_substituir_texto',
-        'python': 'tool_validar_sintaxe (sintaxe) ou tool_executar_processo (venv/pip/servidor)',
-        'python3': 'tool_validar_sintaxe (sintaxe) ou tool_executar_processo (venv/pip/servidor)',
-        'py': 'tool_validar_sintaxe (sintaxe) ou tool_executar_processo (venv/pip/servidor)',
-        'powershell': 'tool_executar_processo',
-        'pwsh': 'tool_executar_processo',
-        'cmd': 'tool_executar_processo',
-        'echo': 'tool_salvar_arquivo ou tool_substituir_texto',
-        'mkdir': 'tool_executar_processo',
-        'type': 'tool_ler_arquivo',
-    }
-    cmd_base = comando.strip().split()[0].lower()
-    if cmd_base in comandos_proibidos:
-        sugestao = sugestoes.get(cmd_base, 'as ferramentas nativas correspondentes')
+    partes = (comando or "").strip().split()
+    if not partes:
+        return "ERRO: comando vazio."
+    cmd_base = _normalizar_exe(partes[0])
+    if cmd_base in COMANDOS_PROIBIDOS:
+        sugestao = FERRAMENTA_NATIVA.get(cmd_base, "as ferramentas nativas correspondentes")
         return f"ERRO: O comando '{cmd_base}' é proibido. Motivo: existe ferramenta nativa mais segura e rastreável para isso. Use: {sugestao}."
     return tool_executar_processo(comando, modo="aguardar", timeout=30)
 
@@ -42,51 +37,178 @@ def id_processo():
     estado["_contador_processo"] = n
     return f"proc_{n}"
 
-def _tokenizar(comando):
-    cmd = (comando or "").strip()
-    if not cmd:
-        return []
-    try:
-        partes = shlex.split(cmd, posix=False)
-        if partes:
-            return partes
-    except ValueError:
-        pass
-    return cmd.split()
+
+SUFIXOS_DE_EXECUTAVEL = (".exe", ".cmd", ".bat")
+
+ALIASES_DE_PYTHON = ("python", "python3", "py")
+
+COMANDOS_PROIBIDOS = (
+    "grep", "sed", "awk", "cat", "nano", "vim", "python", "python3", "py",
+    "powershell", "pwsh", "cmd", "echo", "mkdir", "type",
+)
+
+FERRAMENTA_NATIVA = {
+    "grep": "tool_pesquisar_no_projeto",
+    "findstr": "tool_pesquisar_no_projeto",
+    "find": "tool_pesquisar_no_projeto",
+    "sed": "tool_substituir_texto",
+    "awk": "tool_substituir_texto",
+    "cat": "tool_ler_arquivo",
+    "type": "tool_ler_arquivo",
+    "more": "tool_ler_arquivo",
+    "head": "tool_ler_trecho_arquivo",
+    "tail": "tool_ler_trecho_arquivo",
+    "nano": "tool_substituir_texto",
+    "vim": "tool_substituir_texto",
+    "vi": "tool_substituir_texto",
+    "notepad": "tool_substituir_texto",
+    "echo": "tool_salvar_arquivo ou tool_substituir_texto",
+    "mkdir": "tool_executar_processo",
+    "md": "tool_executar_processo",
+    "rm": "tool_deletar_arquivo (passa pela lixeira)",
+    "del": "tool_deletar_arquivo (passa pela lixeira)",
+    "erase": "tool_deletar_arquivo (passa pela lixeira)",
+    "rmdir": "tool_deletar_arquivo (passa pela lixeira)",
+    "rd": "tool_deletar_arquivo (passa pela lixeira)",
+    "cp": "tool_salvar_arquivo",
+    "copy": "tool_salvar_arquivo",
+    "xcopy": "tool_salvar_arquivo",
+    "mv": "tool_mover_arquivo_binario",
+    "move": "tool_mover_arquivo_binario",
+    "ren": "tool_mover_arquivo_binario",
+    "dir": "tool_listar_pasta ou tool_listar_arvore",
+    "ls": "tool_listar_pasta ou tool_listar_arvore",
+    "tree": "tool_listar_arvore",
+    "python": "tool_validar_sintaxe (sintaxe) ou tool_executar_processo (venv/pip/servidor)",
+    "python3": "tool_validar_sintaxe (sintaxe) ou tool_executar_processo (venv/pip/servidor)",
+    "py": "tool_validar_sintaxe (sintaxe) ou tool_executar_processo (venv/pip/servidor)",
+    "powershell": "tool_executar_processo",
+    "pwsh": "tool_executar_processo",
+    "cmd": "tool_executar_processo",
+    "ruff": "tool_auditar_codigo",
+    "eslint": "tool_auditar_codigo",
+    "flake8": "tool_auditar_codigo",
+    "pylint": "tool_auditar_codigo",
+    "mypy": "tool_auditar_codigo",
+    "jscpd": "tool_analisar_similaridade",
+    "taskkill": "tool_parar_processo",
+}
+
+COMANDOS_DESTRUTIVOS = (
+    (r"\bgit\s+reset\s+--hard\b", "git reset --hard descarta alteracoes nao commitadas"),
+    (r"\bgit\s+clean\s+-[a-z]*[fdx]", "git clean -f/-d/-x apaga ficheiros nao rastreados"),
+    (r"\bgit\s+checkout\s+(--\s+)?\.(\s|$)", "git checkout . descarta alteracoes nao commitadas"),
+    (r"\bgit\s+restore\s+(--staged\s+)?\.(\s|$)", "git restore . descarta alteracoes nao commitadas"),
+    (r"\bgit\s+push\b[^|;&]*--force", "git push --force reescreve o historico remoto"),
+    (r"\bgit\s+branch\s+-D\b", "git branch -D apaga uma branch sem confirmacao"),
+    (r"\brm\s+[^|;&]*-[a-z]*[rf]", "rm -r/-f apaga sem passar pela lixeira"),
+    (r"\b(del|erase)\s+[^|;&]*/[a-z]*[qs]", "del /s /q apaga sem passar pela lixeira"),
+    (r"\b(rd|rmdir)\s+[^|;&]*/s\b", "rmdir /s apaga uma pasta inteira sem passar pela lixeira"),
+    (r"\bformat\s+[a-z]:", "format apaga uma unidade inteira"),
+    (r"\b(shutdown|reboot)\b", "desliga ou reinicia a maquina"),
+    (r"\bdocker\s+(system|volume|image|builder)\s+prune\b", "docker prune apaga volumes e imagens"),
+    (r"\btaskkill\s+[^|;&]*/f\b[^|;&]*/im\b", "taskkill /F /IM mata TODOS os processos com esse nome"),
+)
+
+MODULOS_PYTHON = (
+    "venv", "pip", "flask", "uvicorn", "http.server", "pytest", "unittest",
+    "ruff", "mypy", "black", "json.tool", "pipx", "ensurepip", "site", "compileall",
+)
+
+SUBCOMANDOS_DE_GESTOR_JS = (
+    "install", "ci", "add", "remove", "uninstall", "update", "upgrade", "dedupe",
+    "run", "test", "build", "dev", "start", "exec", "x", "dlx", "create", "init",
+    "ls", "list", "why", "outdated", "audit", "view", "info", "pack", "prune",
+    "cache", "config", "typecheck", "lint", "format", "check", "link",
+)
+
+SUBCOMANDOS_DE_GESTOR_PY = (
+    "venv", "pip", "sync", "lock", "add", "remove", "uninstall", "run", "tree",
+    "python", "tool", "cache", "self", "init", "export", "build", "install",
+    "update", "upgrade", "show", "env", "new", "config", "check", "list",
+    "inject", "reinstall", "download", "freeze", "wheel",
+)
+
+FERRAMENTAS_DE_CODIGO = (
+    "pytest", "ruff", "mypy", "black", "pylint", "flake8", "isort", "tox", "nox",
+    "hatch", "pre-commit", "alembic", "eslint", "prettier", "vite", "webpack",
+    "rollup", "esbuild", "parcel", "tsc", "tsx", "jest", "vitest", "mocha",
+    "playwright", "cypress", "electron", "electron-builder", "next", "nuxt",
+    "astro", "nodemon", "pm2", "just", "task", "sass", "tailwindcss",
+)
+
+COMPILADORES = (
+    "cmake", "make", "mingw32-make", "ninja", "g++", "gcc", "clang", "clang++",
+    "meson", "dotnet", "cargo", "rustc", "go", "javac", "nmake", "msbuild", "cl",
+)
+
+VERSIONAMENTO_E_NUVEM = (
+    "git", "gh", "glab", "docker", "docker-compose", "kubectl", "helm", "supabase",
+    "firebase", "gcloud", "aws", "az", "vercel", "netlify", "wrangler", "flyctl",
+    "mempalace",
+)
+
+MIDIA = ("ffmpeg", "ffprobe", "magick", "sox", "scenedetect")
+
+REDE_E_SISTEMA = (
+    "curl", "wget", "ping", "netstat", "tasklist", "taskkill", "sqlite3",
+    "tar", "unzip", "zip", "7z",
+)
+
+PACOTES_DE_CONSULTA_PIP = ("list", "freeze", "show", "check", "download", "wheel")
 
 def _normalizar_exe(token):
     """Nome do executavel normalizado: sem caminho e sem sufixo .exe/.cmd/.bat."""
     exe = (token or "").replace("\\", "/").split("/")[-1].lower()
-    for sufixo in (".exe", ".cmd", ".bat"):
-        if exe.endswith(sufixo):
-            exe = exe[: -len(sufixo)]
+    for sufixo in SUFIXOS_DE_EXECUTAVEL:
+        exe = exe.removesuffix(sufixo)
     return exe
 
 def _validar_comando_processo(comando):
     cmd = (comando or "").strip()
     if not cmd:
         return False, "Comando vazio."
-    partes = _tokenizar(cmd)
+    partes = tokenizar_linha(cmd)
     exe = _normalizar_exe(partes[0])
     if not exe:
         return False, "Executável não identificado."
 
-    if exe in ("python", "python3", "py"):
-        if len(partes) >= 3 and partes[1] == "-m" and partes[2] in ("venv", "pip", "flask", "uvicorn"):
+    irreversivel = comando_destrutivo(cmd)
+    if irreversivel:
+        return False, (
+            f"Comando irreversivel recusado: {irreversivel}. Se e mesmo isto que queres, corre-o "
+            "tu no painel do terminal - eu nao descarto trabalho sem uma pessoa a decidir."
+        )
+
+    if exe in ALIASES_DE_PYTHON:
+        if len(partes) >= 3 and partes[1] == "-m" and partes[2] in MODULOS_PYTHON:
             return True, ""
         if len(partes) >= 2 and partes[1].endswith(".py"):
             return True, ""
-        return False, f"Uso de '{exe}' não permitido. Permitido: {exe} -m venv/pip/flask/uvicorn ou {exe} app.py."
+        sugestao = ferramenta_nativa_do_comando(cmd)
+        dica = f" Use: {sugestao}." if sugestao else ""
+        return False, (f"Uso de '{exe}' não permitido. Permitido: {exe} -m <modulo> "
+                       f"(venv/pip/flask/uvicorn/pytest/ruff/mypy/...) ou {exe} script.py.{dica}")
 
     if exe in ("pip", "pip3"):
-        if len(partes) >= 2 and partes[1] == "install":
+        if len(partes) >= 2 and partes[1] in ("install",) + PACOTES_DE_CONSULTA_PIP:
             return True, ""
-        return False, "pip só é permitido com 'install'."
+        return False, ("pip só é permitido com install/list/freeze/show/check/download/wheel "
+                       "(os de consulta nao alteram nada).")
 
-    if exe in ("npm", "npx"):
-        if len(partes) >= 2 and partes[1] in ("install", "ci", "start", "run"):
+    if exe in ("uv", "poetry", "pipx"):
+        if len(partes) >= 2 and partes[1] in SUBCOMANDOS_DE_GESTOR_PY:
             return True, ""
-        return False, "npm/npx só são permitidos com install/ci/start/run."
+        return False, f"'{exe}' só é permitido com subcomandos de gestão de projeto ou pacotes."
+
+    if exe in ("npx", "bunx"):
+        return True, ""
+
+    if exe in ("npm", "yarn", "pnpm", "bun", "deno"):
+        if len(partes) >= 2 and partes[1] in SUBCOMANDOS_DE_GESTOR_JS:
+            return True, ""
+        return False, (f"'{exe}' só é permitido com subcomandos de instalação, execução de script "
+                       "ou consulta (publicar nunca).")
 
     if exe == "node":
         return True, ""
@@ -96,20 +218,53 @@ def _validar_comando_processo(comando):
             return True, ""
         return False, "flask só é permitido com 'run'."
 
-    if exe in ("supabase", "firebase", "gcloud", "docker", "mempalace", "git"):
+    if (exe in FERRAMENTAS_DE_CODIGO or exe in VERSIONAMENTO_E_NUVEM
+            or exe in MIDIA or exe in REDE_E_SISTEMA):
         return True, ""
 
-    if exe in ("cmake", "make", "mingw32-make", "ninja", "g++", "gcc", "clang", "clang++", "meson",
-               "dotnet", "cargo", "rustc", "go", "javac", "tsc", "nmake", "msbuild", "cl"):
+    if exe in COMPILADORES:
         return True, ""
 
-    return False, f"Executável '{exe}' não está na lista permitida."
+    if not re.search(r"\.(?:exe|cmd|bat)$", partes[0], re.IGNORECASE) and re.search(r"\.(?:exe|cmd|bat)\b", cmd, re.IGNORECASE):
+        return False, (
+            f"O executável não foi reconhecido (li '{exe}'). O caminho tem espaços sem aspas, "
+            "por isso o cmd.exe também não o executaria assim. Repita com o caminho entre aspas: "
+            "\"C:\\caminho com espacos\\python.exe\" script.py"
+        )
+    sugestao = ferramenta_nativa_do_comando(cmd)
+    dica = f" Use: {sugestao}." if sugestao else ""
+    return False, f"Executável '{exe}' não está na lista permitida.{dica}"
+
+
+def ferramenta_nativa_do_comando(comando):
+    """Ferramenta nativa que faz o mesmo que este comando, ou string vazia se nao houver."""
+    partes = tokenizar_linha(comando or "")
+    if not partes:
+        return ""
+    exe = _normalizar_exe(partes[0])
+    sub = partes[1].lower() if len(partes) >= 2 else ""
+    if exe in ALIASES_DE_PYTHON and sub == "-c":
+        return "tool_executar_python"
+    if exe == "node" and sub in ("-e", "--eval"):
+        return "tool_executar_js"
+    if exe == "node" and sub in ("--check", "-c"):
+        return "tool_validar_sintaxe"
+    return FERRAMENTA_NATIVA.get(exe, "")
+
+
+def comando_destrutivo(comando):
+    """Motivo pelo qual o comando e irreversivel, ou string vazia se nao for."""
+    texto = (comando or "").strip()
+    for padrao, motivo in COMANDOS_DESTRUTIVOS:
+        if re.search(padrao, texto, re.IGNORECASE):
+            return motivo
+    return ""
+
 
 def _codepage_console_windows():
     if os.name != "nt":
         return None
     try:
-        import ctypes
         cp = ctypes.windll.kernel32.GetConsoleOutputCP()
         if cp:
             return "cp%d" % cp
@@ -117,50 +272,108 @@ def _codepage_console_windows():
         pass
     return None
 
-def _decodificar_linha_processo(raw):
-    if isinstance(raw, str):
-        return raw
-    encs = ["utf-8"]
-    if os.name == "nt":
-        oem = _codepage_console_windows()
-        if oem:
-            encs.append(oem)
-        for e in ("cp850", "cp437"):
-            if e.lower() not in [x.lower() for x in encs]:
-                encs.append(e)
+def _parece_utf8(bruto):
+    """Verdadeiro para UTF-8 valido e para a cauda de uma sequencia cortada a meio."""
     try:
-        pref = locale.getpreferredencoding(False)
-        if pref and pref.lower() not in [x.lower() for x in encs]:
-            encs.append(pref)
-    except Exception:
-        pass
-    for enc in encs + ["cp1252", "latin-1"]:
+        bruto.decode("utf-8")
+        return True
+    except UnicodeDecodeError as e:
+        return e.reason == "unexpected end of data"
+
+def _escolher_encoding_saida(bruto):
+    if _parece_utf8(bruto):
+        return "utf-8"
+    candidatos = []
+    oem = _codepage_console_windows()
+    if oem:
+        candidatos.append(oem)
+    candidatos.extend(["cp850", "cp437", "cp1252"])
+    for enc in candidatos:
+        try:
+            bruto.decode(enc)
+            return enc
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return "utf-8"
+
+class _DecodificadorSaida:
+    """Fixa a pagina do stream quando aparece o primeiro byte nao-ASCII e guarda a
+    cauda de uma sequencia cortada, para um bloco de 4096 bytes nao virar lixo."""
+
+    def __init__(self):
+        self.decoder = None
+        self.pendente = b""
+
+    def alimentar(self, bruto):
+        if self.decoder is not None:
+            return self.decoder.decode(bruto)
+        self.pendente += bruto
+        if self.pendente.isascii():
+            texto = self.pendente.decode("ascii")
+            self.pendente = b""
+            return texto
+        self.decoder = codecs.getincrementaldecoder(_escolher_encoding_saida(self.pendente))(errors="replace")
+        texto = self.decoder.decode(self.pendente)
+        self.pendente = b""
+        return texto
+
+    def fechar(self):
+        if self.decoder is None:
+            texto = self.pendente.decode("ascii", "replace")
+            self.pendente = b""
+            return texto
+        return self.decoder.decode(b"", True)
+
+def _codificar_entrada_processo(texto):
+    """UTF-8 primeiro: os subprocessos arrancam com PYTHONIOENCODING=utf-8, logo e
+    UTF-8 que esperam na entrada; a pagina OEM so fica como recurso."""
+    linha = str(texto) + "\r\n"
+    candidatos = ["utf-8"]
+    if os.name == "nt":
+        candidatos.append(_codepage_console_windows())
+        try:
+            candidatos.append(locale.getpreferredencoding(False))
+        except Exception:
+            pass
+    for enc in candidatos:
         if not enc:
             continue
         try:
-            return raw.decode(enc)
-        except (UnicodeDecodeError, LookupError):
+            return linha.encode(enc)
+        except (UnicodeEncodeError, LookupError):
             continue
-    return raw.decode("utf-8", "replace")
+    return linha.encode("utf-8", "replace")
+
+def _emitir_saida_processo(pid, texto):
+    dados = {"pid": pid, "chunk": texto}
+    url = detectar_url_na_saida(texto)
+    if url:
+        dados["url"] = url
+    emit_event("process_output", **dados)
 
 def ler_saida_stream(pid, popen):
     try:
         stream = popen.stdout
         if not stream:
             return
+        decodificador = _DecodificadorSaida()
         buffer = ""
         while True:
             bruto = stream.read1(4096) if hasattr(stream, "read1") else stream.read(4096)
             if not bruto:
                 break
-            texto = _decodificar_linha_processo(bruto)
+            texto = decodificador.alimentar(bruto)
             if not texto:
                 continue
-            emit_event("process_output", pid=pid, chunk=texto)
+            _emitir_saida_processo(pid, texto)
             buffer += texto
             while "\n" in buffer:
                 linha, buffer = buffer.split("\n", 1)
                 _anexar_log_processo(pid, linha.rstrip("\r"))
+        cauda = decodificador.fechar()
+        if cauda:
+            _emitir_saida_processo(pid, cauda)
+            buffer += cauda
         if buffer:
             _anexar_log_processo(pid, buffer.rstrip("\r"))
     except Exception:
@@ -168,15 +381,14 @@ def ler_saida_stream(pid, popen):
 
 def _monitorar_processo_segundo_plano(pid, popen):
     try:
-        popen.wait()
+        codigo = popen.wait()
     except Exception:
-        pass
-    reg = estado.get("processos", {}).get(pid)
-    if reg is None or reg.get("status") != "rodando":
         return
-    rc = popen.returncode
-    reg["status"] = "ok" if rc == 0 else "erro"
-    emit_event("process_finished", pid=pid, exit_code=rc, status=reg["status"])
+    reg = estado.get("processos", {}).get(pid)
+    if reg is None or reg.get("status") == "parado":
+        return
+    reg["status"] = "ok" if codigo == 0 else "erro"
+    emit_event("process_finished", pid=pid, exit_code=codigo, status=reg["status"])
 
 def matar_arvore(popen):
     if popen is None:
@@ -230,7 +442,7 @@ def _eh_comando_web(comando):
     cmd = (comando or "").strip()
     if not cmd:
         return False
-    partes = _tokenizar(cmd)
+    partes = tokenizar_linha(cmd)
     if not partes:
         return False
     exe = _normalizar_exe(partes[0])
@@ -240,8 +452,12 @@ def _eh_comando_web(comando):
         return bool(re.search(r"\S+\.(?:js|mjs|cjs)\b", cmd))
     if exe in ("python", "python3", "py"):
         return ("flask" in cmd) or ("uvicorn" in cmd) or bool(re.search(r"\S+\.py(?:\s|$)", cmd))
-    if exe in ("npm", "npx"):
-        return any(p in cmd for p in ("start", "run dev", "run serve", "run start"))
+    if exe in ("npm", "npx", "yarn", "pnpm", "bun", "deno"):
+        return any(p in cmd for p in ("start", "run dev", "run serve", "run start", "dev", "serve"))
+    if exe in ("vite", "next", "nuxt", "astro", "nodemon"):
+        return True
+    if exe in ("uv", "poetry"):
+        return "run" in cmd and any(p in cmd for p in ("flask", "uvicorn", "dev", "serve", "start"))
     return False
 
 def _ajustar_porta_comando(comando):
@@ -261,11 +477,14 @@ def _ajustar_porta_comando(comando):
 def _eh_servidor_http(comando):
     if not _eh_comando_web(comando):
         return False
-    partes = _tokenizar(comando)
+    partes = tokenizar_linha(comando)
     if not partes:
         return False
     exe = _normalizar_exe(partes[0])
-    return exe in ("flask", "uvicorn", "python", "python3", "py", "node", "npm", "npx")
+    if exe in ALIASES_DE_PYTHON:
+        return True
+    return exe in ("flask", "uvicorn", "node", "npm", "npx", "yarn", "pnpm", "bun", "deno",
+                   "vite", "next", "nuxt", "astro", "nodemon")
 
 def _porta_responde(porta, timeout=30):
     inicio = time.time()
@@ -305,19 +524,17 @@ def _abrir_quando_pronto(pid, porta):
     else:
         _registrar_linha_processo(pid, f"[axio] não consegui abrir o navegador; abra manualmente: {url}")
 
-def montar_env_processo(comando, porta_env=None):
-    env = os.environ.copy()
-    if porta_env:
-        env["PORT"] = str(porta_env)
-        env["FLASK_RUN_PORT"] = str(porta_env)
-    venv = venv_projeto()
-    if venv:
-        scripts = venv["scripts"]
-        path_atual = env.get("PATH", "")
-        env["PATH"] = scripts + os.pathsep + path_atual if path_atual else scripts
-        env["VIRTUAL_ENV"] = venv["dir"]
-    return env
 
+@register(
+    "tool_executar_processo",
+    "Executa processos longos ou de bootstrap: criar venv, instalar dependências (pip/npm) e rodar servidores. Use modo='aguardar' (padrão) para venv/instalações e modo='segundo_plano' para servidores que não terminam (npm start, flask run). Para subir um SERVIDOR FLASK use 'python -m flask --app app run --port N' (a allowlist recusa 'python -c'). ATENÇÃO AO LEVANTAR UMA SEGUNDA INSTÂNCIA DO PRÓPRIO AXIO para testar o código do disco: ela arranca com o estado VAZIO (sem pasta de projeto), logo /preview/<p> responde 403 e tudo o que depende da pasta recusa — quem restaura a pasta no arranque é o frontend, e um servidor sem frontend não o faz. Nesse caso fixe a pasta de dentro da própria página, com um fetch relativo a POST /api/set_folder e {\"folder\":\"<raiz>\"}.",
+    {
+        'comando': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'modo': {"tipo": "STRING", "enum": ['aguardar', 'segundo_plano'], "padrao": "aguardar"},
+        'timeout': {"tipo": "INTEGER", "padrao": None},
+    },
+    disponivel="edicao",
+)
 def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
     try:
         timeout = int(timeout) if timeout is not None else 300
@@ -343,31 +560,16 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
         nota_porta = f" (porta sugerida via env PORT/FLASK_RUN_PORT: {porta_env})"
 
     emit_event("executing", function=f"Executando: {comando}")
-    pid = id_processo()
-    reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": estado.get("pasta_raiz", ""), "popen": None}
-    estado["processos"][pid] = reg
+    try:
+        reg = iniciar_processo(comando, porta_env=porta_env, modo=modo, acompanhar=(modo == "segundo_plano"))
+    except OSError as e:
+        return f"ERRO: nao consegui iniciar o processo ({e})."
+    pid = reg["id"]
+    popen = reg["popen"]
+    leitor = reg["_leitor"]
 
     try:
-        kwargs = {
-            "shell": True,
-            "cwd": estado.get("pasta_raiz", ""),
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.STDOUT,
-            "stdin": subprocess.DEVNULL,
-        }
-        kwargs["env"] = montar_env_processo(comando, porta_env)
-        if os.name == "nt":
-            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-        else:
-            kwargs["start_new_session"] = True
-        popen = subprocess.Popen(comando, **kwargs)
-        reg["popen"] = popen
-        emit_event("process_started", pid=pid, comando=comando, modo=modo)
-        leitor = threading.Thread(target=ler_saida_stream, args=(pid, popen), daemon=True)
-        leitor.start()
-
         if modo == "segundo_plano":
-            threading.Thread(target=_monitorar_processo_segundo_plano, args=(pid, popen), daemon=True).start()
             if _eh_servidor_http(comando) and porta_env:
                 threading.Thread(target=_abrir_quando_pronto, args=(pid, porta_env), daemon=True).start()
             return f"PROCESSO INICIADO EM SEGUNDO PLANO (pid={pid}){nota_porta}. Acompanhe em /api/processos e encerre com /api/processo/{pid}/parar."
@@ -405,6 +607,88 @@ def parar_processo_reg(pid, reg):
             pass
     emit_event("process_finished", pid=pid, exit_code=None, status="parado")
 
+def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False):
+    """Abre o comando, registra-o em estado['processos'] e liga o leitor da saida.
+    Devolve o registo (com a thread leitora em '_leitor'). Com 'acompanhar' liga tambem o
+    monitor que fecha o processo nos eventos quando ele terminar sozinho; quem espera pela
+    conclusao (modo 'aguardar') passa False e trata o fim por si, para nao haver dois fim.
+    Com 'stdin_pipe' a entrada fica aberta para escrever_stdin_processo (cards do terminal)."""
+    cwd = cwd or estado.get("pasta_raiz", "") or os.getcwd()
+    pid = id_processo()
+    reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": cwd, "popen": None, "stdin": None}
+    estado["processos"][pid] = reg
+    emit_event("process_started", pid=pid, comando=comando, modo=modo)
+    kwargs = {
+        "shell": True,
+        "cwd": cwd,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "stdin": subprocess.PIPE if stdin_pipe else subprocess.DEVNULL,
+        "env": montar_env_processo(comando, porta_env),
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    try:
+        popen = subprocess.Popen(comando, **kwargs)
+    except OSError:
+        reg["status"] = "erro"
+        emit_event("process_finished", pid=pid, exit_code=None, status="erro")
+        raise
+    reg["popen"] = popen
+    reg["stdin"] = popen.stdin
+    reg["_leitor"] = threading.Thread(target=ler_saida_stream, args=(pid, popen), daemon=True)
+    reg["_leitor"].start()
+    if acompanhar:
+        threading.Thread(target=_monitorar_processo_segundo_plano, args=(pid, popen), daemon=True).start()
+    return reg
+
+def escrever_stdin_processo(pid, texto, timeout=2.0):
+    """Escreve uma linha no stdin de um processo gerido aberto com 'stdin_pipe'.
+    Devolve (ok, motivo). A linha vai com CRLF porque o cmd.exe so a da por completa assim;
+    a escrita corre numa thread com limite porque um processo que nao le o pipe o enche
+    (~64KB) e a escrita bloqueia para sempre."""
+    reg = estado.get("processos", {}).get(pid)
+    if reg is None:
+        return False, "processo nao encontrado"
+    popen = reg.get("popen")
+    entrada = reg.get("stdin")
+    if popen is None or entrada is None:
+        return False, "este processo nao aceita entrada"
+    try:
+        if popen.poll() is not None:
+            return False, "o processo ja terminou"
+    except Exception:
+        return False, "o processo ja terminou"
+    bruto = _codificar_entrada_processo(texto)
+    pronto = threading.Event()
+    resultado = {"erro": ""}
+
+    def _gravar():
+        try:
+            entrada.write(bruto)
+            entrada.flush()
+        except (OSError, ValueError) as e:
+            resultado["erro"] = str(e)
+        finally:
+            pronto.set()
+
+    threading.Thread(target=_gravar, daemon=True).start()
+    if not pronto.wait(timeout):
+        return False, "o processo nao esta a ler a entrada"
+    if resultado["erro"]:
+        return False, f"nao consegui escrever: {resultado['erro']}"
+    return True, ""
+
+@register(
+    "tool_parar_processo",
+    'Para (mata) um processo em segundo plano pelo pid. Use para encerrar servidores e processos longos antes de reinicia-los. Obtenha os pids em /api/processos.',
+    {
+        'pid': {"tipo": "STRING", "desc": 'Identificador do processo (ex: proc_1)', "obrig": True, "padrao": ""},
+    },
+    disponivel="edicao",
+)
 def tool_parar_processo(pid: str):
     emit_event("executing", function="Parando processo")
     pid = (pid or "").strip()
@@ -415,3 +699,62 @@ def tool_parar_processo(pid: str):
         return f"ERRO: processo '{pid}' nao encontrado. Liste os pids em /api/processos."
     parar_processo_reg(pid, reg)
     return f"Processo {pid} parado."
+
+@register(
+    "tool_listar_processos",
+    'Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado). Use para saber o que esta a correr antes de parar ou reiniciar algo.',
+    {
+    },
+    disponivel="edicao",
+)
+def tool_listar_processos():
+    """Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado).
+
+    Permite saber o que esta a correr (servidores, watchers) sem ter de decorar
+    os pids nem consultar /api/processos manualmente.
+    """
+    emit_event("executing", function="Listando processos em segundo plano")
+    registros = estado.get("processos", {})
+    if not registros:
+        return "Nenhum processo em segundo plano nesta sessao."
+    linhas = []
+    for pid, reg in registros.items():
+        popen = reg.get("popen")
+        rodando = False
+        if popen is not None:
+            try:
+                rodando = popen.poll() is None
+            except Exception:
+                rodando = False
+        estado_txt = "rodando" if rodando else reg.get("status", "parado")
+        linhas.append(f"{pid}: {reg.get('comando', '(desconhecido)')} [{estado_txt}]")
+    return "Processos em segundo plano:\n" + "\n".join(linhas)
+def run_com_timeout(cmd, timeout=60):
+    """Executa um comando externo com timeout que realmente funciona no Windows.
+
+    subprocess.run(..., shell=True, timeout=...) mata apenas o shell; o processo
+    neto (ex: node via npx) herda os pipes de stdout/stderr e o communicate()
+    nunca retorna, ignorando o timeout. Aqui usamos Popen + communicate(timeout)
+    e, ao estourar, encerramos a arvore inteira com matar_arvore antes de relancar
+    subprocess.TimeoutExpired para o chamador tratar.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        shell=isinstance(cmd, str),
+    )
+    try:
+        out, err = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        matar_arvore(proc)
+        try:
+            proc.communicate(timeout=5)
+        except Exception:
+            pass
+        raise
+    return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
+
+

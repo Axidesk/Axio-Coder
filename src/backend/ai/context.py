@@ -6,7 +6,10 @@ from src.backend.ai.gemini import get_gemini_client
 from src.backend.ai.deepseek import get_deepseek_client
 
 LIMITE_TOKENS_HISTORICO_GLOBAL = int(os.getenv("LIMITE_TOKENS_HISTORICO", "200000"))
+LIMITE_TOKENS_HISTORICO_MAX = int(os.getenv("LIMITE_TOKENS_HISTORICO_MAX", "1000000"))
 MANTER_RECENTES_GLOBAL = 12
+TETO_AUTOMATICO_LIMIAR = float(os.getenv("TETO_AUTOMATICO_LIMIAR", "85"))
+TETO_AUTOMATICO_PASSOS = int(os.getenv("TETO_AUTOMATICO_PASSOS", "2"))
 
 token_encoder = None
 class ErroContextoExcedido(Exception):
@@ -44,6 +47,40 @@ def eh_erro_transitorio(msg):
         "DEADLINE_EXCEEDED",
         "Deadline expired",
     ])
+
+def limite_tokens():
+    ajustado = estado.get("limite_tokens_contexto")
+    if not ajustado:
+        return LIMITE_TOKENS_HISTORICO_GLOBAL
+    return max(1000, min(int(ajustado), LIMITE_TOKENS_HISTORICO_MAX))
+
+
+def ajustar_teto_automatico(percent):
+    """Sobe o teto quando a memoria da rodada se aproxima do limite, e diz por que.
+
+    Sem isto o teto era 100% manual: a rodada chegava aos 200 mil tokens e a
+    compactacao comecava a substituir conversa por resumo, mesmo com o modelo a
+    aceitar um milhao. A subida e deliberada e escassa - limiar alto, dois passos
+    por sessao no maximo, nunca abaixo do padrao do .env e cada passo anunciado
+    com o motivo -, porque teto maior significa pedido maior em TODA chamada, ou
+    seja custo real. Devolve True quando subiu.
+    """
+    teto = limite_tokens()
+    if percent < TETO_AUTOMATICO_LIMIAR or teto >= LIMITE_TOKENS_HISTORICO_MAX:
+        return False
+    if teto < LIMITE_TOKENS_HISTORICO_GLOBAL:
+        return False
+    if estado.get("tetos_automaticos", 0) >= TETO_AUTOMATICO_PASSOS:
+        return False
+    novo = min(LIMITE_TOKENS_HISTORICO_MAX, teto * 2)
+    estado["limite_tokens_contexto"] = novo
+    estado["tetos_automaticos"] = estado.get("tetos_automaticos", 0) + 1
+    motivo = f"a memoria da rodada chegou a {percent:.0f}% do teto"
+    emit_event("context_limit", anterior=teto, limite=novo,
+               maximo=LIMITE_TOKENS_HISTORICO_MAX, motivo=motivo)
+    emit_event("status", message=f"Teto de contexto: {teto:,} -> {novo:,} tokens ({motivo}).")
+    return True
+
 
 def truncar_cabeca_cauda(texto, max_chars=3000):
     if len(texto) <= max_chars:
@@ -171,7 +208,7 @@ def resumir_com_llm(texto, use_deepseek=False):
             )
             return (resp.choices[0].message.content or "").strip() or None
         resp = get_gemini_client().models.generate_content(
-            model='gemini-3.1-pro-preview-customtools',
+            model='gemini-3.1-pro-preview-customtools', #gemini-3.8-flash (compute use)
             contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
             config=types.GenerateContentConfig(temperature=0.2),
         )
@@ -185,7 +222,7 @@ def podar_historico_global(use_deepseek=False):
     if not hist:
         return
     total = sum(contar_tokens(texto_de_content(c)) for c in hist)
-    if total <= LIMITE_TOKENS_HISTORICO_GLOBAL:
+    if total <= limite_tokens():
         return
     antigas = hist[:-MANTER_RECENTES_GLOBAL]
     recentes = hist[-MANTER_RECENTES_GLOBAL:]
@@ -243,10 +280,14 @@ def medir_contexto(extra_texto="", system_text="", ferramentas=None, historico=N
         usado += contar_tokens(texto_de_ferramentas(ferramentas))
     if extra_texto:
         usado += contar_tokens(extra_texto)
-    limite = LIMITE_TOKENS_HISTORICO_GLOBAL
+    limite = limite_tokens()
     percent = (usado / limite) * 100 if limite else 0.0
     acumulado = tokens_historico(estado.get("historico_chat", []))
     percent_acumulado = (acumulado / limite) * 100 if limite else 0.0
+    if ajustar_teto_automatico(percent):
+        limite = limite_tokens()
+        percent = (usado / limite) * 100 if limite else 0.0
+        percent_acumulado = (acumulado / limite) * 100 if limite else 0.0
     emit_event(
         "context_usage",
         usado=usado,

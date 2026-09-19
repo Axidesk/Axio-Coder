@@ -1,23 +1,33 @@
 import os
 import re
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, jsonify, request, send_file, send_from_directory
 from src.backend.config import APP_ROOT
 from src.backend.memory.glossary import load_glossary, save_glossary
+from src.backend.services.file_service import resolver_caminho
+from src.backend.tools.js_contrato import defeitos_contrato_imports
 
 static_bp = Blueprint("static", __name__)
 
+
+def _servir_pasta(subpasta, alvo, mimetype):
+    """Corpo unico das rotas estaticas: serve um ficheiro de uma pasta do projeto."""
+    return send_from_directory(os.path.join(APP_ROOT, *subpasta), alvo, mimetype=mimetype)
+
+
 @static_bp.route('/editor/<path:p>')
 def serve_editor_module(p):
-    return send_from_directory(
-        os.path.join(APP_ROOT, 'src', 'frontend', 'js', 'editor'), p,
-        mimetype='application/javascript')
+    return _servir_pasta(('src', 'frontend', 'js', 'editor'), p, 'application/javascript')
+
 
 @static_bp.route('/vendor/socket.io.js')
 def serve_socketio_client():
-    return send_from_directory(
-        os.path.join(APP_ROOT, 'node_modules', 'socket.io-client', 'dist'),
-        'socket.io.min.js', mimetype='application/javascript')
+    return _servir_pasta(('node_modules', 'socket.io-client', 'dist'), 'socket.io.min.js', 'application/javascript')
+
+@static_bp.route('/vendor/<path:p>')
+def serve_vendor(p):
+    return _servir_pasta(('src', 'frontend', 'vendor'), p, None)
+
 
 @static_bp.route('/monaco/<path:p>')
 def serve_monaco(p):
@@ -42,17 +52,82 @@ def serve_xterm(p):
 
 @static_bp.route('/')
 def serve_index():
-    return send_from_directory(os.path.join(APP_ROOT, 'src', 'frontend'), 'index.html')
+    return _servir_pasta(('src', 'frontend'), 'index.html', None)
+
 
 @static_bp.route('/chat/<path:p>')
 def serve_chat_module(p):
-    return send_from_directory(
-        os.path.join(APP_ROOT, 'src', 'frontend', 'js', 'chat'), p,
-        mimetype='application/javascript')
+    return _servir_pasta(('src', 'frontend', 'js', 'chat'), p, 'application/javascript')
+
+
+@static_bp.route('/boot-guard.js')
+def serve_boot_guard():
+    """Guard de arranque: script CLASSICO de proposito.
+
+    Todo o resto do frontend sao ES modules, e um modulo so corre depois de
+    resolver os seus imports - que e exatamente o que pode estar partido. Um
+    guard que tem de sobreviver a modulos mortos nao pode ser um deles.
+    """
+    return _servir_pasta(('src', 'frontend', 'js'), 'boot-guard.js', 'application/javascript')
+
+
+@static_bp.route('/api/diagnostico_frontend', methods=['GET'])
+def diagnostico_frontend():
+    """Imports de modulos locais do frontend que NAO resolvem no disco.
+
+    E a mesma analise (tree-sitter) que trava a restauracao de checkpoint, mas
+    sobre o estado ATUAL e sem alteracoes projetadas. O guard de arranque
+    consulta-a porque ha avarias que o browser nao reporta de forma apanhável
+    (modulo que deixou de existir aborta o fetch antes de qualquer execucao).
+    """
+    raiz = os.path.join(APP_ROOT, 'src', 'frontend', 'js')
+    return jsonify({"defeitos": defeitos_contrato_imports(raiz, {})})
+
 
 @static_bp.route('/style.css')
 def serve_style_css():
-    return send_from_directory(os.path.join(APP_ROOT, 'src', 'frontend'), 'style.css')
+    return _servir_pasta(('src', 'frontend'), 'style.css', None)
+
+
+@static_bp.route('/css/<path:p>')
+def serve_css_module(p):
+    return _servir_pasta(('src', 'frontend', 'css'), p, 'text/css')
+
+
+@static_bp.route('/js/<path:p>')
+def serve_js_module(p):
+    return _servir_pasta(('src', 'frontend', 'js'), p, 'application/javascript')
+
+
+@static_bp.route('/icons/<path:p>')
+def serve_icone(p):
+    return _servir_pasta(('data', 'icons'), p, None)
+
+
+_MIME_EXTRA = {
+    '.mjs': 'application/javascript',
+    '.jsx': 'application/javascript'
+}
+
+
+@static_bp.route('/preview/<path:p>')
+def serve_ficheiro_do_projeto(p):
+    """Serve um ficheiro da pasta do projeto para a janela de preview.
+
+    Existe porque por file:// um HTML do projeto nao carrega nada: os caminhos
+    absolutos do documento (/css/x.css, /editor/y.js) resolvem contra a raiz do
+    disco. Servido daqui, o mesmo documento resolve-os contra o servidor e as
+    paginas do proprio Axio funcionam inteiras dentro do preview.
+    """
+    caminho, erro = resolver_caminho(p, permitir_extra=False)
+    if erro or not caminho:
+        return jsonify({"error": erro or "caminho invalido"}), 403
+    if not os.path.isfile(caminho):
+        return jsonify({"error": "ficheiro nao encontrado: " + p}), 404
+    extra = _MIME_EXTRA.get(os.path.splitext(caminho)[1].lower())
+    resposta = send_file(caminho, mimetype=extra) if extra else send_file(caminho)
+    resposta.headers['Cache-Control'] = 'no-store'
+    return resposta
 
 @static_bp.route('/api/glossary', methods=['GET'])
 def glossary_list():

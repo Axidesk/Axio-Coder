@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visualizador</title>
+<link rel="stylesheet" href="/vendor/viewer/viewer.css">
+</head>
+<body>
+<div id="vw-ferramentas"></div>
+<main id="vw-palco">
+    <div id="vw-vazio">
+        <p class="vw-vazio-titulo">Preview</p>
+        <p class="vw-dica">Escreva um endere&ccedil;o na barra acima, ou abra um ficheiro .html da &aacute;rvore com duplo clique.</p>
+    </div>
+</main>
+<script>
+if (typeof process !== 'undefined' && process.versions) {
+    try { delete process.versions.node; } catch (erro) { console.warn('versions.node continua visivel', erro); }
+}
+</script>
+<script type="module" src="/vendor/viewer/dist/viewer.js"></script>
+</body>
+</html>

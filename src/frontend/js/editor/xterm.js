@@ -1,13 +1,8 @@
 import { state } from './state.js';
 
-const URL_XTERM = 'http://127.0.0.1:5000/xterm/xterm/lib/xterm.mjs';
-const URL_FIT = 'http://127.0.0.1:5000/xterm/addon-fit/lib/addon-fit.mjs';
-const URL_WEBGL = 'http://127.0.0.1:5000/xterm/addon-webgl/lib/addon-webgl.mjs';
-
-export const ANSI_RESET = '\x1b[0m';
-export const ANSI_CMD = '\x1b[32m';
-export const ANSI_ERR = '\x1b[31m';
-export const ANSI_META = '\x1b[90m';
+const URL_XTERM = state.API + '/xterm/xterm/lib/xterm.mjs';
+const URL_FIT = state.API + '/xterm/addon-fit/lib/addon-fit.mjs';
+const URL_WEBGL = state.API + '/xterm/addon-webgl/lib/addon-webgl.mjs';
 
 let term = null;
 let fitAddon = null;
@@ -61,14 +56,6 @@ function opcoesWindowsPty() {
         if (build > 0) return { backend: 'conpty', buildNumber: build };
     } catch (e) {}
     return undefined;
-}
-
-export function ansiParaClasse(cls) {
-    const c = cls || '';
-    if (c.includes('term-err')) return ANSI_ERR;
-    if (c.includes('term-cmd')) return ANSI_CMD;
-    if (c.includes('term-meta')) return ANSI_META;
-    return '';
 }
 
 function ajustar() {
@@ -143,7 +130,7 @@ async function criarTerminal() {
     term = new modXterm.Terminal({
         allowTransparency: false,
         cursorBlink: false,
-        convertEol: false,
+        convertEol: true,
         disableStdin: true,
         cursorInactiveStyle: 'none',
         windowsPty: opcoesWindowsPty(),
@@ -190,13 +177,6 @@ export function termWrite(texto) {
         return;
     }
     term.write(texto);
-}
-
-export function termWriteLine(texto, cls) {
-    const ansi = ansiParaClasse(cls);
-    const corpo = texto == null ? '' : String(texto);
-    termWrite(ansi ? ansi + corpo + ANSI_RESET : corpo);
-    termWrite('\r\n');
 }
 
 export function termGetSelection() {

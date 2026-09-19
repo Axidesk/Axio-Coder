@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import unicodedata
+from importlib import metadata
 
 from src.backend.state import estado, MAX_UNDO, caminho_estado_projeto, MSG_SEM_PASTA
 from src.backend.config import APP_ROOT
@@ -134,23 +135,118 @@ def resolver_caminho_arquivo(caminho):
 
 def versao_pacote(nome):
     try:
-        from importlib import metadata
         return metadata.version(nome)
     except Exception:
         return "desconhecida"
 
-def entradas_diretorio(caminho_alvo):
-    ignorar = {'.git', 'node_modules', 'build', '__pycache__', '.vs', 'Intermediate', 'Binaries', 'Saved'}
+PASTAS_FORA_DA_BUSCA = {'.git', '__pycache__', 'node_modules', 'build'}
+EXT_FORA_DA_BUSCA = ('.exe', '.dll', '.obj', '.o', '.a', '.lib', '.so', '.pyc', '.spv', '.pdb', '.ilk', '.png', '.jpg', '.jpeg', '.ttf', '.bin', '.zip', '.tar')
+
+def raiz_repositorio(caminho):
+    """Sobe a partir de `caminho` ate encontrar a pasta .git. Devolve "" se nao houver repo."""
+    atual = os.path.abspath(caminho)
+    if os.path.isfile(atual):
+        atual = os.path.dirname(atual)
+    while True:
+        if os.path.isdir(os.path.join(atual, ".git")):
+            return atual
+        pai = os.path.dirname(atual)
+        if pai == atual:
+            return ""
+        atual = pai
+
+def _git(raiz, *args):
+    """Roda git dentro da raiz do repositorio. Devolve (saida_texto, erro)."""
+    try:
+        proc = subprocess.run(["git", "-C", raiz] + list(args), capture_output=True, timeout=30)
+    except Exception as e:
+        return None, f"falha ao executar git: {e}"
+    if proc.returncode != 0:
+        detalhe = (proc.stderr or b"").decode("utf-8", "replace").strip()
+        return None, detalhe or f"git devolveu o codigo {proc.returncode}"
+    return proc.stdout.decode("utf-8", "replace"), None
+
+def caminho_na_revisao(caminho_relativo, revisao):
+    """Resolve (raiz_do_repo, caminho_dentro_do_repo) para consultar uma revisao git."""
+    alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
+    if erro:
+        return None, erro
+    raiz = raiz_repositorio(alvo)
+    if not raiz:
+        return None, "ERRO: a pasta do projeto nao e um repositorio git; nao ha revisoes para consultar."
+    return (raiz, os.path.relpath(alvo, raiz).replace(os.sep, "/")), None
+
+def conteudo_de_revisao(caminho_relativo, revisao):
+    """Le o ficheiro como estava numa revisao git (ex: 'HEAD'), mesmo se ja nao existe no disco."""
+    dados, erro = caminho_na_revisao(caminho_relativo, revisao)
+    if erro:
+        return None, erro
+    raiz, rel = dados
+    texto, erro_git = _git(raiz, "show", f"{revisao}:{rel}")
+    if erro_git:
+        return None, f"ERRO: '{rel}' nao existe na revisao {revisao} ({erro_git})."
+    return texto, None
+
+def buscar_em_revisao(termo, revisao, raiz_projeto):
+    """Procura `termo` (literal, NFC) nos ficheiros de texto de uma revisao git.
+
+    Usa a MESMA normalizacao e as mesmas pastas/extensoes ignoradas da busca no
+    disco, para os dois resultados serem comparaveis linha a linha. E o que permite
+    ver o que uma refatoracao tirou de um ficheiro depois de o codigo ja ter saido
+    do disco. Devolve (lista_de_resultados, erro).
+    """
+    raiz = raiz_repositorio(raiz_projeto)
+    if not raiz:
+        return None, "ERRO: a pasta do projeto nao e um repositorio git; nao ha revisoes para consultar."
+    listagem, erro = _git(raiz, "ls-tree", "-r", "--name-only", "-z", revisao)
+    if erro:
+        return None, f"ERRO: revisao '{revisao}' indisponivel ({erro})."
+    termo_norm = normalizar_unicode(termo)
+    resultados = []
+    inicio = time.time()
+    for rel in [p for p in listagem.split("\0") if p]:
+        if time.time() - inicio > 10:
+            resultados.append("[AVISO] Timeout de 10s atingido. Resultados parciais.")
+            break
+        if any(p in PASTAS_FORA_DA_BUSCA or p.startswith('.') for p in rel.split("/")[:-1]):
+            continue
+        if rel.endswith(EXT_FORA_DA_BUSCA):
+            continue
+        texto, erro_ficheiro = _git(raiz, "show", f"{revisao}:{rel}")
+        if erro_ficheiro or not texto or len(texto) > 512000:
+            continue
+        for i, linha in enumerate(texto.splitlines()):
+            if termo_norm in normalizar_unicode(linha):
+                resultados.append(f"{rel} (Linha {i+1}): {linha.strip()}")
+    return resultados, None
+
+_DIRS_FORA_DA_LISTAGEM = {'.git', 'node_modules', 'build', '__pycache__', '.vs', 'Intermediate', 'Binaries', 'Saved'}
+_EXT_BINARIAS = ('.exe', '.dll', '.obj', '.lib', '.o', '.so', '.a', '.dylib', '.png', '.jpg', '.pdb')
+
+def resumo_entradas(caminho_alvo):
+    """Varre o diretorio UMA vez e devolve (entradas visiveis, quantos itens ficaram ocultos).
+
+    A listagem esconde pastas de sistema/build e binarios. Sem o contador, uma pasta
+    com um .o dentro parecia igual antes e depois de compilar, e a conclusao errada
+    era "o compilador nao produziu nada". Nada fica oculto sem aviso.
+    """
     entradas = []
+    ocultos = 0
     for item in os.listdir(caminho_alvo):
-        if item in ignorar or item.startswith('.'):
+        if item in _DIRS_FORA_DA_LISTAGEM or item.startswith('.'):
+            ocultos += 1
             continue
         caminho_item = os.path.join(caminho_alvo, item)
         if os.path.isdir(caminho_item):
             entradas.append({"nome": item, "tipo": "dir"})
-        elif not item.endswith(('.exe', '.dll', '.obj', '.lib', '.o', '.so', '.a', '.dylib', '.png', '.jpg', '.pdb')):
+        elif item.endswith(_EXT_BINARIAS):
+            ocultos += 1
+        else:
             entradas.append({"nome": item, "tipo": "file"})
-    return entradas
+    return entradas, ocultos
+
+def entradas_diretorio(caminho_alvo):
+    return resumo_entradas(caminho_alvo)[0]
 
 def normalizar_unicode(texto: str) -> str:
     """Normaliza para NFC e decodifica escapes Unicode literais (ex: 'ú' -> 'u').
@@ -175,7 +271,6 @@ def aplicar_snapshot(entrada, reverso):
     conteudo = entrada["antes"] if reverso else entrada["depois"]
 
     if conteudo is None:
-        # O arquivo não existia antes da edição -> remove para desfazer a criação
         if os.path.exists(caminho):
             os.remove(caminho)
         return
@@ -277,12 +372,10 @@ def registrar_edicao(caminho_absoluto, antes, depois, grupo=None):
     'grupo' agrupa edições atômicas (ex: mover origem+destino) para desfazer/refazer juntas.
     """
     if antes is not None and antes == depois:
-        return  # Sem mudança efetiva, não registra
+        return
 
     registrar_edicao_para_contexto(caminho_absoluto, antes, depois)
 
-    # Marca o arquivo como tocado nesta sessão para que ele entre no checkpoint
-    # de código persistido junto com o log da sessão (Fase 1 de restauração).
     estado["arquivos_tocados"].add(caminho_absoluto)
 
     hist = estado["file_history"].setdefault(caminho_absoluto, {"undo": [], "redo": []})
@@ -296,11 +389,9 @@ def registrar_edicao(caminho_absoluto, antes, depois, grupo=None):
         entrada["grupo"] = grupo
     hist["undo"].append(entrada)
 
-    # Mantém apenas as MAX_UNDO edições mais recentes
     if len(hist["undo"]) > MAX_UNDO:
         hist["undo"] = hist["undo"][-MAX_UNDO:]
 
-    # Uma nova edição invalida o histórico de redo
     hist["redo"].clear()
 
 def capturar_snapshot():
@@ -323,10 +414,9 @@ def capturar_snapshot():
                 with open(caminho, "r", encoding="utf-8") as f:
                     conteudo = f.read()
             except (OSError, UnicodeDecodeError):
-                continue  # Ignora arquivos ilegíveis/binários (não editáveis por texto).
+                continue
             snapshot[rel] = {"conteudo": conteudo}
         else:
-            # Foi tocado nesta sessão, mas não existe mais no disco.
             snapshot[rel] = {"conteudo": None}
     return snapshot
 
@@ -354,7 +444,7 @@ def raiz_lixeira():
     raiz = estado.get("pasta_raiz", "")
     if not raiz:
         return ""
-    return caminho_estado_projeto("chats", "session_logs", ".trash")
+    return caminho_estado_projeto("logs", "session_logs", ".trash")
 
 def _meta_lixeira_path(lixeira_raiz, ts_dir):
     """Caminho do manifesto de uma operacao da lixeira (irmao do diretorio).
@@ -472,6 +562,56 @@ def caminho_original_lixeira(lixeira_raiz, item_id, origem):
     if resto in (".", ""):
         return base
     return base + "/" + resto
+
+def resolver_item_lixeira(item_id):
+    """Resolve um id da lixeira para o caminho absoluto do item guardado.
+
+    Devolve (origem, erro): origem e None quando ha erro, erro e None quando
+    corre bem. O item pode ser um arquivo ou um diretorio. E a fonte unica da
+    validacao, usada pela rota HTTP e pelas ferramentas de lixeira.
+    """
+    lixeira_raiz = raiz_lixeira()
+    if not lixeira_raiz:
+        return None, MSG_SEM_PASTA
+    if not item_id:
+        return None, "ERRO: item nao informado."
+    origem = os.path.abspath(os.path.join(lixeira_raiz, item_id.replace("/", os.sep)))
+    if not caminho_contido(origem, lixeira_raiz):
+        return None, "ERRO: caminho invalido da lixeira."
+    if not os.path.exists(origem):
+        return None, "ERRO: item nao encontrado na lixeira."
+    return origem, None
+
+def restaurar_item_lixeira(item_id, destino_rel=""):
+    """Restaura um item da lixeira para dentro da pasta do projeto.
+
+    Sem `destino_rel`, devolve o item ao caminho original gravado no manifesto.
+    Com `destino_rel`, restaura para esse caminho - util quando o original
+    voltou a estar ocupado. Devolve (caminho_relativo, erro).
+    """
+    origem, erro = resolver_item_lixeira(item_id)
+    if erro:
+        return None, erro
+    lixeira_raiz = raiz_lixeira()
+    rel_original = (destino_rel or "").strip().replace("\\", "/")
+    if not rel_original:
+        rel_original = caminho_original_lixeira(lixeira_raiz, item_id, origem)
+    if not rel_original:
+        return None, "ERRO: nao foi possivel determinar o caminho original."
+    destino = os.path.abspath(os.path.join(raiz_abs(), rel_original.replace("/", os.sep)))
+    if not caminho_contido(destino, raiz_abs()):
+        return None, "ERRO: destino escapa da pasta do projeto."
+    if os.path.exists(destino):
+        return None, "ERRO: ja existe um item em '" + rel_original + "'."
+    ts_dir = item_id.split("/")[0]
+    try:
+        os.makedirs(os.path.dirname(destino), exist_ok=True)
+        shutil.move(origem, destino)
+        limpar_dirs_vazios(os.path.dirname(origem), os.path.join(lixeira_raiz, ts_dir))
+        limpar_item_lixeira_vazio(lixeira_raiz, ts_dir)
+    except OSError as e:
+        return None, str(e)
+    return rel_original, None
 
 def listar_conteudo_lixeira(rel):
     """Lista o conteudo de uma pasta dentro da lixeira (navegacao na interface)."""
@@ -623,3 +763,17 @@ def limpar_lixeira():
     for ts_dir in operacoes:
         limpar_item_lixeira_vazio(lixeira_raiz, ts_dir)
     return len(operacoes)
+def arquivos_recursivos(pasta, extensao):
+    """Lista recursivamente os ficheiros de uma extensao, ignorando venv/caches/build.
+
+    Ponto unico da varredura por extensao: o auditor de Python (.py) e o de
+    JavaScript (.js) varrem a pasta INTEIRA, nao apenas o primeiro nivel.
+    """
+    if not os.path.isdir(pasta):
+        return [pasta] if pasta.endswith(extensao) else []
+    ignorar = {'.venv', 'venv', '__pycache__', '.git', 'node_modules', 'build', 'dist', '.vs', 'site-packages'}
+    saida = []
+    for dirpath, dirnames, filenames in os.walk(pasta):
+        dirnames[:] = [d for d in dirnames if d not in ignorar and not d.startswith('.')]
+        saida.extend(os.path.join(dirpath, f) for f in filenames if f.endswith(extensao))
+    return sorted(saida)

@@ -1,4 +1,5 @@
 import os
+import codecs
 import base64
 
 from flask import Blueprint, request, jsonify
@@ -13,6 +14,7 @@ from src.backend.services.file_service import (
     refazer_edicao,
     registrar_edicao_para_contexto,
 )
+from src.backend.services.busca_texto import buscar_no_projeto
 
 editor_bp = Blueprint("editor", __name__)
 @editor_bp.route('/api/undo_redo_status', methods=['GET'])
@@ -30,27 +32,26 @@ def undo_redo_status():
                 "undo_count": len(hist["undo"]),
                 "redo_count": len(hist["redo"]),
             })
-    # Ordena pelo nome para facilitar a localização
     files.sort(key=lambda f: f["nome"].lower())
     return jsonify({"files": files})
 
-@editor_bp.route('/api/undo', methods=['POST'])
-def undo():
-    data = request.json or {}
-    caminho = data.get("caminho")
-    resultado = desfazer_edicao(caminho)
+def _undo_redo(aplicar):
+    """Corpo unico de /api/undo e /api/redo: aplica a acao ao caminho do pedido."""
+    caminho = (request.json or {}).get("caminho")
+    resultado = aplicar(caminho)
     if resultado.get("status") == "error":
         return jsonify(resultado), 500
     return jsonify(resultado)
 
+
+@editor_bp.route('/api/undo', methods=['POST'])
+def undo():
+    return _undo_redo(desfazer_edicao)
+
+
 @editor_bp.route('/api/redo', methods=['POST'])
 def redo():
-    data = request.json or {}
-    caminho = data.get("caminho")
-    resultado = refazer_edicao(caminho)
-    if resultado.get("status") == "error":
-        return jsonify(resultado), 500
-    return jsonify(resultado)
+    return _undo_redo(refazer_edicao)
 
 @editor_bp.route('/api/explorer', methods=['GET'])
 def explorer():
@@ -96,6 +97,19 @@ def explorer():
         "entries": items
     })
 
+TETO_TEXTO_BYTES = 4 * 1024 * 1024
+AMOSTRA_TEXTO_BYTES = 65536
+
+def _parece_texto(caminho):
+    with open(caminho, 'rb') as f:
+        amostra = f.read(AMOSTRA_TEXTO_BYTES)
+    decodificador = codecs.getincrementaldecoder('utf-8')()
+    try:
+        decodificador.decode(amostra, False)
+        return True
+    except UnicodeDecodeError:
+        return False
+
 @editor_bp.route('/api/file_content', methods=['GET'])
 def file_content():
     caminho = request.args.get("caminho")
@@ -103,14 +117,18 @@ def file_content():
     if erro:
         return jsonify({"error": erro}), 400
     try:
-        with open(alvo, 'rb') as f:
-            raw = f.read()
+        tamanho = os.path.getsize(alvo)
     except Exception as e:
         return jsonify({"error": str(e)}), 404
 
     ext = os.path.splitext(alvo)[1].lower()
     img_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico'}
     if ext in img_exts:
+        try:
+            with open(alvo, 'rb') as f:
+                raw = f.read()
+        except Exception as e:
+            return jsonify({"error": str(e)}), 404
         mime = {
             '.png': 'image/png',
             '.jpg': 'image/jpeg',
@@ -127,15 +145,31 @@ def file_content():
             "data": base64.b64encode(raw).decode('ascii'),
         })
 
-    try:
-        conteudo = raw.decode('utf-8')
-        return jsonify({"caminho": alvo, "conteudo": conteudo, "tipo": "texto"})
-    except UnicodeDecodeError:
+    if tamanho > TETO_TEXTO_BYTES:
         return jsonify({
             "caminho": alvo,
             "tipo": "binario",
-            "mensagem": "Arquivo binário (não textual) — não é possível exibi-lo como código.",
+            "mensagem": f"Arquivo com {tamanho / 1048576:.1f} MB.\nDemasiado grande para exibir como código.",
         })
+
+    if not _parece_texto(alvo):
+        return jsonify({
+            "caminho": alvo,
+            "tipo": "binario",
+            "mensagem": "Arquivo binário.\nNão é possível exibi-lo como código.",
+        })
+
+    try:
+        with open(alvo, 'rb') as f:
+            raw = f.read()
+        conteudo = raw.decode('utf-8')
+    except (OSError, UnicodeDecodeError):
+        return jsonify({
+            "caminho": alvo,
+            "tipo": "binario",
+            "mensagem": "Arquivo binário.\nNão é possível exibi-lo como código.",
+        })
+    return jsonify({"caminho": alvo, "conteudo": conteudo, "tipo": "texto"})
 
 @editor_bp.route('/api/search_files', methods=['GET'])
 def search_files():
@@ -145,43 +179,7 @@ def search_files():
         return jsonify({"error": MSG_SEM_PASTA}), 400
     if not termo:
         return jsonify({"results": []})
-    termo_lower = termo.lower()
-    ignorar_dirs = {'.git', 'node_modules', 'build', '__pycache__', '.vs', 'Intermediate', 'Binaries', 'Saved', 'dist', '.next', 'venv', '.venv'}
-    exts_bin = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.exe', '.dll', '.obj', '.lib', '.pdb', '.so', '.dylib', '.zip', '.pdf', '.pyc'}
-    exts_texto = {'.py', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.html', '.htm', '.css', '.scss', '.less', '.json', '.md', '.cpp', '.cc', '.h', '.hpp', '.c', '.sh', '.bash', '.sql', '.yaml', '.yml', '.xml', '.java', '.cs', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.lua', '.r', '.txt', '.toml', '.ini', '.cfg', '.env'}
-    resultados = []
-    for dirpath, dirnames, filenames in os.walk(raiz):
-        dirnames[:] = [d for d in dirnames if d not in ignorar_dirs and not d.startswith('.')]
-        for fn in filenames:
-            if fn.startswith('.'):
-                continue
-            ext = os.path.splitext(fn)[1].lower()
-            if ext in exts_bin:
-                continue
-            if ext and ext not in exts_texto:
-                continue
-            caminho = os.path.join(dirpath, fn)
-            try:
-                with open(caminho, 'r', encoding='utf-8', errors='ignore') as f:
-                    linhas = f.readlines()
-            except Exception:
-                continue
-            ocorrencias = []
-            total = 0
-            for i, linha in enumerate(linhas, 1):
-                if termo_lower in linha.lower():
-                    total += 1
-                    if len(ocorrencias) < 100:
-                        trecho = linha.strip()
-                        if len(trecho) > 160:
-                            trecho = trecho[:160] + '…'
-                        ocorrencias.append({"linha": i, "trecho": trecho})
-            if total > 0:
-                rel = os.path.relpath(caminho, raiz)
-                resultados.append({"arquivo": rel, "total": total, "ocorrencias": ocorrencias})
-            if len(resultados) >= 300:
-                break
-    return jsonify({"results": resultados, "termo": termo})
+    return jsonify({"results": buscar_no_projeto(raiz, termo), "termo": termo})
 
 @editor_bp.route('/api/file_original', methods=['GET'])
 def file_original():
@@ -204,8 +202,6 @@ def file_original():
         original = primeira.get("antes")
         criado = original is None
     elif hist and hist["redo"]:
-        # Arquivo desfeito até o estado original: a edição mais antiga é a última
-        # desfeita (topo invertido da pilha de redo), então usamos hist["redo"][-1].
         primeira = hist["redo"][-1]
         original = primeira.get("antes")
         criado = original is None
@@ -214,7 +210,6 @@ def file_original():
         if criado:
             original = ""
         else:
-            # Sem registro de criação, tenta ler o conteúdo atual do disco.
             try:
                 with open(alvo, 'r', encoding='utf-8') as f:
                     original = f.read()

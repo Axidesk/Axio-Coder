@@ -1,10 +1,10 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
-import { setHistoryActionButtonsVisible, updateActionButtons } from './history.js';
+import { setHistoryActionButtonsVisible, updateActionButtons } from './historico/acoes.js';
 import { closeCol3, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock } from './layout.js';
 import { sendMessage, startSSE } from './messages.js';
 
-const { btnClearContext, btnOpenLog, btnSend, btnSessionHistory, btnWorkspace, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, chatMode, confirmClearContextContent, confirmClearContextPopup, contextUsageLabel, contextUsagePopup, currentLogsList, currentLogsWrapper, glossaryChip, historyLogsWrapper, input, inputText, lblExecuting, lblFolder, lblStatus, panelCol2, termInput, terminalMode } = dom;
+const { btnClearContext, btnOpenLog, btnSend, btnSessionHistory, btnWorkspace, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, chatMode, confirmClearContextContent, confirmClearContextPopup, contextUsageLabel, contextUsagePopup, currentLogsList, currentLogsWrapper, glossaryChip, historyLogsWrapper, inputText, lblExecuting, lblFolder, lblStatus, panelCol2, termInput, terminalMode } = dom;
 
 export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que é importante desta conversa: decisões, regras, arquivos alterados e o que ficou pendente';
 
@@ -68,7 +68,7 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
     }
     async function loadGlossary() {
         try {
-            const resp = await fetch('http://127.0.0.1:5000/api/glossary');
+            const resp = await fetch('/api/glossary');
             if (resp.ok) {
                 const dados = await resp.json();
                 window.glossary = (dados && dados.termos) || [];
@@ -82,20 +82,24 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         state.glossaryMatchCurrent = null;
     }
     function findGlossaryMatch(texto) {
+
         const alvo = normalizarTermo(texto);
-        if (!alvo) return null;
+        if (!alvo.trim()) return null;
+        let melhor = null;
         for (const entrada of window.glossary) {
             const identNorm = normalizarTermo(entrada.identificador);
             if (identNorm && alvo.includes(identNorm)) continue;
             const candidatos = [entrada.termo].concat(entrada.aliases || []);
             for (const c of candidatos) {
-                const norm = normalizarTermo(c);
-                if (norm && alvo.includes(norm)) {
-                    return { entrada: entrada, termoOriginal: c };
+                const norm = normalizarTermo(c).trim();
+                if (!norm || !alvo.endsWith(norm)) continue;
+
+                if (!melhor || norm.length > melhor.comprimento) {
+                    melhor = { entrada: entrada, termoOriginal: c, comprimento: norm.length };
                 }
             }
         }
-        return null;
+        return melhor;
     }
     function showGlossaryChip() {
         const match = findGlossaryMatch(inputText.value);
@@ -112,12 +116,10 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         if (!state.glossaryMatchCurrent) return;
         const match = state.glossaryMatchCurrent;
         const texto = inputText.value;
-        const alvo = normalizarTermo(texto);
-        const idx = alvo.indexOf(normalizarTermo(match.termoOriginal));
-        if (idx >= 0) {
-            const antes = texto.slice(0, idx);
-            const depois = texto.slice(idx + match.termoOriginal.length);
-            inputText.value = antes + match.entrada.identificador + depois;
+
+        const corte = texto.length - match.comprimento;
+        if (corte >= 0) {
+            inputText.value = texto.slice(0, corte) + match.entrada.identificador;
             inputText.dispatchEvent(new Event('input'));
         }
         esconderChip();
@@ -207,13 +209,19 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         iconTooltip.style.top = top + 'px';
     }
     const ICON_TOOLTIP_DELAY = 500;
-    function mostrarIconTooltip(target, texto) {
+    function mostrarIconTooltip(target, texto, imediato) {
         clearTimeout(state.iconTooltipTimer);
-        state.iconTooltipTimer = setTimeout(() => {
+        const mostrar = () => {
             iconTooltip.textContent = texto;
             posicionarIconTooltip(target);
             iconTooltip.classList.add('balao-visible');
-        }, ICON_TOOLTIP_DELAY);
+        };
+
+        if (imediato) {
+            mostrar();
+            return;
+        }
+        state.iconTooltipTimer = setTimeout(mostrar, ICON_TOOLTIP_DELAY);
     }
     function esconderIconTooltip() {
         clearTimeout(state.iconTooltipTimer);
@@ -256,14 +264,33 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         setLogsLoading(false);
         window.currentGroupBalloon = null;
     }
+
+    function bloquearChat(ativo, opcoes) {
+        const cfg = opcoes || {};
+        if (inputText) {
+            inputText.disabled = !!ativo;
+            inputText.placeholder = ativo ? (cfg.placeholder || 'Aguarde...') : 'Digite seu comando aqui';
+            if (ativo) inputText.blur();
+        }
+        if (btnSend) btnSend.disabled = !!ativo;
+        if (cfg.classe) document.body.classList.toggle(cfg.classe, !!ativo);
+        if (!lblStatus) return;
+        if (ativo) {
+            if (lblStatus.dataset.antesBloqueio === undefined) {
+                lblStatus.dataset.antesBloqueio = lblStatus.textContent || '';
+            }
+            lblStatus.textContent = cfg.status || 'Aguarde...';
+        } else if (lblStatus.dataset.antesBloqueio !== undefined) {
+            lblStatus.textContent = lblStatus.dataset.antesBloqueio;
+            delete lblStatus.dataset.antesBloqueio;
+        }
+    }
     function setLogsLoading(active) {
         updateClearContextButton(active);
         document.querySelectorAll('#current-logs-wrapper > div.log-pulsing').forEach(el => el.classList.remove('log-pulsing'));
         document.querySelectorAll('#current-logs-wrapper .logs-spinner').forEach(el => el.classList.add('hidden'));
         if (active) {
-            // So o card da rodada EM ANDAMENTO deve pulsar/mostrar spinner.
-            // O fallback para currentActiveLogGroup reativava o spinner de um
-            // card antigo que estava selecionado na janela de arquivos.
+
             const alvo = window.currentGroupBalloon;
             if (alvo && alvo.domElement) {
                 alvo.domElement.classList.add('log-pulsing');
@@ -342,6 +369,12 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         const isOpen = !terminalMode.classList.contains('hidden');
         showWorkspaceView(!isOpen);
     }
+
+    function escrevendoNoChat() {
+        const el = document.activeElement;
+        if (!el || !chatMode || !chatMode.contains(el)) return false;
+        return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+    }
     function syncMenuIcons() {
         if (btnOpenLog) {
             const active = isLogDockOpen();
@@ -363,7 +396,9 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         const first = currentLogsWrapper.querySelector('.log-card');
         if (first) first.classList.add('log-card-active');
     }
-    function renderCurrentSessionLogs() {
+    function renderCurrentSessionLogs(opcoes) {
+
+        const fecharColunas = !opcoes || opcoes.fecharColunas !== false;
         state.isShowingSessionHistory = false;
         setHistoryActionButtonsVisible(false);
         state.currentSelectedHistoryGroup = null;
@@ -373,36 +408,33 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
             historyLogsWrapper.innerHTML = '';
         }
         syncMenuIcons();
-        closePanelCol(panelCol2);
-        closeCol3();
+        if (fecharColunas) {
+            closePanelCol(panelCol2);
+            closeCol3();
+        }
         if (currentLogsList) currentLogsList.scrollTop = 0;
         selectFirstSessionLogCard();
     }
     function resetWorkspaceUI() {
-        // Log da Sessão (memoria + DOM)
         window.sessionLogsData = [];
         if (currentLogsWrapper) currentLogsWrapper.innerHTML = '';
         state.currentTurnLogs = [];
         state.currentTurnSummary = '';
         state.currentCheckpointId = null;
         state.checkpointRestoredAt = 0;
-        state.discardedRounds.clear();
+        state.restoreEvents = [];
         window.currentGroupBalloon = null;
         window.currentActiveLogGroup = null;
-        // Historico (cache + DOM)
         state.sessionHistoryLoaded = false;
         state.sessionHistoryList = [];
         state.sessionDetailCache = {};
-        // Chat
         if (chatInnerLeft) chatInnerLeft.innerHTML = '';
         if (chatInnerRight) chatInnerRight.innerHTML = '';
         if (chatContainerLeft) chatContainerLeft.scrollTop = 0;
         if (chatContainerRight) chatContainerRight.scrollTop = 0;
-        // Restaura o painel lateral para a aba de logs da sessão (vazia) e fecha Col2/Col3.
         renderCurrentSessionLogs();
         openLogDock();
-        // Reinicia o stream SSE para descartar eventos pendentes do projeto anterior
-        // e zerar as variáveis locais da closure (currentGroupBalloon, etc.).
+
         if (state.eventSource) {
             state.eventSource.close();
         }
@@ -438,8 +470,10 @@ export {
     posicionarIconTooltip,
     mostrarIconTooltip,
     esconderIconTooltip,
+    bloquearChat,
     toggleWorkspaceView,
     showWorkspaceView,
+    escrevendoNoChat,
     activateWorkspaceIcon,
     syncMenuIcons,
     renderCurrentSessionLogs,

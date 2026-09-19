@@ -2,7 +2,7 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { escapeHtml } from './messages.js';
 
-const { bpEl, btnInspect, inputText, inspectTooltip, termInputEl, terminalMode } = dom;
+const { bpEl, inputText, inspectTooltip, termInputEl, terminalMode } = dom;
 const titulosNativos = new Map();
 
     function obterElementoAlvo(el) {
@@ -56,6 +56,9 @@ const titulosNativos = new Map();
         let top = y + pad;
         if (left + w > vw - 8) left = x - w - pad;
         if (top + h > vh - 8) top = y - h - pad;
+        const livre = areaLivreDaViewDoPreview(left, top, w, h, vw, vh);
+        left = livre.left;
+        top = livre.top;
         if (left < 8) left = 8;
         if (top < 8) top = 8;
         inspectTooltip.style.left = left + 'px';
@@ -176,7 +179,6 @@ const titulosNativos = new Map();
     async function renderizarInspect(el, x, y) {
         if (!el || !inspectTooltip) return;
         const token = ++state.renderInspectToken;
-        const alvo = obterElementoAlvo(el);
         const seletor = gerarSeletor(el);
         const g = glossaryDescription(seletor);
         const classes = (el.classList && Array.from(el.classList).join(' ')) || '';
@@ -217,7 +219,7 @@ const titulosNativos = new Map();
             }
             html += '</div>';
         });
-        html += '<div class="inspect-hint">Tab: selecionar · Enter: copiar/abrir · Esc: sair</div>';
+        html += '<div class="inspect-hint">Tab: selecionar · Enter: copiar/abrir · Shift+clique: interagir · Esc: sair</div>';
         inspectTooltip.innerHTML = html;
         inspectTooltip.classList.remove('hidden');
         posicionarInspectTooltipXY(x, y);
@@ -293,22 +295,115 @@ const titulosNativos = new Map();
         const novaPos = inicio + texto.length;
         try { inputText.setSelectionRange(novaPos, novaPos); } catch (e) {}
     }
-    function desativarInspect() {
-        state.inspectAtivo = false;
-        state.inspectLocked = false;
-        if (btnInspect) {
-            btnInspect.classList.remove('sidebar-active');
+    function textoDaInspecaoDoPreview(info) {
+        if (!info || !info.seletor) return '';
+        const medidas = [];
+        const caixa = info.caixa || {};
+        if (caixa.largura) medidas.push(caixa.largura + 'x' + caixa.altura);
+        const espaco = info.espacamento || {};
+        if (espaco.padding && espaco.padding !== '0px') medidas.push('padding ' + espaco.padding);
+        if (espaco.gap && espaco.gap !== 'normal') medidas.push('gap ' + espaco.gap);
+        if (info.arredondamento && info.arredondamento !== '0px') medidas.push('radius ' + info.arredondamento);
+        if (info.fundo) medidas.push('fundo ' + info.fundo);
+        if (info.cor) medidas.push('cor ' + info.cor);
+        if (info.borda) medidas.push('borda ' + info.borda);
+        if (info.sombra) medidas.push('sombra ' + info.sombra);
+        if (info.layout) medidas.push('layout ' + info.layout);
+        if (info.fonte) medidas.push('fonte ' + info.fonte);
+        const linhas = ['[preview] ' + (info.caminho || info.seletor)];
+        if (medidas.length) linhas.push(medidas.join(' · '));
+        if (info.texto) linhas.push('texto "' + info.texto + '"');
+        return linhas.join('\n');
+    }
+    function recolherDoPreview(info) {
+        const texto = textoDaInspecaoDoPreview(info);
+        if (!texto) return;
+        const prefixo = inputText && inputText.value.trim() ? '\n' : '';
+        colarNoInputText(prefixo + texto);
+    }
+    function areaDaViewDoPreview() {
+        const vista = document.getElementById('preview-view') || document.getElementById('preview-host');
+        if (!vista) return null;
+        const caixa = vista.getBoundingClientRect();
+        if (caixa.width < 1 || caixa.height < 1) return null;
+        const painel = document.getElementById('sliding-panel-container');
+        const esquerda = painel && !painel.classList.contains('dock-closed')
+            ? Math.max(caixa.left, painel.getBoundingClientRect().right)
+            : caixa.left;
+        if (caixa.right - esquerda < 1) return null;
+        return { left: esquerda, top: caixa.top, right: caixa.right, bottom: caixa.bottom };
+    }
+    function areaLivreDaViewDoPreview(left, top, w, h, vw, vh) {
+        const ocupada = areaDaViewDoPreview();
+        if (!ocupada || !_sobrepoe(left, top, w, h, ocupada)) return { left, top };
+        const margem = 10;
+        const tentativas = [
+            { left: ocupada.left - w - margem, top: top },
+            { left: left, top: ocupada.top - h - margem },
+            { left: left, top: ocupada.bottom + margem },
+            { left: ocupada.right + margem, top: top }
+        ];
+        for (const tentativa of tentativas) {
+            if (tentativa.left < 8 || tentativa.top < 8) continue;
+            if (tentativa.left + w > vw - 8 || tentativa.top + h > vh - 8) continue;
+            if (_sobrepoe(tentativa.left, tentativa.top, w, h, ocupada)) continue;
+            return tentativa;
         }
-        document.body.classList.remove('inspect-mode');
+        return { left: Math.max(8, ocupada.left - w - margem), top: top };
+    }
+    function _sobrepoe(left, top, w, h, outra) {
+        return left < outra.right && left + w > outra.left && top < outra.bottom && top + h > outra.top;
+    }
+    function esconderInspectTooltip() {
         if (inspectTooltip) {
             inspectTooltip.classList.add('hidden');
             inspectTooltip.classList.remove('inspect-locked');
         }
-        state.inspectCurrentEl = null;
-        state.inspectItems = [];
-        state.inspectItemIndex = -1;
-        restaurarTooltipsNativos();
-        document.body.style.removeProperty('cursor');
+        state.inspectLocked = false;
+    }
+    function _ipc() {
+        try {
+            return window.require('electron').ipcRenderer;
+        } catch (e) {
+            return null;
+        }
+    }
+    function avisarMenuInspect() {
+        const ipc = _ipc();
+        if (ipc) ipc.send('inspect:set', !!state.inspectAtivo);
+    }
+    function ligarInspectAoMenu() {
+        const ipc = _ipc();
+        if (!ipc) return;
+        ipc.on('menu:set-inspect', (e, ativo) => definirInspect(ativo));
+        ipc.on('preview:inspecao', (e, info) => recolherDoPreview(info));
+        document.addEventListener('mouseleave', () => {
+            if (state.inspectAtivo && !state.inspectLocked) esconderInspectTooltip();
+        });
+
+        ipc.send('inspect:set', !!state.inspectAtivo);
+    }
+    function definirInspect(ativo) {
+
+        const ligado = !!ativo;
+        if (ligado === state.inspectAtivo) return;
+        state.inspectAtivo = ligado;
+        state.inspectLocked = false;
+        document.body.classList.toggle('inspect-mode', ligado);
+        esconderInspectTooltip();
+        if (!ligado) {
+            state.inspectCurrentEl = null;
+            state.inspectItems = [];
+            state.inspectItemIndex = -1;
+            restaurarTooltipsNativos();
+            document.body.style.removeProperty('cursor');
+        } else {
+            document.body.style.cursor = 'crosshair';
+        }
+        avisarMenuInspect();
+    }
+    function desativarInspect() {
+        definirInspect(false);
     }
     function executarItemInspect(idx) {
         const item = state.inspectItems[idx];
@@ -321,27 +416,6 @@ const titulosNativos = new Map();
         }
         colarNoInputText(item.valor);
         desativarInspect();
-    }
-    function ativarInspect() {
-        state.inspectAtivo = !state.inspectAtivo;
-        state.inspectLocked = false;
-        if (btnInspect) {
-            btnInspect.classList.toggle('sidebar-active', state.inspectAtivo);
-        }
-        document.body.classList.toggle('inspect-mode', state.inspectAtivo);
-        if (inspectTooltip) {
-            inspectTooltip.classList.add('hidden');
-            inspectTooltip.classList.remove('inspect-locked');
-        }
-        if (!state.inspectAtivo) {
-            restaurarTooltipsNativos();
-            state.inspectCurrentEl = null;
-            state.inspectItems = [];
-            state.inspectItemIndex = -1;
-            document.body.style.removeProperty('cursor');
-        } else {
-            document.body.style.cursor = 'crosshair';
-        }
     }
 
     function infoFonte(el) {
@@ -380,8 +454,12 @@ export {
     atualizarHintInspect,
     abrirArquivoNaLinha,
     colarNoInputText,
+    textoDaInspecaoDoPreview,
+    recolherDoPreview,
+    esconderInspectTooltip,
+    definirInspect,
+    ligarInspectAoMenu,
     desativarInspect,
     executarItemInspect,
-    ativarInspect,
     infoFonte
 };

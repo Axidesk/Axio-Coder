@@ -1,11 +1,13 @@
 import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogTheme, enterLogMode, enterLogModeWithLines, enterReadonlyLogMode, exitLogMode, updateLineNumbersButton } from './themes.js';
-import { getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
-import { closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, loadFileIntoEditor, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
+import { VISTAS_DE_TRABALHO, fecharPreview, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
+import { agendarReconciliacaoDeAbas, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
+import { ALTURA_LINHA } from './metricas.js';
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
-import { appendLine, basename, clearLog, closeShellMenu, connectTermSocket, runCommand, toggleShellMenu } from './terminal.js';
-import { ensureTerminal, termFit, termWrite } from './xterm.js';
+import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
+import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, temCardSelecionado } from './terminal_cards.js';
+import { ensureTerminal, termFit } from './xterm.js';
 import { captureDiffExitScroll, computeLineDiff, enterDiffMode, exitDiffMode, revealDiffExitScroll } from './diff.js';
-import { fadeEditorSwap, fadeGutterSwap, scheduleExplorerReload, smoothRevealLine } from './scroll.js';
+import { fadeEditorSwap, fadeGutterSwap, revelarLinhaComRolagem, scheduleExplorerReload, smoothRevealLine } from './scroll.js';
 import { state } from './state.js';
 
 const DOCK_ANIM_MS = 450;
@@ -22,26 +24,16 @@ self.MonacoEnvironment = {
 
 export function handleSSE(data) {
     if (data.type === 'process_started') {
-        if (data.modo === 'terminal') {
-            state.terminalPids.add(data.pid);
-            return;
-        }
-        appendLine('> ' + (data.comando || ''), 'term-cmd');
+        cardIniciar(data);
     } else if (data.type === 'process_output') {
-        if (state.terminalPids.has(data.pid)) return;
-        if (data.chunk != null) termWrite(data.chunk);
-        else if (data.line != null) appendLine(data.line, 'term-out');
+        cardSaida(data);
     } else if (data.type === 'process_finished') {
-        if (state.terminalPids.has(data.pid)) {
-            state.terminalPids.delete(data.pid);
-            return;
-        }
-        const cls = (data.status === 'erro' || data.status === 'timeout') ? 'term-err' : 'term-meta';
-        appendLine('[proc ' + data.pid + ' finalizado: ' + (data.status || 'ok') + ']', cls);
+        cardFinalizar(data);
     } else if (data.type === 'workspace_activate') {
         state.wsStatus.textContent = 'bootstrap ativo';
     } else if (data.type === 'files_changed') {
         scheduleExplorerReload();
+        agendarReconciliacaoDeAbas();
         if (state.trashOpen) loadTrash(true);
         loadVenvName();
     }
@@ -61,6 +53,12 @@ export function preloadMonaco() {
         defineLogTheme();
         defineDiffTheme();
     });
+}
+
+function preloadTerminal() {
+    if (state.termSocket) return;
+    connectTermSocket();
+    ensureTerminal();
 }
 
 export function ensureWorkspaceReady() {
@@ -97,16 +95,20 @@ export function activate() {
 }
 
 export function showEditor() {
+    abrirDoc('editor');
+}
+
+export function abrirDoc(vista) {
     ensureWorkspaceReady();
     setActive(true);
-    setView('editor');
+    setView(vista || state.vistaDeTrabalho);
 }
 
 export function setActive(active) {
     state.workspaceActive = !!active;
     if (!active) collapseVenv();
-    const editorOpen = state.currentView === 'editor';
-    const barVisible = state.workspaceActive || editorOpen;
+    const documentoAberto = emVistaDeTrabalho();
+    const barVisible = state.workspaceActive || documentoAberto;
     if (state.wsTopBar) {
         if (barVisible) {
             state.wsTopBar.classList.remove('hidden');
@@ -121,15 +123,19 @@ export function setActive(active) {
             }, 300);
         }
     }
-    if (!active && !editorOpen) {
+    if (!active && !documentoAberto) {
         setView('chat');
     }
     applyTopBarVisibility();
     applyTabsVisibility();
 }
 
+function emVistaDeTrabalho() {
+    return VISTAS_DE_TRABALHO.includes(state.currentView);
+}
+
 export function applyTopBarVisibility() {
-    if (!state.workspaceActive && state.currentView !== 'editor') return;
+    if (!state.workspaceActive && !emVistaDeTrabalho()) return;
     if (state.wsTopBar) state.wsTopBar.classList.toggle('ws-top-bar-collapsed', state.topBarHidden);
     if (state.termTopBar) state.termTopBar.classList.toggle('term-top-bar-collapsed', state.topBarHidden);
 }
@@ -143,6 +149,37 @@ export function applyTabsVisibility() {
 export function setTopBarHidden(hidden) {
     state.topBarHidden = !!hidden;
     applyTopBarVisibility();
+}
+
+export function alinharComLinha(linha) {
+
+    if (!state.monaco) return false;
+    const ed = (state.diffMode && state.diffModifiedEditor) ? state.diffModifiedEditor : state.editor;
+    const modelo = ed && ed.getModel();
+    if (!modelo) return false;
+    const n = Number(linha);
+    if (!isFinite(n)) return false;
+    const total = modelo.getLineCount();
+
+    const ref = Math.max(1, Math.min(total, Math.floor(n)));
+    const topo = ed.getTopForLineNumber(ref) + (n - ref) * ALTURA_LINHA;
+    ed.setScrollTop(Math.max(0, Math.round(topo)), state.monaco.editor.ScrollType.Immediate);
+    return true;
+}
+
+export async function transferirDaCamada(path, linha, arquivoOriginal) {
+
+    if (!state.monaco) return false;
+
+    const alvo = path || arquivoOriginal;
+    if (!alvo) return false;
+
+    const recarregar = state.diffMode || state.logModeNeedsReload || state.currentFile !== alvo;
+    if (state.logMode || state.diffMode) exitLogMode(true);
+    if (recarregar) await openFileInEditor(alvo, { semFade: true, recarregar: true });
+    if (!path) revealAndSelectFile(alvo);
+    if (linha == null) return true;
+    return alinharComLinha(linha);
 }
 
 export function layoutAllEditors() {
@@ -298,20 +335,21 @@ export function openFileFromLog(path, snippet, diffData, asReadonly) {
         state.wsStatus.textContent = 'editor: carregando...';
         return;
     }
+
+    const temLinhas = diffData && Array.isArray(diffData.deletedLines) && Array.isArray(diffData.addedLines) &&
+                      (diffData.deletedLines.length > 0 || diffData.addedLines.length > 0);
     const hasFullDiff = diffData && diffData.full && diffData.original && diffData.modified && diffData.original !== diffData.modified;
     let diff = null;
-    if (hasFullDiff) {
-        if (Array.isArray(diffData.deletedLines) && Array.isArray(diffData.addedLines)) {
-            diff = {
-                deletedLines: diffData.deletedLines.slice(),
-                addedLines: diffData.addedLines.slice(),
-                origToMod: Array.isArray(diffData.origToMod) ? diffData.origToMod.slice() : [],
-                modToOrig: Array.isArray(diffData.modToOrig) ? diffData.modToOrig.slice() : [],
-                anchorLine: 0
-            };
-        } else {
-            diff = computeLineDiff(diffData.original, diffData.modified);
-        }
+    if (temLinhas) {
+        diff = {
+            deletedLines: diffData.deletedLines.slice(),
+            addedLines: diffData.addedLines.slice(),
+            origToMod: Array.isArray(diffData.origToMod) ? diffData.origToMod.slice() : [],
+            modToOrig: Array.isArray(diffData.modToOrig) ? diffData.modToOrig.slice() : [],
+            anchorLine: 0
+        };
+    } else if (hasFullDiff) {
+        diff = computeLineDiff(diffData.original, diffData.modified);
     }
     const hasSubstitution = diff && diff.deletedLines.length && diff.addedLines.length;
     const hasAddition = diff && !diff.deletedLines.length && diff.addedLines.length;
@@ -349,6 +387,8 @@ export function openFileFromLog(path, snippet, diffData, asReadonly) {
                 } else {
                     exitLogMode();
                 }
+                const linhas = state.currentLogChangedLines || [];
+                revelarLinhaComRolagem(state.editor, linhas[0], 600);
             };
             fadeEditorSwap(applyMode);
         }
@@ -367,6 +407,7 @@ export function openFileFromLog(path, snippet, diffData, asReadonly) {
 
 export function showSingleViewLog(path, content, changedLines, cls, needsReload) {
     ensureEditor();
+    const trocaNoMesmoFicheiro = state.currentFile === path;
     if (state.currentFile && state.currentFile !== path && state.editor && !state.currentFileIsImage && !state.logMode && !state.diffMode) {
         state.editorViewStates[state.currentFile] = state.editor.saveViewState();
     }
@@ -393,6 +434,7 @@ export function showSingleViewLog(path, content, changedLines, cls, needsReload)
     renderTabs();
     state.wsStatus.textContent = 'log: ' + path;
     enterLogModeWithLines(changedLines, cls, needsReload);
+    if (trocaNoMesmoFicheiro) revelarLinhaComRolagem(state.editor, (changedLines || [])[0], 600);
     state.savedDiffScrolls.clear();
 }
 
@@ -532,7 +574,7 @@ export function createSearchResultCard(r, termoLower, collapsedByDefault) {
         line.textContent = o.linha;
         const txt = document.createElement('span');
         txt.className = 'esc-hit-text';
-        appendSearchHighlight(txt, o.trecho, termoLower);
+        appendSearchHighlight(txt, o.trecho, o.destaque || termoLower);
         hit.appendChild(line);
         hit.appendChild(txt);
         hit.title = 'Abrir ' + r.arquivo + ' na linha ' + o.linha;
@@ -558,31 +600,27 @@ export function createSearchResultCard(r, termoLower, collapsedByDefault) {
     return card;
 }
 
-export function appendSearchHighlight(container, text, termoLower) {
-    if (!termoLower) {
-        container.textContent = text;
-        return;
-    }
-    const lower = String(text).toLowerCase();
-    const idx = lower.indexOf(termoLower);
+export function appendSearchHighlight(container, text, alvo) {
+    const termo = String(alvo || '').toLowerCase();
+    const idx = termo ? String(text).toLowerCase().indexOf(termo) : -1;
     if (idx === -1) {
         container.textContent = text;
         return;
     }
-    const antes = document.createTextNode(text.slice(0, idx));
+    container.appendChild(document.createTextNode(text.slice(0, idx)));
     const match = document.createElement('span');
     match.className = 'esc-match';
-    match.textContent = text.slice(idx, idx + termoLower.length);
-    const depois = document.createTextNode(text.slice(idx + termoLower.length));
-    container.appendChild(antes);
+    match.textContent = text.slice(idx, idx + termo.length);
     container.appendChild(match);
-    container.appendChild(depois);
+    container.appendChild(document.createTextNode(text.slice(idx + termo.length)));
 }
 
 if ('requestIdleCallback' in window) {
     requestIdleCallback(preloadMonaco, { timeout: 3000 });
+    requestIdleCallback(preloadTerminal, { timeout: 4000 });
 } else {
     setTimeout(preloadMonaco, 1200);
+    setTimeout(preloadTerminal, 1500);
 }
 
 export function getView() {
@@ -591,24 +629,29 @@ export function getView() {
 
 state.btnPreview.addEventListener('click', () => {
     if (state.currentView === 'preview') {
-        setView(state.lastNonPreviewView);
+        fecharPreview();
     } else {
         setView('preview');
     }
 });
 state.termInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        const cmd = state.termInput.value.trim();
-        if (cmd === 'clear' || cmd === 'cls') {
-            clearLog();
-            state.termInput.value = '';
-            return;
-        }
-        if (cmd) {
-            runCommand(cmd);
-            state.termInput.value = '';
-        }
+    if (e.key !== 'Enter') return;
+    const cmd = state.termInput.value.trim();
+    if (!cmd) return;
+    state.termInput.value = '';
+    if (cmd === 'clear' || cmd === 'cls') {
+        clearLog();
+        return;
     }
+    if (state.shellAtivo || /^cd\b/i.test(cmd)) {
+        runCommand(cmd);
+        return;
+    }
+    if (temCardSelecionado()) {
+        escreverNoCardSelecionado(cmd);
+        return;
+    }
+    lancarComando(cmd);
 });
 
 export function loadVenvName() {
@@ -617,9 +660,7 @@ export function loadVenvName() {
         .then(data => {
             state.venvDetected = !!(data && data.venv_name);
             if (state.termVenvName) state.termVenvName.textContent = (data && data.venv_name) || '';
-            if (data && data.shell && state.wsShellLabel) {
-                state.wsShellLabel.textContent = data.shell;
-            }
+            if (data && data.shell) aplicarShellAtual(data.shell);
         })
         .catch(() => {});
 }
@@ -655,22 +696,6 @@ if (state.termVenvName) {
     state.termVenvName.title = 'Ambiente virtual';
     state.termVenvName.addEventListener('click', toggleVenv);
 }
-if (state.wsShellLabel) {
-    state.wsShellLabel.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleShellMenu();
-    });
-}
-if (state.wsShellArrow) {
-    state.wsShellArrow.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleShellMenu();
-    });
-}
-
-document.addEventListener('click', (e) => {
-    if (state.shellMenuOpen && !e.target.closest('#ws-shell')) closeShellMenu();
-});
 loadVenvName();
 
 if (state.btnDockRight) {
@@ -719,21 +744,6 @@ if (state.btnCreateFile) {
     });
 }
 
-if (state.btnLogToggle) {
-    state.btnLogToggle.addEventListener('click', () => {
-        if (state.logMode) {
-            const wasDiff = state.diffMode;
-            const needsReload = state.logModeNeedsReload;
-            const path = state.currentFile;
-            if ((wasDiff || needsReload) && path) {
-                exitLogMode();
-                loadFileIntoEditor(path).then(ok => { if (ok) renderTabs(); });
-            } else {
-                fadeEditorSwap(() => exitLogMode());
-            }
-        }
-    });
-}
 
 if (state.btnExplorerSearch) {
     state.btnExplorerSearch.addEventListener('click', () => {
@@ -895,18 +905,27 @@ export function scheduleEditorLayout() {
 }
 window.addEventListener('resize', scheduleEditorLayout);
 
+if (typeof ResizeObserver !== 'undefined' && state.editorHost) {
+    state.editorVigia = new ResizeObserver(scheduleEditorLayout);
+    state.editorVigia.observe(state.editorHost);
+}
+
 export function mountLogDockIntoWorkspace() {
     const logDock = document.getElementById('log-dock');
     const panelCol2 = document.getElementById('panel-col-2');
-    const panelCol3 = document.getElementById('panel-col-3');
     if (!logDock) return;
 
     if (panelCol2 && panelCol2.parentNode !== logDock) {
         logDock.appendChild(panelCol2);
     }
-    if (panelCol3 && panelCol3.parentNode !== logDock) {
-        logDock.appendChild(panelCol3);
-    }
+
+    const editorHostWrap = document.getElementById('editor-host-wrap');
+    ['panel-col-3', 'panel-col-3-history', 'panel-col-3-notes'].forEach((id) => {
+        const camada = document.getElementById(id);
+        if (camada && editorHostWrap && camada.parentNode !== editorHostWrap) {
+            editorHostWrap.appendChild(camada);
+        }
+    });
 }
 
 mountLogDockIntoWorkspace();

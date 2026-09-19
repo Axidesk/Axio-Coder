@@ -6,6 +6,7 @@ import shutil
 import uuid
 
 from src.backend.state import estado, emit_event, notificar_mudanca_arquivos
+from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, registrar_edicao
 from src.backend.services.diff import gerar_diff
 
@@ -201,7 +202,7 @@ def _colapsar_linhas_vazias(linhas):
     return resultado
 
 def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors=None):
-    """Anexa `corpo` ao destino, registra no undo e grava. Devolve (novo_dest, diff_dest, grupo_mover)."""
+    """Anexa `corpo` ao destino, registra no undo e grava. Devolve (diff_dest, grupo_mover)."""
     novo_dest = conteudo_dest
     if novo_dest and not novo_dest.endswith("\n"):
         novo_dest += "\n"
@@ -212,7 +213,7 @@ def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remo
     registrar_edicao(dest_abs, None if not dest_existia else conteudo_dest, novo_dest, grupo=grupo_mover)
     with open(dest_abs, "w", encoding="utf-8", errors=errors) as f:
         f.write(novo_dest)
-    return novo_dest, gerar_diff(conteudo_dest, novo_dest), grupo_mover
+    return gerar_diff(conteudo_dest, novo_dest), grupo_mover
 
 def _emitir_diff_movido(arquivo_origem, arquivo_destino, conteudo_orig, novo_orig, diff_dest):
     """Gera o diff da origem e o diff combinado (removido + adicionado) e emite o evento 'moved'."""
@@ -221,6 +222,18 @@ def _emitir_diff_movido(arquivo_origem, arquivo_destino, conteudo_orig, novo_ori
     partes_adicionadas = [p for p in diff_dest if p.get("type") == "added"]
     emit_event("action_diff", actionName=arquivo_destino, actionType="moved", origem=arquivo_origem, destino=arquivo_destino, diff=partes_deletadas + partes_adicionadas)
 
+@register(
+    "tool_mover_funcao_verbatim",
+    'Move uma função/classe inteira de um arquivo para outro copiando os bytes exatos do disco (verbatim, sem redigitar, sem simplificar). Detecta o range completo da função (início e fim) por AST no Python e por balanceamento de chaves no JavaScript. Recusa funções aninhadas, porque o destino recebe o corpo no topo do módulo e a indentação herdada o invalidaria. Opcionalmente remove a função do arquivo de origem. Use preview=true para dry-run (mostra linhas + SHA-256 sem escrever/remover nada). Retorna o SHA-256 do corpo movido para verificação.',
+    {
+        'arquivo_origem': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'nome_funcao': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'arquivo_destino': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'remover_origem': {"tipo": "BOOLEAN", "padrao": True},
+        'preview': {"tipo": "BOOLEAN", "padrao": False},
+    },
+    disponivel="edicao",
+)
 def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, remover_origem=True, preview=False):
     if estado.get("bloquear_edicao"):
         return "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
@@ -238,9 +251,16 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
     if corpo is None:
         return info
     inicio, fim = info
+    if corpo[:1].isspace():
+        return (
+            f"ERRO: '{nome_funcao}' esta ANINHADA dentro de outra funcao (linha {inicio} indentada). O destino "
+            "recebe o corpo no topo do modulo, logo move-la assim gravaria um ficheiro invalido. Aninhada nao e "
+            "peca solta: o que ela fecha por cima tem de virar parametro, e essa decisao nao e mecanica. Extraia "
+            "por faixas de linha, dedentando com prova de ida-e-volta (repôr a indentacao removida tem de "
+            "reproduzir os bytes originais) e ajuste a assinatura. Nada foi movido."
+        )
     if not _corpo_com_chaves_balanceadas(corpo):
         return f"ERRO: O corpo extraído da função '{nome_funcao}' está com chaves desbalanceadas (possível corte incorreto). Nada foi movido. Verifique o arquivo origem manualmente."
-    import hashlib
     hash_corpo = hashlib.sha256(corpo.encode("utf-8")).hexdigest()
     if preview:
         primeira_linha = corpo.splitlines()[0].strip() if corpo else ""
@@ -269,7 +289,7 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
             conteudo_dest = f.read()
     else:
         conteudo_dest = ""
-    novo_dest, diff_dest, grupo_mover = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem)
+    diff_dest, grupo_mover = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem)
     if remover_origem:
         with open(origem_abs, "r", encoding="utf-8") as f:
             conteudo_orig = f.read()
@@ -292,9 +312,18 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
         f"Removida da origem: {'sim' if remover_origem else 'não'}"
     )
 
+@register(
+    "tool_verificar_integridade_refatoracao",
+    'Verifica se uma função movida por refatoração permaneceu idêntica (verbatim) ao original, comparando hash e byte a byte. Use após tool_mover_funcao_verbatim para provar que o movimento não alterou nada.',
+    {
+        'arquivo_origem': {"tipo": "STRING", "padrao": ""},
+        'nome_funcao': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'arquivo_destino': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'hash_esperado': {"tipo": "STRING", "padrao": ""},
+    },
+)
 def tool_verificar_integridade_refatoracao(arquivo_origem, nome_funcao, arquivo_destino, hash_esperado=""):
     emit_event("executing", function=f"Verificando integridade: {nome_funcao}")
-    import hashlib
     def _hash(texto):
         return hashlib.sha256(texto.encode("utf-8")).hexdigest()
     origem_abs, erro = resolver_caminho(arquivo_origem, permitir_extra=True)
@@ -344,11 +373,25 @@ def tool_verificar_integridade_refatoracao(arquivo_origem, nome_funcao, arquivo_
                     linhas.append(f"    + [destino] {texto}")
     return "\n".join(linhas)
 
+@register(
+    "tool_mover_bloco_verbatim",
+    "Move um bloco/range de linhas (ou um bloco delimitado por tags, ex: '<style>...</style>') de um arquivo para outro copiando os bytes exatos do disco (verbatim, sem redigitar). Use OU linha_inicio/linha_fim OU tag_abertura/tag_fechamento (com 'ocorrencia' para escolher qual bloco quando houver mais de um). Remove o bloco da origem e verifica por SHA-256 e por presença/ausência que saiu inteiro da origem e entrou idêntico no destino. Ideal para CSS/HTML/blocos de texto que tool_mover_funcao_verbatim não cobre. Use SEMPRE para mover blocos grandes em vez de fatiar manualmente.",
+    {
+        'arquivo_origem': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'arquivo_destino': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'linha_inicio': {"tipo": "INTEGER", "padrao": 0},
+        'linha_fim': {"tipo": "INTEGER", "padrao": 0},
+        'tag_abertura': {"tipo": "STRING", "padrao": ""},
+        'tag_fechamento': {"tipo": "STRING", "padrao": ""},
+        'remover_origem': {"tipo": "BOOLEAN", "padrao": True},
+        'ocorrencia': {"tipo": "INTEGER", "padrao": 1},
+    },
+    disponivel="edicao",
+)
 def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, linha_fim=0, tag_abertura="", tag_fechamento="", remover_origem=True, ocorrencia=1):
     if estado.get("bloquear_edicao"):
         return "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
     emit_event("executing", function="Movendo bloco verbatim")
-    import hashlib
     if isinstance(remover_origem, str):
         remover_origem = remover_origem.strip().lower() in ("1", "true", "sim", "yes", "s")
     try:
@@ -429,7 +472,7 @@ def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, l
         if corpo in conteudo_dest.replace("\r\n", "\n"):
             return f"ERRO: O bloco já existe no destino '{arquivo_destino}'. Mover novamente causaria duplicação."
 
-    novo_dest, diff_dest, grupo_mover = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors="ignore")
+    diff_dest, grupo_mover = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors="ignore")
 
     verificacoes = []
     with open(dest_abs, "r", encoding="utf-8", errors="ignore") as f:
@@ -467,6 +510,16 @@ def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, l
         f"Verificações:\n" + "\n".join(f"  - {v}" for v in verificacoes)
     )
 
+@register(
+    "tool_mover_arquivo_binario",
+    'Move um arquivo binário ou uma pasta inteira (ícones, imagens, fontes, binários) de um lugar para outro byte a byte usando shutil.move. Use para mover .ico, .png, .exe ou pastas inteiras que tool_mover_bloco_verbatim não consegue (só lida com texto). Retorna o SHA-256 do arquivo movido e verifica que a origem sumiu e o destino apareceu.',
+    {
+        'origem': {"tipo": "STRING", "desc": 'Caminho relativo do arquivo ou pasta a mover', "obrig": True, "padrao": ""},
+        'destino': {"tipo": "STRING", "desc": 'Caminho relativo de destino (arquivo ou pasta)', "obrig": True, "padrao": ""},
+        'sobrescrever': {"tipo": "BOOLEAN", "desc": 'Se True, substitui o destino caso já exista', "padrao": False},
+    },
+    disponivel="edicao",
+)
 def tool_mover_arquivo_binario(origem, destino, sobrescrever=False):
     if estado.get("bloquear_edicao"):
         return "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."

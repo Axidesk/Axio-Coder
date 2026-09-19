@@ -1,6 +1,8 @@
+import { opcoesBase } from './metricas.js';
 import { defineEditorTheme, defineLogTheme } from './themes.js';
 import { installEditorHoverHighlight, installUrlWordSelection } from './highlight.js';
 import { installFindToggle, wireMonacoFindPush } from './findbar.js';
+import { instalarDestaqueCsv } from './destacar_csv.js';
 import { refreshErrorMarkers } from './explorer.js';
 import { createFileFromTyping, scheduleAutoSave } from './scroll.js';
 import { appendLine } from './terminal.js';
@@ -48,30 +50,23 @@ export function ensureEditor() {
     if (!state.monaco) return;
     defineEditorTheme();
     defineLogTheme();
-    state.editor = state.monaco.editor.create(state.editorHost, {
+    state.editor = state.monaco.editor.create(state.editorHost, Object.assign(opcoesBase(), {
         value: '',
         language: 'plaintext',
         theme: 'axio-editor',
         automaticLayout: false,
-        minimap: { enabled: false },
-        fontSize: 14,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
         lineNumbers: 'off',
         lineNumbersMinChars: 0,
         glyphMargin: false,
-        lineDecorationsWidth: 10,
+        lineDecorationsWidth: 0,
         folding: true,
-        scrollBeyondLastLine: false,
-        smoothScrolling: true,
-        mouseWheelScrollSensitivity: 1,
         bracketPairColorization: { enabled: false },
         highlightActiveIndentGuide: false,
-        renderLineHighlight: 'none',
         renderIndentGuides: false,
         overviewRulerLanes: 3,
         overviewRulerBorder: false,
         find: { addExtraSpaceOnTop: false }
-    });
+    }));
     state.monaco.editor.onDidChangeMarkers(refreshErrorMarkers);
     state.editor.onDidChangeModelContent(() => {
         if (state.suppressAutoSave) return;
@@ -93,7 +88,9 @@ export function ensureEditor() {
     installEditorHoverHighlight();
     installUrlWordSelection();
     wireMonacoFindPush(state.editorHost);
+    wireMonacoFindPush(state.diffHost);
     installFindToggle();
+    instalarDestaqueCsv();
     updateEditorWatermark();
 }
 export function updateEditorWatermark() {

@@ -1,50 +1,60 @@
 process.env.ELECTRON_NO_ATTACH_CONSOLE = 'true';
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const http = require('http');
+const { iniciarPonte, pararPonte, prepararDepurador, inspecionarPreview } = require('./preview-cdp');
 
 app.commandLine.appendSwitch('log-level', '3');
 app.commandLine.appendSwitch('disable-logging');
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
-// ---- Performance / aceleração de hardware ----
-// Rasterização via GPU (compositor Chromium) para scroll/animações fluidas.
 app.commandLine.appendSwitch('enable-gpu-rasterization');
-// Zero-copy: evita cópia de texturas entre CPU e GPU (menos latência no paint).
 app.commandLine.appendSwitch('enable-zero-copy');
-// Usa a GPU mesmo quando o driver está na blocklist do Chromium (máquinas potentes).
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
-// Força a GPU dedicada de alto desempenho (NVIDIA Optimus / AMD) em vez da integrada.
 app.commandLine.appendSwitch('force_high_performance_gpu');
-// Buffers de memória nativos de GPU (compartilhamento eficiente de texturas).
 app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
-// Skia como renderer (padrão moderno do Chromium) + rasterização fora do compositor.
 app.commandLine.appendSwitch('enable-features', 'UseSkiaRenderer,CanvasOopRasterization');
-// Mais memória heap para o V8 (o renderer é pesado: Monaco + sessão + logs).
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
-// Suporte a DPI alto (monitores 4K/Retina) mantendo o paint nítido e rápido.
 app.commandLine.appendSwitch('high-dpi-support', '1');
-// Evita que o Chromium "estrangule" a renderização de janelas/timers em
-// segundo plano ou ocluídas (causa clássica de engasgo em animações no Windows).
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
-// Windows: desliga um recurso de "occlusão nativa" que pode congelar a janela.
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
 let mainWindow;
 let flaskProcess;
 let temaAtual = 'dark';
+let inspectAtivo = false;
 let quitting = false;
 let flaskRestarts = 0;
 let reiniciandoBackend = false;
+let previewViews = { node: null, web: null };
+let previewAtiva = null;
+let previewVisivel = false;
+let previewFerramentas = false;
+let previewLimites = null;
+let pontePorta = 0;
+let ponteToken = '';
+let zoomDaInterface = 1;
+const ALTURA_DA_BARRA_DE_TITULO = 32;
+const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
+const ZOOM_MINIMO = 0.5;
+const ZOOM_MAXIMO = 2;
+const PASSOS_DE_ZOOM = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     icon: path.join(__dirname, '..', 'data', 'icons', 'icon.ico'),
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#1e1e1e',
+      symbolColor: '#d6d8dc',
+      height: ALTURA_DA_BARRA_DE_TITULO
+    },
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -54,6 +64,12 @@ function createWindow() {
     backgroundColor: '#1e1e1e'
   });
 
+  mainWindow.setMenuBarVisibility(false);
+  zoomDaInterface = lerZoomPersistido();
+  mainWindow.webContents.setZoomFactor(zoomDaInterface);
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoomDaInterface);
+  });
   mainWindow.loadURL('http://127.0.0.1:5000/');
 
   let loadAttempts = 0;
@@ -68,15 +84,11 @@ function createWindow() {
     }
   });
 
-  // Abre links externos (ex.: URLs visitadas pela busca web) no navegador padrão
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  // Correção do Ctrl+V no Monaco (Electron 34+ removeu document.execCommand('paste')).
-  // Intercepta o atalho e usa o caminho de paste nativo do Electron, que funciona
-  // tanto no editor quanto nos inputs do find/replace widget.
   const isMac = process.platform === 'darwin';
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
@@ -92,6 +104,9 @@ function createWindow() {
   });
 
   mainWindow.on('closed', function () {
+    descartarPreviewView();
+    previewLimites = null;
+    previewVisivel = false;
     mainWindow = null;
   });
 }
@@ -132,8 +147,6 @@ function killProcessOnPort(port) {
         if (!localAddr.endsWith(':' + port)) continue;
         const pid = parseInt(parts[parts.length - 1], 10);
         if (!Number.isInteger(pid)) continue;
-        // Nunca matar processos do sistema: 0 = System Idle, 4 = System (kernel).
-        // O socket de um processo que crashou pode aparecer como PID 4 no netstat.
         if (pid <= 4) continue;
         pids.add(pid);
       }
@@ -169,6 +182,10 @@ function startFlask() {
     PYTHONUNBUFFERED: '1',
     PYTHONFAULTHANDLER: '1'
   });
+  if (pontePorta) {
+    flaskEnv.AXIO_PONTE_PORTA = String(pontePorta);
+    flaskEnv.AXIO_PONTE_TOKEN = ponteToken;
+  }
   flaskProcess = spawn('python', ['app.py'], { windowsHide: true, env: flaskEnv });
   console.log(`[main] Flask iniciado. PID=${flaskProcess.pid}`);
 
@@ -209,9 +226,6 @@ function startFlask() {
   });
 }
 
-// Reinicia apenas o processo Python (Flask), sem fechar o Electron.
-// Necessario porque o Flask roda com debug=False (sem auto-reload): codigo .py
-// alterado so entra em vigor quando o processo morre e sobe de novo.
 function restartFlask() {
   if (reiniciandoBackend) {
     return;
@@ -237,18 +251,448 @@ function restartFlask() {
   }, 600);
 }
 
+function avisarPreview(canal, dados) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(canal, dados);
+  }
+}
+
+function veioDaJanelaPrincipal(evento) {
+  return !!mainWindow && !mainWindow.isDestroyed() && evento.sender === mainWindow.webContents;
+}
+
+function estadoDoPreview(view) {
+  const wc = view.webContents;
+  const historico = wc.navigationHistory;
+  return {
+    url: wc.getURL(),
+    titulo: wc.getTitle(),
+    carregando: wc.isLoading(),
+    podeVoltar: !!historico && historico.canGoBack(),
+    podeAvancar: !!historico && historico.canGoForward()
+  };
+}
+
+function enviarEstadoDoPreview() {
+  const view = previewVivo();
+  if (!view) return;
+  avisarPreview('preview:estado', estadoDoPreview(view));
+}
+
+function ligarEventosDoPreview(view, precisaNode) {
+  const wc = view.webContents;
+  wc.setWindowOpenHandler(({ url }) => {
+    if (/^https?:/i.test(url) && !precisaNode) {
+      setImmediate(() => {
+        if (!wc.isDestroyed()) wc.loadURL(url);
+      });
+      return { action: 'deny' };
+    }
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  wc.on('did-start-loading', () => {
+    avisarPreview('preview:estado', Object.assign(estadoDoPreview(view), { carregando: true }));
+  });
+  wc.on('did-stop-loading', enviarEstadoDoPreview);
+  wc.on('did-navigate', enviarEstadoDoPreview);
+  wc.on('did-navigate-in-page', enviarEstadoDoPreview);
+  wc.on('page-title-updated', enviarEstadoDoPreview);
+  wc.on('did-fail-load', (evento, codigo, descricao, url, principal) => {
+    if (!principal || codigo === -3) return;
+    avisarPreview('preview:erro', { codigo: codigo, descricao: descricao, url: url });
+  });
+}
+
+const LOCAL_NO_PREVIEW = /^(file|about|devtools|chrome):/i;
+const LOOPBACK_NO_PREVIEW = /^https?:\/\/(localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?(?:[/?#]|$)/i;
+
+function alvoPrecisaNode(url) {
+  const texto = String(url || '').trim();
+  return LOCAL_NO_PREVIEW.test(texto) || LOOPBACK_NO_PREVIEW.test(texto);
+}
+
+const TIPOS_DE_VIEW = ['node', 'web'];
+
+function tipoDoAlvo(alvo) {
+  const texto = String(alvo || '').trim();
+  if (!texto) return 'web';
+  if (/^[a-z]:[\\/]/i.test(texto) || texto.startsWith('\\\\') || texto.startsWith('/')) return 'node';
+  return alvoPrecisaNode(texto) ? 'node' : 'web';
+}
+
+function viewDoTipo(tipo) {
+  const view = tipo ? previewViews[tipo] : null;
+  if (!view || view.webContents.isDestroyed()) return null;
+  return view;
+}
+
+function previewVivo() {
+  return viewDoTipo(previewAtiva);
+}
+
+function descartarPreviewView(tipo) {
+  const alvos = tipo ? [tipo] : TIPOS_DE_VIEW.slice();
+  for (const chave of alvos) {
+    const view = previewViews[chave];
+    if (!view) continue;
+    previewViews[chave] = null;
+    if (previewAtiva === chave) previewAtiva = null;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        mainWindow.contentView.removeChildView(view);
+      } catch (e) {}
+    }
+    if (!view.webContents.isDestroyed()) view.webContents.close();
+  }
+}
+
+function criarViewDoTipo(tipo) {
+  const existente = viewDoTipo(tipo);
+  if (existente) return existente;
+  const querNode = tipo === 'node';
+  const view = new WebContentsView({
+    webPreferences: querNode
+      ? {
+          nodeIntegration: true,
+          contextIsolation: false,
+          sandbox: false,
+          backgroundThrottling: false,
+          spellcheck: false
+        }
+      : {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true,
+          backgroundThrottling: false
+        }
+  });
+  previewViews[tipo] = view;
+  view.setBackgroundColor('#1e1e1e');
+  view.setBounds(previewLimites || limitesDeArranque());
+  view.setVisible(false);
+  ligarEventosDoPreview(view, querNode);
+  view.webContents.on('did-finish-load', () => {
+    aplicarZoomAoPreview();
+    aplicarFerramentasDoPreview();
+  });
+  prepararDepurador(view);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.contentView.addChildView(view);
+  }
+  avisarPreview('preview:novo', {});
+  return view;
+}
+
+function mostrarSoAVista(tipo) {
+  previewAtiva = tipo;
+  for (const chave of TIPOS_DE_VIEW) {
+    const view = viewDoTipo(chave);
+    if (!view) continue;
+    view.setVisible(previewVisivel && chave === tipo);
+  }
+}
+
+function definirVisibilidadeDoPreview(visivel) {
+  const alguma = viewDoTipo('node') || viewDoTipo('web');
+  if (!visivel && !alguma) return;
+  previewVisivel = !!visivel;
+  for (const chave of TIPOS_DE_VIEW) {
+    const view = viewDoTipo(chave);
+    if (!view) continue;
+    view.setVisible(previewVisivel && chave === previewAtiva);
+    if (previewVisivel && mainWindow && !mainWindow.isDestroyed()) {
+      if (!mainWindow.contentView.children.includes(view)) {
+        mainWindow.contentView.addChildView(view);
+      }
+    }
+  }
+}
+
+function aplicarLimitesDoPreview(limites) {
+  const caixa = escalarLimites(limites, zoomDaJanela());
+  if (!caixa) return;
+  previewLimites = caixa;
+  for (const chave of TIPOS_DE_VIEW) {
+    const view = viewDoTipo(chave);
+    if (view) view.setBounds(previewLimites);
+  }
+}
+
+function escalarLimites(limites, fator) {
+  const escala = (Number.isFinite(fator) && fator > 0) ? fator : 1;
+  const x = Math.round(Number(limites && limites.x) * escala);
+  const y = Math.round(Number(limites && limites.y) * escala);
+  const largura = Math.round(Number(limites && limites.width) * escala);
+  const altura = Math.round(Number(limites && limites.height) * escala);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(largura) || !Number.isFinite(altura)) return null;
+  return { x: x, y: y, width: Math.max(1, largura), height: Math.max(1, altura) };
+}
+
+function zoomDaJanela() {
+  if (!mainWindow || mainWindow.isDestroyed()) return zoomDaInterface;
+  return mainWindow.webContents.getZoomFactor() || zoomDaInterface;
+}
+
+function limitesDeArranque() {
+  if (!mainWindow || mainWindow.isDestroyed()) return { x: 0, y: 0, width: 1, height: 1 };
+  const caixa = mainWindow.getContentBounds();
+  return { x: 0, y: 0, width: Math.max(1, caixa.width), height: Math.max(1, caixa.height) };
+}
+
+function urlDoAlvo(texto) {
+  const temEsquema = /^[a-z][a-z0-9+.-]*:\/\//i.test(texto);
+  if (temEsquema || /^(localhost|127\.0\.0\.1):/i.test(texto)) {
+    return { remoto: true, url: temEsquema ? texto : 'http://' + texto, caminho: '' };
+  }
+  if (/^[a-z]:[\\/]/i.test(texto) || texto.startsWith('\\\\') || texto.startsWith('/')) {
+    const caminho = path.resolve(texto);
+    return { remoto: false, url: 'file:///' + caminho.replace(/\\/g, '/'), caminho: caminho };
+  }
+  return null;
+}
+
+function mesmoAlvoCarregado(wc, url) {
+  const atual = wc.getURL();
+  if (!atual) return false;
+  if (atual === url) return true;
+  if (!/^file:/i.test(atual) || !/^file:/i.test(url)) return false;
+  try {
+    const a = decodeURIComponent(new URL(atual).pathname);
+    const b = decodeURIComponent(new URL(url).pathname);
+    return a.toLowerCase() === b.toLowerCase();
+  } catch (e) {
+    return false;
+  }
+}
+
+function carregarNoPreview(alvo) {
+  const texto = String(alvo || '').trim();
+  if (!texto) return { ok: false, erro: 'Endereco vazio.' };
+  const destino = urlDoAlvo(texto);
+  if (!destino) return { ok: false, erro: 'Endereco invalido: ' + texto };
+  const tipo = tipoDoAlvo(texto);
+  const view = criarViewDoTipo(tipo);
+  mostrarSoAVista(tipo);
+  const wc = view.webContents;
+  if (mesmoAlvoCarregado(wc, destino.url)) {
+    enviarEstadoDoPreview();
+    return { ok: true, alvo: destino.url, reutilizado: true };
+  }
+  if (destino.remoto) wc.loadURL(destino.url);
+  else wc.loadFile(destino.caminho);
+  return { ok: true, alvo: destino.url };
+}
+
+const PRAZO_DA_SONDA_MS = 1500;
+
+function mesmaPagina(atual, destino) {
+  try {
+    const a = new URL(atual);
+    const b = new URL(destino);
+    return a.origin === b.origin && a.pathname === b.pathname && a.search === b.search;
+  } catch (e) {
+    return false;
+  }
+}
+
+function paginaResponde(view, limite) {
+  if (!view || view.webContents.isDestroyed()) return Promise.resolve(true);
+  const sonda = view.webContents.executeJavaScript('1').then(() => true, () => true);
+  const prazo = new Promise((resolve) => setTimeout(() => resolve(false), limite));
+  return Promise.race([sonda, prazo]);
+}
+
+async function carregarRespeitandoPaginaPresa(alvo) {
+  const destino = String(alvo || '').trim();
+  const resolvido = urlDoAlvo(destino);
+  const tipo = tipoDoAlvo(destino);
+  const view = viewDoTipo(tipo);
+  const atual = view && resolvido ? view.webContents.getURL() : '';
+  const mesma = !!atual && mesmaPagina(atual, resolvido.url);
+  const repetida = mesma && mesmoAlvoCarregado(view.webContents, resolvido.url);
+  if (mesma && !repetida) {
+    const respondeu = await paginaResponde(view, PRAZO_DA_SONDA_MS);
+    if (!respondeu) descartarPreviewView(tipo);
+  }
+  return carregarNoPreview(alvo);
+}
+
+function recarregarPreview() {
+  const view = previewVivo();
+  if (!view) return { ok: false, erro: 'Nenhuma pagina carregada no preview.' };
+  view.webContents.reload();
+  return { ok: true };
+}
+
+function navegarPreview(passo) {
+  const view = previewVivo();
+  if (!view) return { ok: false, erro: 'Nenhuma pagina carregada no preview.' };
+  const historico = view.webContents.navigationHistory;
+  if (!historico) return { ok: false, erro: 'Historico indisponivel nesta versao do Electron.' };
+  if (passo < 0) {
+    if (!historico.canGoBack()) return { ok: false, erro: 'Nao ha pagina anterior.' };
+    historico.goBack();
+  } else {
+    if (!historico.canGoForward()) return { ok: false, erro: 'Nao ha pagina seguinte.' };
+    historico.goForward();
+  }
+  return { ok: true };
+}
+
+function normalizarZoom(valor) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero < ZOOM_MINIMO || numero > ZOOM_MAXIMO) return null;
+  return numero;
+}
+
+function lerZoomPersistido() {
+  try {
+    const dados = JSON.parse(fs.readFileSync(CAMINHO_SETTINGS, 'utf8'));
+    return normalizarZoom((dados.interface || {}).zoom) || 1;
+  } catch (erro) {
+    return 1;
+  }
+}
+
+function gravarZoom(valor) {
+  let dados = {};
+  try {
+    const lido = JSON.parse(fs.readFileSync(CAMINHO_SETTINGS, 'utf8'));
+    if (lido && typeof lido === 'object' && !Array.isArray(lido)) dados = lido;
+  } catch (erro) {
+    dados = {};
+  }
+  dados.interface = Object.assign({}, dados.interface, { zoom: valor });
+  const temporario = CAMINHO_SETTINGS + '.tmp';
+  try {
+    fs.mkdirSync(path.dirname(CAMINHO_SETTINGS), { recursive: true });
+    fs.writeFileSync(temporario, JSON.stringify(dados, null, 2), 'utf8');
+    fs.renameSync(temporario, CAMINHO_SETTINGS);
+    return true;
+  } catch (erro) {
+    return false;
+  }
+}
+
+function aplicarZoomAoPreview() {
+  for (const chave of TIPOS_DE_VIEW) {
+    const view = viewDoTipo(chave);
+    if (!view) continue;
+    try {
+      view.webContents.setZoomFactor(zoomDaInterface);
+    } catch (erro) {}
+  }
+}
+
+function definirZoomDaInterface(valor, avisar) {
+  const zoom = normalizarZoom(valor);
+  if (zoom === null) return { ok: false, erro: 'Zoom fora do intervalo: ' + valor };
+  zoomDaInterface = zoom;
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoom);
+  aplicarZoomAoPreview();
+  gravarZoom(zoom);
+  if (avisar !== false && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('menu:set-zoom', zoom);
+  }
+  return { ok: true, zoom: zoom };
+}
+
+function passoDeZoom(direcao) {
+  let indice = PASSOS_DE_ZOOM.findIndex((v) => Math.abs(v - zoomDaInterface) < 0.001);
+  if (indice === -1) indice = PASSOS_DE_ZOOM.indexOf(1);
+  const alvo = Math.min(PASSOS_DE_ZOOM.length - 1, Math.max(0, indice + direcao));
+  return definirZoomDaInterface(PASSOS_DE_ZOOM[alvo]);
+}
+
+async function escolherFicheiroDoPreview(raiz) {
+  const opcoes = {
+    properties: ['openFile'],
+    filters: [
+      { name: 'Paginas web', extensions: ['html', 'htm', 'svg'] },
+      { name: 'Todos os ficheiros', extensions: ['*'] }
+    ]
+  };
+  if (raiz) opcoes.defaultPath = raiz;
+  const resultado = await dialog.showOpenDialog(mainWindow, opcoes);
+  if (resultado.canceled || !resultado.filePaths.length) return { ok: false, cancelado: true };
+  return carregarNoPreview(resultado.filePaths[0]);
+}
+
+function abrirPreviewNoNavegador() {
+  const view = previewVivo();
+  const url = view ? view.webContents.getURL() : '';
+  if (!url) return { ok: false, erro: 'Nada para abrir no navegador.' };
+  shell.openExternal(url);
+  return { ok: true, url: url };
+}
+
+function abrirDevToolsDoPreview() {
+  const view = previewVivo() || criarViewDoTipo(previewAtiva || 'node');
+  const wc = view.webContents;
+  try {
+    if (wc.debugger.isAttached()) wc.debugger.detach();
+  } catch (e) {}
+  wc.openDevTools({ mode: 'detach' });
+  wc.once('devtools-closed', () => prepararDepurador(view));
+  return { ok: true };
+}
+
+const ACOES_DO_PREVIEW = {
+  recarregar: () => recarregarPreview(),
+  ferramentas: (valor) => definirFerramentasDoPreview(valor),
+  voltar: () => navegarPreview(-1),
+  avancar: () => navegarPreview(1),
+  ficheiro: (valor) => escolherFicheiroDoPreview(valor),
+  externo: () => abrirPreviewNoNavegador(),
+  devtools: () => abrirDevToolsDoPreview()
+};
+
+function executarAcaoDoPreview(acao, valor) {
+  const executar = ACOES_DO_PREVIEW[acao];
+  if (!executar) return { ok: false, erro: 'Acao desconhecida: ' + acao };
+  return executar(valor);
+}
+
+function aplicarFerramentasDoPreview() {
+  const detalhe = previewFerramentas ? 'true' : 'false';
+  for (const chave of TIPOS_DE_VIEW) {
+    const view = viewDoTipo(chave);
+    if (!view) continue;
+    view.webContents
+      .executeJavaScript("document.dispatchEvent(new CustomEvent('axio-ferramentas', { detail: " + detalhe + " }))")
+      .catch(() => {});
+  }
+}
+
+function definirFerramentasDoPreview(ligado) {
+  previewFerramentas = !!ligado;
+  aplicarFerramentasDoPreview();
+  return { ok: true, ligado: previewFerramentas };
+}
+
 app.on('ready', () => {
-  // Configurar IPC para seleção de pasta
-  ipcMain.handle('select-folder', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory']
-    });
+  ipcMain.handle('select-folder', async (e, pastaAtual) => {
+    const opcoes = { properties: ['openDirectory'] };
+    if (pastaAtual) opcoes.defaultPath = pastaAtual;
+    const result = await dialog.showOpenDialog(mainWindow, opcoes);
     return result.filePaths[0];
   });
 
-  // Menu nativo: tema do dock (dark / cinza espacial)
-  function setTema(tema, enviar) {
-    temaAtual = (tema === 'espacial') ? 'espacial' : 'dark';
+  ipcMain.handle('preview:carregar', (e, alvo) => (
+    veioDaJanelaPrincipal(e) ? carregarRespeitandoPaginaPresa(alvo) : { ok: false, erro: 'Origem nao autorizada.' }
+  ));
+  ipcMain.handle('preview:acao', (e, acao, valor) => (
+    veioDaJanelaPrincipal(e) ? executarAcaoDoPreview(acao, valor) : { ok: false, erro: 'Origem nao autorizada.' }
+  ));
+  ipcMain.on('preview:limites', (e, limites) => {
+    if (veioDaJanelaPrincipal(e)) aplicarLimitesDoPreview(limites);
+  });
+  ipcMain.on('preview:visivel', (e, visivel) => {
+    if (veioDaJanelaPrincipal(e)) definirVisibilidadeDoPreview(!!visivel);
+  });
+
+  function montarMenu() {
     const menu = Menu.buildFromTemplate([
       {
         label: 'Exibir',
@@ -260,33 +704,111 @@ app.on('ready', () => {
               { label: 'Cinza Espacial', type: 'radio', checked: temaAtual === 'espacial', click: () => setTema('espacial') }
             ]
           },
+          {
+            label: 'Zoom',
+            submenu: [
+              { label: 'Aumentar', accelerator: 'CmdOrCtrl+=', click: () => passoDeZoom(1) },
+              { label: 'Diminuir', accelerator: 'CmdOrCtrl+-', click: () => passoDeZoom(-1) },
+              { label: 'Repor 100%', accelerator: 'CmdOrCtrl+0', click: () => definirZoomDaInterface(1) }
+            ]
+          },
           { type: 'separator' },
           { role: 'reload', label: 'Recarregar' },
           { role: 'forceReload', label: 'Recarregar ignorando cache', accelerator: 'CmdOrCtrl+Shift+R' },
           { type: 'separator' },
-          { label: 'Reiniciar Backend', accelerator: 'CmdOrCtrl+Shift+B', click: () => restartFlask() },
+          { label: 'Reiniciar Backend', accelerator: 'CmdOrCtrl+Shift+B', click: () => restartFlask() }
+        ]
+      },
+      {
+        label: 'Ferramentas',
+        submenu: [
+          { role: 'toggleDevTools', label: 'Dev Tools' },
           { type: 'separator' },
-          { role: 'toggleDevTools', label: 'Ferramentas de Desenvolvedor' }
+          { label: inspectAtivo ? 'Modo Inspecionar  ✓' : 'Modo Inspecionar', click: () => pedirInspect(!inspectAtivo) }
         ]
       }
     ]);
     Menu.setApplicationMenu(menu);
+  }
+
+  function setTema(tema, enviar) {
+    temaAtual = (tema === 'espacial') ? 'espacial' : 'dark';
+    montarMenu();
     if (enviar !== false && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('menu:set-tema', temaAtual);
     }
   }
+
+  function pedirInspect(ativo) {
+    inspectAtivo = !!ativo;
+    montarMenu();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('menu:set-inspect', inspectAtivo);
+    }
+    inspecionarPreview(previewVivo(), inspectAtivo).catch(() => {});
+  }
+
+  function executarAcaoDoMenu(acao, valor) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (acao === 'tema') return setTema(valor);
+    if (acao === 'reload') return mainWindow.webContents.reload();
+    if (acao === 'reload-sem-cache') return mainWindow.webContents.reloadIgnoringCache();
+    if (acao === 'reiniciar-backend') return restartFlask();
+    if (acao === 'devtools') return mainWindow.webContents.toggleDevTools();
+    if (acao === 'inspect') return pedirInspect(!inspectAtivo);
+    if (acao === 'zoom') return definirZoomDaInterface(valor);
+  }
+
+  ipcMain.on('menu:acao', (e, acao, valor) => {
+    if (veioDaJanelaPrincipal(e)) executarAcaoDoMenu(acao, valor);
+  });
+
+  ipcMain.handle('menu:zoom-atual', (e) => (
+    veioDaJanelaPrincipal(e)
+      ? { ok: true, zoom: zoomDaInterface, minimo: ZOOM_MINIMO, maximo: ZOOM_MAXIMO }
+      : { ok: false, erro: 'Origem nao autorizada.' }
+  ));
+
   ipcMain.on('tema:set', (e, tema) => setTema(tema, false));
+  ipcMain.on('inspect:set', (e, ativo) => {
+    inspectAtivo = !!ativo;
+    montarMenu();
+    if (e.sender && !e.sender.isDestroyed()) e.sender.send('menu:set-inspect', inspectAtivo);
+    inspecionarPreview(previewVivo(), inspectAtivo).catch(() => {});
+  });
   setTema('dark', false);
 
-  // Mata qualquer processo orfao que esteja segurando a porta 5000 (de uma
-  // sessao anterior fechada de forma abrupta). Sem isso, o Flask novo morre
-  // com "Address already in use" e a interface abre com ERR_CONNECTION_REFUSED.
   killProcessOnPort(5000);
 
-  startFlask();
-
-  // Espera o Flask subir antes de abrir a janela (a interface agora e servida via HTTP)
-  waitForFlask('http://127.0.0.1:5000/', createWindow);
+  iniciarPonte({
+    obterPreview: () => previewVivo(),
+    aoUsar: (acao, interage) => avisarPreview('preview:uso', { acao: acao, interage: !!interage }),
+    aoInspecionar: (info) => {
+      if (info && info.sair) {
+        if (inspectAtivo) pedirInspect(false);
+        return;
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('preview:inspecao', info);
+      }
+    },
+    acoesDeFora: {
+      carregar: (view, params) => {
+        const resultado = carregarNoPreview(params.alvo);
+        if (resultado && resultado.ok && resultado.alvo) {
+          avisarPreview('preview:alvo', { alvo: resultado.alvo });
+        }
+        return resultado;
+      },
+      mostrar: () => ({ ok: true })
+    }
+  }, (porta, token) => {
+    pontePorta = porta;
+    ponteToken = token;
+    if (porta) console.log(`[main] Ponte do preview a escutar em 127.0.0.1:${porta}`);
+    startFlask();
+    waitForFlask('http://127.0.0.1:5000/', createWindow);
+  });
 });
 
 app.on('window-all-closed', function () {
@@ -297,12 +819,10 @@ app.on('window-all-closed', function () {
 
 app.on('quit', () => {
   quitting = true;
+  pararPonte();
   if (flaskProcess) {
     console.log(`[main] quit: finalizando Flask PID=${flaskProcess.pid} (arvore /T /F)...`);
     if (process.platform === 'win32') {
-      // Mata a árvore inteira: o minerador (python -m mempalace mine) é
-      // filho do Flask. Se matarmos só o pai, o filho fica órfão segurando
-      // o lock do chroma.sqlite3 e trava o app no próximo start.
       try {
         require('child_process').execSync(`taskkill /pid ${flaskProcess.pid} /T /F`);
         console.log('[main] quit: arvore do Flask finalizada.');
@@ -316,8 +836,6 @@ app.on('quit', () => {
   } else {
     console.log('[main] quit: nenhum Flask em execucao para finalizar.');
   }
-  // Garantia extra: mata qualquer processo que ainda esteja segurando a porta
-  // 5000 (filhos orfaos do mempalace que sobreviveram ao kill da arvore).
   killProcessOnPort(5000);
 });
 

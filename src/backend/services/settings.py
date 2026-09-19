@@ -18,6 +18,8 @@ DEFAULT_SETTINGS = {
         "enabled": False,
     },
     "tavily": {"api_key": "", "enabled": False},
+    "projeto": {"ultima_pasta": ""},
+    "interface": {"zoom": 1},
 }
 
 def _deep_merge(base, extra):

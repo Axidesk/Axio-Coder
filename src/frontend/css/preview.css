@@ -1,0 +1,304 @@
+#btn-preview {
+    padding: 0.25rem;
+    border-radius: 9999px;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+#btn-preview.preview-em-uso {
+    color: var(--oliva);
+    background: var(--bg-hover-suave);
+    animation: preview-em-uso 1.6s ease-in-out infinite;
+}
+
+@keyframes preview-em-uso {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+#preview-bar #btn-preview {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+}
+
+#preview-bar #btn-preview svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.preview-float {
+    position: fixed;
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--oliva);
+    background: var(--bg-panel);
+    border-radius: 9999px;
+    box-shadow: var(--sombra-card);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(14px);
+    pointer-events: none;
+    transition: opacity var(--dur-7) var(--ease-fluid), transform var(--dur-7) var(--ease-fluid), visibility var(--dur-7) var(--ease-fluid);
+}
+
+.preview-float.preview-float-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.preview-float svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.preview-float:hover {
+    background: var(--bg-hover-suave);
+}
+
+.preview-tabs {
+    height: 2rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0 0.75rem;
+    background: var(--bg-panel);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.preview-tabs::-webkit-scrollbar {
+    height: 6px;
+}
+
+.preview-tab-mais {
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    border-radius: 9999px;
+    color: var(--text-suave);
+    cursor: pointer;
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.preview-tab-mais:hover {
+    color: var(--text-branco);
+    background: var(--bg-hover-suave);
+}
+
+.preview-tab {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    max-width: 15rem;
+    height: 1.625rem;
+    padding: 0 0.3125rem 0 0.6875rem;
+    border: 0;
+    background: transparent;
+    border-radius: 0.4375rem;
+    color: var(--text-suave);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.preview-tab + .preview-tab::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--border-suave);
+}
+
+.preview-tab:hover { color: var(--text-branco); }
+.preview-tab:hover::before, .preview-tab:hover + .preview-tab::before { background: transparent; }
+
+.preview-tab.preview-tab-ativa {
+    color: var(--text-branco);
+    background: var(--bg);
+}
+
+.preview-tab.preview-tab-ativa::before, .preview-tab.preview-tab-ativa + .preview-tab::before { background: transparent; }
+
+.preview-tab.aba-arrastando {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.abas-arrastando .preview-tab { cursor: grabbing; }
+
+.preview-tab-nome {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preview-tab-x {
+    padding: 0.125rem 0.3125rem;
+    border-radius: 9999px;
+    font-size: 0.8125rem;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.preview-tab:hover .preview-tab-x, .preview-tab.preview-tab-ativa .preview-tab-x { opacity: 0.7; }
+
+.preview-tab-x:hover {
+    opacity: 1;
+    background: var(--bg-hover-suave);
+    color: var(--text-branco);
+}
+
+.preview-bar {
+    height: 2.5rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.75rem;
+    background: var(--bg-panel);
+}
+
+.preview-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: var(--text-suave);
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.preview-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.preview-btn:hover:not(:disabled) {
+    color: var(--text-branco);
+    background: var(--bg-hover-suave);
+}
+
+.preview-btn:disabled {
+    opacity: 0.28;
+    cursor: default;
+}
+
+.preview-btn-ativo,
+.preview-btn-ativo:hover:not(:disabled) {
+    color: var(--oliva);
+}
+
+#preview-bar.preview-carregando #preview-reload svg {
+    animation: preview-girar var(--dur-11) linear infinite;
+}
+
+@keyframes preview-girar {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.preview-address-wrap {
+    flex: 1;
+    min-width: 0;
+    height: 1.75rem;
+    margin: 0 0.25rem;
+    padding: 0 0.75rem;
+    display: flex;
+    align-items: center;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    transition: border-color var(--dur-3) ease;
+}
+
+.preview-address-wrap:focus-within {
+    border-color: var(--border-suave);
+}
+
+.preview-address {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 13px;
+}
+
+.preview-address::placeholder {
+    color: var(--text-suave);
+}
+
+.preview-host {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    background: var(--bg-panel);
+}
+
+.preview-aviso {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    pointer-events: none;
+    user-select: none;
+}
+
+.preview-aviso-titulo {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-weight: 200;
+    font-size: 2.6rem;
+    letter-spacing: 10px;
+    line-height: 1;
+    color: var(--cinza-escuro);
+}
+
+.preview-aviso-texto {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    max-width: 30rem;
+    color: var(--text-mutado-escuro);
+}
+
+.preview-aviso-erro .preview-aviso-titulo {
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    color: var(--perigo);
+}
+
+.preview-aviso-erro .preview-aviso-texto {
+    color: var(--text-suave);
+    letter-spacing: 0;
+    word-break: break-word;
+}

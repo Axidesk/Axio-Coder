@@ -1,5 +1,5 @@
-import { revealSnippet, smoothRevealLine } from './scroll.js';
-import { applyFocusMode, decorateDiffSide, exitDiffMode, updateLogToggle } from './diff.js';
+import { applyFocusMode, decorateDiffSide, exitDiffMode } from './diff.js';
+import { opcoesBase } from './metricas.js';
 import { state } from './state.js';
 
 export function defineEditorTheme() {
@@ -117,7 +117,7 @@ export function applyLineGutterState() {
         lineNumbers: state.showLineNumbers ? 'on' : 'off',
         lineNumbersMinChars: state.showLineNumbers ? 3 : 0,
         glyphMargin: false,
-        lineDecorationsWidth: state.showLineNumbers ? 0 : 10,
+        lineDecorationsWidth: 0,
         folding: true,
         renderIndentGuides: state.showLineNumbers
     });
@@ -133,26 +133,20 @@ export function updateLineNumbersButton() {
     }
 }
 export function applyLogEditorOptions() {
-    state.editor.updateOptions({
+
+    state.editor.updateOptions(Object.assign(opcoesBase(), {
         readOnly: true,
         lineNumbers: state.showLineNumbers ? 'on' : 'off',
         lineNumbersMinChars: state.showLineNumbers ? 3 : 0,
         glyphMargin: false,
-        lineDecorationsWidth: state.showLineNumbers ? 0 : 10,
+        lineDecorationsWidth: 0,
         folding: true,
         renderIndentGuides: state.showLineNumbers,
-        renderLineHighlight: 'none',
-        minimap: { enabled: false },
-        fontSize: 14,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
-        scrollBeyondLastLine: false,
         overviewRulerLanes: 0,
         hideCursorInOverviewRuler: true,
         overviewRulerBorder: false,
-        renderLineHighlightOnlyWhenFocus: true,
-        smoothScrolling: true,
-        mouseWheelScrollSensitivity: 1
-    });
+        renderLineHighlightOnlyWhenFocus: true
+    }));
 }
 export function enterLogMode(snippet, content) {
     state.logMode = true;
@@ -169,10 +163,6 @@ export function enterLogMode(snippet, content) {
     state.currentLogChangedLines = changed;
     state.currentLogFocusCls = '';
     applyFocusMode();
-    if (snippet && content) {
-        requestAnimationFrame(() => revealSnippet(snippet, content));
-    }
-    updateLogToggle();
 }
 export function enterLogModeWithLines(changedLines, cls, needsReload) {
     state.logMode = true;
@@ -186,48 +176,35 @@ export function enterLogModeWithLines(changedLines, cls, needsReload) {
     state.currentLogChangedLines = changedLines || [];
     state.currentLogFocusCls = cls || '';
     applyFocusMode();
-    const firstChanged = (changedLines && changedLines.length) ? changedLines[0] : 1;
-    requestAnimationFrame(() => {
-        if (state.editor) {
-            state.editor.setPosition({ lineNumber: firstChanged, column: 1 });
-            smoothRevealLine(state.editor, firstChanged);
-        }
-    });
-    updateLogToggle();
 }
-export function exitLogMode() {
+export function exitLogMode(suppressFade) {
+
     state.logMode = false;
     state.logSnippet = null;
     state.currentLogChangedLines = [];
     state.currentLogFocusCls = '';
     state.logModeNeedsReload = false;
-    exitDiffMode();
+    exitDiffMode(suppressFade);
     if (state.editor) {
         state.logDecorations = state.editor.deltaDecorations(state.logDecorations, []);
         state.editor.setHiddenAreas([]);
-        state.editor.updateOptions({
+        state.editor.updateOptions(Object.assign(opcoesBase(), {
             readOnly: false,
             lineNumbers: state.showLineNumbers ? 'on' : 'off',
             lineNumbersMinChars: state.showLineNumbers ? 3 : 0,
             glyphMargin: false,
-            lineDecorationsWidth: state.showLineNumbers ? 0 : 10,
+            lineDecorationsWidth: 0,
             folding: true,
             renderIndentGuides: state.showLineNumbers,
-            renderLineHighlight: 'none',
             bracketPairColorization: { enabled: false },
             highlightActiveIndentGuide: false,
-            minimap: { enabled: false },
-            fontSize: 14,
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
-            scrollBeyondLastLine: false,
             overviewRulerLanes: 3,
             hideCursorInOverviewRuler: true,
             overviewRulerBorder: false,
             renderLineHighlightOnlyWhenFocus: false
-        });
+        }));
         state.monaco.editor.setTheme('axio-editor');
     }
-    updateLogToggle();
 }
 export function enterReadonlyLogMode() {
     state.logMode = true;
@@ -241,7 +218,6 @@ export function enterReadonlyLogMode() {
     state.currentLogFocusCls = '';
     state.logModeNeedsReload = false;
     applyFocusMode();
-    updateLogToggle();
 }
 export function defineDiffTheme() {
     if (state.diffThemeDefined) return;

@@ -4,23 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Axio Coder</title>
-    <link rel="stylesheet" data-name="vs/editor/editor.main" href="http://127.0.0.1:5000/monaco/vs/editor/editor.main.css">
-    <link rel="stylesheet" data-name="xterm" href="http://127.0.0.1:5000/xterm/xterm/css/xterm.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="/monaco/vs/editor/editor.main.css">
+    <link rel="stylesheet" data-name="xterm" href="/xterm/xterm/css/xterm.css">
+    <link rel="stylesheet" href="/vendor/highlight/vs2015.min.css">
+    <script src="/vendor/highlight/highlight.min.js"></script>
     <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/css/dock.css">
+<link rel="stylesheet" href="/css/contexto.css">
+<link rel="stylesheet" href="/css/workspace.css">
+<link rel="stylesheet" href="/css/editor.css">
+<link rel="stylesheet" href="/css/geral.css">
+<link rel="stylesheet" href="/css/projeto.css">
+<link rel="stylesheet" href="/css/diagnostico.css">
+<link rel="stylesheet" href="/css/preview.css">
+<link rel="stylesheet" href="/css/titulo.css">
+<link rel="stylesheet" href="/css/tailwind.css">
 </head>
 
 <body class="bg-[var(--bg)] text-[var(--text-claro)] h-screen flex flex-col overflow-hidden relative">
 
+    <div id="title-bar">
+        <img id="title-bar-logo" src="/icons/icon.ico" alt="">
+        <button type="button" class="title-bar-menu" id="title-bar-exibir" aria-haspopup="true">Exibir</button>
+        <button type="button" class="title-bar-menu" id="title-bar-ferramentas" aria-haspopup="true">Ferramentas</button>
+    </div>
+
     <div id="inspect-tooltip" class="balao hidden"></div>
 
-    <!-- Hidden elements to prevent renderer.js from crashing -->
     <div id="lbl-folder" class="hidden"></div>
     <div id="lbl-metrics" class="hidden"></div>
 
-    <!-- Popup de Alerta -->
     <div id="alert-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[60] flex justify-center items-center p-6">
         <div id="alert-popup-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
             <div id="lbl-alert-message" class="text-[var(--text-claro)] mb-6 text-sm">Por favor, selecione a pasta raiz do seu projeto.</div>
@@ -30,7 +43,6 @@
         </div>
     </div>
 
-    <!-- Popup de Confirmação de Exclusão -->
     <div id="confirm-delete-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[70] flex justify-center items-center p-6">
         <div id="confirm-delete-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
             <p id="lbl-delete-message" class="text-[var(--text-claro)] mb-6">Tem certeza que deseja excluir os registros selecionados?</p>
@@ -41,7 +53,6 @@
         </div>
     </div>
 
-    <!-- Popup de Confirmação de Restauração -->
     <div id="restore-confirm-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[75] flex justify-center items-center p-6">
         <div id="restore-confirm-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-md w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
             <div id="lbl-restore-message" class="text-[var(--text-claro)] mb-6 text-sm text-left whitespace-pre-wrap"></div>
@@ -52,7 +63,6 @@
         </div>
     </div>
 
-    <!-- Popup de Confirmação de Limpeza de Contexto -->
     <div id="confirm-clear-context-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[72] flex justify-center items-center p-6">
         <div id="confirm-clear-context-content" class="modal-card p-6 max-w-md w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
             <p id="lbl-clear-context-message" class="text-[var(--text-claro)] mb-6 text-sm text-left">Deseja apagar a memória de contexto acumulada? Isso fará com que o modelo esqueça o que foi feito (ferramentas usadas, ficheiros editados etc) desde o início da sessão.</p>
@@ -63,9 +73,7 @@
         </div>
     </div>
 
-    <!-- Sliding Panel Container -->
     <div id="sliding-panel-container" class="fixed top-0 left-0 pl-14 h-full z-30 flex flex-row shadow-[var(--sombra-card)] max-w-[100vw] overflow-x-auto dock-closed">
-        <!-- Historico -->
         <div id="panel-col-1" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col">
             <div class="flex justify-between items-center p-4 border-b border-[var(--border)]">
                 <div class="flex items-center gap-3">
@@ -92,26 +100,68 @@
                     </button>
                 </div>
             </div>
-            <div id="log-list-container" class="flex-1 overflow-y-auto p-2" style="scrollbar-gutter: stable;">
-                <div id="history-logs-wrapper" class="logs-wrapper space-y-2"></div>
-            </div>
-            <div id="history-search-panel" class="hidden flex-1 min-h-0 flex flex-col">
-                <div class="p-3 shrink-0 border-b border-[var(--border)]">
-                    <div class="relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-mutado)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-                        </svg>
-                        <input id="history-search-input-inline" type="text" placeholder="O que está procurando?"
-                            class="w-full bg-[var(--bg)] rounded-2xl pl-9 pr-3 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text-mutado)] focus:outline-none transition-colors">
-                    </div>
+            <div id="col1-stack" class="flex-1 min-h-0">
+                <div id="log-list-container" class="overflow-y-auto p-2" style="scrollbar-gutter: stable;">
+                    <div id="history-logs-wrapper" class="logs-wrapper space-y-2"></div>
                 </div>
-                <div id="history-search-results-inline" class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2"></div>
+                <div id="history-search-panel" class="min-h-0 flex flex-col">
+                    <div class="p-3 shrink-0 border-b border-[var(--border)]">
+                        <div class="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-mutado)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                            </svg>
+                            <input id="history-search-input-inline" type="text" placeholder="O que está procurando?"
+                                class="w-full bg-[var(--bg)] rounded-2xl pl-9 pr-3 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text-mutado)] focus:outline-none transition-colors">
+                        </div>
+                    </div>
+                    <div id="history-search-results-inline" class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2"></div>
+                </div>
             </div>
 
         </div>
         
-        <!-- Col 2: Files -->
-        <div id="panel-col-2" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+        <div id="panel-col-2-history" data-col-vista="historico" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+            <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
+                <div class="flex items-center gap-2 min-w-0">
+                    <button id="btn-show-question-history" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver pergunta e resposta">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    </button>
+                    <button id="btn-show-thoughts-history" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver raciocínio da IA (Chain of Thought)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                    </button>
+                    <button id="btn-show-tools-history" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver ferramentas usadas nesta resposta">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 icon-header-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.373 8.373a1 1 0 1 1-1.414-1.414L13.586 10.586"/><path d="m18.293 11.707 1.414-1.414a1 1 0 0 0 0-1.414l-4.586-4.586a1 1 0 0 0-1.414 0l-1.414 1.414a1 1 0 0 0 0 1.414l4.586 4.586a1 1 0 0 0 1.414 0Z"/></svg>
+                    </button>
+                </div>
+                <button id="btn-close-col-2-history" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors shrink-0" title="Fechar Arquivos">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="files-list-container-history" class="flex-1 overflow-y-auto p-2 space-y-2" style="scrollbar-gutter: stable;"></div>
+        </div>
+
+        <div id="panel-col-3-history" class="shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+            <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <h2 id="col-3-title-history" class="text-lg font-semibold text-[var(--text)] truncate">Codigo</h2>
+                    <button id="btn-copy-tools-history" class="hidden text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors focus:outline-none shrink-0" title="Copiar log de ferramentas">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 ml-4">
+                    <button id="btn-close-col-3-history" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors shrink-0" title="Fechar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="code-view-container-history" class="flex-1 overflow-y-auto p-4 font-mono text-sm" style="scrollbar-gutter: stable;"></div>
+        </div>
+
+        <div id="panel-col-2" data-col-vista="dock" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
             <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
                 <div class="flex items-center gap-2 flex-1 min-w-0">
                     <button id="btn-show-question" class="text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Ver pergunta e resposta">
@@ -149,29 +199,20 @@
         </div>
 
         <div id="panel-col-3" class="shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
-            <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
+            <div id="col-3-header" class="p-4 flex justify-between items-center border-b border-[var(--border)]">
                 <div class="flex items-center gap-2 flex-1 min-w-0">
                     <h2 id="col-3-title" class="text-lg font-semibold text-[var(--text)] truncate">Código</h2>
                     <button id="btn-copy-tools" class="hidden text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors focus:outline-none" title="Copiar log de ferramentas">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                     </button>
                 </div>
-                <div class="flex items-center gap-2 shrink-0 ml-4">
-                    <button id="btn-close-col-3" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
             </div>
-            <div id="code-view-container" class="flex-1 overflow-y-auto overflow-x-hidden p-4 font-mono text-sm whitespace-pre-wrap" style="scrollbar-gutter: stable;">
+            <div id="code-view-container" class="flex-1 overflow-y-auto p-4 font-mono text-sm" style="scrollbar-gutter: stable;">
                 </div>
         </div>
     </div>
 
-    <!-- Main Layout -->
     <div class="flex-1 flex flex-row w-full overflow-hidden relative">
-        <!-- Sidebar -->
         <div class="w-14 shrink-0 bg-[var(--bg-panel)] flex flex-col items-center py-6 gap-6 z-40">
             <button id="btn-select-folder" class="sidebar-btn" title="Selecionar Pasta">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -183,17 +224,17 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
             </button>
-            <button id="btn-session-history" class="sidebar-btn" title="Ver histórico de sessões anteriores">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon-sidebar-clock" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            <button id="btn-editor" class="sidebar-btn" title="Editor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             </button>
             <button id="btn-workspace" class="sidebar-btn" title="Terminal">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
             </button>
-            <button id="btn-editor" class="sidebar-btn" title="Editor">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <button id="btn-session-history" class="sidebar-btn" title="Ver histórico de sessões anteriores">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon-sidebar-clock" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             </button>
-            <button id="btn-inspect" class="sidebar-btn" title="Modo inspecionar">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.5"/><line x1="12" y1="3" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21"/><line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/></svg>
+            <button id="btn-project-info" class="sidebar-btn" title="Informações do projeto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             </button>
             <div id="context-usage" class="context-usage mt-auto">
                 <svg class="context-usage-ring" viewBox="0 0 36 36">
@@ -209,16 +250,12 @@
             </button>
         </div>
 
-        <!-- Left Column: Chat <-> Terminal -->
         <div class="w-[35%] shrink-0 flex flex-col border-r border-[var(--border)] relative">
-            <!-- Modo Chat (padrão) -->
             <div id="chat-mode" class="absolute inset-0 flex flex-col">
             <main id="chat-container-left" class="flex-1 overflow-y-auto pt-4 pb-28 px-6">
                 <div id="chat-inner-left" class="w-full flex flex-col">
-                    <!-- User messages -->
                 </div>
             </main>
-            <!-- Input Flutuante -->
             <footer id="input-footer" class="absolute bottom-0 left-0 w-[calc(100%-8px)] px-6 pb-2 pt-6 bg-[var(--bg)] pointer-events-none transition-opacity duration-[var(--dur-7)] z-10">
                 <div id="input-footer-inner" class="w-full relative pointer-events-auto transition-opacity duration-[var(--dur-7)]">
                     <div id="glossary-chip" class="balao balao-fade"></div>
@@ -235,7 +272,7 @@
                             <div class="context-popup-bar context-popup-bar-sessao">
                                 <div id="context-sessao-fill" class="context-popup-fill context-popup-fill-sessao"></div>
                             </div>
-                            <div class="context-popup-info-text" id="context-info-sessao"><div class="context-popup-usage" id="context-usage-sessao"></div>Essa é a memória que o Axio utiliza para manter o contexto enquanto lê sua resposta, trechos de código e executa ferramentas. Quanto mais trechos de código e ferramentas o Axio consumir, maior será o consumo de tokens na rodada. Ao atingir 200 mil tokens (cerca de 140 mil palavras), ele começa a substituir e resumir o conteúdo mais antigo pelo novo, e poderá não se lembrar do que já foi substituído.</div>
+                            <div class="context-popup-info-text" id="context-info-sessao"><div class="context-popup-usage" id="context-usage-sessao"></div>Essa é a memória que o Axio utiliza para manter o contexto enquanto lê sua resposta, trechos de código e executa ferramentas. Quanto mais trechos de código e ferramentas o Axio consumir, maior será o consumo de tokens na rodada. Ao atingir <span id="context-info-limite">200 mil tokens (cerca de 140 mil palavras)</span>, ele começa a substituir e resumir o conteúdo mais antigo pelo novo, e poderá não se lembrar do que já foi substituído.</div>
                         </div>
                         <div class="context-popup-section">
                             <div class="context-popup-row">
@@ -248,9 +285,8 @@
                             <div class="context-popup-info-text" id="context-info-acumulada"><div class="context-popup-usage" id="context-usage-acumulada"></div>É o acúmulo do contexto absorvido pela memória da sessão: as perguntas e respostas das rodadas anteriores, além do resumo das ferramentas usadas e do que foi feito. Essa memória é reinjetada na memória da sessão a cada nova rodada.</div>
                         </div>
                     </div>
-                    <div class="bg-[var(--bg-input)] rounded-3xl px-4 py-3 shadow-[var(--sombra-input)] border border-[var(--border)] flex flex-col relative">
+                    <div class="bg-[var(--bg-input)] rounded-3xl px-4 py-3 shadow-[var(--sombra-input)] flex flex-col relative">
                         <div id="image-preview-container" class="hidden mb-2 flex flex-wrap gap-2">
-                            <!-- Imagens anexadas aparecerão aqui -->
                         </div>
                         <div class="flex items-start w-full">
                             <input type="file" id="file-input" accept="image/*" class="hidden">
@@ -293,7 +329,8 @@
                                             <div id="ai-submenu" class="balao absolute top-0 left-full ml-1 w-44 rounded-lg">
                                                 <ul class="py-1 text-sm text-[var(--text-claro)]">
                                                     <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] ai-option" data-model="deepseek" title="Mais preciso">DeepSeek</button></li>
-                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] ai-option" data-model="gemini" title="Mais ágil">Google Gemini</button></li>
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] ai-option" data-model="gemini" title="Mais ágil (Custom Tools)">Gemini 3.1 Pro</button></li>
+                                                    <li><button class="w-full text-left px-4 py-2 hover:bg-[var(--border-suave)] ai-option" data-model="gemini-flash" title="Suporta uso do computador">Gemini 3.8 Flash</button></li>
                                                 </ul>
                                             </div>
                                         </li>
@@ -309,7 +346,6 @@
                         </div>
                     </div>
                     
-                    <!-- Status -->
                     <div class="text-center mt-3">
                         <span id="lbl-status" class="text-[var(--text-branco)] text-xs italic">Selecione o diretório</span>
                         <span id="lbl-executing" class="text-[var(--text-branco)] text-xs italic ml-1"></span>
@@ -319,16 +355,12 @@
             </footer>
             </div>
 
-            <!-- Modo Terminal (workspace ativado) -->
             <div id="terminal-mode" class="absolute inset-0 flex-col hidden">
                 <div id="term-top-bar" class="h-10 bg-[var(--bg-panel)] border-b border-[var(--border)] flex items-center px-4 gap-2 shrink-0">
-                    <span class="text-xs text-[var(--text-suave)] font-semibold tracking-wider">TERMINAL</span>
-                    <span class="text-xs text-[var(--text-mutado-escuro)]">|</span>
                     <span id="ws-status" class="hidden"></span>
                     <div id="ws-shell" class="relative flex items-center">
-                        <button id="ws-shell-btn" class="flex items-center gap-1 text-xs text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors" title="Trocar terminal">
-                            <span id="ws-shell-label" class="ws-shell-label">cmd</span>
-                        </button>
+                        <button id="ws-mode-cards" class="ws-shell-label" title="Comandos em cards">Cards</button>
+                        <button id="ws-shell-label" class="ws-shell-label" title="Sessao interativa">Shell</button>
                         <div id="ws-shell-menu" class="ws-shell-menu"></div>
                         <span id="ws-shell-arrow" class="ws-shell-arrow">></span>
                     </div>
@@ -336,46 +368,43 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
                     </button>
                 </div>
+                <div id="term-cards" class="term-cards term-cards-vazio"></div>
                 <div id="term-log" class="flex-1 min-h-0 relative overflow-hidden"></div>
                 <footer id="term-input-footer" class="absolute bottom-0 left-0 w-[calc(100%-8px)] px-6 pb-8 pt-6 pointer-events-none transition-opacity duration-[var(--dur-7)] z-10">
                     <div id="term-input-footer-inner" class="w-full relative pointer-events-auto transition-opacity duration-[var(--dur-7)]">
                         <div id="term-venv-popup" class="term-venv-popup">Ambiente virtual não detectado ou inativo.</div>
-                        <div class="term-input-box bg-[var(--bg-input)] rounded-3xl px-4 py-3 shadow-[var(--sombra-input)] border border-[var(--border)] flex items-center relative">
+                        <div class="term-input-box bg-[var(--bg-input)] rounded-3xl px-4 py-3 shadow-[var(--sombra-input)] flex items-center relative">
                             <span id="term-venv-name" class="term-venv-name"></span>
                             <span id="term-prompt-arrow" class="text-[var(--terminal)] font-mono text-sm select-none flex-shrink-0 flex items-center justify-center cursor-pointer" title="Ambiente virtual">></span>
-                            <input id="term-input" class="flex-1 bg-transparent text-[var(--text)] font-normal placeholder-[var(--text-suave)] focus:placeholder-transparent focus:outline-none py-1" placeholder="Prompt..." autocomplete="off" spellcheck="false" />
+                            <input id="term-input" class="flex-1 bg-transparent text-[var(--text)] font-normal placeholder-[var(--text-suave)] focus:placeholder-transparent focus:outline-none py-1" placeholder="Terminal" autocomplete="off" spellcheck="false" />
                         </div>
                     </div>
                 </footer>
             </div>
         </div>
 
-        <!-- Right Column: abas (chat / editor / preview) + barra superior -->
         <div class="flex-1 flex flex-col relative w-full min-w-0">
-            <!-- Barra superior: editor / preview (apenas no modo Workspace) -->
+            <button id="preview-float" class="preview-float" title="O agente est&aacute; a usar o preview. Clique para ver.">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
             <div id="ws-top-bar" class="h-10 shrink-0 bg-[var(--bg-panel)] border-b border-[var(--border)] flex items-center gap-2 px-4 hidden">
                 <button id="btn-create-file" class="text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors shrink-0 flex items-center justify-center w-6 h-6 rounded-full hover:bg-[var(--border)]" title="Novo ficheiro">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
                 <div id="editor-tabs" class="flex items-center gap-1 overflow-hidden min-w-0 flex-1"></div>
                 <div class="flex items-center gap-6 shrink-0 ml-auto">
-                    <button id="btn-log-toggle" class="hidden text-[var(--text-suave)] hover:text-[var(--oliva)] transition-colors focus:outline-none" title="Sair do modo log (voltar a editar)">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-                    </button>
                     <button id="btn-preview" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Preview">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
             </div>
             <div class="flex-1 min-h-0 relative">
-                <!-- Aba Chat (respostas da IA) -->
                 <div id="chat-view" class="absolute inset-0 flex flex-col">
                     <main id="chat-container-right" class="flex-1 overflow-y-auto pt-4 pb-0 px-6 relative z-10">
                         <div id="chat-inner-right" class="w-full flex flex-col">
                             </div>
                     </main>
                 </div>
-                <!-- Aba Editor (código em cima + pastas embaixo) -->
                 <div id="editor-view" class="absolute inset-x-0 top-10 bottom-0 hidden flex-col overflow-hidden">
                     <div id="editor-panel" class="flex-1 min-h-0 min-w-0 dock-bottom">
                         <div id="editor-host-wrap" class="relative flex-1 min-h-0 min-w-0">
@@ -393,7 +422,7 @@
                         <div id="explorer-resizer"></div>
                         <div id="dock-bottom-row">
                             <div id="log-dock" class="">
-                                <div id="panel-log-session" class="w-80 shrink-0 bg-[var(--bg-panel)]/95 border-r border-[var(--border)] h-full flex flex-col">
+                                <div id="panel-log-session" class="w-80 shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col">
                                     <div class="p-4 flex justify-between items-center border-b border-[var(--border)]">
                                         <h2 class="text-lg font-semibold text-[var(--text)]">Logs da Sessão</h2>
                                         <button id="btn-close-log-session" class="text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors" title="Fechar Log da Sessão">
@@ -454,9 +483,43 @@
                     </div>
                     </div>
                 </div>
-                <!-- Aba Preview -->
                 <div id="preview-view" class="absolute inset-x-0 top-10 bottom-0 hidden flex-col overflow-hidden">
-                    <div class="flex-1 flex items-center justify-center text-[var(--text-mutado-escuro)] text-sm italic">Preview (Fase 4 - em breve)</div>
+                    <div id="preview-tabs" class="preview-tabs">
+                        <button id="preview-nova" class="preview-tab-mais" title="Nova aba">+</button>
+                    </div>
+                    <div id="preview-bar" class="preview-bar">
+                        <button id="preview-back" class="preview-btn" title="Voltar" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button id="preview-forward" class="preview-btn" title="Avançar" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                        </button>
+                        <button id="preview-reload" class="preview-btn" title="Recarregar">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        </button>
+                        <div class="preview-address-wrap">
+                            <input id="preview-address" class="preview-address" placeholder="Endereço, localhost:porta ou ficheiro do projeto" spellcheck="false" autocomplete="off" />
+                        </div>
+                        <button id="preview-opcoes" class="preview-btn" title="Opções do ficheiro" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+                        </button>
+                        <button id="preview-file" class="preview-btn" title="Abrir um ficheiro do projeto">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/></svg>
+                        </button>
+                        <button id="preview-external" class="preview-btn" title="Abrir no navegador">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        </button>
+                    </div>
+                    <div id="preview-host" class="preview-host">
+                        <div id="preview-vazio" class="preview-aviso">
+                            <div class="preview-aviso-titulo">Preview</div>
+                            <div class="preview-aviso-texto">Escreva um endereço na barra acima, ou abra um ficheiro .html da árvore com duplo clique.</div>
+                        </div>
+                        <div id="preview-erro" class="preview-aviso preview-aviso-erro hidden">
+                            <div class="preview-aviso-titulo">Não foi possível carregar</div>
+                            <div id="preview-erro-texto" class="preview-aviso-texto"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -490,7 +553,15 @@
         </button>
     </div>
 
-    <!-- Modal de Confirmação do Explorer (excluir arquivo) -->
+    <div id="notes-context-menu" class="balao fixed z-[90] w-60 rounded-lg py-1">
+        <button id="notes-ctx-reopen" type="button" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--text-claro)] hover:bg-[var(--bg-hover-suave)] transition-colors text-left disabled:opacity-40 disabled:pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Voltar a abrir a nota fechada
+        </button>
+    </div>
+
+    <div id="titulo-menu" class="balao fixed z-[95] w-56 rounded-lg py-1"></div>
+
     <div id="fs-confirm-popup" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[80] flex justify-center items-center p-6">
         <div id="fs-confirm-content" class="bg-[var(--bg-panel)] rounded-lg shadow-[var(--sombra-card)] p-6 max-w-sm w-full text-center transform scale-95 transition-transform duration-[var(--dur-7)]">
             <p id="fs-confirm-message" class="text-[var(--text-claro)] mb-6 text-sm">Excluir este item?</p>
@@ -501,15 +572,51 @@
         </div>
     </div>
 
-    <!-- Modal de Imagem Expandida -->
     <div id="image-modal" class="fixed inset-0 bg-[var(--overlay-forte)] flex items-center justify-center z-[60] hidden cursor-zoom-out" onclick="this.classList.add('hidden')">
         <img id="expanded-image" class="max-w-[90%] max-h-[90%] object-contain rounded-lg shadow-[var(--sombra-card)]" src="" alt="Expanded Image">
     </div>
 
-    <!-- Modal de Configurações -->
+    <div id="project-panel-container" class="fixed top-0 left-0 pl-14 h-full z-30 flex flex-row shadow-[var(--sombra-card)] max-w-[100vw] overflow-x-auto project-closed">
+        <div id="project-panel" class="shrink-0 h-full flex flex-col bg-[var(--bg-panel)] border-r border-[var(--border)]">
+            <div class="flex justify-between items-center px-4 border-b border-[var(--border)]">
+                <div class="flex items-center gap-2 min-w-0">
+                    <h2 id="project-panel-title" class="text-lg font-semibold text-[var(--text)] truncate">Informações do projeto</h2>
+                    <button id="btn-project-notes" class="projeto-icon-btn" type="button" title="Notas">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="13" y1="8" x2="17" y2="8"/><line x1="13" y1="12" x2="17" y2="12"/><line x1="13" y1="16" x2="16" y2="16"/></svg>
+                    </button>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button id="btn-close-project-info" class="projeto-icon-btn" type="button" title="Fechar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="project-info-body" class="flex-1 min-h-0 overflow-y-auto px-4 pb-4"></div>
+        </div>
+    </div>
+
+    <div id="panel-col-3-notes" class="shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+        <div id="project-notes-header" class="flex items-center px-4 border-b border-[var(--border)]">
+            <div class="flex items-center gap-2 min-w-0">
+                <h2 id="project-notes-title" class="projeto-notas-titulo">Notas</h2>
+                <button id="btn-notes-wand" class="projeto-notas-acao" type="button" title="Traduzir para termos técnicos">
+                    <span class="projeto-icone-wand"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg></span>
+                    <span class="projeto-icone-spinner"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg></span>
+                </button>
+            </div>
+        </div>
+        <div id="project-notes-bar" class="projeto-notas-barra">
+            <button id="btn-notes-add" class="projeto-notas-acao" type="button" title="Nova nota">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div id="project-notes-tabs" class="projeto-notas-abas"></div>
+        </div>
+        <div id="project-notes-editor" class="flex-1 min-h-0"></div>
+        <div id="project-notes-placeholder" class="projeto-notas-placeholder">Escreva aqui as suas anotações...</div>
+    </div>
+
     <div id="settings-modal" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[55] flex justify-center items-center p-6">
         <div id="settings-modal-content" class="bg-[var(--bg-panel)] rounded-2xl shadow-[var(--sombra-card)] w-full max-w-3xl h-[540px] flex overflow-hidden transform scale-95 transition-transform duration-[var(--dur-7)]">
-            <!-- Menu lateral -->
             <aside class="w-56 shrink-0 bg-[var(--bg-panel-2)] flex flex-col">
                 <div class="px-5 pt-[18px] flex items-start justify-between">
                     <h2 class="text-base font-semibold text-[var(--text)]">Configurações</h2>
@@ -524,12 +631,19 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
+                    <div class="relative flex items-center">
+                        <button class="settings-nav-item w-full text-left px-3 py-2.5 text-sm text-[var(--text-claro)] transition-colors flex items-center gap-3 rounded-[10px]" data-settings-tab="cofre">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/><circle cx="12" cy="15.5" r="1.5"/></svg>
+                            <span>Cofre</span>
+                        </button>
+                        <button id="btn-cofre-revelar" class="absolute right-2 settings-folder-btn hidden" title="Mostrar valores" aria-pressed="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
                 </nav>
             </aside>
-            <!-- Conteúdo -->
             <div class="flex-1 flex flex-col min-w-0">
-                <div class="flex-1 overflow-y-auto px-6 pt-[18px] pb-5 space-y-8 settings-scroll">
-                    <!-- DeepSeek -->
+                <div data-settings-panel="apis" class="flex-1 overflow-y-auto px-6 pt-[18px] pb-5 space-y-8 settings-scroll">
                     <div>
                         <div class="settings-label-row">
                             <label id="label-deepseek" for="input-deepseek-key" class="settings-label">DeepSeek</label>
@@ -557,7 +671,6 @@
                         <div id="deepseek-error" class="settings-input-error hidden">Digite uma chave API válida.</div>
                         <div id="tavily-error" class="settings-input-error hidden">Digite uma chave API válida.</div>
                     </div>
-                    <!-- Google Gemini -->
                     <div>
                         <div class="settings-label-row">
                             <label id="label-gemini" for="input-gemini-key" class="settings-label">Google Gemini</label>
@@ -589,11 +702,30 @@
                         <input type="file" id="vertex-json-input" accept=".json,application/json" class="hidden" />
                     </div>
                 </div>
+                <div data-settings-panel="cofre" class="hidden flex-1 overflow-y-auto px-6 pt-[18px] pb-5 space-y-5 settings-scroll">
+                    <div class="settings-info-text open">
+                        <div class="settings-info-text-inner">
+                            O cofre guarda as credenciais que eu uso por você: a sua identidade (para preencher cadastros),
+                            o seu email (para eu abrir a caixa de entrada e ler os códigos de confirmação) e as contas dos sites
+                            que usarmos, <strong>cada uma com a chave de API dela no mesmo cartão</strong> - com a chave preenchida eu
+                            uso-a direto, em branco eu entro pela conta e vou buscá-la. É <strong>um cofre só, partilhado por todos
+                            os projetos</strong>: a identidade e o email estão sempre aqui, e o que guardar agora fica ao alcance
+                            quando abrir outro projeto.
+                            Fica em <code>data/cofre.json</code>, fora do git, e <strong>não entra no
+                            repositório</strong>. Os valores são guardados em claro: não há palavra-passe mestra, e por isso não há
+                            cifra que valha. O que existe de proteção é o uso: eu recebo sempre a versão tapada e, quando preciso
+                            de escrever uma senha num site, refiro-a pelo nome - ela vai do cofre para o campo sem passar por mim.
+                        </div>
+                    </div>
+                    <div id="cofre-corpo"></div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="/boot-guard.js"></script>
     <script src="/vendor/socket.io.js"></script>
+    <script type="module" src="/js/titulo.js"></script>
     <script type="module" src="/editor/state.js"></script>
     <script type="module" src="/editor/workspace.js"></script>
     <script type="module" src="/editor/terminal.js"></script>
@@ -605,6 +737,7 @@
     <script type="module" src="/editor/diff.js"></script>
     <script type="module" src="/editor/editor.js"></script>
     <script type="module" src="/editor/scroll.js"></script>
+    <script type="module" src="/editor/preview.js"></script>
     <script type="module" src="/chat/renderer.js"></script>
 </body>
 </html>

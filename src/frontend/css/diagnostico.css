@@ -1,0 +1,144 @@
+.diag-painel {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--overlay);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--dur-3) ease, visibility var(--dur-3) ease;
+}
+.diag-painel.diag-aberto {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+.diag-caixa {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 720px;
+    max-height: 82vh;
+    background: var(--bg-panel);
+    border: 1px solid var(--perigo);
+    border-radius: 10px;
+    box-shadow: var(--sombra-card);
+    overflow: hidden;
+}
+.diag-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-panel-2);
+    border-bottom: 1px solid var(--border-suave);
+}
+.diag-titulo {
+    font-size: 13.6px;
+    font-weight: 700;
+    color: var(--perigo);
+}
+.diag-fechar {
+    border: none;
+    background: transparent;
+    color: var(--text-mutado);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+.diag-fechar:hover {
+    color: var(--text);
+}
+.diag-corpo {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 14px;
+}
+.diag-intro {
+    font-size: 12px;
+    color: var(--text-mutado);
+    margin-bottom: 10px;
+}
+.diag-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    outline: none;
+}
+.diag-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--alerta);
+    background: var(--bg-hover-suave);
+    border-radius: 0 6px 6px 0;
+}
+.diag-item-disco {
+    border-left-color: var(--perigo);
+}
+.diag-onde {
+    font-family: Consolas, monospace;
+    font-size: 11.2px;
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-all;
+}
+.diag-oque {
+    font-size: 12px;
+    color: var(--text-claro);
+}
+.diag-msg {
+    font-family: Consolas, monospace;
+    font-size: 10.72px;
+    color: var(--text-mutado);
+    word-break: break-word;
+}
+.diag-mais {
+    font-size: 11.2px;
+    font-style: italic;
+    color: var(--text-mutado);
+}
+.diag-rodape {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-suave);
+    background: var(--bg-panel-2);
+}
+.diag-copiar {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-suave);
+    background: transparent;
+    color: var(--text-claro);
+    font-size: 12px;
+    cursor: pointer;
+}
+.diag-copiar:hover {
+    background: var(--bg-hover-suave);
+    color: var(--text);
+}
+.diag-aviso {
+    font-size: 11.2px;
+    color: var(--text-mutado);
+}
+.diag-area {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+}
+.diag-status-erro {
+    color: var(--perigo);
+    font-weight: 700;
+    cursor: pointer;
+}

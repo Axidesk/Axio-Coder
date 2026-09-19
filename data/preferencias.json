@@ -1,0 +1,64 @@
+{
+  "itens": [
+    {
+      "area": "bordas",
+      "texto": "Sem bordas em botoes, icones, inputs e cards: separar por COR, fundo suave e hover - nunca por uma linha a contornar.",
+      "atualizado": "2026-09-19 16:48:10"
+    },
+    {
+      "area": "transicoes",
+      "texto": "Tudo com transicao suave (var(--dur-*) + var(--ease-fluid)): recolher, aparecer, mudar de estado. Nunca saltos secos. Cascata de entrada de listas: o atraso entre itens nao pode passar de ~0.12s - uma pasta com 50 ficheiros tem de estar toda visivel em ~0.4s, nunca a gotejar por mais de meio segundo.",
+      "atualizado": "2026-09-19 18:59:04"
+    },
+    {
+      "area": "recolher",
+      "texto": "Painel que abre e fecha usa grid-template-rows 0fr->1fr com overflow hidden no filho; o sinal e um + que vira - (duas barras, a vertical some), nunca uma seta.",
+      "atualizado": "2026-09-19 16:48:10"
+    },
+    {
+      "area": "scrollbar",
+      "texto": "Barra de rolagem fininha (8px), fundo transparente, polegar arredondado (#333, hover #555). NUNCA usar scrollbar-width: thin - ele desliga o ::-webkit-scrollbar.",
+      "atualizado": "2026-09-19 16:48:10"
+    },
+    {
+      "area": "cards",
+      "texto": "Blocos sem caixa: nada de borda + fundo + radius a fechar um cartao. O que agrupa e o respiro e o alinhamento, nunca um contorno.",
+      "atualizado": "2026-09-19 17:23:40"
+    },
+    {
+      "area": "pills",
+      "texto": "Botao pequeno e uma pill so de COR: fundo transparente, radius 9999px, hover com fundo suave. Sem borda a contornar.",
+      "atualizado": "2026-09-19 16:48:10"
+    },
+    {
+      "area": "indentacao",
+      "texto": "Conteudo indentado alinha com o TEXTO do titulo, nao com a borda do cartao; labels a esquerda com os campos todos a comecar no mesmo x. A coluna da label dimensiona-se pelo rotulo MAIS LONGO do cartao (grid `max-content 1fr` + `display: contents` no label) - nunca por um px fixo, que ou corta o rotulo ou afasta o campo sem razao.",
+      "atualizado": "2026-09-19 17:49:54"
+    },
+    {
+      "area": "valores",
+      "texto": "Campo de senha na janela mostra SO bolinhas: nem comprimento, nem fim do valor. Comprimento e sufixo sao detalhe meu, nao do ecra.",
+      "atualizado": "2026-09-19 16:48:10"
+    },
+    {
+      "area": "inputs",
+      "texto": "Campo editavel e um retangulo SUAVE (fundo --bg-input #222222), sem borda, radius 16px, padding 10px 14px - o mesmo em toda a app. NUNCA fundo mais ESCURO que o painel (--bg-panel-2 #141414): sobre o painel #1e1e1e isso le-se como um buraco e foi queixa explicita. Campo em modo LEITURA (nao editavel) fica plano: fundo transparente, so o texto em --text-suave, sem caixa nenhuma.",
+      "atualizado": "2026-09-19 17:06:04"
+    },
+    {
+      "area": "explicacao",
+      "texto": "Texto explicativo nao fica solto na pagina a ocupar espaco: vive atras de um \"i\" redondo (16px, circulo, italico serifado) ao lado do titulo da seccao, que expande suavemente (grid-template-rows 0fr->1fr). Abrir um fecha os outros do mesmo painel. O \"i\" fica aceso (--azul-acao) enquanto a explicacao esta aberta.",
+      "atualizado": "2026-09-19 17:06:04"
+    },
+    {
+      "area": "listas",
+      "texto": "Itens de menu/lista com respiro: o fundo de hover de um item NUNCA pode encostar no vizinho - pelo menos 6px entre itens (`.settings-nav-item` dentro de `#settings-modal nav > * + *`). Hover e fundo suave, sem contorno.",
+      "atualizado": "2026-09-19 17:21:05"
+    },
+    {
+      "area": "separadores",
+      "texto": "Separador entre itens e UM tracinho fino (1px var(--border-suave)), nunca uma caixa a contornar: a linha vai de ponta a ponta dentro da indentacao da zona. Onde nao houver separador, separa o respiro/cor.",
+      "atualizado": "2026-09-19 17:23:35"
+    }
+  ]
+}

@@ -1,34 +1,195 @@
 const { ipcRenderer } = window.require('electron');
 import { state } from './state.js';
 import * as dom from './dom.js';
-import { closeCol3, closePlusMenus, isCol3Open, isHistoryOpen, openCol3Overlay, openLogDockInWorkspace, openPanelCol, setupCol3ForFileView } from './layout.js';
+import { closeCol3, closePanelCol, closePlusMenus, openCol3Panel, openLogDockInWorkspace, openPanelCol, setupCol3ForFileView, syncCopyButtons, syncDocTopBar } from './layout.js';
+import { criarVista, vistaDoElemento } from './colunas.js';
 import { escapeHtml } from './messages.js';
 import { resetWorkspaceUI } from './ui.js';
 import { createCopyButton } from './clipboard.js';
 
-const { btnEyeDiff, btnRedo, btnSelectFolder, btnUndo, codeViewContainer, col3Title, filesListContainer, lblFolder, lblRedoCount, lblStatus, lblUndoCount, panelCol3 } = dom;
+import { ALTURA_LINHA, PADDING_TOPO } from '../editor/metricas.js';
+
+const { btnEyeDiff, btnRedo, btnSelectFolder, btnUndo, codeViewContainer, codeViewContainerHistory, col3Title, col3TitleHistory, filesListContainer, filesListContainerHistory, lblFolder, lblRedoCount, lblStatus, lblUndoCount, panelCol2, panelCol2History, panelCol3, panelCol3History } = dom;
 const NL = String.fromCharCode(10);
 
 
-    function setCodeViewContent(html, plainText) {
-        if (plainText) {
-            codeViewContainer.textContent = html;
-        } else {
-            codeViewContainer.innerHTML = html;
+    const vistaDock = criarVista({
+        id: 'dock',
+        col2: panelCol2,
+        col3: panelCol3,
+        lista: filesListContainer,
+        codigo: codeViewContainer,
+        titulo: col3Title,
+        lerArquivoAtual: () => state.currentFileDataRef,
+        gravarArquivoAtual: (fileData) => { state.currentFileDataRef = fileData; },
+        abrirCol2() {
+            openLogDockInWorkspace();
+            openPanelCol(panelCol2);
+        },
+        fecharCol2() {
+            closePanelCol(panelCol2);
+        },
+        abrirCol3() {
+            openCol3Panel();
+        },
+        fecharCol3() {
+            closeCol3();
+        },
+        aoAbrirGrupo() {
+            atualizarBotoesUndoRedo();
+        },
+        abrirArquivo(fileData) {
+            const arquivo = encontrarArquivoUndo(fileData.name);
+            const caminhoAlvo = arquivo ? arquivo.caminho : caminhoAbsolutoDoArquivo(fileData.name);
+            state.currentUndoFile = caminhoAlvo;
+            _focarAbaDoArquivo(caminhoAlvo);
+            setupCol3ForFileView(fileData.name, false);
+            state.currentOpenedDiff = null;
+
+            vistaDock.marcarCaminhoEntrega(null);
+            vistaDock.marcarCaminhoOriginal(caminhoAlvo);
+
+            col3Title.onclick = () => entregarAoMonaco(vistaDock);
+            carregarConteudoOriginal(caminhoAlvo, vistaDock);
+            atualizarBotoesUndoRedo();
+        },
+        abrirDiff(dados) {
+            const arquivo = encontrarArquivoUndo(dados.fileName);
+            const caminhoAlvo = arquivo ? arquivo.caminho : caminhoAbsolutoDoArquivo(dados.fileName);
+            state.currentUndoFile = caminhoAlvo;
+            _focarAbaDoArquivo(caminhoAlvo);
+            const grupoAtual = window.currentActiveLogGroup;
+            if (grupoAtual && grupoAtual.files) {
+
+                const fd = grupoAtual.files.find(f => normalizarCaminho(f.name) === normalizarCaminho(dados.fileName));
+                if (fd) {
+                    state.currentFileDataRef = fd;
+                    if (fd._headerEl) marcarFileSelecionado(fd._headerEl);
+                }
+            }
+            window.currentActiveFileBalloonHtml = dados.htmlContent;
+
+            setCodeViewContent((state.isEyeMode && dados.snippetHtml)
+                ? dados.snippetHtml
+                : dados.htmlContent, false, vistaDock, false);
+            setupCol3ForFileView(dados.fileName, true);
+            atualizarIconeOlho();
+
+            col3Title.onclick = () => entregarAoMonaco(vistaDock);
+            state.currentOpenedDiff = {
+                fullHtml: dados.htmlContent,
+                snippetHtml: dados.snippetHtml,
+                fileName: dados.fileName,
+
+                addedLines: dados.addedLines || [],
+                deletedLines: dados.deletedLines || []
+            };
+
+            marcarLinhasAlteradas(codeViewContainer, dados);
+            rolarParaDestaque(vistaDock);
+            atualizarBotoesUndoRedo();
+
+            if (window.WorkspaceView && typeof window.WorkspaceView.revealAndSelectFile === 'function') {
+                window.WorkspaceView.revealAndSelectFile(caminhoAlvo);
+            }
+
+            vistaDock.marcarCaminhoEntrega(caminhoAlvo);
+            vistaDock.marcarCaminhoOriginal(caminhoAlvo);
+            syncDocTopBar();
         }
-        if (state.suppressCol3Anim) return;
-        codeViewContainer.classList.remove('code-view-enter');
-        void codeViewContainer.offsetWidth;
-        codeViewContainer.classList.add('code-view-enter');
+    });
+
+    const vistaHistorico = criarVista({
+        id: 'historico',
+        col2: panelCol2History,
+        col3: panelCol3History,
+        lista: filesListContainerHistory,
+        codigo: codeViewContainerHistory,
+        titulo: col3TitleHistory,
+        abrirCol3() {
+
+            if (window.WorkspaceView && typeof window.WorkspaceView.showEditor === 'function') {
+                window.WorkspaceView.showEditor();
+            }
+            if (panelCol3History) panelCol3History.classList.remove('panel-col-closed');
+            syncDocTopBar();
+        },
+        abrirArquivo(fileData) {
+            const caminho = caminhoAbsolutoDoArquivo(fileData.name);
+
+            vistaHistorico.marcarCaminhoEntrega(null);
+            vistaHistorico.marcarCaminhoOriginal(caminho);
+            _modoCodigoHistorico();
+            if (col3TitleHistory) col3TitleHistory.textContent = fileData.name;
+            carregarConteudoOriginal(caminho, vistaHistorico);
+        },
+        abrirDiff(dados) {
+            const caminho = caminhoAbsolutoDoArquivo(dados.fileName);
+            vistaHistorico.marcarCaminhoEntrega(caminho);
+            vistaHistorico.marcarCaminhoOriginal(caminho);
+            _modoCodigoHistorico();
+            if (col3TitleHistory) col3TitleHistory.textContent = dados.fileName;
+
+            setCodeViewContent(dados.htmlContent, false, vistaHistorico, false);
+            marcarLinhasAlteradas(codeViewContainerHistory, dados);
+            rolarParaDestaque(vistaHistorico);
+        }
+    });
+
+
+    function _modoCodigoHistorico() {
+        state.isShowingTools = false;
+        state.isShowingThoughts = false;
+        state.isShowingQuestions = false;
+        syncCopyButtons(vistaHistorico, null);
+        syncDocTopBar();
+    }
+
+    function _focarAbaDoArquivo(caminho) {
+        const wv = window.WorkspaceView;
+        if (wv && typeof wv.focarAba === 'function') wv.focarAba(caminho);
+    }
+
+
+
+    function setCodeViewContent(html, plainText, vista = vistaDock, entrar = true) {
+        const alvo = vista.codigo;
+        if (!alvo) return;
+
+        const novo = plainText
+            ? '<pre class="code-view-plain">' + escapeHtml(html) + '</pre>'
+            : html;
+
+        if (alvo.innerHTML === novo) return;
+        alvo.innerHTML = novo;
+        if (state.suppressCol3Anim || !entrar) return;
+        alvo.classList.remove('code-view-enter');
+        void alvo.offsetWidth;
+        alvo.classList.add('code-view-enter');
+    }
+    function caminhoAbsolutoDoArquivo(nome) {
+
+        const basePath = lblFolder ? lblFolder.textContent : '';
+        if (basePath && !/^([a-zA-Z]:[\\/]|\/)/.test(nome)) {
+            return window.require('path').join(basePath, nome);
+        }
+        return nome;
     }
     function encontrarArquivoUndo(nomeRelativo) {
+
         if (!state.undoRedoFiles || !state.undoRedoFiles.length) return null;
-        const alvo = (nomeRelativo || '').replace(/\\/g, '/');
-        const base = alvo.split('/').pop() || alvo;
-        return state.undoRedoFiles.find(f =>
-            ((f.caminho_relativo || '').replace(/\\/g, '/') === alvo) ||
-            ((f.nome || '') === base)
-        ) || null;
+        const alvo = normalizarCaminho(nomeRelativo);
+        if (!alvo) return null;
+        const exato = state.undoRedoFiles.find(f => normalizarCaminho(f.caminho_relativo) === alvo);
+        if (exato) return exato;
+        const porSufixo = state.undoRedoFiles.filter(f => {
+            const rel = normalizarCaminho(f.caminho_relativo);
+            return !!rel && rel.endsWith('/' + alvo);
+        });
+        if (porSufixo.length === 1) return porSufixo[0];
+        const base = alvo.split('/').pop();
+        const porNome = state.undoRedoFiles.filter(f => normalizarCaminho(f.nome) === base);
+        return porNome.length === 1 ? porNome[0] : null;
     }
     function aplicarRiscadoUndo(fileData, redoCount) {
         if (!fileData || !fileData.diffElements) return;
@@ -39,10 +200,7 @@ const NL = String.fromCharCode(10);
         });
     }
     function aplicarRiscadoEmTodosArquivos() {
-        // Reaplica o riscado (undo-struck) a TODOS os arquivos do grupo ativo,
-        // não apenas ao arquivo selecionado. Assim, quando o agente desfaz uma
-        // edição durante a execução, todos os cards da pilha de ficheiros do log
-        // refletem o estado desfeito (mesmo visual do histórico).
+
         const grupo = window.currentActiveLogGroup;
         if (!grupo || !grupo.files) return;
         grupo.files.forEach(fileData => {
@@ -53,15 +211,22 @@ const NL = String.fromCharCode(10);
         });
     }
     function encontrarFileDataPorCaminho(caminho) {
-        // Localiza o objeto de arquivo (com diffElements) no grupo de log ativo pelo nome.
+
         const grupoAtual = window.currentActiveLogGroup;
         if (!grupoAtual || !grupoAtual.files) return null;
-        const base = (caminho || '').replace(/\\/g, '/').split('/').pop();
-        return grupoAtual.files.find(f => (f.name || '') === base) || null;
+        const alvo = normalizarCaminho(caminho);
+        if (!alvo) return null;
+        const doFim = grupoAtual.files.filter(f => {
+            const nome = normalizarCaminho(f.name);
+            return !!nome && (nome === alvo || alvo.endsWith('/' + nome));
+        });
+        if (doFim.length === 1) return doFim[0];
+        if (doFim.length > 1) return doFim.find(f => normalizarCaminho(f.name) === alvo) || null;
+        const base = alvo.split('/').pop();
+        const porNome = grupoAtual.files.filter(f => normalizarCaminho(f.name).split('/').pop() === base);
+        return porNome.length === 1 ? porNome[0] : null;
     }
     function selecionarDiffElement(fileData, indice) {
-        // Move o destaque de seleção para o item da pilha indicado, sem fechar/recarregar
-        // a coluna 3 (a exibição do arquivo já é tratada por carregarConteudoArquivo).
         if (!fileData || !fileData.diffElements) return;
         const el = fileData.diffElements[indice];
         if (!el) return;
@@ -69,37 +234,48 @@ const NL = String.fromCharCode(10);
         el.classList.add('diff-selected');
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
-    function carregarConteudoOriginal(caminho) {
-        if (!caminho) {
-            codeViewContainer.textContent = '';
+
+    const originaisEmCache = new Map();
+    function aplicarOriginal(data, vista) {
+        if (data.error) {
+            setCodeViewContent('Erro: ' + data.error, true, vista);
             return;
         }
-        fetch(`http://127.0.0.1:5000/api/file_original?caminho=${encodeURIComponent(caminho)}`)
+        if (data.criado) {
+            setCodeViewContent('<span class="text-[var(--text-mutado)] italic">(arquivo criado nesta sessão — não havia código original)</span>', false, vista);
+            return;
+        }
+        setCodeViewContent(data.conteudo || '', true, vista);
+    }
+    function carregarConteudoOriginal(caminho, vista = vistaDock) {
+        if (!caminho) {
+            if (vista.codigo) vista.codigo.textContent = '';
+            return;
+        }
+        const emCache = originaisEmCache.get(caminho);
+        if (emCache) {
+            aplicarOriginal(emCache, vista);
+            return;
+        }
+        fetch(`/api/file_original?caminho=${encodeURIComponent(caminho)}`)
             .then(r => r.json())
             .then(data => {
-                if (data.error) {
-                    setCodeViewContent('Erro: ' + data.error, true);
-                    return;
-                }
-                if (data.criado) {
-                    setCodeViewContent('<span class="text-[var(--text-mutado)] italic">(arquivo criado nesta sessão — não havia código original)</span>');
-                    return;
-                }
-                setCodeViewContent(data.conteudo || '', true);
+                if (!data.error) originaisEmCache.set(caminho, data);
+                aplicarOriginal(data, vista);
             })
             .catch(err => {
                 console.error('Erro ao carregar conteúdo original do arquivo:', err);
-                setCodeViewContent('Erro de conexão ao carregar o arquivo original.', true);
+                setCodeViewContent('Erro de conexão ao carregar o arquivo original.', true, vista);
             });
     }
-    function rolarParaDestaque() {
-        // Rola suavemente até o primeiro trecho destacado (vermelho/verde).
-        // Usamos dois rAF para o layout já estar pronto após o re-render
-        // (innerHTML). Isso evita a rolagem "pulada"/brusca ao subir.
+    function rolarParaDestaque(vista = vistaDock) {
+
+        const container = vista.codigo;
+        if (!container) return;
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                const alvo = codeViewContainer.querySelector('.diff-deleted, .diff-added');
-                rolarSuave(alvo, codeViewContainer);
+                const alvo = container.querySelector('.diff-deleted, .diff-added');
+                rolarSuave(alvo, container);
             });
         });
     }
@@ -107,46 +283,173 @@ const NL = String.fromCharCode(10);
         if (!elemento || !container) return;
         const containerRect = container.getBoundingClientRect();
         const elRect = elemento.getBoundingClientRect();
-        // Tolerância: se o trecho já está visível, não rola de novo
-        // (corrige o movimento desnecessário quando o texto está proximo).
+
         const MARGEM = 40;
         const jaVisivel = elRect.top >= containerRect.top + MARGEM &&
                           elRect.bottom <= containerRect.bottom - MARGEM;
         if (jaVisivel) return;
-        // Centraliza o trecho calculando a posição manualmente. O scrollTo com
-        // 'smooth' sobe e desce de forma suave (mais confiável que scrollIntoView).
         const topoAlvo = container.scrollTop + (elRect.top - containerRect.top) -
                          (container.clientHeight / 2) + (elRect.height / 2);
-        container.scrollTo({ top: Math.max(0, topoAlvo), behavior: 'smooth' });
+        const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+        const destino = Math.max(0, Math.min(maxScroll, Math.round(topoAlvo)));
+
+        container.scrollTo({ top: destino, behavior: 'smooth' });
     }
-    function selecionarArquivo(fileData) {
-        // Ao abrir o arquivo pelo cabeçalho, limpa o destaque de item específico
-        document.querySelectorAll('.diff-selected').forEach(el => el.classList.remove('diff-selected'));
-        const arquivo = encontrarArquivoUndo(fileData.name);
-        let caminhoAlvo = arquivo ? arquivo.caminho : fileData.name;
-        const basePath = document.getElementById('lbl-folder').textContent;
-        if (basePath && !/^([a-zA-Z]:[\\/]|\/)/.test(caminhoAlvo)) {
-            caminhoAlvo = window.require('path').join(basePath, caminhoAlvo);
-        }
-        state.currentUndoFile = caminhoAlvo;
 
-        if (isHistoryOpen()) {
-            openCol3Overlay();
-            state.currentFileDataRef = fileData;
-        } else {
-            openPanelCol(panelCol3);
-        }
+    function marcarLado(container, classe, linhas) {
+        if (!linhas || !linhas.length) return;
+        let consumidas = 0;
+        Array.from(container.querySelectorAll('.' + classe)).forEach(no => {
+            const pedacos = String(no.textContent).split(NL);
 
-        setupCol3ForFileView(fileData.name, false);
-        state.currentOpenedDiff = null;
-        col3Title.onclick = () => {
-            openLogDockInWorkspace();
-            if (window.WorkspaceView && typeof window.WorkspaceView.openFileFromLog === 'function') {
-                window.WorkspaceView.openFileFromLog(caminhoAlvo);
-            }
+            const quebraFinal = pedacos.length > 1 && pedacos[pedacos.length - 1] === '';
+            if (quebraFinal) pedacos.pop();
+            if (!pedacos.length) return;
+            const frag = document.createDocumentFragment();
+            pedacos.forEach((texto, k) => {
+                const num = linhas[consumidas + k];
+                const s = document.createElement('span');
+                s.className = classe;
+                if (num != null) s.dataset.ln = String(num);
+                s.textContent = texto + (k < pedacos.length - 1 || quebraFinal ? NL : '');
+                frag.appendChild(s);
+            });
+            consumidas += pedacos.length;
+            no.replaceWith(frag);
+        });
+    }
+    function marcarLinhasAlteradas(container, dados) {
+        if (!container || !dados) return;
+
+        const duasColunas = !!container.querySelector('.diff-two-col');
+        const classe = (duasColunas || container.querySelector('.diff-added')) ? 'diff-added' : 'diff-deleted';
+        marcarLado(container, classe, classe === 'diff-added' ? dados.addedLines : dados.deletedLines);
+    }
+    function linhaDoTopo(container, porGrelha) {
+
+        const marcas = [];
+        const base = container.getBoundingClientRect().top - container.scrollTop;
+        container.querySelectorAll('[data-ln]').forEach(no => {
+            const r = no.getBoundingClientRect();
+            marcas.push({ ln: Number(no.dataset.ln), topo: r.top - base });
+        });
+        if (!marcas.length) {
+
+            if (!porGrelha) return null;
+            return (container.scrollTop - PADDING_TOPO) / ALTURA_LINHA + 1;
+        }
+        marcas.sort((a, b) => a.topo - b.topo);
+        const topo = container.scrollTop;
+        const primeira = marcas[0];
+        const ultima = marcas[marcas.length - 1];
+        const spanLinhas = ultima.ln - primeira.ln;
+        const spanPx = ultima.topo - primeira.topo;
+        const altura = (spanLinhas > 0 && spanPx > 0) ? spanPx / spanLinhas : 18;
+        if (topo <= primeira.topo) return primeira.ln - (primeira.topo - topo) / altura;
+        if (topo >= ultima.topo) return ultima.ln + (topo - ultima.topo) / altura;
+        for (let i = 1; i < marcas.length; i++) {
+            const a = marcas[i - 1];
+            const b = marcas[i];
+            if (topo > b.topo) continue;
+            const t = b.topo === a.topo ? 0 : (topo - a.topo) / (b.topo - a.topo);
+            return a.ln + t * (b.ln - a.ln);
+        }
+        return ultima.ln;
+    }
+
+    function linhaNoFicheiroAtual(container, linha) {
+        if (linha == null) return linha;
+        const removidas = container.querySelectorAll('.diff-deleted[data-ln]');
+        if (!removidas.length || container.querySelector('.diff-added')) return linha;
+        let acima = 0;
+        removidas.forEach(no => {
+            if (Number(no.dataset.ln) < linha) acima++;
+        });
+        return linha - acima;
+    }
+    function entregarAoMonaco(vista) {
+        const container = vista.codigo;
+        if (!container) return false;
+
+        const doHistorico = vista.id === 'historico';
+        const painelAberto = state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions;
+        const manterCamada = painelAberto && doHistorico;
+        if (painelAberto && !manterCamada) return false;
+
+        const caminhoMonaco = vista.caminhoEntrega();
+        const caminhoOriginal = vista.caminhoOriginal();
+        const alvo = caminhoMonaco || caminhoOriginal;
+
+        const linha = painelAberto ? null : (container.querySelector('[data-ln]')
+            ? linhaNoFicheiroAtual(container, linhaDoTopo(container))
+            : (caminhoMonaco ? null : linhaDoTopo(container, true)));
+        vista.marcarCaminhoEntrega(null);
+        if (!alvo) {
+            if (!manterCamada) vista.fecharCol3();
+            return false;
+        }
+        const wv = window.WorkspaceView;
+ 
+        const fechar = () => {
+            if (!manterCamada) vista.fecharCol3();
+            syncDocTopBar();
         };
-        carregarConteudoOriginal(state.currentUndoFile);
-        atualizarBotoesUndoRedo();
+        if (wv && typeof wv.transferirDaCamada === 'function') {
+
+            if (!caminhoMonaco && vista.id === 'dock') openLogDockInWorkspace();
+            const entrega = wv.transferirDaCamada(caminhoMonaco, linha, caminhoMonaco ? null : caminhoOriginal);
+            state.codigoDoHistoricoNoEditor = doHistorico;
+            if (entrega && typeof entrega.then === 'function') {
+                entrega.then(fechar, fechar);
+                return true;
+            }
+            fechar();
+            return !!entrega;
+        }
+        fechar();
+        return false;
+    }
+
+    function sincronizarColunasDiff(e) {
+        const col = e.target;
+        if (!col || !col.classList || !col.classList.contains('diff-col')) return;
+        const pai = col.parentElement;
+        if (!pai) return;
+        const colunas = pai.querySelectorAll(':scope > .diff-col');
+        if (colunas.length < 2) return;
+        const outra = colunas[0] === col ? colunas[1] : colunas[0];
+        if (!outra || Math.abs(outra.scrollLeft - col.scrollLeft) < 0.5) return;
+        outra.scrollLeft = col.scrollLeft;
+    }
+    function instalarSincroniaDeColunas(container) {
+        if (container) container.addEventListener('scroll', sincronizarColunasDiff, true);
+    }
+    instalarSincroniaDeColunas(codeViewContainer);
+    instalarSincroniaDeColunas(codeViewContainerHistory);
+    if (codeViewContainer) {
+        codeViewContainer.addEventListener('click', (e) => {
+            if (e.target.closest('button, a, input, textarea, select')) return;
+            const selecao = window.getSelection();
+            if (selecao && String(selecao).length > 0) return;
+            entregarAoMonaco(vistaDock);
+        });
+    }
+
+    if (codeViewContainerHistory) {
+        codeViewContainerHistory.addEventListener('click', (e) => {
+            if (e.target.closest('button, a, input, textarea, select')) return;
+            const selecao = window.getSelection();
+            if (selecao && String(selecao).length > 0) return;
+            entregarAoMonaco(vistaHistorico);
+        });
+    }
+    function selecionarArquivo(fileData, vista = vistaDock) {
+
+        const raiz = vista.col2 || document;
+        raiz.querySelectorAll('.diff-selected').forEach(el => el.classList.remove('diff-selected'));
+        vista.abrirCol3();
+        vista.marcarArquivoAtual(fileData);
+        vista.abrirArquivo(fileData);
     }
     function encurtarNomeArquivo(caminho) {
         const partes = (caminho || '').replace(/\\/g, '/').split('/').filter(Boolean);
@@ -154,10 +457,13 @@ const NL = String.fromCharCode(10);
         return partes.slice(-2).join('/');
     }
     function marcarFileSelecionado(fileHeader) {
-        document.querySelectorAll('.file-card-header').forEach(h => h.classList.remove('file-card-selected'));
+
+        const raiz = (fileHeader && typeof fileHeader.closest === 'function' && fileHeader.closest('[data-col-vista]')) || document;
+        raiz.querySelectorAll('.file-card-header').forEach(h => h.classList.remove('file-card-selected'));
         if (fileHeader) fileHeader.classList.add('file-card-selected');
     }
-    function adicionarFileNaLista(fileData) {
+    function adicionarFileNaLista(fileData, vista = vistaDock) {
+        if (!vista || !vista.lista) return;
         const fileEl = document.createElement('div');
         fileEl.className = 'rounded-[10px] overflow-hidden';
         const fileHeader = document.createElement('div');
@@ -178,8 +484,7 @@ const NL = String.fromCharCode(10);
         }
         const toggleIcon = fileHeader.querySelector('.file-toggle-icon');
         function expandir() {
-            // Acordeão: recolhe os demais cards de arquivo para manter apenas um aberto
-            Array.from(filesListContainer.children).forEach(card => {
+            Array.from(vista.lista.children).forEach(card => {
                 if (card === fileEl) return;
                 const content = card.children[1];
                 const icon = card.querySelector('.file-toggle-icon');
@@ -195,11 +500,10 @@ const NL = String.fromCharCode(10);
             fileContent.classList.remove('card-collapsible-open');
             if (toggleIcon) toggleIcon.textContent = '+';
         }
-        // Clique no cabeçalho (fora do ícone): abre/seleciona. Se já expandido, apenas
-        // seleciona novamente (NÃO recolhe). Recolher so pelo ícone de "-".
+
         fileHeader.addEventListener('click', () => {
-            if (!isHistoryOpen() && state.currentFileDataRef === fileData && isCol3Open()) {
-                closeCol3();
+            if (vista.arquivoAtual() === fileData && vista.col3Aberta()) {
+                vista.fecharCol3();
                 return;
             }
             const estavaFechado = !fileContent.classList.contains('card-collapsible-open');
@@ -207,8 +511,7 @@ const NL = String.fromCharCode(10);
                 expandir();
             }
             marcarFileSelecionado(fileHeader);
-            state.currentFileDataRef = fileData;
-            selecionarArquivo(fileData);
+            selecionarArquivo(fileData, vista);
         });
         if (toggleIcon) {
             toggleIcon.addEventListener('click', (e) => {
@@ -216,8 +519,7 @@ const NL = String.fromCharCode(10);
                 if (!fileContent.classList.contains('card-collapsible-open')) {
                     expandir();
                     marcarFileSelecionado(fileHeader);
-                    state.currentFileDataRef = fileData;
-                    selecionarArquivo(fileData);
+                    selecionarArquivo(fileData, vista);
                 } else {
                     recolher();
                 }
@@ -225,9 +527,8 @@ const NL = String.fromCharCode(10);
         }
         fileEl.appendChild(fileHeader);
         fileEl.appendChild(fileContent);
-        filesListContainer.appendChild(fileEl);
-        // Guarda referência ao cabeçalho do arquivo para o undo/redo conseguir
-        // "selecionar o arquivo" (conteúdo original) quando todas as edições forem desfeitas (0/N).
+        vista.lista.appendChild(fileEl);
+
         fileData._headerEl = fileHeader;
         fileData._fileEl = fileEl;
         fileData._contentInner = fileContentInner;
@@ -249,8 +550,7 @@ const NL = String.fromCharCode(10);
         }
     }
     function atualizarBotoesUndoRedo() {
-        // Consulta o estado das pilhas no backend e habilita/desabilita os botões
-        fetch('http://127.0.0.1:5000/api/undo_redo_status')
+        fetch('/api/undo_redo_status')
             .then(r => r.json())
             .then(data => {
                 state.undoRedoFiles = data.files || [];
@@ -264,7 +564,6 @@ const NL = String.fromCharCode(10);
                 aplicarRiscadoEmTodosArquivos();
             })
             .catch(() => {
-                // Falha silenciosa: mantém os botões como estão
             });
     }
     function normalizarCaminho(c) {
@@ -282,14 +581,12 @@ const NL = String.fromCharCode(10);
         const btn = acao === 'undo' ? btnUndo : btnRedo;
         if (btn && btn.disabled) return;
         if (!state.currentUndoFile) return;
-        // Captura o estado da pilha ANTES da operação para selecionar o item correto depois.
-        // diffElements está em ordem cronológica: índice 0 = edição mais antiga,
-        // índice total-1 = edição mais recente. O backend desfaz/refaz sempre o topo (LIFO).
+
         const fileData = state.currentFileDataRef || encontrarFileDataPorCaminho(state.currentUndoFile);
         const totalItens = fileData ? fileData.diffElements.length : 0;
         const arquivoAtual = encontrarArquivoUndo(state.currentUndoFile);
         const redoCountAntes = arquivoAtual ? arquivoAtual.redo_count : 0;
-        fetch(`http://127.0.0.1:5000/api/${acao}`, {
+        fetch(`/api/${acao}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ caminho: state.currentUndoFile })
@@ -300,12 +597,10 @@ const NL = String.fromCharCode(10);
                     state.currentOpenedDiff = null;
                     atualizarBotoesUndoRedo();
                     if (data.status === 'ok' && totalItens > 0) {
-                        // Mapeia a ação para o item da pilha recém-desfeito/refeito,
-                        // fazendo a seleção "caminhar" junto com a linha do tempo.
+
                         const indice = acao === 'undo'
                             ? totalItens - redoCountAntes - 2
                             : totalItens - redoCountAntes;
-                        // Se desfez tudo (0/N), seleciona o cabeçalho do arquivo (conteúdo original).
                         if (indice < 0) {
                             if (fileData && fileData._headerEl) {
                                 fileData._headerEl.click();
@@ -329,71 +624,94 @@ const NL = String.fromCharCode(10);
                 lblStatus.textContent = `Erro de conexão ao ${acao === 'undo' ? 'desfazer' : 'refazer'}.`;
             });
     }
+    let pastaSelecionada = '';
+    let restauracaoEmCurso = null;
+
+    function aplicarPastaSelecionada(folder) {
+        const jaEra = pastaSelecionada === folder;
+        pastaSelecionada = folder;
+        lblFolder.textContent = folder;
+        if (btnSelectFolder) {
+            btnSelectFolder.classList.remove('text-[var(--text-branco)]');
+            btnSelectFolder.classList.add('text-[var(--oliva)]');
+            btnSelectFolder.classList.add('folder-selected');
+            btnSelectFolder.title = folder;
+        }
+        if (!jaEra) {
+            resetWorkspaceUI();
+            if (window.WorkspaceView && typeof window.WorkspaceView.reloadExplorer === 'function') {
+                window.WorkspaceView.reloadExplorer();
+            }
+            if (window.WorkspaceView && typeof window.WorkspaceView.loadVenvName === 'function') {
+                window.WorkspaceView.loadVenvName();
+            }
+        }
+    }
+
+    async function abrirPasta(folderPath, recarregando) {
+        lblStatus.textContent = 'Carregando diretório...';
+        for (let i = 0; i < 20; i++) {
+            try {
+                const response = await fetch('/api/set_folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder: folderPath })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.folder) {
+                        aplicarPastaSelecionada(data.folder);
+                        lblStatus.textContent = recarregando
+                            ? 'Diretório recarregado.'
+                            : 'Diretório carregado.';
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.log(`Tentativa ${i+1} falhou, aguardando servidor...`);
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        lblStatus.textContent = 'Erro: Servidor não respondeu.';
+        console.error('Erro ao selecionar pasta após várias tentativas.');
+        return false;
+    }
+
     async function selectFolder() {
         closePlusMenus();
         try {
-            const folderPath = await ipcRenderer.invoke('select-folder');
-            if (folderPath) {
-                let success = false;
-                lblStatus.textContent = 'Iniciando sistema...';
-                for (let i = 0; i < 20; i++) {
-                    try {
-                        const response = await fetch('http://127.0.0.1:5000/api/set_folder', { 
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ folder: folderPath })
-                        });
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.folder) {
-                                lblFolder.textContent = data.folder;
-                                lblStatus.textContent = 'Diretório selecionado.';
-                                if (btnSelectFolder) {
-                                    btnSelectFolder.classList.remove('text-[var(--text-branco)]');
-                                    btnSelectFolder.classList.add('text-[var(--oliva)]');
-                                    btnSelectFolder.classList.add('folder-selected');
-                                    btnSelectFolder.title = data.folder;
-                                }
-                                resetWorkspaceUI();
-                                if (window.WorkspaceView && typeof window.WorkspaceView.reloadExplorer === 'function') {
-                                    window.WorkspaceView.reloadExplorer();
-                                }
-                                if (window.WorkspaceView && typeof window.WorkspaceView.loadVenvName === 'function') {
-                                    window.WorkspaceView.loadVenvName();
-                                }
-                                success = true;
-                                break;
-                            }
-                        }
-                    } catch (e) {
-                        console.log(`Tentativa ${i+1} falhou, aguardando servidor...`);
-                        await new Promise(r => setTimeout(r, 1000));
-                    }
-                }
-                if (!success) {
-                    lblStatus.textContent = 'Erro: Servidor não respondeu.';
-                    console.error('Erro ao selecionar pasta após várias tentativas.');
-                }
-            }
+            const folderPath = await ipcRenderer.invoke('select-folder', pastaSelecionada);
+            if (folderPath) await abrirPasta(folderPath, false);
         } catch (error) {
             console.error('Erro ao selecionar pasta:', error);
         }
     }
+
     function restaurarPastaSelecionada() {
-        fetch('http://127.0.0.1:5000/api/env_info')
-            .then(r => r.json())
-            .then(data => {
-                if (data && data.folder) {
-                    lblFolder.textContent = data.folder;
-                    if (btnSelectFolder) {
-                        btnSelectFolder.classList.remove('text-[var(--text-branco)]');
-                        btnSelectFolder.classList.add('text-[var(--oliva)]');
-                        btnSelectFolder.classList.add('folder-selected');
-                        btnSelectFolder.title = data.folder;
-                    }
-                }
-            })
-            .catch(() => {});
+
+        if (restauracaoEmCurso) return restauracaoEmCurso;
+        restauracaoEmCurso = _restaurarPasta().finally(() => {
+            restauracaoEmCurso = null;
+        });
+        return restauracaoEmCurso;
+    }
+
+    async function _restaurarPasta() {
+        let data = null;
+        try {
+            const r = await fetch('/api/env_info');
+            data = await r.json();
+        } catch (e) {
+            return;
+        }
+        if (!data) return;
+        if (data.folder) {
+            const jaEra = pastaSelecionada === data.folder;
+            aplicarPastaSelecionada(data.folder);
+            if (!jaEra) lblStatus.textContent = 'Diretório recarregado.';
+            return;
+        }
+        if (data.ultima_pasta) await abrirPasta(data.ultima_pasta, true);
     }
     function normalizeFsPath(p) {
         return (p || '').replace(/\\/g, '/');
@@ -404,7 +722,7 @@ const NL = String.fromCharCode(10);
             const pedacos = String(part.text || '').split(NL);
             pedacos.forEach((linhaTexto, idx) => {
                 const ehUltima = idx === pedacos.length - 1;
-                if (ehUltima && linhaTexto === '') return; // ignora vazio final (texto terminava em \n)
+                if (ehUltima && linhaTexto === '') return;
                 const conteudo = ehUltima ? linhaTexto : linhaTexto + NL;
                 linhas.push({ tipo: part.type, texto: conteudo });
             });
@@ -416,9 +734,7 @@ const NL = String.fromCharCode(10);
         const ehAlterada = (tipo) => lado === 'original'
             ? (tipo === 'deleted' || tipo === 'modified')
             : (tipo === 'added');
-        // Cada lado mostra apenas as linhas que lhe pertencem. Isso impede que
-        // linhas "added" vazem para o painel original (e vice-versa), fazendo
-        // as linhas de referência (cinza) coincidirem entre os dois painéis.
+
         const ehPertinente = (tipo) => lado === 'original'
             ? (tipo === 'unmodified' || tipo === 'deleted' || tipo === 'modified')
             : (tipo === 'unmodified' || tipo === 'added');
@@ -426,7 +742,7 @@ const NL = String.fromCharCode(10);
         if (!linhas.length) return '';
         const marcadas = linhas.map(l => ehAlterada(l.tipo));
         const incluir = new Array(linhas.length).fill(false);
-        // Localiza a faixa de alteração (primeiro..último trecho marcado).
+
         let primeiro = -1;
         let ultimo = -1;
         for (let i = 0; i < linhas.length; i++) {
@@ -435,17 +751,16 @@ const NL = String.fromCharCode(10);
             ultimo = i;
         }
         if (primeiro === -1) return '';
-        // Mantém todo o bloco de mudança (incluindo linhas idênticas internas).
         for (let i = primeiro; i <= ultimo; i++) incluir[i] = true;
         const linhaVazia = (i) => linhas[i].texto.trim() === '';
-        // Contexto anterior: até LINHAS_CONTEXTO linhas com conteúdo antes do bloco.
+
         let contagem = 0;
         for (let j = primeiro - 1; j >= 0 && contagem < LINHAS_CONTEXTO; j--) {
             if (linhaVazia(j)) continue;
             incluir[j] = true;
             contagem++;
         }
-        // Contexto posterior: até LINHAS_CONTEXTO linhas com conteúdo depois do bloco.
+
         contagem = 0;
         for (let j = ultimo + 1; j < linhas.length && contagem < LINHAS_CONTEXTO; j++) {
             if (linhaVazia(j)) continue;
@@ -512,6 +827,7 @@ export {
     normalizeFsPath,
     gerarSnippetHtml,
     atualizarIconeOlho,
+    marcarLinhasAlteradas,
     createChildBalloon
 };
     function createChildBalloon(title, htmlContent, snippetHtml, rawTextOld, rawTextNew, fileName, sessionTools, fullOriginalText, fullNewText, deletedLines, addedLines, origToMod, modToOrig, subtitle) {
@@ -547,73 +863,8 @@ export {
         }
         header.appendChild(titleContainer);
         header.appendChild(actionsContainer);
-        header.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Se clicar no mesmo arquivo que já está aberto, ele fecha a coluna 3
-            // (clique duplo não fecha mais a coluna 3)
-            // Marca este item como selecionado na pilha de edições (destaque fixo).
-            // Limpa GLOBALMENTE para não deixar item de outra pilha/arquivo selecionado.
-            document.querySelectorAll('.diff-selected').forEach(el => el.classList.remove('diff-selected'));
-            child.classList.add('diff-selected');
-            // Garante que o undo/redo atue no arquivo deste item da pilha.
-            const arquivo = encontrarArquivoUndo(fileName);
-            let caminhoAlvo = arquivo ? arquivo.caminho : fileName;
-            const basePath = document.getElementById('lbl-folder').textContent;
-            if (basePath && !/^([a-zA-Z]:[\\/]|\/)/.test(caminhoAlvo)) {
-                caminhoAlvo = window.require('path').join(basePath, caminhoAlvo);
-            }
-            state.currentUndoFile = caminhoAlvo;
-            const grupoAtual = window.currentActiveLogGroup;
-            if (grupoAtual && grupoAtual.files) {
-                const fd = grupoAtual.files.find(f => f.name === fileName);
-                if (fd) state.currentFileDataRef = fd;
-                if (fd && fd._headerEl) marcarFileSelecionado(fd._headerEl);
-            }
-            window.currentActiveFileBalloonHtml = htmlContent;
-            const isHistOpen = isHistoryOpen();
-            if (isHistOpen) {
-                openCol3Overlay();
-                state.currentUndoFile = caminhoAlvo;
-                if (grupoAtual && grupoAtual.files) {
-                    const fd = grupoAtual.files.find(f => f.name === fileName);
-                    if (fd) state.currentFileDataRef = fd;
-                }
-            } else {
-                openPanelCol(panelCol3);
-            }
-            
-            setupCol3ForFileView(fileName, true);
-            atualizarIconeOlho();
-            
-            const openInWorkspace = () => {
-                openLogDockInWorkspace();
-                if (window.WorkspaceView && typeof window.WorkspaceView.openFileFromLog === 'function') {
-                    window.WorkspaceView.openFileFromLog(caminhoAlvo, rawTextNew || rawTextOld, {
-                        original: fullOriginalText || rawTextOld || '',
-                        modified: fullNewText || rawTextNew || '',
-                        full: !!(fullOriginalText && fullNewText),
-                        deletedLines: deletedLines || [],
-                        addedLines: addedLines || [],
-                        origToMod: origToMod || [],
-                        modToOrig: modToOrig || []
-                    });
-                }
-            };
-            
-            col3Title.onclick = openInWorkspace;
-            state.currentOpenedDiff = { fullHtml: htmlContent, snippetHtml: snippetHtml, fileName: fileName };
-            codeViewContainer.innerHTML = (state.isEyeMode && snippetHtml) ? snippetHtml : htmlContent;
-            rolarParaDestaque();
-            atualizarBotoesUndoRedo();
-            
-            if (!isHistOpen) {
-                openInWorkspace();
-            }
-        });
-        // Permite ao undo/redo "simular" o clique neste item da pilha, reutilizando
-        // toda a lógica de abertura (destaque, cores, rolagem automática, botões).
-        child._abrirDiff = () => header.click();
-        child._data = {
+
+        const dados = {
             title: title,
             subtitle: subtitle || '',
             htmlContent: htmlContent,
@@ -628,6 +879,26 @@ export {
             origToMod: origToMod || [],
             modToOrig: modToOrig || []
         };
+        header.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            const vista = vistaDoElemento(child) || vistaDock;
+            const raiz = vista.col2 || document;
+            raiz.querySelectorAll('.diff-selected').forEach(el => el.classList.remove('diff-selected'));
+            child.classList.add('diff-selected');
+            vista.abrirCol3();
+            vista.abrirDiff(dados);
+            
+
+            
+
+            
+
+            
+        });
+
+        child._abrirDiff = () => header.click();
+        child._data = dados;
         child.appendChild(header);
         return child;
     }

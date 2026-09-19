@@ -3,11 +3,13 @@ import json
 import re
 import time
 
+from src.backend.services.file_watcher import PASTAS_IGNORADAS, TAMANHO_MAX
+from src.backend.services.persistencia import gravar_json_atomico
 from src.backend.state import estado, caminho_estado_projeto
 def _caminho_checkpoint():
     return caminho_estado_projeto("chats", "checkpoint.json")
 
-CHECKPOINT_TTL_SEGUNDOS = 7 * 24 * 60 * 60  # 7 dias (sobrevive a restarts de fim de semana/feriado)
+CHECKPOINT_TTL_SEGUNDOS = 7 * 24 * 60 * 60
 
 def carregar_checkpoint():
     """Lê e remove o checkpoint de continuidade (se existir e for recente). Retorna dict ou None."""
@@ -19,12 +21,9 @@ def carregar_checkpoint():
     try:
         with open(caminho, "r", encoding="utf-8") as f:
             dados = json.load(f)
-        # 1. Evita vazamento entre projetos: checkpoint só vale para a pasta onde foi gravado.
         pasta_origem = dados.get("pasta_raiz")
         if pasta_origem and pasta_origem != estado["pasta_raiz"]:
             return None
-        # 2. Evita falso positivo: um checkpoint antigo (de outra tarefa/sessão)
-        # não deve ser injetado quando o usuário disser "continue/continua" em frase normal.
         ts = int(dados.get("timestamp", 0) or 0)
         if ts and (time.time() - ts) > CHECKPOINT_TTL_SEGUNDOS:
             os.remove(caminho)
@@ -94,8 +93,62 @@ def formatar_checkpoint(dados):
     linhas.append("Não repita o que já foi feito. Continue a partir do próximo passo.")
     return "\n".join(linhas)
 
+def pasta_session_logs_em(pasta_raiz):
+    """Pasta dos logs de sessao para uma raiz explicita.
+
+    Os logs vivem em .axio/logs/session_logs, FORA de .axio/chats. O minerador
+    do mempalace varre .axio/chats recursivamente: enquanto os logs estavam la
+    dentro, cada sessionlog_*.json (alguns com centenas de MB) era minerado
+    como se fosse uma conversa, enchendo o vetor de ruido e gerando dezenas de
+    milhares de drawers orfas sempre que o prune apagava o log.
+    """
+    if not pasta_raiz:
+        return ""
+    return os.path.join(pasta_raiz, ".axio", "logs", "session_logs")
+
 def pasta_session_logs():
-    return caminho_estado_projeto("chats", "session_logs")
+    return pasta_session_logs_em(estado.get("pasta_raiz", ""))
+
+def migrar_session_logs_antigos():
+    """Move .axio/chats/session_logs para .axio/logs/session_logs (uma vez).
+
+    A migracao tira os logs do alcance do minerador, que varre .axio/chats.
+    Idempotente: sem a pasta antiga nao faz nada. Devolve o numero de ficheiros
+    movidos.
+    """
+    raiz = estado.get("pasta_raiz", "")
+    if not raiz:
+        return 0
+    antiga = os.path.join(raiz, ".axio", "chats", "session_logs")
+    nova = pasta_session_logs_em(raiz)
+    if not os.path.isdir(antiga) or os.path.abspath(antiga) == os.path.abspath(nova):
+        return 0
+    try:
+        os.makedirs(nova, exist_ok=True)
+        movidos = 0
+        for nome in os.listdir(antiga):
+            origem = os.path.join(antiga, nome)
+            destino = os.path.join(nova, nome)
+            if not os.path.isfile(origem):
+                continue
+            try:
+                if os.path.exists(destino) and os.path.getsize(destino) >= os.path.getsize(origem):
+                    os.unlink(origem)
+                    continue
+                os.replace(origem, destino)
+                movidos += 1
+            except OSError as e:
+                print(f"[sessao] falha ao migrar {nome}: {e}")
+        try:
+            os.rmdir(antiga)
+        except OSError:
+            pass
+        if movidos:
+            print(f"[sessao] {movidos} logs movidos para .axio/logs/session_logs (fora do alcance do minerador)")
+        return movidos
+    except OSError as e:
+        print(f"[sessao] falha ao migrar session_logs: {e}")
+        return 0
 
 def caminho_checkpoint_state():
     """Caminho do arquivo que persiste o checkpoint restaurado atual (por projeto)."""
@@ -110,46 +163,177 @@ def ts_de_arquivo_log(nome):
     except ValueError:
         return 0
 
+def reparar_json_truncado(texto, limite):
+    """Recupera o maior prefixo de `texto` que ainda forma JSON valido.
+
+    Percorre o texto UMA vez (ate `limite`, a posicao onde o parser desistiu) e
+    guarda as ultimas posicoes em que a estrutura estava consistente - o fim de
+    um valor ja fechado - com o estado da pilha nesse instante. Depois fecha o
+    que ficou aberto. Perde, no maximo, o item onde o ficheiro se corrompeu; o
+    resto do log fica utilizavel em vez de um 500.
+
+    Existe porque `raw_decode` nao serve para isto: num objecto de topo
+    corrompido a meio ele levanta SEMPRE (so devolve valores completos), que era
+    exactamente o caso do sessionlog_1788985169540.json.
+
+    Devolve o objeto lido ou None se nem o inicio servir.
+    """
+    pilha = []
+    dentro_string = False
+    escape = False
+    ancoras = []
+    for i in range(min(limite, len(texto))):
+        ch = texto[i]
+        if dentro_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                dentro_string = False
+            continue
+        if ch == '"':
+            dentro_string = True
+        elif ch in "{[":
+            pilha.append("}" if ch == "{" else "]")
+        elif ch in "}]":
+            if not pilha or pilha.pop() != ch:
+                break
+            if len(ancoras) >= 4:
+                ancoras.pop(0)
+            ancoras.append((i + 1, list(pilha)))
+    for pos, pilha_ok in reversed(ancoras):
+        try:
+            return json.loads(texto[:pos] + "".join(reversed(pilha_ok)))
+        except ValueError:
+            continue
+    return None
+
 def ler_log_sessao(caminho):
-    with open(caminho, "r", encoding="utf-8") as f:
+    """Le o log de sessao completo, tolerante a JSON corrompido.
+
+    Cascata: (1) parse direto; (2) saneamento de escapes unicode invalidos
+    (barra invertida seguida de nao-ASCII); (3) parse tolerante (strict=False,
+    aceita caracteres de controlo crus); (4) reparo por corte no ultimo item
+    intacto, fechando as estruturas abertas. So levanta se nada servir.
+    """
+    with open(caminho, "r", encoding="utf-8", errors="replace") as f:
         texto = f.read()
     try:
         return json.loads(texto)
     except json.JSONDecodeError:
-        texto = re.sub(r'\\([^\x00-\x7F])', r'\1', texto)
-        return json.loads(texto)
+        pass
+    saneado = re.sub(r'\\([^\x00-\x7F])', r'\1', texto)
+    try:
+        return json.loads(saneado)
+    except json.JSONDecodeError:
+        pass
+    try:
+        return json.JSONDecoder(strict=False).decode(saneado)
+    except ValueError as e:
+        ultimo_erro = e
+    dados = reparar_json_truncado(saneado, getattr(ultimo_erro, "pos", len(saneado)))
+    if dados is not None:
+        return dados
+    raise ultimo_erro
+
+CABECALHO_LOG_BYTES = 8192
+
+def ler_cabecalho_log_sessao(caminho):
+    """Le apenas o INICIO do log: timestamp, datetime e summary.
+
+    Estes tres campos ficam no topo do JSON, mas o historico lia o ficheiro
+    inteiro para os obter - cerca de 412 MB de parse a cada abertura (um unico
+    sessionlog chegou a 132 MB). Aqui le-se so o prefixo e extraem-se os campos
+    por regex, o que tambem torna a leitura imune a um JSON truncado no fim
+    (era o que provocava 'Expecting , delimiter' no historico).
+
+    Devolve um dict com os campos encontrados (vazio se nao der para ler).
+    """
+    try:
+        with open(caminho, "r", encoding="utf-8", errors="replace") as f:
+            prefixo = f.read(CABECALHO_LOG_BYTES)
+    except OSError:
+        return {}
+    dados = {}
+    for campo in ("datetime", "summary"):
+        m = re.search(r'"' + campo + r'"\s*:\s*"((?:[^"\\]|\\.)*)"', prefixo)
+        if not m:
+            continue
+        try:
+            dados[campo] = json.loads('"' + m.group(1) + '"')
+        except ValueError:
+            dados[campo] = m.group(1)
+    m = re.search(r'"timestamp"\s*:\s*(\d+)', prefixo)
+    if m:
+        dados["timestamp"] = int(m.group(1))
+    return dados
+
+def gravar_log_sessao(caminho, dados):
+    """Grava o log de sessao de forma ATOMICA (ficheiro temporario + replace).
+
+    O json.dump diretamente sobre o ficheiro final deixava um JSON truncado
+    quando o processo morria a meio da escrita (kill do Electron, crash, fim de
+    sessao abrupto). Um log truncado quebra o parse e o card do historico fica
+    sem data nem preview. Com tmp + os.replace o ficheiro final tem sempre a
+    versao antiga inteira ou a nova inteira - nunca metade.
+    """
+    return gravar_json_atomico(caminho, dados, fsync=True)
+
+def _log_tem_salvos(caminho):
+    """Deteta '"salvo": true' lendo o ficheiro em blocos, sem parsear o JSON.
+
+    Parsear logs de dezenas de MB so para saber se ha um card salvo custava
+    minutos e muita memoria. A procura por blocos e ordens de magnitude mais
+    barata. Em caso de duvida (leitura falhada) devolve True: preservar a mais
+    e seguro; apagar uma sessao salva nao e.
+    """
+    alvo = b'"salvo"'
+    try:
+        with open(caminho, "rb") as f:
+            resto = b""
+            while True:
+                bloco = f.read(1024 * 1024)
+                if not bloco:
+                    return False
+                texto = resto + bloco
+                inicio = 0
+                while True:
+                    pos = texto.find(alvo, inicio)
+                    if pos == -1:
+                        break
+                    if re.match(rb"\s*:\s*true", texto[pos + len(alvo):pos + len(alvo) + 24]):
+                        return True
+                    inicio = pos + len(alvo)
+                resto = texto[len(texto) - 32:]
+    except OSError:
+        return True
 
 def prune_session_logs(pasta_logs, manter_dias=3):
     """Mantém apenas as sessões de log dos últimos N dias distintos (por data).
 
     Sessões que contêm tarefas salvas (salvo=True) são preservadas mesmo fora
     da janela de dias, para que um card salvo nunca seja sobrescrito/removido.
+
+    Devolve a lista dos nomes de arquivo removidos, para quem chamou poder
+    limpar do vetor as drawers mineradas desses logs (senao ficariam orfas).
     """
     try:
         arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
     except OSError:
-        return
+        return []
 
     infos = []
-    arquivos_com_salvos = set()
     for arq in arquivos:
         ts = ts_de_arquivo_log(arq)
-        dia = ""
-        caminho = os.path.join(pasta_logs, arq)
-        try:
-            dados = ler_log_sessao(caminho)
-            dia = (dados.get("datetime") or "").split(" ")[0]
-            if any(g.get("salvo") for g in dados.get("logs", [])):
-                arquivos_com_salvos.add(arq)
-        except Exception:
-            dia = ""
+        cabecalho = ler_cabecalho_log_sessao(os.path.join(pasta_logs, arq))
+        dia = (cabecalho.get("datetime") or "").split(" ")[0]
         if not dia and ts:
             dia = time.strftime("%d/%m/%Y", time.localtime(ts / 1000))
         infos.append((dia, ts, arq))
 
     infos.sort(key=lambda x: x[1], reverse=True)
 
-    # Descobre os N dias distintos mais recentes.
     dias_recentes = []
     for dia, ts, arq in infos:
         if dia and dia not in dias_recentes:
@@ -158,21 +342,25 @@ def prune_session_logs(pasta_logs, manter_dias=3):
             break
     dias_recentes = set(dias_recentes)
 
+    removidos = []
     for dia, ts, arq in infos:
         if dia and dia in dias_recentes:
             continue
-        if arq in arquivos_com_salvos:
+        caminho = os.path.join(pasta_logs, arq)
+        if _log_tem_salvos(caminho):
             continue
         try:
-            os.remove(os.path.join(pasta_logs, arq))
-        except OSError:
-            pass
+            os.remove(caminho)
+            removidos.append(arq)
+        except OSError as e:
+            print(f"[sessao] falha ao remover log antigo {arq}: {e}")
+    return removidos
 
 def criar_sessao_vazia(pasta_raiz, session_id):
     """Cria o arquivo de log vazio da sessão para o card "em andamento" já
     aparecer no histórico assim que a sessão inicia (sem esperar a 1ª edição)."""
     try:
-        pasta_logs = os.path.join(pasta_raiz, ".axio", "chats", "session_logs")
+        pasta_logs = pasta_session_logs_em(pasta_raiz)
         os.makedirs(pasta_logs, exist_ok=True)
         caminho = os.path.join(pasta_logs, f"sessionlog_{session_id}.json")
         if os.path.exists(caminho):
@@ -185,8 +373,7 @@ def criar_sessao_vazia(pasta_raiz, session_id):
             "logs": [],
             "snapshot": {},
         }
-        with open(caminho, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+        gravar_log_sessao(caminho, payload)
     except (OSError, ValueError) as e:
         print(f"Erro ao criar sessão vazia {session_id}: {e}")
 
@@ -256,12 +443,58 @@ def marcar_delecoes_manuais(snapshot):
             resultado[rel] = meta
     return resultado
 
-def snapshot_sessao_anterior(pasta_logs, ignorar_session_id):
+def capturar_arvore(pasta_raiz, referencia=None, teto_bytes=TAMANHO_MAX):
+    """Le a arvore do projeto e devolve o que o registo ainda nao conhece.
+
+    `capturar_snapshot` cobre so os arquivos que as FERRAMENTAS tocaram nesta
+    sessao: um arquivo criado ou editado a mao nunca entrava no registo, e por
+    isso nunca era restaurado nem removido. Aqui a arvore e lida inteira e
+    comparada com `referencia` (o snapshot herdado, ja em memoria) - entra o
+    caminho que falta e o que tem conteudo diferente. Medido no projeto real:
+    136 arquivos / 2,1 MB em 0,033s.
+
+    `PASTAS_IGNORADAS` e a MESMA lista que alimenta o file_watcher, para o
+    registo descrever exatamente o que a arvore do editor mostra. Binarios e
+    arquivos acima de `teto_bytes` ficam de fora: nao ha versao de texto para
+    repor.
+    """
+    if not pasta_raiz:
+        return {}
+    referencia = referencia or {}
+    capturado = {}
+    for dirpath, dirnames, filenames in os.walk(pasta_raiz):
+        dirnames[:] = [d for d in dirnames if d not in PASTAS_IGNORADAS]
+        for nome in filenames:
+            caminho = os.path.join(dirpath, nome)
+            try:
+                if os.path.getsize(caminho) > teto_bytes:
+                    continue
+                with open(caminho, "r", encoding="utf-8") as f:
+                    conteudo = f.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            rel = os.path.relpath(caminho, pasta_raiz).replace("\\", "/")
+            conhecido = referencia.get(rel)
+            if isinstance(conhecido, dict) and conhecido.get("conteudo") == conteudo:
+                continue
+            capturado[rel] = {"conteudo": conteudo}
+    return capturado
+
+def snapshot_sessao_anterior(pasta_logs, ignorar_session_id, antes_de=0):
     """Carrega o checkpoint final da sessão mais recente (exceto a atual) na pasta.
 
     Mantém o snapshot cumulativo entre sessões: arquivos editados numa sessão
     anterior continuam presentes no checkpoint das sessões seguintes, mesmo que
     não sejam editados novamente.
+
+    Um log de sessão VAZIO (o esqueleto de 124 B que cada arranque do programa
+    grava, com `snapshot: {}`) não é um ponto de herança válido: escolhido pelo
+    timestamp, apagava a memória de uma sessão inteira — foi assim que o
+    checkpoint de uma tarefa recente ficou com 5 chaves onde devia ter 47, e
+    restaurá-lo deixou 42 ficheiros na era de uma restauração anterior. Quando o
+    log mais recente não tem snapshot, a busca continua no anterior (ler 124 B é
+    instantâneo). `antes_de` limita a escolha a logs anteriores a esse timestamp,
+    para recompor a herança de um ponto antigo.
     """
     melhor_arq = None
     melhor_ts = -1
@@ -274,60 +507,195 @@ def snapshot_sessao_anterior(pasta_logs, ignorar_session_id):
         if arq == ignorar:
             continue
         ts = ts_de_arquivo_log(arq)
+        if not ts or (antes_de and ts >= antes_de):
+            continue
         if ts > melhor_ts:
             melhor_ts = ts
             melhor_arq = arq
     if not melhor_arq:
         return {}
     try:
-        dados = ler_log_sessao(os.path.join(pasta_logs, melhor_arq))
-        return dados.get("snapshot") or {}
+        snapshot = ler_log_sessao(os.path.join(pasta_logs, melhor_arq)).get("snapshot") or {}
     except Exception:
         return {}
+    if not snapshot:
+        return snapshot_sessao_anterior(pasta_logs, ignorar_session_id, melhor_ts)
+    return snapshot
 
-def primeira_aparicao_por_arquivo(pasta_logs):
-    """Mapeia cada arquivo rastreado ao menor timestamp de log em que ele aparece.
+_TAMANHO_LOG_VAZIO = 1024
 
-    Substitui a inferência por diferença de conjuntos: um arquivo só é considerado
-    "criado depois do ponto" quando a sua primeira aparição registrada é posterior
-    ao timestamp do checkpoint restaurado. Isso elimina falsos positivos causados
-    por snapshots incompletos (herança quebrada entre sessões).
+def snapshot_recomposto(pasta_logs, arq_alvo, teto=8):
+    """Soma a cadeia de snapshots anteriores a um log: a herança que ele devia ter.
+
+    O snapshot de um ponto é o cumulativo das sessões até ali, mas ficou gravado
+    com o que a gravação conseguiu herdar — e uma sessão que arrancou com um log
+    vazio pelo caminho ficou com a herança amputada. Aqui a cadeia é somada de
+    novo, do log mais antigo para o mais recente, cada um a sobrepor-se ao
+    anterior: o resultado é o último conteúdo conhecido de cada ficheiro, que é o
+    que a restauração tem de repor. A leitura (restauro e prévia) recompõe sempre,
+    para um checkpoint amputado não deixar ficheiros na era errada; a gravação
+    usa-a ao abrir uma sessão, para a amputação não se propagar às seguintes.
+
+    Fica de fora o próprio log alvo: o snapshot de topo dele é o do FIM da sessão
+    e arrastaria o futuro para dentro de um ponto do meio. `teto` limita quantos
+    logs da cadeia se leem (os vazios, abaixo de `_TAMANHO_LOG_VAZIO`, nem contam)
+    e existe para a GRAVAÇÃO, que corre ao abrir uma sessão e não pode pagar uma
+    varredura da pasta toda. A RESTAURAÇÃO usa `heranca_do_checkpoint`, sem teto:
+    a herança de um ponto antigo pode estar a dezenas de logs de distância.
     """
-    aparicao = {}
+    ts_alvo = ts_de_arquivo_log(os.path.basename(arq_alvo or ""))
+    if not ts_alvo:
+        return {}
     try:
-        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
+        arquivos = os.listdir(pasta_logs)
     except OSError:
-        return aparicao
+        return {}
+    candidatos = []
     for arq in arquivos:
-        ts = ts_de_arquivo_log(arq)
-        if not ts:
+        if not (arq.startswith("sessionlog_") and arq.endswith(".json")):
             continue
+        ts = ts_de_arquivo_log(arq)
+        if not ts or ts >= ts_alvo:
+            continue
+        try:
+            if os.path.getsize(os.path.join(pasta_logs, arq)) < _TAMANHO_LOG_VAZIO:
+                continue
+        except OSError:
+            continue
+        candidatos.append((ts, arq))
+    candidatos.sort()
+    acumulado = {}
+    for _ts, arq in candidatos[-teto:]:
         try:
             dados = ler_log_sessao(os.path.join(pasta_logs, arq))
         except Exception:
             continue
-        caminhos = set((dados.get("snapshot") or {}).keys())
+        for rel, meta in (dados.get("snapshot") or {}).items():
+            if isinstance(meta, dict):
+                acumulado[rel] = meta
+    return acumulado
+
+def heranca_do_checkpoint(pasta_logs, arq_alvo, varredura=None):
+    """A herança COMPLETA de um ponto: a última versão de cada ficheiro antes dele.
+
+    `snapshot_recomposto` lê só os últimos `teto` logs — barato, e é o que a
+    GRAVAÇÃO usa ao abrir uma sessão. Aqui a varredura percorre a pasta toda e
+    devolve, por ficheiro, a versão do log mais recente ANTERIOR ao alvo: é a
+    herança que o checkpoint devia ter e a que a restauração tem de repor. A de
+    um ponto antigo pode estar a dezenas de logs de distância (medido em
+    13/09/2026: 81 logs, para o `services/session.py` do checkpoint da tarefa 3) e
+    com o teto curto esses ficheiros ficavam fora — nem repostos nem removidos,
+    ficavam com o código de agora, sem aviso no ecrã.
+
+    `varredura` reaproveita uma varredura já feita na mesma operação: a
+    classificação dos rastreados precisa da mesma passagem pelos logs.
+    """
+    if varredura is None:
+        varredura = varredura_dos_logs(pasta_logs, arq_alvo)
+    return varredura[1]
+
+def varredura_dos_logs(pasta_logs, arq_alvo=""):
+    """UMA passagem pelos logs alimenta as duas leituras da restauração.
+
+    Devolve (aparicoes, versoes) e as duas saem da mesma leitura:
+
+    - `aparicoes`: {rel: ts da primeira aparição} em qualquer log (topo ou rodada).
+      Substitui a inferência por diferença de conjuntos: um arquivo só é
+      considerado "criado depois do ponto" quando a sua primeira aparição
+      registrada é posterior ao timestamp do checkpoint restaurado — o que
+      elimina falsos positivos de snapshots incompletos (herança quebrada).
+    - `versoes`: {rel: meta} da última versão registada em log ANTERIOR a
+      `arq_alvo`. O próprio alvo fica de fora: o snapshot de topo dele é o do FIM
+      da sessão e arrastaria o futuro para dentro de um ponto do meio.
+
+    A `versoes` é o que faz a restauração repor TODOS os ficheiros no ponto. O
+    snapshot gravado de um checkpoint é o cumulativo da cadeia, e uma sessão que
+    arrancou com um log vazio pelo caminho ficou com a herança amputada: os
+    ficheiros que saíram da cadeia não eram repostos nem removidos, ficavam com o
+    código de agora e a restauração parecia ter "saltado" ficheiros. A herança
+    de um ponto antigo pode estar a dezenas de logs de distância (medido em
+    13/09/2026: o `services/session.py` do checkpoint da tarefa 3 só aparecia 81
+    logs antes dele), por isso a varredura vai até ao fim da pasta.
+
+    Os logs são percorridos do mais antigo para o mais recente para a `versoes`
+    ficar com a última versão de cada ficheiro (a sobreposição é a ordem).
+    """
+    aparicoes = {}
+    versoes = {}
+    try:
+        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
+    except OSError:
+        return aparicoes, versoes
+    ts_alvo = ts_de_arquivo_log(os.path.basename(arq_alvo or "")) if arq_alvo else 0
+    for arq in sorted(arquivos, key=ts_de_arquivo_log):
+        ts = ts_de_arquivo_log(arq)
+        if not ts:
+            continue
+        caminho = os.path.join(pasta_logs, arq)
+        try:
+            if os.path.getsize(caminho) < _TAMANHO_LOG_VAZIO:
+                continue
+        except OSError:
+            continue
+        try:
+            dados = ler_log_sessao(caminho)
+        except Exception:
+            continue
+        snap = dados.get("snapshot") or {}
+        caminhos = set(snap.keys())
         for grupo in dados.get("logs", []):
             caminhos.update((grupo.get("snapshot") or {}).keys())
         for rel in caminhos:
-            atual = aparicao.get(rel)
+            atual = aparicoes.get(rel)
             if atual is None or ts < atual:
-                aparicao[rel] = ts
-    return aparicao
+                aparicoes[rel] = ts
+        if ts_alvo and ts < ts_alvo:
+            for rel, meta in snap.items():
+                if isinstance(meta, dict):
+                    versoes[rel] = meta
+    return aparicoes, versoes
 
-def criados_depois_de(pasta_logs, snapshot, ts_alvo):
-    """Retorna caminhos rastreados que não estão no snapshot alvo e cuja primeira
-    aparição registrada é posterior a ts_alvo (criados depois do ponto)."""
+def primeira_aparicao_por_arquivo(pasta_logs):
+    """{rel: ts da primeira aparição} — a classificação dos rastreados.
+
+    Casca da varredura que também produz a herança (`varredura_dos_logs`): quando
+    as duas são precisas na mesma operação, quem chama varre uma vez e passa o
+    resultado, em vez de ler a pasta de logs duas vezes.
+    """
+    return varredura_dos_logs(pasta_logs)[0]
+
+def rastreados_fora_do_snapshot(pasta_logs, snapshot, ts_alvo, aparicoes=None):
+    """Classifica os rastreados que o snapshot alvo não cobre, em duas listas.
+
+    - `criados_depois`: a primeira aparição é posterior ao ponto -> nasceram
+      depois dele e a restauração manda-os para a lixeira;
+    - `fora_do_alcance`: já existiam antes do ponto mas não estão no snapshot ->
+      a restauração não os conhece: não os repõe nem os remove, ficam no disco
+      com o conteúdo de agora. COM A HERANÇA COMPLETA (`heranca_do_checkpoint`)
+      esta lista tende a esvaziar-se: um ficheiro que já existia antes do ponto e
+      foi registado em algum log entra pelo `versoes`. Sobra o caso sem remédio —
+      o ficheiro cuja única versão registada é posterior ao ponto.
+
+    Uma varredura de logs só serve as duas listas — por isso saem juntas e não de
+    duas chamadas. `aparicoes` permite reaproveitar uma varredura já feita na
+    mesma operação (a restauração corre `varredura_dos_logs` para a herança).
+    """
     if not ts_alvo:
-        return []
-    aparicoes = primeira_aparicao_por_arquivo(pasta_logs)
+        return [], []
+    if aparicoes is None:
+        aparicoes = primeira_aparicao_por_arquivo(pasta_logs)
     criados = []
+    fora = []
     for rel, ts in aparicoes.items():
         if rel in snapshot:
             continue
-        if ts > ts_alvo:
-            criados.append(rel)
-    return criados
+        (criados if ts > ts_alvo else fora).append(rel)
+    return sorted(criados), sorted(fora)
+
+def criados_depois_de(pasta_logs, snapshot, ts_alvo, aparicoes=None):
+    """Retorna caminhos rastreados que não estão no snapshot alvo e cuja primeira
+    aparição registrada é posterior a ts_alvo (criados depois do ponto)."""
+    return rastreados_fora_do_snapshot(pasta_logs, snapshot, ts_alvo, aparicoes)[0]
 
 def _aplicar_nos_logs(pasta_logs, aplicar):
     """Percorre os logs de sessao da pasta e aplica `aplicar(fd, nome) -> bool`.
@@ -352,8 +720,7 @@ def _aplicar_nos_logs(pasta_logs, aplicar):
                     alterado = True
         if alterado:
             try:
-                with open(caminho, "w", encoding="utf-8") as f:
-                    json.dump(payload, f, ensure_ascii=False, indent=2)
+                gravar_log_sessao(caminho, payload)
             except OSError:
                 pass
 
@@ -382,11 +749,13 @@ def marcar_deletado_logs(rel):
         return False
     _aplicar_nos_logs(pasta_session_logs(), _aplicar)
 
-def carregar_snapshot_restauracao(pasta_logs, filename, round_id):
+def carregar_snapshot_restauracao(pasta_logs, filename, round_id, varredura=None):
     """Carrega o checkpoint a ser restaurado a partir do arquivo de log.
 
     Retorna (dados, snapshot, erro). Em caso de erro, dados/snapshot são None e
-    erro contém a mensagem amigável.
+    erro contém a mensagem amigável. `varredura` reaproveita a passagem pelos
+    logs que o chamador já fez (`varredura_dos_logs`) — a mesma que alimenta a
+    classificação dos rastreados, para a pasta não ser lida duas vezes.
     """
     caminho = os.path.join(pasta_logs, filename)
     if not os.path.exists(caminho):
@@ -405,4 +774,8 @@ def carregar_snapshot_restauracao(pasta_logs, filename, round_id):
                 break
     if snapshot is None:
         snapshot = dados.get("snapshot") or {}
+
+    heranca = heranca_do_checkpoint(pasta_logs, filename, varredura)
+    if heranca:
+        snapshot = {**heranca, **snapshot}
     return dados, snapshot, None

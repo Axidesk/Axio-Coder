@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 dist/
 .venv/
+.ruff_cache/
 
 # Environment
 .env
@@ -30,6 +31,10 @@ node_modules/
 .next/
 out/
 
+# Artefactos do viewer (gerados por 'npm run build:viewer')
+src/frontend/vendor/viewer/dist/
+src/frontend/vendor/viewer/pptx.browser.es.js
+
 # Custom
 .axio/
 .ai_memory/
@@ -46,3 +51,13 @@ majestic-voice-506608-a2-7d0e60699f7d.json
 # Credenciais gerenciadas pelo modal de Configurações
 data/settings.json
 data/vertex_credentials.json
+
+# Cofre de credenciais do utilizador (janela de Configuracoes -> Cofre)
+data/cofre.json
+
+# Cache dos modelos convertidos do visualizador (IFC -> Fragments)
+data/cache_modelos/
+
+# Modelos gerados: o codigo que os produz (gerados/<modelo>/*.py) entra no git,
+# o binario resultante nao - reproduz-se a partir do codigo em segundos
+gerados/**/*.ifc

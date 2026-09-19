@@ -3,12 +3,25 @@ import json
 import time
 
 from src.backend.state import estado, emit_event, caminho_estado_projeto
+from src.backend.tools.registry import register
 
 def _caminho_bootstrap():
     if not estado.get("pasta_raiz"):
         return None
     return caminho_estado_projeto("bootstrap.json")
 
+@register(
+    "tool_gerenciar_bootstrap",
+    "Gerencia o estado de um bootstrap de projeto (Supabase/Firebase/serviço) para retomada segura. Use acao='gravar' para registrar progresso ou parar aguardando uma credencial, acao='ler' para retomar de onde parou e acao='limpar' ao concluir o bootstrap. Ao concluir definitivamente, chame gravar com concluido=true (ou acao='limpar') para que o estado pare de ser injetado.",
+    {
+        'acao': {"tipo": "STRING", "enum": ['ler', 'gravar', 'limpar'], "obrig": True, "padrao": "ler"},
+        'servico': {"tipo": "STRING", "desc": 'Nome do serviço (ex: supabase, firebase, gcloud)', "padrao": ""},
+        'etapa_atual': {"tipo": "STRING", "desc": 'Descrição da etapa atual em andamento', "padrao": ""},
+        'etapa_concluida': {"tipo": "STRING", "desc": 'Etapa concluída para adicionar à lista acumulada', "padrao": ""},
+        'aguardando': {"tipo": "STRING", "desc": 'O que está aguardando do usuário (ex: credencial/token)', "padrao": ""},
+        'concluido': {"tipo": "BOOLEAN", "desc": 'Marque true quando o bootstrap estiver definitivamente concluído, para não ser mais injetado no contexto', "padrao": False},
+    },
+)
 def tool_gerenciar_bootstrap(acao="ler", servico="", etapa_atual="", etapa_concluida="", aguardando="", silencioso=False, concluido=False):
     if not silencioso:
         emit_event("executing", function="Gerenciando bootstrap")

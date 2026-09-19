@@ -1,9 +1,10 @@
 import { loadVenvName } from './workspace.js';
 import { loadExplorer } from './explorer.js';
 import { state } from './state.js';
-import { termClear, termFit, termGetSelection, termOnResize, termWrite, termWriteLine } from './xterm.js';
+import { termClear, termFit, termGetSelection, termOnResize, termWrite } from './xterm.js';
 import { copiarTexto } from '../chat/clipboard.js';
 import { colarNoInputText } from '../chat/inspect.js';
+import { aviso, descartarSelecao, limparCards } from './terminal_cards.js';
 
 let termStatusTimer = null;
 
@@ -17,13 +18,14 @@ function marcarAtividadeTerminal() {
 }
 
 export function appendLine(text, cls) {
-    termWriteLine(text == null || text === '' ? ' ' : text, cls);
+    aviso(text == null || text === '' ? ' ' : text, cls);
 }
 export function clearLog() {
     if (state.termSocket && state.termSocket.connected) {
         state.termSocket.emit('pty:input', { data: comandoLimparTerminal() + '\n' });
     }
     termClear();
+    limparCards();
 }
 
 let termPtyTimer = null;
@@ -58,11 +60,20 @@ export function connectTermSocket() {
         termFit();
         loadVenvName();
         loadShellInfo();
+        state.termSocket.emit('pty:replay');
     });
     state.termSocket.on('pty:output', (msg) => {
         if (!msg || msg.data == null) return;
         termWrite(msg.data);
         marcarAtividadeTerminal();
+    });
+    state.termSocket.on('pty:session', (msg) => {
+        termClear();
+        if (msg && msg.shell) aplicarShellAtual(msg.shell);
+    });
+    state.termSocket.on('pty:replay', (msg) => {
+        termClear();
+        if (msg && msg.data) termWrite(msg.data);
     });
     state.termSocket.on('connect_error', () => {
         state.wsStatus.textContent = 'erro';
@@ -105,12 +116,12 @@ export function quotePath(p) {
     return /\s/.test(s) ? '"' + s + '"' : s;
 }
 export function cdCommandFor(path) {
-    const shell = (state.wsShellLabel && state.wsShellLabel.textContent) || 'cmd';
+    const shell = state.shellAtual || 'cmd';
     const q = quotePath(path);
     return shell === 'cmd' ? 'cd /d ' + q : 'cd ' + q;
 }
 function comandoLimparTerminal() {
-    const shell = (state.wsShellLabel && state.wsShellLabel.textContent) || 'cmd';
+    const shell = state.shellAtual || 'cmd';
     if (shell === 'cmd' || shell === 'powershell' || shell === 'pwsh') return 'cls';
     return 'clear';
 }
@@ -148,6 +159,11 @@ function colarNoTerminal() {
         if (texto) colarNoInputText(texto);
     } catch (e) {}
 }
+function interromperShell() {
+    if (state.termSocket && state.termSocket.connected) {
+        state.termSocket.emit('pty:input', { data: '\x03' });
+    }
+}
 function tratarAtalhoTerminal(ev) {
     if (!(ev.ctrlKey || ev.metaKey) || ev.altKey) return;
     const tecla = teclaDeAtalho(ev);
@@ -155,8 +171,9 @@ function tratarAtalhoTerminal(ev) {
     if (tecla === 'c') {
         if (focoForaDoTerminal()) return;
         const selecao = termGetSelection();
-        if (!selecao) return;
-        copiarTexto(selecao);
+        if (!selecao && !state.shellAtivo) return;
+        if (selecao) copiarTexto(selecao);
+        else interromperShell();
         ev.preventDefault();
         ev.stopPropagation();
     } else if (tecla === 'v') {
@@ -266,51 +283,124 @@ export function loadShellInfo() {
         .then(r => r.json())
         .then(data => {
             if (!data || !Array.isArray(data.shells)) return;
-            if (state.wsShellLabel) state.wsShellLabel.textContent = data.atual || 'cmd';
-            if (state.wsShellMenu) {
-                state.wsShellMenu.innerHTML = '';
-                data.shells.forEach(s => {
-                    if (s.nome === data.atual) return;
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'ws-shell-item';
-                    btn.textContent = s.nome;
-                    btn.addEventListener('click', () => setTerminalShell(s.nome));
-                    state.wsShellMenu.appendChild(btn);
-                });
-            }
+            if (data.atual) state.shellAtual = data.atual;
+            _renderModoTerminal();
+            if (!state.wsShellMenu) return;
+            state.wsShellMenu.innerHTML = '';
+            data.shells.forEach(s => {
+                const aceso = s.nome === state.shellAtual;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ws-shell-item' + (aceso ? ' active' : '');
+                btn.textContent = s.nome;
+                btn.title = aceso ? 'Escolhido' : 'Usar ' + s.nome;
+                btn.addEventListener('click', () => setTerminalShell(s.nome));
+                state.wsShellMenu.appendChild(btn);
+            });
         })
         .catch(() => {});
 }
 export function setTerminalShell(shell) {
     closeShellMenu();
+    const trocou = state.shellAtual !== shell;
+    state.shellAtual = shell;
+    ativarShell();
+    if (!trocou) {
+        loadShellInfo();
+        return;
+    }
     fetch(state.API + '/api/terminal/shell', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shell: shell })
     }).then(r => r.json()).then(data => {
-        if (data && data.atual && state.wsShellLabel) state.wsShellLabel.textContent = data.atual;
+        if (data && data.error) {
+            aviso('[terminal] ' + data.error, 'term-err');
+            desativarShell();
+            loadShellInfo();
+            return;
+        }
+        if (data && data.atual) state.shellAtual = data.atual;
         if (state.termSocket) state.termSocket.emit('pty:restart');
+        _renderModoTerminal();
         loadShellInfo();
-    }).catch(() => {});
+    }).catch(() => {
+        desativarShell();
+    });
 }
 export function openShellMenu() {
     state.shellMenuOpen = true;
     if (state.wsShellMenu) state.wsShellMenu.classList.add('expanded');
-    if (state.wsShellArrow) state.wsShellArrow.textContent = '<';
-    if (state.wsShellLabel) state.wsShellLabel.classList.add('menu-open');
+    if (state.wsShellArrow) {
+        state.wsShellArrow.textContent = '<';
+        state.wsShellArrow.classList.add('menu-open');
+    }
     loadShellInfo();
 }
 export function closeShellMenu() {
     state.shellMenuOpen = false;
     if (state.wsShellMenu) state.wsShellMenu.classList.remove('expanded');
-    if (state.wsShellArrow) state.wsShellArrow.textContent = '>';
-    if (state.wsShellLabel) state.wsShellLabel.classList.remove('menu-open');
+    if (state.wsShellArrow) {
+        state.wsShellArrow.textContent = '>';
+        state.wsShellArrow.classList.remove('menu-open');
+    }
 }
 export function toggleShellMenu() {
     if (state.shellMenuOpen) closeShellMenu(); else openShellMenu();
 }
+function _renderModoTerminal() {
+    if (state.wsShellLabel) {
+        state.wsShellLabel.classList.toggle('aceso', state.shellAtivo);
+        state.wsShellLabel.title = 'Sessao interativa (' + state.shellAtual + ')';
+    }
+    if (state.wsModoCards) {
+        state.wsModoCards.classList.toggle('aceso', !state.shellAtivo);
+    }
+}
+export function aplicarShellAtual(nome) {
+    if (nome) state.shellAtual = nome;
+    _renderModoTerminal();
+}
+export function ativarShell() {
+    if (state.shellAtivo) return;
+    state.shellAtivo = true;
+    descartarSelecao();
+    if (state.termMode) state.termMode.classList.add('shell-ativo');
+    _renderModoTerminal();
+    termFit();
+}
+export function desativarShell() {
+    if (!state.shellAtivo) return;
+    state.shellAtivo = false;
+    if (state.termMode) state.termMode.classList.remove('shell-ativo');
+    _renderModoTerminal();
+    termFit();
+}
 if (state.btnClear) {
     state.btnClear.addEventListener('click', clearLog);
 }
+if (state.wsModoCards) {
+    state.wsModoCards.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeShellMenu();
+        desativarShell();
+    });
+}
+if (state.wsShellLabel) {
+    state.wsShellLabel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeShellMenu();
+        ativarShell();
+    });
+}
+if (state.wsShellArrow) {
+    state.wsShellArrow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleShellMenu();
+    });
+}
+document.addEventListener('click', (e) => {
+    if (state.shellMenuOpen && !e.target.closest('#ws-shell')) closeShellMenu();
+});
+_renderModoTerminal();
 ligarClipboardTerminal();

@@ -1,12 +1,18 @@
+from collections import deque
 import os
 import re
+import shlex
 import shutil
 import threading
 import time
 
+from flask import request
+
 from src.backend.state import estado
 from src.backend.extensions import socketio
-from src.backend.tools.process import montar_env_processo
+from src.backend.services.file_service import venv_projeto
+
+
 def comando_inicia_axio(cmd):
     c = re.sub(r"\s+", " ", (cmd or "").strip().lower())
     if re.match(r"^npm\s+(start|run\b)", c):
@@ -18,6 +24,25 @@ def comando_inicia_axio(cmd):
     if re.match(r"^(python|python3|py)\s+(app\.py|ax\.py)(\s|$)", c):
         return True
     return False
+
+def tokenizar_linha(comando):
+    """Divide o comando em tokens, limpando as aspas que o shlex preserva.
+
+    Com posix=False o token fica com as aspas coladas (ex: "C:/x/python.exe"),
+    o que estragava _normalizar_exe: sobrava um python.exe\" que nao casava com
+    nenhuma regra da allowlist e a mensagem devolvida nao dizia o verdadeiro
+    motivo. O strip alinha com o que config.py e file_service.py ja fazem.
+    """
+    cmd = (comando or "").strip()
+    if not cmd:
+        return []
+    try:
+        partes = shlex.split(cmd, posix=False)
+        if partes:
+            return [p.strip('"').strip("'") for p in partes]
+    except ValueError:
+        pass
+    return [p.strip('"').strip("'") for p in cmd.split()]
 
 def shell_caminho(nome):
     nome = (nome or "").strip().lower()
@@ -63,8 +88,6 @@ def detectar_shell():
             return {"cmd": caminho, "nome": nome}
     return {"cmd": "sh", "nome": "sh"}
 
-# Marca se a preferencia de shell ja foi lida do disco neste processo. Evita
-# pagar I/O a cada chamada de detectar_shell.
 _shell_persistido_lido = False
 
 def carregar_shell_persistido():
@@ -87,11 +110,14 @@ def carregar_shell_persistido():
         estado["terminal_shell"] = shell
     return shell
 
-# --- Terminal interativo (shell persistente via ConPTY) + Socket.IO ---
 _pty_proc = None
 pty_lock = threading.Lock()
 _pty_pump_started = False
 _pty_dims = (24, 120)
+_pty_hist = deque()
+_pty_hist_len = 0
+_pty_hist_aparado = False
+_LIMITE_HIST_PTY = 200000
 
 def _pty_env():
     return montar_env_processo(detectar_shell()["cmd"])
@@ -113,6 +139,8 @@ def _pty_spawn_locked():
     elif shell["nome"] == "cmd":
         args += ["/Q", "/D"]
     _pty_proc = PtyProcess.spawn(args, cwd=cwd, env=_pty_env(), dimensions=_pty_dims)
+    _pty_hist_limpar()
+    socketio.emit('pty:session', {'shell': shell['nome']})
     return _pty_proc
 
 def pty_kill_locked():
@@ -147,6 +175,8 @@ def _pty_pump():
             if isinstance(data, bytes):
                 data = data.decode('utf-8', errors='replace')
             if data:
+                with pty_lock:
+                    _pty_hist_append(data)
                 socketio.emit('pty:output', {'data': data})
         except EOFError:
             with pty_lock:
@@ -161,6 +191,30 @@ def _pty_ensure_pump():
         return
     _pty_pump_started = True
     threading.Thread(target=_pty_pump, daemon=True).start()
+
+def _pty_hist_limpar():
+    global _pty_hist_len, _pty_hist_aparado
+    _pty_hist.clear()
+    _pty_hist_len = 0
+    _pty_hist_aparado = False
+
+def _pty_hist_append(data):
+    global _pty_hist_len, _pty_hist_aparado
+    _pty_hist.append(data)
+    _pty_hist_len += len(data)
+    while _pty_hist_len > _LIMITE_HIST_PTY and len(_pty_hist) > 1:
+        _pty_hist_len -= len(_pty_hist.popleft())
+        _pty_hist_aparado = True
+
+def _pty_hist_texto():
+    if not _pty_hist:
+        return ''
+    texto = ''.join(_pty_hist)
+    if _pty_hist_aparado:
+        corte = texto.find('\n')
+        if corte != -1:
+            texto = texto[corte + 1:]
+    return texto
 
 @socketio.on('connect')
 def _pty_on_connect():
@@ -208,3 +262,24 @@ def _pty_on_restart():
     _pty_ensure_pump()
     with pty_lock:
         pty_kill_locked()
+
+@socketio.on('pty:replay')
+def _pty_on_replay():
+    _pty_ensure_pump()
+    with pty_lock:
+        texto = _pty_hist_texto()
+    socketio.emit('pty:replay', {'data': texto}, to=request.sid)
+def montar_env_processo(comando, porta_env=None):
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    if porta_env:
+        env["PORT"] = str(porta_env)
+        env["FLASK_RUN_PORT"] = str(porta_env)
+    venv = venv_projeto()
+    if venv:
+        scripts = venv["scripts"]
+        path_atual = env.get("PATH", "")
+        env["PATH"] = scripts + os.pathsep + path_atual if path_atual else scripts
+        env["VIRTUAL_ENV"] = venv["dir"]
+    return env

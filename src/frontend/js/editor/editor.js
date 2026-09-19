@@ -1,6 +1,7 @@
+import { ordenarPorChaves, tornarAbasArrastaveis } from './arrastar_abas.js';
 import { currentDir, deselectEntry, getLanguage, highlightSelection, loadDirChildren, loadExplorer, reloadExplorer, selectEntry, setView } from './explorer.js';
 import { ensureEditor, updateEditorWatermark } from './monaco.js';
-import { fadeEditorIn, fadeEditorSwap, revealSnippet, smoothRevealLine } from './scroll.js';
+import { fadeEditorIn, fadeEditorSwap, smoothRevealLine } from './scroll.js';
 import { enterLogMode, enterReadonlyLogMode, exitLogMode } from './themes.js';
 import { appendLine, basename, enterDir } from './terminal.js';
 import { clearHoverLine } from './highlight.js';
@@ -17,7 +18,7 @@ export function loadFileIntoEditor(path, opts) {
                 state.wsStatus.textContent = 'editor: erro';
                 return false;
             }
-            setView('editor');
+            if (!opts.manterVista) setView('editor');
             ensureEditor();
             const applyContent = function () {
                 state.suppressAutoSave = true;
@@ -26,6 +27,7 @@ export function loadFileIntoEditor(path, opts) {
                     state.editorViewStates[state.currentFile] = state.editor.saveViewState();
                 }
                 state.currentFile = path;
+                state.abaAtiva = path;
                 if (data.tipo === 'imagem') {
                     showEditorImage(data);
                 } else if (data.tipo === 'binario') {
@@ -45,6 +47,7 @@ export function loadFileIntoEditor(path, opts) {
                     if (state.editorViewStates[path]) {
                         state.editor.restoreViewState(state.editorViewStates[path]);
                     }
+                    state.editor.layout();
                     updateEditorWatermark();
                     if (opts.logMode) {
                         enterLogMode(opts.snippet, data.conteudo || '');
@@ -65,16 +68,15 @@ export function loadFileIntoEditor(path, opts) {
                 state.suppressAutoSave = false;
                 updateTabsActive();
                 state.wsStatus.textContent = 'editor: ' + path;
-                if (state.pendingSnippet) {
-                    revealSnippet(state.pendingSnippet, data.conteudo || '');
-                    state.pendingSnippet = null;
-                }
                 if (opts.rename) {
                     state.pendingTabRename = path;
                     renderTabs();
                 }
             };
-            if (state.currentFile) {
+
+            if (opts.semFade || opts.manterVista) {
+                applyContent();
+            } else if (state.currentFile) {
                 fadeEditorSwap(applyContent);
             } else {
                 applyContent();
@@ -122,6 +124,7 @@ export function showEditorBinary(msg) {
     if (!prepareImageHost()) return;
     const div = document.createElement('div');
     div.className = 'text-[var(--text-mutado)] text-sm font-mono select-text px-6 text-center';
+    div.style.whiteSpace = 'pre-line';
     div.textContent = msg;
     state.editorImageHost.appendChild(div);
     fadeInImageHost();
@@ -159,10 +162,13 @@ export function findTabElement(path) {
     }
     return null;
 }
+function pathDaAbaAtiva() {
+    return state.abaAtiva || state.currentFile;
+}
 export function updateTabsActive() {
     if (!state.editorTabs) return;
     state.editorTabs.querySelectorAll('.editor-tab').forEach(t => {
-        t.classList.toggle('editor-tab-active', t.dataset.path === state.currentFile);
+        t.classList.toggle('editor-tab-active', t.dataset.path === pathDaAbaAtiva());
     });
 }
 export function allTabPaths() {
@@ -178,6 +184,12 @@ export function addTab(path, preview) {
         if (state.previewTabPath === path) state.previewTabPath = null;
     }
 }
+export function focarAba(path) {
+    if (!path) return;
+    addTab(path, false);
+    state.abaAtiva = path;
+    renderTabs();
+}
 export function pinPreview(path) {
     const target = path || state.previewTabPath || state.currentFile;
     if (!target) return;
@@ -185,17 +197,60 @@ export function pinPreview(path) {
     if (state.previewTabPath === target) state.previewTabPath = null;
     renderTabs();
 }
+function rotulosDasAbas(caminhos) {
+
+    const rotulos = new Map();
+    const porNome = new Map();
+    caminhos.forEach(p => {
+        const b = basename(p);
+        if (!porNome.has(b)) porNome.set(b, []);
+        porNome.get(b).push(p);
+    });
+    const usados = new Set();
+    caminhos.forEach(p => {
+        const grupo = porNome.get(basename(p));
+        if (grupo.length === 1 || grupo[0] === p) {
+            rotulos.set(p, basename(p));
+            usados.add(basename(p));
+        }
+    });
+    caminhos.forEach(p => {
+        if (rotulos.has(p)) return;
+        const partes = String(p).replace(/\\/g, '/').split('/').filter(Boolean);
+        for (let n = 2; n <= partes.length; n++) {
+            const candidato = partes.slice(-n).join('/');
+            if (!usados.has(candidato)) {
+                usados.add(candidato);
+                rotulos.set(p, candidato);
+                return;
+            }
+        }
+        rotulos.set(p, p);
+    });
+    return rotulos;
+}
+export function reordenarAbas(ordem) {
+    ordenarPorChaves(state.openTabs, ordem, (caminho) => caminho);
+    renderTabs();
+}
+const tabsApagadas = new Set();
+const ESPERA_DA_RECONCILIACAO_MS = 300;
+let reconciliacaoTimer = null;
+
 export function renderTabs() {
     if (!state.editorTabs) return;
+    tornarAbasArrastaveis(state.editorTabs, reordenarAbas);
+    const caminhos = allTabPaths();
+    const rotulos = rotulosDasAbas(caminhos);
     state.editorTabs.innerHTML = '';
-    allTabPaths().forEach(path => {
+    caminhos.forEach(path => {
         const tab = document.createElement('div');
-        tab.className = 'editor-tab' + (path === state.currentFile ? ' editor-tab-active' : '') + (path === state.previewTabPath ? ' editor-tab-preview' : '');
+        tab.className = 'editor-tab' + (path === pathDaAbaAtiva() ? ' editor-tab-active' : '') + (path === state.previewTabPath ? ' editor-tab-preview' : '') + (tabsApagadas.has(path) ? ' editor-tab-apagado' : '');
         tab.dataset.path = path;
         tab.title = path;
         const nameSpan = document.createElement('span');
         nameSpan.className = 'editor-tab-name';
-        nameSpan.textContent = basename(path);
+        nameSpan.textContent = rotulos.get(path) || basename(path);
         const closeBtn = document.createElement('button');
         closeBtn.className = 'editor-tab-close';
         closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
@@ -225,49 +280,90 @@ export function renderTabs() {
         }
     }
 }
+export function marcarAbaApagada(path) {
+    if (_marcarAbaApagada(path)) renderTabs();
+}
+
+export function limparAbaApagada(path) {
+    if (_limparAbaApagada(path)) renderTabs();
+}
+
+function _marcarAbaApagada(path) {
+    if (!path || tabsApagadas.has(path)) return false;
+    tabsApagadas.add(path);
+    return true;
+}
+
+function _limparAbaApagada(path) {
+    return tabsApagadas.delete(path);
+}
+
+export function agendarReconciliacaoDeAbas() {
+    if (reconciliacaoTimer) clearTimeout(reconciliacaoTimer);
+    reconciliacaoTimer = setTimeout(() => {
+        reconciliacaoTimer = null;
+        reconciliarAbas();
+    }, ESPERA_DA_RECONCILIACAO_MS);
+}
+
+export async function reconciliarAbas() {
+    const caminhos = allTabPaths();
+    if (!caminhos.length) return;
+    let ausentes;
+    try {
+        const resp = await fetch(state.API + '/api/fs_existem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caminhos: caminhos })
+        });
+        const data = await resp.json();
+        ausentes = new Set(data && data.ausentes);
+    } catch (erro) {
+        return;
+    }
+    let mudou = false;
+    for (const caminho of caminhos) {
+        if (ausentes.has(caminho)) mudou = _marcarAbaApagada(caminho) || mudou;
+        else mudou = _limparAbaApagada(caminho) || mudou;
+    }
+    if (mudou) renderTabs();
+}
+
+window.addEventListener('focus', agendarReconciliacaoDeAbas);
+
 export function startTabRename(path, tab, nameSpan) {
     if (!nameSpan) return;
-    state.renameTarget = { path: path };
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = basename(path);
-    input.className = 'editor-tab-rename';
-    nameSpan.replaceWith(input);
-    input.focus();
-    input.select();
-    let done = false;
-    const commit = async () => {
-        if (done) return;
-        done = true;
-        state.renameTarget = null;
-        const novoNome = input.value.trim();
-        if (novoNome && novoNome !== basename(path)) {
-            await performRename(path, novoNome);
-        } else {
-            renderTabs();
-        }
-    };
-    input.addEventListener('keydown', ev => {
-        if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
-        else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); done = true; state.renameTarget = null; renderTabs(); }
+    iniciarRenameInline({
+        path: path,
+        alvo: nameSpan,
+        valor: basename(path),
+        nomeOriginal: basename(path),
+        classe: 'editor-tab-rename',
+        renameTarget: { path: path },
+        aoDescartar: () => renderTabs(),
     });
-    input.addEventListener('blur', commit);
 }
 export function openFileInEditor(path, opts) {
+
     opts = opts || {};
-    if (state.currentFile === path) { setView('editor'); return; }
+    limparAbaApagada(path);
+    if (state.currentFile === path && !opts.recarregar) {
+        if (!opts.manterVista) setView('editor');
+        return Promise.resolve(true);
+    }
     if (!state.monaco) {
         state.pendingFile = path;
         if (opts.rename) state.pendingTabRename = path;
-        setView('editor');
+        if (!opts.manterVista) setView('editor');
         state.wsStatus.textContent = 'editor: carregando...';
-        return;
+        return Promise.resolve(false);
     }
-    setView('editor');
-    loadFileIntoEditor(path, opts).then(ok => {
-        if (!ok) return;
+    if (!opts.manterVista) setView('editor');
+    return loadFileIntoEditor(path, opts).then(ok => {
+        if (!ok) return false;
         addTab(path, !!opts.preview);
         renderTabs();
+        return true;
     });
 }
 export function closeTab(path) {
@@ -275,6 +371,7 @@ export function closeTab(path) {
     const idx = allBefore.indexOf(path);
     if (state.openTabs.includes(path)) state.openTabs.splice(state.openTabs.indexOf(path), 1);
     if (state.previewTabPath === path) state.previewTabPath = null;
+    if (state.abaAtiva === path) state.abaAtiva = null;
     if (state.currentFile === path) {
         if (state.logMode || state.diffMode) {
             exitLogMode();
@@ -395,13 +492,25 @@ export function startRename(path, row) {
     if (!row) return;
     const span = row.querySelector('span');
     if (!span) return;
-    state.renameTarget = { path: path, row: row };
     const nome = span.textContent;
+    iniciarRenameInline({
+        path: path,
+        alvo: span,
+        valor: nome,
+        nomeOriginal: nome,
+        classe: 'explorer-rename-input',
+        renameTarget: { path: path, row: row },
+        aoDescartar: (input) => { if (input.parentNode) input.replaceWith(span); },
+    });
+}
+
+function iniciarRenameInline(opts) {
+    state.renameTarget = opts.renameTarget;
     const input = document.createElement('input');
     input.type = 'text';
-    input.value = nome;
-    input.className = 'explorer-rename-input';
-    span.replaceWith(input);
+    input.value = opts.valor;
+    input.className = opts.classe;
+    opts.alvo.replaceWith(input);
     input.focus();
     input.select();
     let done = false;
@@ -410,17 +519,17 @@ export function startRename(path, row) {
         done = true;
         state.renameTarget = null;
         const novoNome = input.value.trim();
-        if (novoNome && novoNome !== nome) {
-            await performRename(path, novoNome);
-        } else if (input.parentNode) {
-            input.replaceWith(span);
+        if (novoNome && novoNome !== opts.nomeOriginal) {
+            await performRename(opts.path, novoNome);
+        } else {
+            opts.aoDescartar(input);
         }
     };
-    input.addEventListener('keydown', (ev) => {
+    input.addEventListener('keydown', ev => {
         if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
-        else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); done = true; state.renameTarget = null; input.replaceWith(span); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); done = true; state.renameTarget = null; opts.aoDescartar(input); }
     });
-    input.addEventListener('blur', () => { commit(); });
+    input.addEventListener('blur', commit);
 }
 export async function createFs(tipo) {
     const dir = currentDir();
@@ -618,8 +727,8 @@ export async function trashPath(path) {
             appendLine('[explorer] ' + data.error, 'term-err');
             return;
         }
+        marcarAbaApagada(data.caminho || path);
         window.dispatchEvent(new CustomEvent('axio-fs-deleted', { detail: { path: data.caminho || path } }));
-        if (allTabPaths().includes(path)) closeTab(path);
         if (state.selectedPath === path) deselectEntry();
         reloadExplorer();
         await loadTrash(true);

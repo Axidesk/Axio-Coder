@@ -1,11 +1,13 @@
-import { activate, collapseDockForFocus, expandDockForFocus, getView, handleSSE, isDockCollapsedForFocus, loadVenvName, openFileAtLine, openFileFromLog, preloadMonaco, setActive, setTopBarHidden, showEditor } from './workspace.js';
-import { renderTabs, revealPath, updateExplorerToolbar } from './editor.js';
-import { currentDir, reloadExplorer, selectEntry, setView } from './explorer.js';
+import { abrirDoc, activate, collapseDockForFocus, expandDockForFocus, getView, handleSSE, isDockCollapsedForFocus, loadVenvName, openFileAtLine, openFileFromLog, preloadMonaco, setActive, setTopBarHidden, showEditor, transferirDaCamada } from './workspace.js';
+import { focarAba, renderTabs, revealAndSelectFile, revealPath, updateExplorerToolbar } from './editor.js';
+import { alternarDoc, currentDir, fecharPreview, reloadExplorer, selectEntry, setView } from './explorer.js';
 import { appendLine } from './terminal.js';
 import { ensureTerminal, termFit } from './xterm.js';
 import { updateEditorWatermark } from './monaco.js';
 import { setFocusMode } from './diff.js';
 import { state } from './state.js';
+
+const RECUO_DA_NAVEGACAO_MS = 1200;
 
 export function fadeEditorSwap(apply) {
     if (!state.editorHost) { apply(); return; }
@@ -144,28 +146,18 @@ export function smoothRevealLine(ed, targetLine, duration) {
     const targetTop = ed.getTopForLineNumber(targetLine) - (layout.height / 2);
     smoothScrollEditor(ed, targetTop, duration);
 }
-export function revealSnippet(snippet, content) {
-    if (!snippet) return;
-    const firstLine = snippet.split('\n').find(l => l.trim().length > 0);
-    if (!firstLine) return;
-    const needle = firstLine.trim();
-    const lines = content.split('\n');
-    let targetLine = -1;
-    for (let i = 0; i < lines.length; i++) {
-        if (lines[i].indexOf(needle) !== -1) {
-            targetLine = i + 1;
-            break;
-        }
-    }
-    if (targetLine === -1) return;
-    if (state.diffMode && state.diffModifiedEditor) {
-        state.diffModifiedEditor.layout();
-        state.diffModifiedEditor.setPosition({ lineNumber: targetLine, column: 1 });
-        smoothRevealLine(state.diffModifiedEditor, targetLine);
-    } else if (state.editor) {
-        state.editor.setPosition({ lineNumber: targetLine, column: 1 });
-        smoothRevealLine(state.editor, targetLine);
-    }
+export function revelarLinhaComRolagem(ed, linha, duration) {
+    if (!ed || !linha) return;
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            if (!ed) return;
+            ed.layout();
+            const layout = ed.getLayoutInfo();
+            const top = ed.getTopForLineNumber(linha) - (layout.height / 2);
+            if (!isFinite(top)) return;
+            smoothScrollEditor(ed, Math.max(0, top), duration || 600);
+        });
+    });
 }
 export function saveFile() {
     if (!state.editor || !state.currentFile || state.currentFileIsImage) return;
@@ -228,7 +220,10 @@ export function scheduleExplorerReload() {
     if (state.explorerReloadTimer) clearTimeout(state.explorerReloadTimer);
     state.explorerReloadTimer = setTimeout(() => {
         state.explorerReloadTimer = null;
-        if (Date.now() - state.explorerNavigatedAt < 1200) return;
+        if (Date.now() - state.explorerNavigatedAt < RECUO_DA_NAVEGACAO_MS) {
+            scheduleExplorerReload();
+            return;
+        }
         if (typeof reloadExplorer === 'function') reloadExplorer();
     }, 250);
 }
@@ -244,8 +239,14 @@ window.WorkspaceView = {
     loadVenvName: loadVenvName,
     openFileFromLog: openFileFromLog,
     openFileAtLine: openFileAtLine,
+    revealAndSelectFile: revealAndSelectFile,
+    focarAba: focarAba,
+    transferirDaCamada: transferirDaCamada,
     setFocusMode: setFocusMode,
     setView: setView,
+    fecharPreview: fecharPreview,
+    alternarDoc: alternarDoc,
+    abrirDoc: abrirDoc,
     showEditor: showEditor,
     getView: getView,
     preloadMonaco: preloadMonaco,

@@ -23,6 +23,8 @@ export const state = {
     isEyeMode: false,
     currentOpenedDiff: null,
     isShowingSessionHistory: false,
+    codigoDoHistoricoNoEditor: false,
+    vistaDocAtual: 'chat',
     sessionHistoryList: [],
     sessionDetailCache: {},
     sessionHistoryLoaded: false,
@@ -61,5 +63,5 @@ export const state = {
     imageCounter: 1,
     historyPreloadTimer: null,
     eventSource: null,
-    discardedRounds: new Set(),
+    restoreEvents: [],
 };

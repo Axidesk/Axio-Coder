@@ -1,9 +1,49 @@
+import base64
 import json
 import time
 
 from src.backend.ai.context import ErroContextoExcedido, eh_erro_contexto_limite, eh_erro_transitorio
 from src.backend.ai.gemini import get_gemini_client
 from src.backend.ai.deepseek import get_deepseek_client
+
+
+def gerar_texto(prompt, instrucao, temperatura=0.0, use_deepseek=False):
+    """Uma resposta do modelo SEM ferramentas: um prompt, um texto de volta.
+
+    E o caminho curto para as tarefas internas do programa que nao precisam de
+    raciocinio com ferramentas - etiquetas da arvore, traducao das notas. Uma
+    mensagem, uma resposta, o mesmo retry do chat.
+    """
+    from google.genai import types
+
+    config = types.GenerateContentConfig(system_instruction=instrucao, temperature=temperatura)
+    historico = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+    resposta = chamar_api_com_retry(historico, config, use_deepseek=use_deepseek)
+    return getattr(resposta, "text", "") or ""
+
+
+def json_da_resposta(texto):
+    """Primeiro JSON (objeto ou lista) que a resposta do modelo traz, ou None.
+
+    Os modelos devolvem o JSON com texto a volta - ou dentro de um bloco de codigo
+    - com frequencia. O recorte vai do primeiro delimitador ao ULTIMO fecho, que e
+    o que funciona nos dois formatos; o candidato mais a esquerda e tentado
+    primeiro, senao `[{...}]` seria lido como o objeto de dentro.
+    """
+    if not texto:
+        return None
+    bruto = str(texto)
+    candidatos = [par for par in ((bruto.find("{"), "}"), (bruto.find("["), "]")) if par[0] >= 0]
+    for inicio, fecho in sorted(candidatos, key=lambda par: par[0]):
+        fim = bruto.rfind(fecho)
+        if fim <= inicio:
+            continue
+        try:
+            return json.loads(bruto[inicio:fim + 1])
+        except json.JSONDecodeError:
+            continue
+    return None
+
 
 def converter_schema_google_para_openai(schema):
     if not schema:
@@ -17,7 +57,42 @@ def converter_schema_google_para_openai(schema):
         res["enum"] = schema.enum
     return res
 
-def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False):
+def _imagem_da_parte(parte):
+    """(mime, base64) de uma parte com imagem embutida; None se a parte nao for imagem."""
+    inline = getattr(parte, "inline_data", None)
+    dados = getattr(inline, "data", None) if inline else None
+    if not dados:
+        return None
+    mime = getattr(inline, "mime_type", None) or "image/png"
+    if isinstance(dados, str):
+        return mime, dados
+    return mime, base64.b64encode(dados).decode("ascii")
+
+def _conteudo_para_deepseek(texto, imagens):
+    """Conteudo de uma mensagem: string simples, ou os blocos multimodais do guia.
+
+    A API aceita imagens SO em mensagens do utilizador - nas outras responde 400 -
+    e nesse caso o content deixa de ser texto e passa a ser uma LISTA de blocos
+    (um de texto, um image_url por imagem, em data URL base64).
+    """
+    if not imagens:
+        return texto
+    blocos = []
+    if texto:
+        blocos.append({"type": "text", "text": texto})
+    for mime, dados in imagens:
+        blocos.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{dados}"}})
+    return blocos
+
+def _modelo_gemini(ai_model):
+    """Nome do modelo Gemini para o identificador escolhido no frontend."""
+    return {
+        "gemini-flash": "gemini-3.8-flash",
+        "gemini": "gemini-3.1-pro-preview-customtools",
+    }.get(ai_model, "gemini-3.1-pro-preview-customtools")
+
+
+def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False, ai_model="gemini"):
     for tentativa in range(max_tentativas):
         try:
             if use_deepseek:
@@ -35,7 +110,6 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                 for i, h in enumerate(historico):
                     role = "assistant" if h.role == "model" else h.role
                     
-                    # 1. Se for uma mensagem de resposta de ferramenta (do "user" no contexto Gemini)
                     is_tool_response = any(hasattr(p, 'function_response') and p.function_response for p in h.parts)
                     
                     if is_tool_response:
@@ -44,21 +118,24 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                             if hasattr(p, 'function_response') and p.function_response:
                                 mensagens_ds.append({
                                     "role": "tool",
-                                    "tool_call_id": f"call_{i-1}_{func_resp_index}", # Refere-se à mensagem anterior
+                                    "tool_call_id": f"call_{i-1}_{func_resp_index}",
                                     "name": p.function_response.name,
                                     "content": json.dumps(p.function_response.response)
                                 })
                                 func_resp_index += 1
-                        continue # Vai para a próxima mensagem do histórico
+                        continue
 
-                    # 2. Se for uma mensagem normal (User ou Assistant/Model)
                     texto_bruto = ""
                     reasoning_bruto = ""
                     tool_calls = []
                     func_call_index = 0
+                    imagens = []
                     for p in h.parts:
                         if hasattr(p, 'text') and p.text:
                             texto_bruto += p.text
+                        imagem = _imagem_da_parte(p)
+                        if imagem:
+                            imagens.append(imagem)
                         if hasattr(p, 'reasoning_content') and p.reasoning_content:
                             reasoning_bruto += p.reasoning_content
                         if hasattr(p, 'function_call') and p.function_call:
@@ -72,9 +149,6 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                             })
                             func_call_index += 1
 
-                    # Limpeza de Pensamento (Thinking)
-                    # Prioriza o campo reasoning_content preservado pelo MockResponse;
-                    # se ausente, extrai das tags <think>...</think> legadas.
                     pensamento = reasoning_bruto.strip()
                     if "<think>" in texto_bruto and "</think>" in texto_bruto:
                         partes = texto_bruto.split("</think>", 1)
@@ -85,14 +159,13 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                     else:
                         conteudo_limpo = texto_bruto.strip()
 
-                    # Montagem do dicionário da mensagem
                     msg_dict = {"role": role}
                     
-                    # DeepSeek: Se houver tool_calls ou reasoning, content não pode ser None
-                    msg_dict["content"] = conteudo_limpo if (conteudo_limpo or not tool_calls) else ""
+                    msg_dict["content"] = _conteudo_para_deepseek(
+                        conteudo_limpo if (conteudo_limpo or not tool_calls) else "",
+                        imagens,
+                    )
                     
-                    # DeepSeek exige que TODO assistant com tool_calls reenvie o reasoning_content
-                    # (mesmo vazio) em toda request subsequente; sem isso retorna erro 400.
                     if role == "assistant" and (pensamento or tool_calls):
                         msg_dict["reasoning_content"] = pensamento
                     
@@ -101,7 +174,6 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                     
                     mensagens_ds.append(msg_dict)
 
-                # Configuração das ferramentas (Tools)
                 ds_tools = []
                 if config.tools:
                     for tool in config.tools:
@@ -120,8 +192,6 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                     messages=mensagens_ds,
                     tools=ds_tools if ds_tools else None
                 )
-                
-                print(f"[API] Modelo real que respondeu: {response.model}")
                 
                 res_msg = response.choices[0].message
                 
@@ -165,11 +235,10 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                 if config is None:
                     config = types.GenerateContentConfig()
                 
-                # Timeout definitivo: 300000ms (5 minutos) via HttpOptions
                 config.http_options = types.HttpOptions(timeout=300000)
 
                 return get_gemini_client().models.generate_content(
-                    model='gemini-3.1-pro-preview-customtools',
+                    model=_modelo_gemini(ai_model),
                     contents=historico,
                     config=config
                 )

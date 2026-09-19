@@ -1,0 +1,285 @@
+:root {
+    --vw-fundo: #17181a;
+    --vw-painel: #1e1e1e;
+    --vw-borda: #2c2f33;
+    --vw-texto: #d6d8dc;
+    --vw-fraco: #8b9096;
+    --vw-oliva: #8a9a4b;
+    --vw-erro: #c9564a;
+    --vw-cruzar: 180ms;
+    --vw-barra-altura: 26px;
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--vw-fundo);
+    color: var(--vw-texto);
+    font: 13px/1.45 system-ui, "Segoe UI", sans-serif;
+    overflow: hidden;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+.vw-ferramenta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: calc(var(--vw-barra-altura) - 4px);
+    height: calc(var(--vw-barra-altura) - 4px);
+    border: 0;
+    background: transparent;
+    color: var(--vw-fraco);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    border-radius: 9999px;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.vw-ferramenta svg {
+    width: 15px;
+    height: 15px;
+}
+
+.vw-ferramenta:hover { background: var(--vw-borda); color: var(--vw-texto); }
+
+#vw-ferramentas {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    height: var(--vw-barra-altura);
+    padding: 0 12px;
+    background: var(--vw-painel);
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: var(--vw-fraco);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+body.vw-com-ferramentas #vw-ferramentas:not(:empty) {
+    display: flex;
+}
+
+#vw-palco {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.vw-caixa {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.vw-caixa.vw-visivel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 1;
+    animation: vw-entrar var(--vw-cruzar) ease both;
+}
+
+@keyframes vw-entrar {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vw-caixa.vw-visivel { animation: none; }
+}
+
+#vw-vazio {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--vw-fraco);
+    text-align: center;
+}
+
+#vw-vazio.vw-escondido { display: none; }
+
+.vw-vazio-titulo {
+    margin: 0;
+    font-weight: 200;
+    font-size: 2.6rem;
+    letter-spacing: 10px;
+    color: var(--vw-fraco);
+    opacity: .35;
+}
+
+.vw-dica {
+    margin: 8px 0 0;
+    font-size: 12px;
+    opacity: .7;
+    max-width: 30rem;
+    line-height: 1.5;
+}
+
+.vw-estado {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--vw-fraco);
+    max-width: 80%;
+}
+
+.vw-estado.vw-erro { color: var(--vw-erro); }
+
+.vw-barra-progresso {
+    width: 220px;
+    height: 4px;
+    margin: 10px auto 0;
+    background: var(--vw-borda);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.vw-barra-progresso > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--vw-oliva);
+    transition: width .2s linear;
+}
+
+.vw-imagem, .vw-media {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+}
+
+.vw-media { outline: 0; }
+
+.vw-texto {
+    margin: 0;
+    padding: 14px 16px;
+    font: 12px/1.5 "Cascadia Mono", Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #cfd3d8;
+}
+
+.vw-pdf-pagina {
+    display: block;
+    margin: 0 auto 10px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
+}
+
+.vw-docx {
+    padding: 20px 16px;
+    color: #111;
+    background: transparent;
+}
+
+.vw-docx .docx-wrapper {
+    background: transparent;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.vw-docx .docx-wrapper > section.docx {
+    background: #fff;
+    color: #111;
+    box-shadow: none;
+    margin: 0;
+}
+
+.vw-sheet-abas {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+.vw-sheet-aba {
+    border: 1px solid var(--vw-borda);
+    background: transparent;
+    color: var(--vw-fraco);
+    border-radius: 4px;
+    height: calc(var(--vw-barra-altura) - 6px);
+    padding: 0 9px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+}
+
+.vw-sheet-aba.vw-ativa {
+    color: #17181a;
+    background: var(--vw-oliva);
+    border-color: var(--vw-oliva);
+}
+
+.vw-tabela {
+    border-collapse: collapse;
+    font: 12px/1.4 "Cascadia Mono", Consolas, monospace;
+    background: #fff;
+    color: #111;
+}
+
+.vw-tabela td, .vw-tabela th {
+    border: 1px solid #d0d0d0;
+    padding: 2px 7px;
+    white-space: pre;
+}
+
+.vw-tabela th { background: #eef0f2; font-weight: 600; }
+
+.vw-rolagem { padding: 10px; }
+
+.vw-rolagem-clara { background: #fff; }
+
+.vw-lista-erros {
+    text-align: left;
+    display: inline-block;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}

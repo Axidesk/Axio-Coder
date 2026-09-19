@@ -1,6 +1,7 @@
 import { getLanguage } from './explorer.js';
-import { fadeEditorIn, revealSnippet, smoothRevealLine, smoothScrollEditor } from './scroll.js';
+import { fadeEditorIn, smoothScrollEditor } from './scroll.js';
 import { clearHoverLineFor, installHoverHighlightFor } from './highlight.js';
+import { opcoesBase, RECUO_COLUNA_DIREITA, RECUO_LATERAL } from './metricas.js';
 import { defineDiffTheme } from './themes.js';
 import { state } from './state.js';
 
@@ -68,88 +69,35 @@ export function computeLineDiff(originalText, modifiedText) {
     }
     return { deletedLines, addedLines, origToMod, modToOrig, anchorLine: prefix };
 }
-export function buildScrollMap(count, sparseMap) {
-    const map = new Array(count + 1);
-    const anchors = [];
-    for (let i = 1; i <= count; i++) {
-        if (sparseMap[i] != null) anchors.push([i, sparseMap[i]]);
-    }
-    if (!anchors.length) {
-        for (let i = 1; i <= count; i++) map[i] = i;
-        return map;
-    }
-    const first = anchors[0];
-    const last = anchors[anchors.length - 1];
-    for (let i = 1; i < first[0]; i++) map[i] = first[1];
-    for (let k = 0; k < anchors.length - 1; k++) {
-        const a1 = anchors[k][0];
-        const b1 = anchors[k][1];
-        const a2 = anchors[k + 1][0];
-        const b2 = anchors[k + 1][1];
-        const span = a2 - a1;
-        for (let i = a1; i <= a2; i++) {
-            const t = span === 0 ? 0 : (i - a1) / span;
-            map[i] = b1 + t * (b2 - b1);
-        }
-    }
-    for (let i = last[0] + 1; i <= count; i++) map[i] = last[1];
-    return map;
-}
-export function getTopForFractionalLine(ed, line) {
-    const lo = Math.floor(line);
-    const hi = Math.ceil(line);
-    if (lo >= hi) return ed.getTopForLineNumber(lo);
-    const topLo = ed.getTopForLineNumber(lo);
-    const topHi = ed.getTopForLineNumber(hi);
-    return topLo + (topHi - topLo) * (line - lo);
-}
-export function syncDiffScrollFrom(source, target, sourceToTargetMap) {
+export function syncDiffScrollFrom(source, target) {
+
     if (state.diffScrollSyncing || !source || !target) return;
-    const sourceLeft = source.getScrollLeft();
-    if (Math.abs(target.getScrollLeft() - sourceLeft) >= 0.5) {
-        state.diffScrollSyncing = true;
-        try {
-            target.setScrollLeft(sourceLeft, state.monaco.editor.ScrollType.Immediate);
-        } finally {
-            state.diffScrollSyncing = false;
-        }
-    }
-    if (!sourceToTargetMap) return;
-    const ranges = source.getVisibleRanges();
-    if (!ranges || !ranges.length) return;
-    const topLine = ranges[0].startLineNumber;
-    const mapped = sourceToTargetMap[topLine];
-    if (mapped == null) return;
-    const offsetInLine = source.getScrollTop() - source.getTopForLineNumber(topLine);
-    const targetTop = getTopForFractionalLine(target, mapped) + offsetInLine;
-    if (Math.abs(target.getScrollTop() - targetTop) < 0.5) return;
+    const esquerda = source.getScrollLeft();
+    const topo = source.getScrollTop();
+    const moverX = Math.abs(target.getScrollLeft() - esquerda) >= 0.5;
+    const moverY = Math.abs(target.getScrollTop() - topo) >= 0.5;
+    if (!moverX && !moverY) return;
     state.diffScrollSyncing = true;
     try {
-        target.setScrollTop(targetTop, state.monaco.editor.ScrollType.Immediate);
+        if (moverX) target.setScrollLeft(esquerda, state.monaco.editor.ScrollType.Immediate);
+        if (moverY) target.setScrollTop(topo, state.monaco.editor.ScrollType.Immediate);
     } finally {
         state.diffScrollSyncing = false;
     }
 }
-export function installDiffScrollSync(diff) {
+export function installDiffScrollSync() {
     disposeDiffScrollSync();
-    if (!state.diffOriginalEditor || !state.diffModifiedEditor || !diff) return;
-    const origModel = state.diffOriginalEditor.getModel();
-    const modModel = state.diffModifiedEditor.getModel();
-    if (!origModel || !modModel) return;
-    state.diffOrigToModMap = buildScrollMap(origModel.getLineCount(), diff.origToMod);
-    state.diffModToOrigMap = buildScrollMap(modModel.getLineCount(), diff.modToOrig);
+    if (!state.diffOriginalEditor || !state.diffModifiedEditor) return;
     state.diffScrollDisposables.push(state.diffOriginalEditor.onDidScrollChange(() => {
-        syncDiffScrollFrom(state.diffOriginalEditor, state.diffModifiedEditor, state.diffOrigToModMap);
+        syncDiffScrollFrom(state.diffOriginalEditor, state.diffModifiedEditor);
     }));
     state.diffScrollDisposables.push(state.diffModifiedEditor.onDidScrollChange(() => {
-        syncDiffScrollFrom(state.diffModifiedEditor, state.diffOriginalEditor, state.diffModToOrigMap);
+        syncDiffScrollFrom(state.diffModifiedEditor, state.diffOriginalEditor);
     }));
 }
 export function disposeDiffScrollSync() {
     state.diffScrollDisposables.forEach(d => { try { d.dispose(); } catch (e) {} });
     state.diffScrollDisposables = [];
-    state.diffOrigToModMap = null;
-    state.diffModToOrigMap = null;
 }
 export function decorateDiffSide(ed, changedLines, highlightCls) {
     if (!ed) return [];
@@ -242,6 +190,15 @@ export function setFocusMode(enabled) {
     state.focusMode = !!enabled;
     applyFocusMode();
 }
+function ajustarRecuoLateral() {
+
+    if (state.diffOriginalEditor) {
+        state.diffOriginalEditor.updateOptions({ glyphMargin: false, lineDecorationsWidth: RECUO_LATERAL });
+    }
+    if (state.diffModifiedEditor) {
+        state.diffModifiedEditor.updateOptions({ glyphMargin: false, lineDecorationsWidth: RECUO_COLUNA_DIREITA });
+    }
+}
 export function enterDiffMode(originalText, modifiedText, snippet, path, precomputedDiff) {
     if (state.diffMode && path === state.currentDiffPath && originalText === state.currentDiffOriginal && modifiedText === state.currentDiffModified) {
         return;
@@ -262,26 +219,19 @@ export function enterDiffMode(originalText, modifiedText, snippet, path, precomp
     if (!state.diffOriginalHost) state.diffOriginalHost = document.getElementById('diff-original-host');
     if (!state.diffModifiedHost) state.diffModifiedHost = document.getElementById('diff-modified-host');
 
-    const sharedOptions = {
+    const sharedOptions = Object.assign(opcoesBase(), {
         readOnly: true,
         automaticLayout: false,
-        minimap: { enabled: false },
-        fontSize: 14,
         lineNumbers: 'off',
         lineNumbersMinChars: 0,
         glyphMargin: false,
         folding: false,
         renderIndentGuides: false,
-        renderLineHighlight: 'none',
         renderOverviewRuler: false,
-        lineDecorationsWidth: 0,
-        smoothScrolling: true,
-        mouseWheelScrollSensitivity: 1,
-        scrollBeyondLastLine: false,
+        lineDecorationsWidth: RECUO_LATERAL,
         overviewRulerLanes: 0,
         hideCursorInOverviewRuler: true,
         overviewRulerBorder: false,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
         theme: 'axio-diff',
         scrollbar: {
             verticalScrollbarSize: 6,
@@ -293,21 +243,21 @@ export function enterDiffMode(originalText, modifiedText, snippet, path, precomp
             verticalHasArrows: false,
             horizontalHasArrows: false
         }
-    };
+    });
 
     if (!state.diffOriginalEditor) {
         state.diffOriginalEditor = state.monaco.editor.create(state.diffOriginalHost, sharedOptions);
     }
     if (!state.diffModifiedEditor) {
-        state.diffModifiedEditor = state.monaco.editor.create(state.diffModifiedHost, sharedOptions);
+
+        state.diffModifiedEditor = state.monaco.editor.create(
+            state.diffModifiedHost,
+            Object.assign({}, sharedOptions, { lineDecorationsWidth: RECUO_COLUNA_DIREITA })
+        );
     }
     installHoverHighlightFor(state.diffOriginalEditor);
     installHoverHighlightFor(state.diffModifiedEditor);
 
-    const prevOrigScrollTop = state.diffOriginalEditor.getScrollTop();
-    const prevOrigScrollLeft = state.diffOriginalEditor.getScrollLeft();
-    const prevModScrollTop = state.diffModifiedEditor.getScrollTop();
-    const prevModScrollLeft = state.diffModifiedEditor.getScrollLeft();
     const savedDiff = state.savedDiffScrolls.get(path);
     const validSavedDiff = (savedDiff && savedDiff.original === originalText && savedDiff.modified === modifiedText) ? savedDiff : null;
 
@@ -324,26 +274,20 @@ export function enterDiffMode(originalText, modifiedText, snippet, path, precomp
     state.diffModifiedDecorations = [];
     const diffForReveal = applyDiffLineDecorations(originalText, modifiedText, precomputedDiff);
     state.currentDiffForFocus = diffForReveal;
-    state.diffOriginalEditor.setScrollTop(validSavedDiff ? validSavedDiff.origTop : prevOrigScrollTop);
-    state.diffOriginalEditor.setScrollLeft(validSavedDiff ? validSavedDiff.origLeft : prevOrigScrollLeft);
-    state.diffModifiedEditor.setScrollTop(validSavedDiff ? validSavedDiff.modTop : prevModScrollTop);
-    state.diffModifiedEditor.setScrollLeft(validSavedDiff ? validSavedDiff.modLeft : prevModScrollLeft);
+
+    const topoInicial = validSavedDiff ? validSavedDiff.top : state.diffOriginalEditor.getScrollTop();
+    const esquerdaInicial = validSavedDiff ? validSavedDiff.left : state.diffOriginalEditor.getScrollLeft();
+    state.diffOriginalEditor.setScrollTop(topoInicial);
+    state.diffOriginalEditor.setScrollLeft(esquerdaInicial);
+    state.diffModifiedEditor.setScrollTop(topoInicial);
+    state.diffModifiedEditor.setScrollLeft(esquerdaInicial);
+    ajustarRecuoLateral();
     requestAnimationFrame(() => {
         state.diffOriginalEditor.layout();
         state.diffModifiedEditor.layout();
-        if (snippet && modifiedText && !validSavedDiff) {
-            revealSnippet(snippet, modifiedText);
-            if (state.diffOriginalEditor && diffForReveal && diffForReveal.deletedLines.length) {
-                const firstDeleted = diffForReveal.deletedLines[0];
-                state.diffOriginalEditor.layout();
-                state.diffOriginalEditor.setPosition({ lineNumber: firstDeleted, column: 1 });
-                smoothRevealLine(state.diffOriginalEditor, firstDeleted);
-            }
-        }
     });
-    installDiffScrollSync(diffForReveal);
+    installDiffScrollSync();
     applyFocusMode();
-    updateLogToggle();
 }
 export function exitDiffMode(suppressFade) {
     if (!state.diffMode && !state.diffOriginalEditor) return;
@@ -352,10 +296,8 @@ export function exitDiffMode(suppressFade) {
         state.savedDiffScrolls.set(state.currentDiffPath, {
             original: state.currentDiffOriginal,
             modified: state.currentDiffModified,
-            origTop: state.diffOriginalEditor.getScrollTop(),
-            origLeft: state.diffOriginalEditor.getScrollLeft(),
-            modTop: state.diffModifiedEditor.getScrollTop(),
-            modLeft: state.diffModifiedEditor.getScrollLeft()
+            top: state.diffOriginalEditor.getScrollTop(),
+            left: state.diffOriginalEditor.getScrollLeft()
         });
     }
     state.diffMode = false;
@@ -417,17 +359,4 @@ export function revealDiffExitScroll(exitScroll) {
             }
         });
     });
-}
-export function updateLogToggle() {
-    if (!state.btnLogToggle) return;
-    if (state.logMode) {
-        state.btnLogToggle.classList.remove('hidden');
-        state.btnLogToggle.classList.remove('text-[var(--text-suave)]');
-        state.btnLogToggle.classList.add('text-[var(--oliva)]');
-        state.btnLogToggle.title = 'Sair do modo log (voltar a editar)';
-    } else {
-        state.btnLogToggle.classList.add('hidden');
-        state.btnLogToggle.classList.remove('text-[var(--oliva)]');
-        state.btnLogToggle.classList.add('text-[var(--text-suave)]');
-    }
 }

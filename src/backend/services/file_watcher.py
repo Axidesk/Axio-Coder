@@ -1,7 +1,7 @@
 import os
 import threading
 
-from src.backend.state import estado
+from src.backend.state import estado, notificar_mudanca_arquivos
 
 try:
     from watchfiles import Change, watch
@@ -24,6 +24,7 @@ ARQUIVOS_SEM_EXT = {
 PASTAS_IGNORADAS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv", ".axio",
     "dist", "build", ".idea", ".vscode", ".next", ".nuxt", "target",
+    ".ruff_cache", ".ai_memory",
 }
 
 ARQUIVOS_IGNORADOS = {"busca.txt"}
@@ -32,6 +33,7 @@ TAMANHO_MAX = 2 * 1024 * 1024
 LIMITE_PRE_CACHE = 2000
 
 _cache = {}
+_vistos = {}
 _lock = threading.Lock()
 _stop_event = None
 _thread = None
@@ -46,26 +48,39 @@ def _rel(caminho):
     except ValueError:
         return caminho.replace("\\", "/")
 
-def _deve_monitorar(caminho):
+def _deve_avisar(caminho):
+    """Portao de CAMINHO: decide o que a interface tem de ver, seja texto ou binario.
+
+    E separado do portao de conteudo de proposito: um PNG largado na pasta nao
+    tem diff de texto nenhum, mas tem de aparecer na arvore.
+    """
     nome = os.path.basename(caminho)
     if nome in ARQUIVOS_IGNORADOS:
         return False
     if nome.endswith(("~", ".swp", ".tmp", ".bak", ".orig")):
         return False
-    rel = _rel(caminho)
-    partes = rel.replace("\\", "/").split("/")
-    if any(p in PASTAS_IGNORADAS for p in partes):
-        return False
+    partes = _rel(caminho).replace("\\", "/").split("/")
+    return not any(p in PASTAS_IGNORADAS for p in partes)
+
+def _tem_conteudo_texto(caminho):
+    nome = os.path.basename(caminho)
     if nome in ARQUIVOS_SEM_EXT:
         return True
     return os.path.splitext(caminho)[1].lower() in EXTENSOES_TEXTO
 
-def notificar_gravacao(caminho, conteudo):
-    """Sincroniza o cache do watcher ap\u00f3s grava\u00e7\u00f5es feitas pelo backend/editor.
+def _marca_do_disco(caminho):
+    try:
+        st = os.stat(caminho)
+    except OSError:
+        return None
+    return (st.st_mtime_ns, st.st_size)
 
-    Mant\u00e9m o \"antes\" do watcher sempre alinhado ao \u00faltimo conte\u00fado conhecido,
-    para que edi\u00e7\u00f5es externas (VS Code etc.) sejam detectadas com a linha correta
-    e edi\u00e7\u00f5es internas n\u00e3o gerem falso positivo.
+def notificar_gravacao(caminho, conteudo):
+    """Sincroniza o cache do watcher após gravações feitas pelo backend/editor.
+
+    Mantém o \"antes\" do watcher sempre alinhado ao último conteúdo conhecido,
+    para que edições externas (VS Code etc.) sejam detectadas com a linha correta
+    e edições internas não gerem falso positivo.
     """
     with _lock:
         if conteudo is None:
@@ -96,7 +111,7 @@ def _preencher_cache(raiz):
             if contador >= LIMITE_PRE_CACHE:
                 return
             caminho = os.path.join(root, nome)
-            if not _deve_monitorar(caminho):
+            if not _deve_avisar(caminho) or not _tem_conteudo_texto(caminho):
                 continue
             conteudo = _ler(caminho)
             if conteudo is not None:
@@ -107,28 +122,38 @@ def _preencher_cache(raiz):
 def _processar(changes):
     from src.backend.services.file_service import registrar_edicao_para_contexto
 
+    avisar = False
     for change, caminho in changes:
-        if not _deve_monitorar(caminho):
+        if not _deve_avisar(caminho):
             continue
         if change == Change.deleted:
             with _lock:
                 antes = _cache.pop(caminho, None)
-            if antes is None:
+                _vistos.pop(caminho, None)
+            if antes is not None:
+                registrar_edicao_para_contexto(caminho, antes, None)
+            avisar = True
+            continue
+        if _tem_conteudo_texto(caminho):
+            atual = _ler(caminho)
+            if atual is not None:
+                with _lock:
+                    antes = _cache.get(caminho)
+                    _cache[caminho] = atual
+                if antes != atual:
+                    registrar_edicao_para_contexto(caminho, antes, atual)
+                    avisar = True
                 continue
-            registrar_edicao_para_contexto(caminho, antes, None)
-            continue
-        atual = _ler(caminho)
-        if atual is None:
+        marca = _marca_do_disco(caminho)
+        if marca is None:
             continue
         with _lock:
-            antes = _cache.get(caminho)
-        if antes == atual:
-            with _lock:
-                _cache[caminho] = atual
-            continue
-        registrar_edicao_para_contexto(caminho, antes, atual)
-        with _lock:
-            _cache[caminho] = atual
+            anterior = _vistos.get(caminho)
+            _vistos[caminho] = marca
+        if anterior != marca:
+            avisar = True
+    if avisar:
+        notificar_mudanca_arquivos()
 
 def _loop(raiz):
     try:
@@ -143,7 +168,10 @@ def _loop(raiz):
         ):
             if _stop_event is not None and _stop_event.is_set():
                 break
-            _processar(changes)
+            try:
+                _processar(changes)
+            except Exception:
+                pass
     except Exception:
         pass
 

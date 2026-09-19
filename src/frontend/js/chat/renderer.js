@@ -1,5 +1,7 @@
+import { vistaDe } from './colunas.js';
 import {
     chatContainerLeft,
+    chatContainerRight,
     inputFooter,
     inputFooterInner,
     inputText,
@@ -11,7 +13,6 @@ import {
     modeSubmenu,
     btnAiSelect,
     aiSubmenu,
-    slidingPanelContainer,
     panelLogSession,
     btnCloseLogSession,
     btnDockLogSession,
@@ -22,16 +23,20 @@ import {
     panelCol2,
     panelCol3,
     codeViewContainer,
-    col3Title,
-    btnCloseCol3,
     btnCloseCol2,
+    btnCloseCol2History,
+    btnCloseCol3History,
     btnShowTools,
     btnShowThoughts,
     btnShowQuestion,
+    btnShowToolsHistory,
+    btnShowThoughtsHistory,
+    btnShowQuestionHistory,
     btnWorkspace,
     btnEditor,
     terminalMode,
     btnCopyTools,
+    btnCopyToolsHistory,
     btnUndo,
     btnRedo,
     lblUndoCount,
@@ -58,11 +63,15 @@ import {
     alertPopupContent,
     btnCloseAlert,
     editorView,
+    wrap,
     settingsModal,
-    wsTopBar,
     chatMode,
     glossaryChip,
-    btnInspect,
+    btnProjectInfo,
+    btnProjectNotes,
+    btnNotesAdd,
+    btnNotesWand,
+    btnCloseProjectInfo,
     inspectTooltip,
     btnSelectFolder,
     btnSettings,
@@ -79,14 +88,20 @@ import {
     btnVertexClear
 } from './dom.js';
 import { state } from './state.js';
-import { atualizarBotoesUndoRedo, atualizarIconeOlho, executarUndoRedo, normalizeFsPath, restaurarPastaSelecionada, rolarParaDestaque, selectFolder } from './files.js';
-import { closeConfirmDeletePopup, closeRestoreConfirmPopup, moveColsToDock, openHistorySearchPanel, performDeleteSelectedTask, performSessionRestore, preloadSessionHistory, requestDeleteSelectedTask, requestRestoreTask, toggleSaveSelectedTask, toggleSessionHistory } from './history.js';
-import { ativarInspect, atualizarHintInspect, avancarItemInspect, desativarInspect, executarItemInspect, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
-import { closeCol3, closeHistory, closeHistoryAndResetDock, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openCol3Panel, openLogDockInWorkspace, toggleLogColumn } from './layout.js';
+import { atualizarBotoesUndoRedo, atualizarIconeOlho, executarUndoRedo, marcarLinhasAlteradas, normalizeFsPath, restaurarPastaSelecionada, rolarParaDestaque, selectFolder } from './files.js';
+import { preloadSessionHistory, toggleSessionHistory } from './historico/painel.js';
+import { toggleHistorySearchInline } from './historico/busca.js';
+import { toggleSaveSelectedTask } from './historico/cards.js';
+import { closeConfirmDeletePopup, performDeleteSelectedTask, requestDeleteSelectedTask } from './historico/eliminar.js';
+import { closeRestoreConfirmPopup, performSessionRestore, requestRestoreTask } from './historico/restauro.js';
+import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderInspectTooltip, executarItemInspect, ligarInspectAoMenu, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
+import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
 import { renderThoughts, renderTools, sendMessage, showQuestionPanel, sortToolArgsKeys, startSSE } from './messages.js';
 import { aplicarEstadoReveal, aplicarEstadoToggleDeepseek, aplicarEstadoToggleGemini, aplicarEstadoToggleNav, aplicarEstadoToggleVertex, atualizarBotaoLimparVertex, closeSettingsModal, limparErroDeepseek, limparErroGemini, mostrarErroDeepseek, mostrarErroGemini, mostrarErroTavily, openSettingsModal, salvarConfiguracoes, validarChaveDeepseek, validarChaveStudio, validarChaveTavily } from './settings.js';
 import { applyGlossaryChip, clearContextMemory, closeClearContextPopup, contextPopupVisivel, esconderChip, esconderIconTooltip, loadGlossary, mostrarIconTooltip, openClearContextPopup, posicionarContextUsageUI, posicionarIconTooltip, recolherContextPopup, renderCurrentSessionLogs, resizeChatInput, showAlert, showGlossaryChip, syncMenuIcons, syncWorkspaceTopBar, toggleWorkspaceView } from './ui.js';
 import { copiarTexto } from './clipboard.js';
+import { abrirProjetoInfo, fecharProjetoInfo, projetoInfoAberto } from './projeto.js';
+import { alternarCamadaNotas, criarNota, traduzirNota } from './projeto_notas.js';
 
     chatContainerLeft.addEventListener('scroll', () => {
         const currentScrollTop = chatContainerLeft.scrollTop;
@@ -178,126 +193,99 @@ import { copiarTexto } from './clipboard.js';
     }
     if (btnWorkspace) {
         btnWorkspace.addEventListener('click', () => {
+
+            const vaiAbrirTerminal = terminalMode && terminalMode.classList.contains('hidden');
+            if (vaiAbrirTerminal) recolherPaineisLaterais();
             toggleWorkspaceView();
         });
     }
     if (btnEditor) {
         btnEditor.addEventListener('click', () => {
             const wsOpen = terminalMode && !terminalMode.classList.contains('hidden');
-            const view = (window.WorkspaceView && typeof window.WorkspaceView.getView === 'function')
-                ? window.WorkspaceView.getView()
-                : 'chat';
-            if (view === 'editor') {
-                if (window.WorkspaceView && typeof window.WorkspaceView.setView === 'function') {
-                    window.WorkspaceView.setView('chat');
-                }
-                if (!wsOpen && window.WorkspaceView && typeof window.WorkspaceView.setActive === 'function') {
-                    window.WorkspaceView.setActive(false);
-                }
-            } else {
-                if (!isHistoryOpen()) {
-                    moveColsToDock();
-                    closePanelCol(panelCol2);
-                    closeCol3();
-                }
-                openLogDockInWorkspace();
-            }
-        });
-    }
-
- // { fullHtml, snippetHtml, fileName }
- // id da tarefa restaurada (epoch ms) p/ riscar cards posteriores
-   // epoch ms do momento da restauração (p/ não riscar tarefas criadas depois)
-
-    if (btnShowThoughts) {
-        btnShowThoughts.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (state.isShowingThoughts) {
-                closeCol3(); // Se já está aberto, fecha tudo
-            } else {
-                state.isShowingThoughts = true;
-                state.isShowingTools = false;
-                state.isShowingQuestions = false;
-                openCol3Panel();
-                btnShowThoughts.classList.remove("text-[var(--text-mutado)]");
-                btnShowThoughts.classList.add("text-[var(--oliva)]");
-                if (btnShowTools) {
-                    btnShowTools.classList.remove("text-[var(--oliva)]");
-                    btnShowTools.classList.add("text-[var(--text-mutado)]");
-                }
-                if (btnShowQuestion) {
-                    btnShowQuestion.classList.remove("text-[var(--oliva)]");
-                    btnShowQuestion.classList.add("text-[var(--text-mutado)]");
-                }
-                if (btnCopyTools) btnCopyTools.classList.remove("hidden");
-                if (btnUndo) btnUndo.classList.add("hidden");
-                if (btnRedo) btnRedo.classList.add("hidden");
-                if (lblUndoCount) lblUndoCount.classList.add("hidden");
-                if (lblRedoCount) lblRedoCount.classList.add("hidden");
-                atualizarBotoesUndoRedo();
-                col3Title.textContent = "Raciocínio do Coder";
-                col3Title.onclick = null;
-                col3Title.ondblclick = null;
-                col3Title.title = "";
-                col3Title.classList.remove("cursor-pointer", "hover:underline", "text-[var(--oliva)]");
-                col3Title.classList.add("text-[var(--text)]");
-                renderThoughts();
-            }
-        });
-    }
-
-    if (btnShowQuestion) {
-        btnShowQuestion.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (state.isShowingQuestions) {
+            const ponte = window.WorkspaceView;
+            const view = (ponte && typeof ponte.getView === 'function') ? ponte.getView() : 'chat';
+            if (view === 'chat') {
+                closePanelCol(panelCol2);
                 closeCol3();
+                openLogDock();
+                if (ponte && typeof ponte.abrirDoc === 'function') ponte.abrirDoc();
             } else {
-                const group = window.currentActiveLogGroup || {};
-                showQuestionPanel(group);
-                btnShowQuestion.classList.remove("text-[var(--text-mutado)]");
-                btnShowQuestion.classList.add("text-[var(--oliva)]");
+                if (ponte && typeof ponte.alternarDoc === 'function') ponte.alternarDoc();
+                if (!wsOpen && ponte && typeof ponte.setActive === 'function') ponte.setActive(false);
             }
         });
     }
 
-    // Exibe o painel da pergunta do usuário (agora o comportamento padrão ao
-    // selecionar uma rodada, substituindo o antigo estado vazio "Codigo").
-    if (btnShowTools) {
-        btnShowTools.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (state.isShowingTools) {
-                closeCol3(); // Se já está aberto, fecha tudo
-            } else {
-                state.isShowingTools = true;
-                state.isShowingThoughts = false;
-                state.isShowingQuestions = false;
-                openCol3Panel();
-                btnShowTools.classList.remove('text-[var(--text-mutado)]');
-                btnShowTools.classList.add('text-[var(--oliva)]');
-                if (btnShowThoughts) {
-                    btnShowThoughts.classList.remove('text-[var(--oliva)]');
-                    btnShowThoughts.classList.add('text-[var(--text-mutado)]');
-                }
-                if (btnShowQuestion) {
-                    btnShowQuestion.classList.remove('text-[var(--oliva)]');
-                    btnShowQuestion.classList.add('text-[var(--text-mutado)]');
-                }
-                if (btnCopyTools) btnCopyTools.classList.remove('hidden');
-                if (btnUndo) btnUndo.classList.add('hidden');
-                if (btnRedo) btnRedo.classList.add('hidden');
-                if (lblUndoCount) lblUndoCount.classList.add('hidden');
-                if (lblRedoCount) lblRedoCount.classList.add('hidden');
-                atualizarBotoesUndoRedo();
-                col3Title.textContent = 'Ferramentas Usadas';
-                col3Title.onclick = null;
-                col3Title.ondblclick = null;
-                col3Title.title = "";
-                col3Title.classList.remove('cursor-pointer', 'hover:underline', 'text-[var(--oliva)]');
-                col3Title.classList.add('text-[var(--text)]');
-                renderTools();
-            }
+    function pintarBotoesCol3(botoes, ativo, vista) {
+        Object.keys(botoes).forEach(tipo => {
+            const b = botoes[tipo];
+            if (!b) return;
+            b.classList.toggle('text-[var(--oliva)]', tipo === ativo);
+            b.classList.toggle('text-[var(--text-mutado)]', tipo !== ativo);
+        });
+        syncCopyButtons(vista, ativo);
+    }
+    function alternarPainelCol3(tipo, vista, botoes) {
+        if (!vista) return;
+        const ativo = tipo === 'thoughts' ? state.isShowingThoughts
+            : tipo === 'question' ? state.isShowingQuestions
+            : state.isShowingTools;
+        if (ativo && vista.col3Aberta()) {
+            state.isShowingThoughts = false;
+            state.isShowingQuestions = false;
+            state.isShowingTools = false;
+            vista.fecharCol3();
+            pintarBotoesCol3(botoes, null, vista);
+            return;
+        }
+        vista.abrirCol3();
+        state.isShowingThoughts = tipo === 'thoughts';
+        state.isShowingQuestions = tipo === 'question';
+        state.isShowingTools = tipo === 'tools';
+        syncDocTopBar();
+        if (tipo === 'question') {
+            showQuestionPanel(window.currentActiveLogGroup || {}, vista);
+            pintarBotoesCol3(botoes, tipo, vista);
+            return;
+        }
+
+        if (vista.id === 'dock') {
+            if (btnUndo) btnUndo.classList.add('hidden');
+            if (btnRedo) btnRedo.classList.add('hidden');
+            if (lblUndoCount) lblUndoCount.classList.add('hidden');
+            if (lblRedoCount) lblRedoCount.classList.add('hidden');
+            atualizarBotoesUndoRedo();
+        }
+        const titulo = vista.titulo;
+        if (titulo) {
+            titulo.textContent = tipo === 'thoughts' ? 'Raciocínio do Coder' : 'Ferramentas Usadas';
+            titulo.onclick = null;
+            titulo.ondblclick = null;
+            titulo.title = '';
+            titulo.classList.remove('cursor-pointer', 'hover:underline', 'text-[var(--oliva)]');
+            titulo.classList.add('text-[var(--text)]');
+        }
+        pintarBotoesCol3(botoes, tipo, vista);
+        if (tipo === 'thoughts') renderThoughts(vista);
+        else renderTools(vista);
+    }
+
+    function ligarBotoesCol3(botoes, idVista) {
+        Object.keys(botoes).forEach(tipo => {
+            const b = botoes[tipo];
+            if (!b) return;
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const vista = vistaDe(idVista);
+
+                if (vista) vista.aoFecharCol3 = () => pintarBotoesCol3(botoes, null, vista);
+                alternarPainelCol3(tipo, vista, botoes);
+            });
         });
     }
+    ligarBotoesCol3({ question: btnShowQuestion, thoughts: btnShowThoughts, tools: btnShowTools }, 'dock');
+
+    ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory }, 'historico');
 
     if (btnEyeDiff) {
         btnEyeDiff.addEventListener('click', (e) => {
@@ -308,24 +296,24 @@ import { copiarTexto } from './clipboard.js';
                 codeViewContainer.innerHTML = (state.isEyeMode && state.currentOpenedDiff.snippetHtml)
                     ? state.currentOpenedDiff.snippetHtml
                     : state.currentOpenedDiff.fullHtml;
+
+                marcarLinhasAlteradas(codeViewContainer, state.currentOpenedDiff);
                 rolarParaDestaque();
-            }
-            if (isHistoryOpen() && window.WorkspaceView && typeof window.WorkspaceView.setFocusMode === 'function') {
-                window.WorkspaceView.setFocusMode(state.isEyeMode);
+                if (window.WorkspaceView && typeof window.WorkspaceView.setFocusMode === 'function') {
+                    window.WorkspaceView.setFocusMode(state.isEyeMode);
+                }
             }
         });
     }
 
-    // NOVA LÓGICA DE CÓPIA DAS FERRAMENTAS
-    if (btnCopyTools) {
-        // Salva o ícone padrão uma única vez, blindando contra cliques duplos
+    function _copiarPainelAtivo(botao) {
+        if (!botao) return;
         const originalToolsIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>`;
-        btnCopyTools.addEventListener('click', (e) => {
+        botao.addEventListener('click', (e) => {
             e.stopPropagation();
             let clipboardText = '';
             if (state.isShowingQuestions) {
-                // MODO PERGUNTA: copia o texto puro da pergunta feita ao usuário.
-                // Se a resposta final da IA estiver expandida, copia pergunta + resposta.
+
                 if (state.currentViewingQuestions && state.currentViewingQuestions.length > 0) {
                     state.currentViewingQuestions.forEach((q, i) => {
                         let plainText = q.replace(/<[^>]*>/g, '');
@@ -345,12 +333,9 @@ import { copiarTexto } from './clipboard.js';
                     clipboardText = 'Nenhuma pergunta registrada neste turno.';
                 }
             } else if (state.isShowingThoughts) {
-                // MODO PENSAMENTOS (MEMÓRIAS): copia o texto puro
                 if (state.currentViewingThoughts && state.currentViewingThoughts.length > 0) {
                     state.currentViewingThoughts.forEach((t, i) => {
-                        // Remove tags HTML para texto limpo
                         let plainText = t.replace(/<[^>]*>/g, '');
-                        // Decodifica entidades HTML comuns
                         plainText = plainText.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
                         clipboardText += plainText;
                         if (i < state.currentViewingThoughts.length - 1) {
@@ -361,7 +346,6 @@ import { copiarTexto } from './clipboard.js';
                     clipboardText = 'Nenhum raciocínio registrado neste turno.';
                 }
             } else {
-                // MODO FERRAMENTAS: comportamento original
                 if (state.currentViewingTools && state.currentViewingTools.length > 0) {
                     state.currentViewingTools.forEach(t => {
                         clipboardText += `FERRAMENTA: ${t.name}\n`;
@@ -391,15 +375,13 @@ import { copiarTexto } from './clipboard.js';
                 }
             }
             copiarTexto(clipboardText.trim());
-            btnCopyTools.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(--oliva)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
-            // Restaura usando a variável fixa
-            setTimeout(() => { btnCopyTools.innerHTML = originalToolsIcon; }, 2000);
+            botao.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(--oliva)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+            setTimeout(() => { botao.innerHTML = originalToolsIcon; }, 2000);
         });
     }
+    _copiarPainelAtivo(btnCopyTools);
+    _copiarPainelAtivo(btnCopyToolsHistory);
 
-    // ============================================================
-    // DESFAZER / REFAZER (UNDO / REDO)
-    // ============================================================
 
 
     if (btnUndo) {
@@ -416,7 +398,6 @@ import { copiarTexto } from './clipboard.js';
         });
     }
 
-    // Store session logs data
     window.sessionLogsData = [];
     btnCloseAlert.addEventListener('click', () => {
         alertPopup.classList.remove('opacity-100', 'pointer-events-auto');
@@ -480,10 +461,8 @@ import { copiarTexto } from './clipboard.js';
         toggleSaveSelectedTask(state.currentSelectedHistoryGroup);
     });
 
-    // Evita que cliques no overlay de confirmação fechem o painel lateral por baixo.
     confirmDeletePopup.addEventListener('click', (e) => e.stopPropagation());
 
-    // --- Restauração de sessão (Fase 1) ---
     btnCancelRestore.addEventListener('click', (e) => {
         e.stopPropagation();
         closeRestoreConfirmPopup();
@@ -522,37 +501,33 @@ import { copiarTexto } from './clipboard.js';
         });
     }
 
-    // Fecha o dock de logs/histórico automaticamente ao clicar fora deles.
+    function recolherPaineisLaterais() {
+        if (isHistoryOpen()) {
+            closeHistoryPanel();
+        }
+        if (projetoInfoAberto()) {
+            fecharProjetoInfo();
+        }
+    }
+
     document.addEventListener('click', (e) => {
-        // Usa composedPath() (snapshot do caminho no momento do dispatch) para a
-        // checagem continuar correta mesmo quando um handler anterior desconecta o
-        // alvo do clique (ex: btnSend troca o innerHTML e desacopla o <svg> clicado).
+
         const path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
         const hit = (el) => !!el && path.includes(el);
         const clickedOnModal = hit(confirmDeletePopup) || hit(restoreConfirmPopup) ||
                                hit(confirmClearContextPopup) || hit(alertPopup) || hit(settingsModal);
         if (clickedOnModal) return;
-        const sidebar = document.querySelector('.w-14.shrink-0');
-        const insideWorkspace = hit(editorView) || hit(wsTopBar);
-        const insideChat = hit(chatMode);
-        const insideTerminal = hit(terminalMode);
-        const clickedSidebar = hit(sidebar);
-        if (isLogDockOpen()) {
-            if (!insideWorkspace && !insideChat && !insideTerminal && !clickedSidebar && !hit(slidingPanelContainer) && !hit(panelCol3) && !hit(btnOpenLog) && !hit(btnSessionHistory)) {
-                closeLogDock();
-                syncMenuIcons();
-                syncWorkspaceTopBar();
-            }
-        }
-        if (isHistoryOpen()) {
-            if (!clickedSidebar && !hit(slidingPanelContainer) && !hit(panelCol3) && !hit(btnSessionHistory) && !hit(btnOpenLog)) {
-                closeHistoryAndResetDock();
-            }
-        }
-    });
+        const clickedLeftColumn = hit(chatMode) || hit(terminalMode);
+        const clickedDocContent = hit(wrap) || hit(chatContainerRight);
+        if (!clickedLeftColumn && !clickedDocContent) return;
 
-    if(btnCloseCol3) btnCloseCol3.addEventListener('click', () => {
-        closeCol3();
+        const col3Hist = vistaDe('historico');
+        const col3HistAberta = !!col3Hist && col3Hist.col3Aberta();
+        const clicouNaCamadaHistorico = path.some(el => el && el.id === 'panel-col-3-history');
+        const clicouNaCamadaNotas = path.some(el => el && el.id === 'panel-col-3-notes');
+        if (clicouNaCamadaNotas) return;
+        if (hit(wrap) && !hit(chatContainerRight) && (clicouNaCamadaHistorico || col3HistAberta || state.codigoDoHistoricoNoEditor)) return;
+        recolherPaineisLaterais();
     });
 
     if(btnCloseCol2) btnCloseCol2.addEventListener('click', () => {
@@ -560,11 +535,20 @@ import { copiarTexto } from './clipboard.js';
         closeCol3();
     });
 
+    if(btnCloseCol2History) btnCloseCol2History.addEventListener('click', () => {
+        const vista = vistaDe('historico');
+        if (vista) vista.fecharCol2();
+    });
+
+    if(btnCloseCol3History) btnCloseCol3History.addEventListener('click', () => {
+        const vista = vistaDe('historico');
+        if (vista) vista.fecharCol3();
+    });
+
     if (btnDockLogSession) btnDockLogSession.addEventListener('click', () => toggleLogColumn(panelLogSession));
     if (btnDockFiles) btnDockFiles.addEventListener('click', () => toggleLogColumn(panelCol2));
     if (btnDockCode) btnDockCode.addEventListener('click', () => toggleLogColumn(panelCol3));
 
-    // Auto-resize textarea
     inputText.addEventListener('input', resizeChatInput);
 
     inputText.addEventListener('keydown', function(e) {
@@ -575,7 +559,6 @@ import { copiarTexto } from './clipboard.js';
     });
     
     btnSend.addEventListener('click', sendMessage);
-    // === Glossario: termo leigo -> identificador de codigo (autocomplete + inspecao) ===
     window.glossary = [];
 
 
@@ -591,7 +574,6 @@ import { copiarTexto } from './clipboard.js';
 
     if (glossaryChip) glossaryChip.addEventListener('click', applyGlossaryChip);
 
-    // Balão do contexto: hover mostra a versão enxuta; clique fixa/expande o popup detalhado.
     if (contextUsage && contextUsageLabel && contextUsagePopup) {
         document.body.appendChild(contextUsageLabel);
         document.body.appendChild(contextUsagePopup);
@@ -647,13 +629,10 @@ import { copiarTexto } from './clipboard.js';
         });
     }
 
-    // Explicações do popup de contexto: clique no "i" expande o texto abaixo da barra.
     setupInfoToggles('.context-popup-info', '.context-popup-info-text');
 
-    // Explicações do modal de configurações (chaves de API): clique no "i" expande o tutorial.
     setupInfoToggles('.settings-info', '.settings-info-text');
 
-    // Tooltip customizado (substitui o title nativo dos ícones pelo balão padronizado)
 
     document.addEventListener('mouseover', function(e) {
         if (state.inspectAtivo) return;
@@ -684,7 +663,8 @@ import { copiarTexto } from './clipboard.js';
     }, true);
 
     document.addEventListener('mouseover', suprimirTooltipNativo, true);
-    if (btnInspect) btnInspect.addEventListener('click', ativarInspect);
+
+    ligarInspectAoMenu();
 
     if (inspectTooltip) {
         inspectTooltip.addEventListener('mouseover', function(e) {
@@ -698,6 +678,11 @@ import { copiarTexto } from './clipboard.js';
 
     document.addEventListener('mousemove', function(e) {
         if (!state.inspectAtivo || !inspectTooltip) return;
+        if (e.shiftKey) {
+
+            esconderInspectTooltip();
+            return;
+        }
         if (state.inspectLocked) return;
         if (inspectTooltip.contains(e.target)) return;
         const el = e.target;
@@ -709,7 +694,9 @@ import { copiarTexto } from './clipboard.js';
 
     document.addEventListener('click', function(e) {
         if (!state.inspectAtivo) return;
-        if (btnInspect && (e.target === btnInspect || btnInspect.contains(e.target))) {
+        if (e.shiftKey) {
+
+            esconderInspectTooltip();
             return;
         }
         e.preventDefault();
@@ -726,7 +713,7 @@ import { copiarTexto } from './clipboard.js';
             state.inspectLocked = true;
             if (inspectTooltip) {
                 inspectTooltip.classList.add('inspect-locked');
-                atualizarHintInspect('Clique em um item para copiar/abrir · Esc: sair');
+                atualizarHintInspect('Clique em um item para copiar/abrir · Shift+clique: interagir · Esc: sair');
             }
             return;
         }
@@ -771,6 +758,24 @@ import { copiarTexto } from './clipboard.js';
             }
         });
     }
+
+    if (btnProjectInfo) {
+        btnProjectInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (projetoInfoAberto()) fecharProjetoInfo();
+            else abrirProjetoInfo();
+        });
+    }
+
+    if (btnSessionHistory) {
+        btnSessionHistory.addEventListener('click', fecharProjetoInfo);
+    }
+
+    if (btnProjectNotes) btnProjectNotes.addEventListener('click', alternarCamadaNotas);
+    if (btnNotesAdd) btnNotesAdd.addEventListener('click', criarNota);
+    if (btnNotesWand) btnNotesWand.addEventListener('click', traduzirNota);
+
+    if (btnCloseProjectInfo) btnCloseProjectInfo.addEventListener('click', fecharProjetoInfo);
 
     if (btnDeepseekToggle) btnDeepseekToggle.addEventListener('click', async () => {
         const ativar = !state.settingsDeepseekEnabled;
@@ -864,23 +869,18 @@ import { copiarTexto } from './clipboard.js';
     if (btnHistorySearch) {
         btnHistorySearch.addEventListener('click', (e) => {
             e.stopPropagation();
-            openHistorySearchPanel();
+            toggleHistorySearchInline();
         });
     }
 
-    // Pré-carrega a lista do histórico em segundo plano (sem tocar na UI),
-    // para que a aba abra instantaneamente, sem o placeholder "Carregando histórico...".
     if ('requestIdleCallback' in window) {
         requestIdleCallback(() => preloadSessionHistory(), { timeout: 4000 });
     } else {
         setTimeout(preloadSessionHistory, 1500);
     }
 
-    // Iniciar SSE para pegar status inicial
     startSSE();
 
-    // Atualiza os cards de arquivo (log da sessao/historico) quando o usuario
-    // renomeia, exclui ou restaura um ficheiro pelo doc (workspace).
 
     function allSessionGroups() {
         const groups = [];
@@ -928,3 +928,17 @@ import { copiarTexto } from './clipboard.js';
 
     window.addEventListener('axio-fs-deleted', (e) => handleFsDeleteRestore(e, true));
     window.addEventListener('axio-fs-restored', (e) => handleFsDeleteRestore(e, false));
+
+    window.addEventListener('axio-editor-file-open', () => {
+        state.codigoDoHistoricoNoEditor = false;
+        ['dock', 'historico', 'notas'].forEach(id => {
+            const vista = vistaDe(id);
+            if (vista && vista.col3Aberta()) vista.fecharCol3();
+        });
+        syncDocTopBar();
+    });
+
+    window.addEventListener('axio-view-change', (e) => {
+        state.vistaDocAtual = e.detail ? e.detail.view : null;
+        syncDocTopBar();
+    });

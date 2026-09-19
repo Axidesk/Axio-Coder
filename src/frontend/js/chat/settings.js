@@ -1,6 +1,8 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { showAlert } from './ui.js';
+import { carregarCofre, ligarEventosCofre } from './cofre.js';
+import { SVG_OLHO, SVG_OLHO_RISCADO } from './icones.js';
 
 const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
 
@@ -14,6 +16,8 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
             dom.settingsModalContent.classList.add('scale-100');
         }
         loadSettingsData();
+        const ativa = document.querySelector('[data-settings-tab].active');
+        if (ativa && ativa.dataset.settingsTab === 'cofre') carregarCofre();
     }
     export function closeSettingsModal() {
         if (!dom.settingsModal) return;
@@ -26,7 +30,7 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
     }
     export async function loadSettingsData() {
         try {
-            const resp = await fetch('http://127.0.0.1:5000/api/settings');
+            const resp = await fetch('/api/settings');
             if (!resp.ok) return;
             const dados = await resp.json();
             const ds = dados.deepseek || {};
@@ -64,7 +68,7 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
             dom.labelGemini.textContent = state.settingsVertexMode ? 'Vertex AI' : 'Google Gemini';
         }
     }
-    export function aplicarEstadoToggleVertex(ativo, animar = false) {
+    export function aplicarEstadoToggleVertex(ativo) {
         state.settingsVertexMode = !!ativo;
         atualizarCardGemini();
         if (dom.btnSwitchModel) {
@@ -155,7 +159,7 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
             tavily: { api_key: tavilyKey, enabled: state.settingsDeepseekEnabled && !!tavilyKey }
         };
         try {
-            const resp = await fetch('http://127.0.0.1:5000/api/settings', {
+            const resp = await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -200,9 +204,7 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
             btnRevealKeys.classList.toggle('on', state.settingsRevealKeys);
             btnRevealKeys.setAttribute('aria-pressed', state.settingsRevealKeys ? 'true' : 'false');
             btnRevealKeys.title = state.settingsRevealKeys ? 'Ocultar chaves' : 'Mostrar chaves';
-            btnRevealKeys.innerHTML = state.settingsRevealKeys
-                ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-                    : '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+            btnRevealKeys.innerHTML = state.settingsRevealKeys ? SVG_OLHO_RISCADO : SVG_OLHO;
         }
         const inputs = [inputDeepseekKey, inputTavilyKey, inputGeminiKey];
         const elegiveis = inputs.filter(Boolean);
@@ -270,3 +272,19 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
         if (!dom.btnNavToggle) return;
         dom.btnNavToggle.classList.toggle('on', state.settingsNavMode || state.settingsDeepseekEnabled);
     }
+
+export function mostrarAbaSettings(nome) {
+    document.querySelectorAll('[data-settings-tab]').forEach((botao) => {
+        botao.classList.toggle('active', botao.dataset.settingsTab === nome);
+    });
+    document.querySelectorAll('[data-settings-panel]').forEach((painel) => {
+        painel.classList.toggle('hidden', painel.dataset.settingsPanel !== nome);
+    });
+    if (dom.btnCofreRevelar) dom.btnCofreRevelar.classList.toggle('hidden', nome !== 'cofre');
+    if (nome === 'cofre') carregarCofre();
+}
+
+document.querySelectorAll('[data-settings-tab]').forEach((botao) => {
+    botao.addEventListener('click', () => mostrarAbaSettings(botao.dataset.settingsTab));
+});
+ligarEventosCofre();

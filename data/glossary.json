@@ -7,13 +7,21 @@
         "aba dos ficheiros abertos",
         "barra superior",
         "nomes dos ficheiros abertos",
-        "ws-top-bar"
+        "ws-top-bar",
+        "tabview",
+        "tab bar",
+        "aba do ficheiro",
+        "aba ativa do editor"
       ],
-      "identificador": "#ws-top-bar",
-      "descricao": "Barra superior do workspace que lista os ficheiros abertos",
+      "identificador": "#ws-top-bar / #editor-tabs",
+      "descricao": "Barra superior do workspace que lista os ficheiros abertos em abas (#editor-tabs, pintadas por editor.js:renderTabs). O que o utilizador chama 'tabview' ou 'tab bar'. A aba acesa e decidida por editor.js:pathDaAbaAtiva() = state.abaAtiva || state.currentFile: state.abaAtiva e posto por focarAba(path), que files.js chama quando se clica num card do log (a aba acompanha o card mesmo antes da entrega no Monaco), e state.currentFile e o ficheiro que esta mesmo carregado no editor.",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1207
+        "arquivo": "src/frontend/index.html",
+        "linha": 390,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -28,8 +36,12 @@
       "identificador": "#explorer-view",
       "descricao": "Janela/painel do workspace que mostra a arvore de ficheiros",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1262
+        "arquivo": "src/frontend/index.html",
+        "linha": 437,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -43,8 +55,12 @@
       "identificador": "#panel-log-session",
       "descricao": "Primeira janela do dock, mostra os logs da sessao atual",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1250
+        "arquivo": "src/frontend/index.html",
+        "linha": 425,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -57,8 +73,12 @@
       "identificador": "#log-dock",
       "descricao": "Container do dock que agrupa as janelas de log/arquivos/codigo",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1249
+        "arquivo": "src/frontend/index.html",
+        "linha": 424,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -72,8 +92,12 @@
       "identificador": "#panel-col-2",
       "descricao": "Segunda coluna do dock, mostra os arquivos editados da sessao",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1015
+        "arquivo": "src/frontend/index.html",
+        "linha": 164,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -83,13 +107,18 @@
         "col 3",
         "panel-col-3",
         "janela do editor",
-        "codigo substituido"
+        "codigo substituido",
+        "code view"
       ],
-      "identificador": "#panel-col-3",
-      "descricao": "Terceira coluna do dock, mostra o codigo/editor",
+      "identificador": "#panel-col-3 (vistaDe('dock') em colunas.js)",
+      "descricao": "Code view da DOC (ficheiros, diffs, ferramentas, raciocinio, pergunta). Deixou de ser uma terceira coluna do #log-dock em 2026-09-13: e a CAMADA que abre por cima da area do Monaco (position absolute, inset 0, opacity), ao lado da gemea #panel-col-3-history. Ambas nascem no HTML no #sliding-panel-container e sao montadas em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace. Abrir a camada nao encolhe a arvore nem faz o dock crescer (o antigo has-code foi eliminado). O TITULO da coluna 3 e o CORPO sao o MESMO GESTO desde 2026-09-13: ambos chamam files.js:entregarAoMonaco (a funcao abrirTituloNoEditor foi eliminada) - o titulo entregava por openFileFromLog sem linha nenhuma e por isso o Monaco nao acompanhava o trecho.",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1045
+        "arquivo": "src/frontend/index.html",
+        "linha": 201,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -103,8 +132,12 @@
       "identificador": "#sliding-panel-container",
       "descricao": "Overlay deslizante do historico de sessoes",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 975
+        "arquivo": "src/frontend/index.html",
+        "linha": 76,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -116,10 +149,14 @@
         "term-log"
       ],
       "identificador": "#terminal-mode",
-      "descricao": "Modo terminal do workspace (janela de comandos)",
+      "descricao": "Modo terminal do workspace (janela de comandos). Alterna com #chat-mode",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1188
+        "arquivo": "src/frontend/index.html",
+        "linha": 358,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -134,23 +171,31 @@
       "identificador": "#input-text",
       "descricao": "Campo onde o usuario digita a mensagem para a IA",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1166
+        "arquivo": "src/frontend/index.html",
+        "linha": 340,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
-      "termo": "lixeira",
+      "termo": "lista da lixeira",
       "aliases": [
-        "botao da lixeira",
-        "btn-trash",
-        "janela da lixeira",
-        "trash-view"
+        "itens da lixeira",
+        "conteudo da lixeira",
+        "trash-list",
+        "lista de ficheiros apagados"
       ],
-      "identificador": "#btn-trash",
-      "descricao": "Botao que abre/fecha a janela da lixeira no explorer",
+      "identificador": "#trash-list",
+      "descricao": "Container que lista os itens apagados dentro do painel da lixeira (distinto do botao #btn-trash)",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1272
+        "arquivo": "src/frontend/index.html",
+        "linha": 479,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -173,7 +218,11 @@
       "descricao": "Botao que alterna o dock entre inferior (dock-bottom, padrao, formato horizontal) e lateral direita (dock-right, formato vertical). applyDockLayout (src/frontend/js/editor/workspace.js:208) aplica as classes dock-right/dock-bottom no #editor-panel, no modo direita o eixo redimensionavel passa de height para WIDTH (applyExplorerSize) e o explorer entra em modo arvore (applyFilesLayout remove a classe files-vertical). O layout do Monaco e diferido com setTimeout(layoutAllEditors, DOCK_ANIM_MS) porque a row tem transition de width/height de 0.4s. Estado persistido em localStorage (chave axio-dock-prefs) por persistDockPrefs/initDockPrefs.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 441
+        "linha": 469,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -187,8 +236,12 @@
       "identificador": "#btn-editor",
       "descricao": "Icone/botao da sidebar que abre o editor de codigo (Monaco)",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1145
+        "arquivo": "src/frontend/index.html",
+        "linha": 227,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -198,13 +251,19 @@
         "inspecao visual",
         "mira",
         "modo inspetor",
-        "btn-inspect"
+        "modo inspecionar do menu",
+        "shift clique",
+        "interagir no modo inspecionar"
       ],
-      "identificador": "#btn-inspect",
-      "descricao": "Icone/botao da sidebar que ativa o modo inspecionar (identificar elementos)",
+      "identificador": "Modo Inspecionar (item do menu nativo Ferramentas)",
+      "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1148
+        "arquivo": "src/main.js",
+        "linha": 727,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
       }
     },
     {
@@ -219,8 +278,12 @@
       "identificador": "#editor-host",
       "descricao": "Area onde o editor Monaco renderiza o codigo",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1291
+        "arquivo": "src/frontend/index.html",
+        "linha": 411,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -234,10 +297,14 @@
         "history-logs-wrapper"
       ],
       "identificador": "#btn-history-search",
-      "descricao": "Botao que abre a busca nas conversas do historico",
+      "descricao": "Botao do header de #panel-col-1 (Historico) que abre a busca nas conversas",
       "localizacao": {
-        "arquivo": "index.html",
-        "linha": 1051
+        "arquivo": "src/frontend/index.html",
+        "linha": 81,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -250,10 +317,14 @@
         "status da barra"
       ],
       "identificador": "#lbl-status",
-      "descricao": "Label que exibe o status atual da IA no rodape (ex: Processando..., Pensando..., Navegando...).",
+      "descricao": "Label que exibe o status atual da IA no rodape (ex: Processando..., Pensando..., Navegando...)",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 316
+        "linha": 350,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -272,7 +343,11 @@
       "descricao": "Botao que alterna entre enviar mensagem e parar/interromper a geracao (vira pause/stop durante a resposta)",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 306
+        "linha": 341,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -285,10 +360,14 @@
         "botao do olho"
       ],
       "identificador": "#btn-reveal-keys",
-      "descricao": "Botao com icone de olho nas Configuracoes que alterna entre mostrar (olho aberto) e ocultar (olho riscado) as chaves de API dos inputs.",
+      "descricao": "Botao com icone de olho nas Configuracoes que alterna entre mostrar (olho aberto) e ocultar (olho riscado) as chaves de API dos inputs",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 550
+        "linha": 630,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -301,10 +380,14 @@
         "barra de tokens"
       ],
       "identificador": "#context-usage-popup",
-      "descricao": "Balão/popup que exibe as barras de uso de contexto (memória da rodada atual e acumulada), com botão de zerar memória",
+      "descricao": "Balao/popup que exibe as barras de uso de contexto (memoria da rodada atual e acumulada), com botao de zerar memoria",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 228
+        "linha": 263,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -316,10 +399,14 @@
         "settings-info-text"
       ],
       "identificador": ".settings-info-text",
-      "descricao": "Cards de texto informativo (ícone \"i\") das chaves de API que expandem suavemente no modal de configurações",
+      "descricao": "Cards de texto informativo (icone \"i\") das chaves de API que expandem suavemente no modal de configuracoes. O toggle e setupInfoToggles em src/frontend/js/chat/renderer.js:652. Ficou em css/geral.css depois da divisao do antigo style.css.",
       "localizacao": {
-        "arquivo": "src/frontend/style.css",
-        "linha": 2033
+        "arquivo": "src/frontend/css/geral.css",
+        "linha": 307,
+        "conferido": [
+          1789836550.602,
+          13529
+        ]
       }
     },
     {
@@ -334,7 +421,11 @@
       "descricao": "Botão que expande a coluna 3 para mostrar o raciocínio (Chain of Thought) da IA",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 121
+        "linha": 170,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -343,28 +434,20 @@
         "reiniciar backend",
         "restart do back",
         "reiniciar o servidor python",
-        "reiniciar o flask"
+        "reiniciar o flask",
+        "recarregar a janela",
+        "ctrl shift b",
+        "recarregar ignorando cache"
       ],
       "identificador": "restartFlask",
-      "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False.",
+      "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 212
-      }
-    },
-    {
-      "termo": "lista da lixeira",
-      "aliases": [
-        "itens da lixeira",
-        "conteudo da lixeira",
-        "trash-list",
-        "lista de ficheiros apagados"
-      ],
-      "identificador": "#trash-list",
-      "descricao": "Container que lista os itens apagados dentro do painel da lixeira (distinto do botao #btn-trash)",
-      "localizacao": {
-        "arquivo": "src/frontend/index.html",
-        "linha": 454
+        "linha": 229,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
       }
     },
     {
@@ -380,7 +463,11 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 150
+        "linha": 351,
+        "conferido": [
+          1789611406.658,
+          19469
+        ]
       }
     },
     {
@@ -396,7 +483,11 @@
       "descricao": "Lado esquerdo do workspace que mostra as mensagens do usuario e o input da IA (alterna com #terminal-mode)",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 216
+        "linha": 254,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -405,13 +496,19 @@
         "campo do terminal",
         "prompt do terminal",
         "caixa do terminal",
-        "input do prompt"
+        "input do prompt",
+        "campo de comando do terminal",
+        "term-input"
       ],
       "identificador": "#term-input",
-      "descricao": "Campo de texto no rodape do modo terminal (placeholder \"Prompt...\") usado para enviar comandos ao PTY",
+      "descricao": "Campo do rodape do terminal e o UNICO caminho para um comando. O destino tem UM dono de cada vez, decidido em src/frontend/js/editor/workspace.js (keydown do state.termInput) por ordem: (1) 'cls'/'clear' limpam (clearLog); (2) com o modo shell ativo (state.shellAtivo) OU um 'cd' a frente, vai tudo ao PTY pelo socket (runCommand); (3) com um card SELECIONADO o texto entra NESSE card (terminal_cards.js:escreverNoCardSelecionado -> stdin do processo se ele corre, ou o comando passa a correr no proprio card se ele ja terminou); (4) sem selecao nasce um card novo (lancarComando -> POST /api/terminal/exec). Nem 'cd' nem 'cls'/'clear' entram num card: sao builtins do cmd e vao sempre ao PTY. O placeholder e 'Terminal' (PLACEHOLDER_INPUT) e muda para 'Responder ao card' com QUALQUER card selecionado. O campo nao tem borda. O Esc do campo ja NAO vive aqui: descartar a selecao passou a ser um listener de keydown no document, dentro de terminal_cards.js, para funcionar mesmo com o foco fora do campo.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 347
+        "linha": 379,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -427,7 +524,11 @@
       "descricao": "Cursor/caret do terminal xterm. Como a digitacao esta desligada (disableStdin), o cursor e escondido pintando-o com a cor de fundo real do painel (getComputedStyle subindo os ancestrais), porque o xterm 6.0.0 IGNORA o alpha (\"rgba(0,0,0,0)\" vira PRETO opaco).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/xterm.js",
-        "linha": 24
+        "linha": 19,
+        "conferido": [
+          1789601609.164,
+          6297
+        ]
       }
     },
     {
@@ -439,10 +540,14 @@
         "scroll do terminal"
       ],
       "identificador": "#term-log .xterm-scrollable-element > .scrollbar > .slider",
-      "descricao": "Scrollbar do terminal xterm 6: nao e a nativa, e a custom do VS Code (SmoothScrollableElement) de 14px; width/background/border-radius forcados no style.css",
+      "descricao": "Scrollbar do terminal xterm 6: nao e a nativa, e a custom do VS Code (SmoothScrollableElement) de 14px; width/background/border-radius forcados. Ficou em css/workspace.css depois da divisao do antigo style.css (o bloco term-log inteiro foi para la).",
       "localizacao": {
-        "arquivo": "src/frontend/style.css",
-        "linha": 918
+        "arquivo": "src/frontend/css/workspace.css",
+        "linha": 12,
+        "conferido": [
+          1789771179.35,
+          10786
+        ]
       }
     },
     {
@@ -458,7 +563,11 @@
       "descricao": "Opcao nativa do xterm (ms) que anima a rolagem; usada com 125 para casar a sensacao do smoothScrolling do Monaco. Nome difere do Monaco: no xterm e smoothScrollDuration, nao smoothScrolling.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/xterm.js",
-        "linha": 154
+        "linha": 141,
+        "conferido": [
+          1789601609.164,
+          6297
+        ]
       }
     },
     {
@@ -474,7 +583,11 @@
       "descricao": "Handler de Ctrl+C/Ctrl+V do terminal. Registrado com document.addEventListener(..., true) em CAPTURE porque o xterm cancela (preventDefault+stopPropagation) o ctrl+c na fase de bolha. Ctrl+C copia a selecao (termGetSelection + copiarTexto); Ctrl+V cola no #term-input (colarNoInputText).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal.js",
-        "linha": 145
+        "linha": 167,
+        "conferido": [
+          1789517962.482,
+          14765
+        ]
       }
     },
     {
@@ -490,7 +603,11 @@
       "descricao": "Descobre o shell ativo do painel (cmd/powershell/pwsh/bash): prefere terminal_shell em RAM (escolha do dropdown), senao AXIO_TERM_SHELL, senao a preferencia persistida em data/settings.json, senao pwsh>powershell>cmd. As ferramentas (tool_executar_processo) NAO usam este shell: correm via cmd.exe (subprocess shell=True).",
       "localizacao": {
         "arquivo": "src/backend/services/process_manager.py",
-        "linha": 45
+        "linha": 70,
+        "conferido": [
+          1789675386.782,
+          9155
+        ]
       }
     },
     {
@@ -504,10 +621,14 @@
         "arrastar pra cima a janela do explorer"
       ],
       "identificador": "#explorer-resizer",
-      "descricao": "Barra horizontal (4px, cursor row-resize) que redimensiona a altura do explorer/dock. Handler initExplorerResizer (src/frontend/js/editor/workspace.js:~253) -> applyExplorerSize (#dock-bottom-row).className resizing desliga a transition de height durante o arrasto.",
+      "descricao": "Barra horizontal (4px, cursor row-resize) que redimensiona a altura do explorer/dock. Handler initExplorerResizer (src/frontend/js/editor/workspace.js) -> applyExplorerSize (#dock-bottom-row).className resizing desliga a transition de height durante o arrasto",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 394
+        "linha": 422,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -522,7 +643,11 @@
       "descricao": "Opção do xterm (disableStdin: true) que impede a digitação direta no terminal. O usuário escreve no #term-input e o comando é enviado por socket (pty:input). NÃO é a causa do Ctrl+C/Ctrl+V: a cópia usa termGetSelection() e a colagem usa o clipboard do Electron.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/xterm.js",
-        "linha": 142
+        "linha": 134,
+        "conferido": [
+          1789601609.164,
+          6297
+        ]
       }
     },
     {
@@ -538,7 +663,11 @@
       "descricao": "Botao de olho no header da janela de arquivos (#panel-col-2) que alterna o modo foco (exibir apenas os trechos alterados do diff). Só aparece quando o conteudo mostrado é um diff. NAO confundir com o \"olhinho\" das Configuracoes (#btn-reveal-keys).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 126
+        "linha": 176,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -552,7 +681,11 @@
       "descricao": "Botao X do header de #panel-col-2. So aparece dentro do #log-dock e fica oculto em DUAS situacoes equivalentes: (a) ha card de ficheiro selecionado (.file-card-selected, posto por marcarFileSelecionado em files.js:156); (b) a vista de ficheiro esta ativa (#btn-undo sem .hidden). Como undo/redo so aparecem com a vista de ficheiro ativa, o X nunca coexiste com eles. O X e o grupo undo/label/redo/label vivem no MESMO container direito (flex shrink-0) -> undo/redo ficam sempre justificados a direita e nao se deslocam quando o olhinho (#btn-eye-diff) aparece/some.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 140
+        "linha": 190,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -567,7 +700,11 @@
       "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 566
+        "linha": 792,
+        "conferido": [
+          1789775419.735,
+          32114
+        ]
       }
     },
     {
@@ -580,10 +717,14 @@
         "barra de uso da sessao"
       ],
       "identificador": "#context-sessao-fill",
-      "descricao": "Barra horizontal (6px, scaleX) da \"Memoria da rodada atual\" dentro do popup do contexto. A cor deixa de ser fixa azul: e aplicada em runtime por aplicarCorBarraContexto (src/frontend/js/chat/messages.js:19) usando corDeUsoContexto (messages.js:12) - oliva <60%, ambar 60-85%, vermelho >=85%, azul durante execucao -, os mesmos limiares do anel #context-usage-fill.",
+      "descricao": "Barra horizontal (6px, scaleX) da memoria da rodada atual dentro do popup do contexto. A cor deixa de ser fixa azul: e aplicada em runtime por aplicarCorBarraContexto (src/frontend/js/chat/messages.js) usando corDeUsoContexto, os mesmos limiares do anel #context-usage-fill",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 237
+        "linha": 273,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -596,10 +737,14 @@
         "anel de tokens"
       ],
       "identificador": "#context-usage-fill",
-      "descricao": "Circulo SVG (stroke-dasharray 100) que mostra o uso do contexto no botao do card. Cor definida no handler context_usage (src/frontend/js/chat/messages.js:604) via corDeUsoContexto.",
+      "descricao": "Circulo SVG (stroke-dasharray 100) que mostra o uso do contexto no botao do card. Cor definida no handler context_usage (src/frontend/js/chat/messages.js) via corDeUsoContexto",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 202
+        "linha": 242,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
       }
     },
     {
@@ -614,7 +759,3079 @@
       "descricao": "Botao do header de #panel-col-2 que mostra o painel da pergunta/resposta na coluna 3. Estado ativo e hover usam a cor verde --oliva (igual a #btn-show-tools e #btn-eye-diff); a cor antiga --ambar-pergunta foi removida do projeto.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 117
+        "linha": 167,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "escadinha do terminal",
+      "aliases": [
+        "log baguncado",
+        "linhas indentadas",
+        "texto em escada",
+        "degraus no terminal",
+        "log todo estranho",
+        "terminal desalinhado"
+      ],
+      "identificador": "convertEol",
+      "descricao": "Opcao do xterm (convertEol) que traduz cada \\n em \\r\\n. Ligada a true porque o mesmo terminal recebe a PTY (que ja traduz) e o chunk cru do subprocess (que NAO traduz). Com false, cada \\n descia a linha sem voltar a coluna 0, criando a escada.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/xterm.js",
+        "linha": 133,
+        "conferido": [
+          1789601609.164,
+          6297
+        ]
+      }
+    },
+    {
+      "termo": "allowlist de processos",
+      "aliases": [
+        "executaveis permitidos",
+        "lista branca de comandos",
+        "quais comandos posso rodar",
+        "lista de permitidos",
+        "permitir electron",
+        "permitir pytest",
+        "comandos que a ia pode correr"
+      ],
+      "identificador": "_validar_comando_processo / COMANDOS_PROIBIDOS / FERRAMENTA_NATIVA / COMANDOS_DESTRUTIVOS",
+      "descricao": "Decide que executaveis tool_executar_processo pode correr. Um conjunto de constantes de familia perto do topo do ficheiro (linha ~120): linguagens, gestores de pacotes (npm/yarn/pnpm/bun/deno/npx, pip/uv/poetry/pipx), compiladores, linters/testes (pytest/ruff/mypy/eslint/vite/tsc/electron...), git/nuvem/contentores, midia, rede (curl/netstat), tasklist/taskkill, sqlite3, tar/zip. FICAM DE FORA: shells (powershell/pwsh/cmd/bash/wsl), administracao do sistema (reg/winget/choco/schtasks) e o que apaga sem undo (del/rm). A familia npm e restrita por subcomando - `publish` nunca. NAO e fronteira de seguranca: tool_executar_python/executar_js correm codigo arbitrario sem passar por aqui; e um travao ergonomico. E so trava as MINHAS chamadas - routes/terminal.py:163 (iniciar_processo) nao passa por aqui, logo nunca bloqueia o utilizador. Desde 2026-09-19 tem tres pecas novas: FERRAMENTA_NATIVA (comando -> ferramenta nativa, fonte unica tambem usada por tool_executar_comando), ferramenta_nativa_do_comando (anexa \"Use: <ferramenta>.\" as recusas; python -c -> tool_executar_python, node -e -> tool_executar_js) e comando_destrutivo + COMANDOS_DESTRUTIVOS, que recusa 13 padroes irreversiveis (git reset --hard, git clean -f/-d/-x, git checkout/restore ., git push --force, git branch -D, rm -rf, del /s, rmdir /s, format X:, shutdown, docker prune, taskkill /F /IM). NAO confundir com comando_inicia_axio (src/backend/services/process_manager.py:15), que e outra lista, so para recusar arrancar um segundo Axio na raiz.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/process.py",
+        "linha": 167,
+        "conferido": [
+          1789824102.364,
+          30628
+        ]
+      }
+    },
+    {
+      "termo": "trava de import",
+      "aliases": [
+        "import no meio do codigo",
+        "import fora do topo",
+        "import dentro de funcao",
+        "import local",
+        "trava de import local"
+      ],
+      "identificador": "bloquear_import_local",
+      "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/syntax.py",
+        "linha": 427,
+        "conferido": [
+          1789611406.658,
+          19469
+        ]
+      }
+    },
+    {
+      "termo": "compactar o banco",
+      "aliases": [
+        "compactar a memoria",
+        "compactar o vetor",
+        "diminuir o tamanho do banco",
+        "vacuum",
+        "encolher o ficheiro chroma"
+      ],
+      "identificador": "compactar_memoria_vetor",
+      "descricao": "Acao acao='compactar' de tool_gerenciar_banco_vetorial. Roda sqlite3 VACUUM no chroma.sqlite3 sob memoria_lock para devolver ao disco o espaco das drawers apagadas: o SQLite marca as paginas como livres mas NAO encolhe o ficheiro sem VACUUM. Precisa de ate 2x o tamanho do ficheiro em espaco livre.",
+      "localizacao": {
+        "arquivo": "src/backend/memory/vector.py",
+        "linha": 799,
+        "conferido": [
+          1789827092.677,
+          37883
+        ]
+      }
+    },
+    {
+      "termo": "barra de progresso do vetor",
+      "aliases": [],
+      "identificador": "_marcar_progresso / estado[\"vetor_ocupado\"][\"progresso\"]",
+      "descricao": "Progresso textual das operacoes pesadas do vetor (varredura, limpeza, reparo, compactacao). Gravado por _marcar_progresso em estado[\"vetor_ocupado\"][\"progresso\"] e exibido por _ocupacao_atual no acao='status'. E o unico sinal que sobrevive ao timeout da tool: como a operacao continua em background, o resultado da ferramenta perde-se, mas a marca de ocupacao (com o progresso) continua em RAM ate terminar. A mesma marca serve o minerador de memorias (sem campo de progresso), que a grava enquanto minera - ver o termo \"trava da memoria\".",
+      "localizacao": {
+        "arquivo": "src/backend/memory/vector.py",
+        "linha": 505,
+        "conferido": [
+          1789827092.677,
+          37883
+        ]
+      }
+    },
+    {
+      "termo": "lixo na memoria",
+      "aliases": [
+        "memoria suja",
+        "pendencia de memoria",
+        "aviso de memoria desatualizada",
+        "memoria desatualizada",
+        "curadoria da memoria",
+        "limpar a memoria"
+      ],
+      "identificador": "pendencias_de_memoria",
+      "descricao": "Revisor automatico de saude da memoria: detecta glossario com alvo desaparecido e notas de knowledge que citam ficheiros inexistentes; o bloco de aviso so aparece na injecao quando ha algo a curar",
+      "localizacao": {
+        "arquivo": "src/backend/memory/manutencao.py",
+        "linha": 584,
+        "conferido": [
+          1789830227.284,
+          33551
+        ]
+      }
+    },
+    {
+      "termo": "raio-x da memoria",
+      "aliases": [
+        "teste final da memoria",
+        "diagnostico da memoria",
+        "como saber se a memoria esta limpa",
+        "auditar a memoria"
+      ],
+      "identificador": "raio_x_da_injecao",
+      "descricao": "Mede TUDO o que entra no contexto do agente (glossario, notas de knowledge, vetor, busca semantica) e devolve veredito LIMPA ou N pontos a curar; exposto como tool_gerenciar_memoria(acao='diagnostico')",
+      "localizacao": {
+        "arquivo": "src/backend/memory/manutencao.py",
+        "linha": 682,
+        "conferido": [
+          1789830227.284,
+          33551
+        ]
+      }
+    },
+    {
+      "termo": "auditor de comentarios",
+      "aliases": [
+        "listar comentarios",
+        "remover comentarios",
+        "editar comentarios",
+        "limpar comentarios do codigo",
+        "comentarios desatualizados"
+      ],
+      "identificador": "tool_auditar_comentarios",
+      "descricao": "Lista/substitui/remove comentarios por linguagem (lexico, multi-linguagem), com undo e rollback automatico se a sintaxe quebrar",
+      "localizacao": {
+        "arquivo": "src/backend/tools/comments.py",
+        "linha": 307,
+        "conferido": [
+          1789414433.704,
+          19608
+        ]
+      }
+    },
+    {
+      "termo": "modo outro projeto",
+      "aliases": [
+        "modo axio",
+        "modo projeto",
+        "auto-melhoria suspensa",
+        "bloco modo projeto",
+        "editando outro projeto",
+        "trabalhar noutro projeto",
+        "noutro diretorio"
+      ],
+      "identificador": "no_diretorio_do_axio",
+      "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. ATENCAO, isto MUDOU a 2026-09-19: o radar de atrito ja NAO ignora a rodada fora do Axio - continua a medir e grava o que apanhou no caderno de melhorias adiadas (APP_ROOT/.axio/melhorias_pendentes.json, via _acumular_pendentes em ai/atrito.py), que volta a ser injetado UMA vez por arranque quando a pasta aberta e outra vez a do Axio (_bloco_pendentes). O projeto do utilizador nao recebe ficheiro nenhum.",
+      "localizacao": {
+        "arquivo": "src/backend/state.py",
+        "linha": 123,
+        "conferido": [
+          1789500532.029,
+          4312
+        ]
+      }
+    },
+    {
+      "termo": "recuperar um ficheiro apagado",
+      "aliases": [
+        "restaurar item da lixeira",
+        "trazer de volta o ficheiro apagado",
+        "recuperar da lixeira",
+        "desfazer a exclusao de um ficheiro"
+      ],
+      "identificador": "restaurar_item_lixeira",
+      "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
+      "localizacao": {
+        "arquivo": "src/backend/services/file_service.py",
+        "linha": 585,
+        "conferido": [
+          1789500538.939,
+          31804
+        ]
+      }
+    },
+    {
+      "termo": "icone de informacoes do projeto",
+      "aliases": [
+        "icon de info do projeto",
+        "icone da stack",
+        "informacoes do projeto",
+        "btn-project-info"
+      ],
+      "identificador": "#btn-project-info",
+      "descricao": "Icone da sidebar (entre o inspecionar e o anel de contexto) que abre a janela de informacoes do projeto: stack, linguagens, dependencias, arvore com linhas e totais.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 236,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "janela de informacoes do projeto",
+      "aliases": [
+        "janela de informacoes do projeto",
+        "painel de informacoes",
+        "informacoes da stack",
+        "project-info",
+        "janela do projeto",
+        "painel do projeto"
+      ],
+      "identificador": "#project-panel-container",
+      "descricao": "Painel (nao modal) que desliza da esquerda como o historico, com a largura das colunas 1+2 (35vw): Stack, Linguagens (nome completo + contagem entre parenteses, sem recolher), Dependencias (declaradas + 'usado no codigo', expandiveis com +) e Estrutura (arvore classica com guias continuas, pastas amarelas var(--alerta), contagem apos o nome). Secoes com o resumo ao lado do titulo (ex: 'Estrutura | 108 arquivos, 13 pastas'). Sem icone de recarregar: a medicao e automatica em abrirProjetoInfo. Corpo renderizado por chat/projeto.js, estilo em css/projeto.css.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 579,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "bolinha com i",
+      "aliases": [
+        "icone de informacao do pacote",
+        "sinal de pacote desatualizado",
+        "marca de desatualizado",
+        "icone de desatualizado",
+        "aviso de versao antiga",
+        "bolinha vermelha do pacote",
+        "ponto vermelho do pacote"
+      ],
+      "identificador": ".projeto-alerta",
+      "descricao": "Circulo de 12px com \"i\" italico serifado (Georgia) em var(--perigo) ao lado do nome do pacote no painel de informacoes do projeto. Posto por marcarPacotesDesatualizados (js/chat/projeto.js) a partir de GET /api/projeto/outdated. E o UNICO elemento que mantem o balao automatico no hover (recebe alerta.title = titulo); nos pacotes o balao e do clique. O texto e SO as versoes (ex: \"1.83.1 -> 1.84.0\" ou, em dia, \"3.1.3\"), sem o nome do pacote. Mesmo desenho do .settings-info das Configuracoes.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 316,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "bolinha amarela",
+      "aliases": [
+        "icone amarelo do pacote",
+        "aviso amarelo do pacote",
+        "pacote travado",
+        "pacote preso",
+        "incompativel"
+      ],
+      "identificador": ".projeto-alerta-preso",
+      "descricao": "Variante amarela do \"i\" do painel de informacoes do projeto: a versao nova existe no registo (PyPI) mas o pacote instalado que a exige nao a aceita (ex: sympy exige mpmath<1.4), logo nao e uma atualizacao ao alcance do utilizador. O tooltip diz quem exige o que. A cor normal, vermelha, e do .projeto-alerta.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 330,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "mãozinha nas dependências",
+      "aliases": [
+        "mão no pacote",
+        "maozinha nas dependencias",
+        "cursor mao nas dependencias",
+        "mao no pacote de dependencia",
+        "cursor pointer nas dependencias",
+        "hover nas dependencias",
+        "realce ao passar o rato no pacote"
+      ],
+      "identificador": ".projeto-pacote",
+      "descricao": "Cursor de mao e realce nos pacotes de dependencia do painel de informacoes do projeto. Ao passar o rato o pacote ganha o MESMO realce de fundo dos cabecalhos/grupos (.projeto-pacote:hover { background: var(--bg-hover-suave }, com o border-radius 6px e o padding 1px 6px do .projeto-linha); o padding-left da grade desceu de 24 para 18px para o texto continuar a comecar a 24px. O cursor pointer denuncia que responde ao CLIQUE (abre o balao com a versao). O texto do balao vive em `item.dataset.info` (nao em `title`, para nao saltar no hover), e aberto por `_mostrarTooltipPacote` (js/chat/projeto.js) via `mostrarIconTooltip(item, texto, true)`; o 3o argumento `imediato` (js/chat/ui.js:213) salta os 500ms de espera. O balao mostra SO a versao (ex: \"1.83.1 -> 1.84.0\"), sem repetir o nome do pacote. Um clique fora de qualquer `.projeto-pacote` fecha-o.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 291,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "última pasta aberta",
+      "aliases": [
+        "memoriza a pasta",
+        "ultima pasta",
+        "ultima pasta aberta",
+        "pasta guardada",
+        "lembrar a pasta",
+        "pasta do projeto memorizada",
+        "reabrir a pasta automaticamente"
+      ],
+      "identificador": "set_folder",
+      "descricao": "Rota que fixa a pasta de projeto na sessao e a grava para o arranque seguinte: chama `atualizar_settings({\"projeto\": {\"ultima_pasta\": pasta}})` (settings.json, sem reset dos clientes de IA). No frontend, `restaurarPastaSelecionada` (js/chat/files.js) le \"ultima_pasta\" de GET /api/env_info e reabre sozinha no arranque; o dialogo nativo recebe a pasta em uso como `defaultPath` (ipcMain 'select-folder', src/main.js). A rota NAO escreve na barra de estado (nao emite \"Diretorio carregado\"): quem escreve e o frontend, em `abrirPasta(folderPath, recarregando)`, que mostra \"Carregando diretorio...\" e depois \"Diretorio carregado.\" ou \"Diretorio recarregado.\" conforme venha da escolha do utilizador ou do restauro do arranque. `restaurarPastaSelecionada` deduplica a dupla chamada do arranque (renderer ao ligar + onopen do SSE) com a promise em `restauracaoEmCurso`, para nao sairem dois POST /api/set_folder nem dois avisos seguidos.",
+      "localizacao": {
+        "arquivo": "src/backend/routes/chat.py",
+        "linha": 36,
+        "conferido": [
+          1789764201.711,
+          7048
+        ]
+      }
+    },
+    {
+      "termo": "trava da memoria",
+      "aliases": [
+        "trava do vetor",
+        "trava da memoria do agente",
+        "impedir corromper a memoria"
+      ],
+      "identificador": "_bloqueio_vetor_ocupado",
+      "descricao": "Recusa (texto) quando ja ha operacao pesada no vetor; a marca de ocupacao (estado[\"vetor_ocupado\"]) inclui agora o minerador de memorias, e as gravacoes/exclusoes de notas adiam-se numa fila (_fila_vetor, drenada por esvaziar_fila_do_vetor) em vez de disputarem o memoria_lock.",
+      "localizacao": {
+        "arquivo": "src/backend/memory/vector.py",
+        "linha": 529,
+        "conferido": [
+          1789827092.677,
+          37883
+        ]
+      }
+    },
+    {
+      "termo": "aviso do embedder sem identidade",
+      "aliases": [
+        "aviso da identidade do embedder",
+        "embedderidentityunknownwarning",
+        "palace sem identidade gravada",
+        "aviso minilm",
+        "aviso axio_code sem identidade"
+      ],
+      "identificador": "_gravar_identidade_embedder",
+      "descricao": "Grava a identidade do embedder no sidecar do palace. O aviso 'has no recorded embedder identity; assuming the current model' sai UMA vez, no arranque em que a identidade e gravada (a verificacao corre antes da gravacao) e nao volta enquanto o sidecar tiver a chave. Apagar o palace apaga o sidecar, logo o aviso reaparece uma vez na reconstrucao.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/code_index.py",
+        "linha": 63,
+        "conferido": [
+          1789827236.694,
+          21937
+        ]
+      }
+    },
+    {
+      "termo": "memorias recuperadas",
+      "aliases": [
+        "bloco de memoria",
+        "contexto de memorias",
+        "memorias do palace",
+        "notas e conversas recuperadas"
+      ],
+      "identificador": "_rotular_memorias",
+      "descricao": "Bloco de contexto injetado a cada rodada com as memorias recuperadas do palace. Cada entrada traz entre [ ]: a ORIGEM (nota curada = .axio/knowledge; conversa antiga (historico) = .axio/chats; memoria minerada), o PROJETO (wing do drawer, marcado '(OUTRO PROJETO)' quando difere do projeto aberto) e a IDADE do conteudo (data real + 'hoje'/'ha 3 dias'/'ha 2 meses'). A data vem de _instante_da_memoria, por ordem de confianca: epoch no nome do ficheiro (sessao_<unix>.txt) > mtime do source_path no disco > created_at do metadata. O epoch manda porque o created_at das transcricoes aponta a MINERACAO, nao o dia da conversa (medido: 29/08 aparecia como 12/09). idade_legivel/data_legivel em src/backend/memory/store.py sao a fonte unica dessa formatacao. As notas curadas vem primeiro e as conversas antigas limitadas a 3; _reforcar_notas_curadas faz uma segunda busca restrita ao room ai_memory quando nenhuma nota veio.",
+      "localizacao": {
+        "arquivo": "src/backend/ai/coleta.py",
+        "linha": 115,
+        "conferido": [
+          1789244304.542,
+          9605
+        ]
+      }
+    },
+    {
+      "termo": "script de teste que o agente criava na raiz",
+      "aliases": [
+        "scripts de prova",
+        "_prova_*.py",
+        "_teste_*.py",
+        "script temporario de teste",
+        "provar um trecho de codigo",
+        "rodar um teste rapido",
+        "espelho do teste no terminal",
+        "provar comportamento em js",
+        "testar javascript",
+        "rodar trecho node",
+        "harness de js"
+      ],
+      "identificador": "tool_executar_python / tool_executar_js (_correr_trecho)",
+      "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/harness.py",
+        "linha": 1368,
+        "conferido": [
+          1789783019.412,
+          62088
+        ]
+      }
+    },
+    {
+      "termo": "etiquetas da arvore",
+      "aliases": [
+        "etiquetas",
+        "tags",
+        "labels",
+        "rotulos da arvore"
+      ],
+      "identificador": ".projeto-tag",
+      "descricao": "Rotulo curto (#endpoints http) a direita de cada pasta/ficheiro na arvore do painel de informacoes do projeto, dentro de uma coluna de largura fixa (--projeto-coluna-tags, 180px) separada por um fio vertical. Fonte 10.72px peso 600, cor --text-mutado, com reticencias. O olho recolhe-as com animacao (width da etiqueta e opacity em 0.3s, mais o gap da coluna e a margem do titulo) e o texto completo so aparece em tooltip quando a etiqueta esta mesmo cortada (medido no hover). Gravado em .axio/etiquetas.json (assinatura = mtime do ficheiro, nomes dos filhos da pasta) e gerado por src/backend/services/etiquetas.py. A primeira etiquetagem dispara sozinha ao abrir a arvore de um projeto novo.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 491,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "olhinho das etiquetas",
+      "aliases": [
+        "olho das etiquetas",
+        "ocultar etiquetas",
+        "mostrar etiquetas",
+        "exibir labels",
+        "olho das tags",
+        "olho ao lado do contador"
+      ],
+      "identificador": ".projeto-olho",
+      "descricao": "Olho do cabecalho da secao Estrutura que oculta ou exibe as etiquetas da arvore. NAO tem lugar fixo: com as etiquetas a vista vive DENTRO da coluna do titulo, encostado as setas do atualizar; ocultas, o JS move-o para o cabecalho, ANTES da coluna (anexarOlho/_colocarOlho em projeto_etiquetas.js), onde fica encostado ao resumo \"N arquivos, M pastas\" em vez de ficar isolado no canto direito. Trocar de pai nao e animavel, por isso cada mudanca leva a classe .projeto-olho-vem (animation projeto-olho-vem em projeto.css), o que da o efeito de desaparecer num sitio e surgir no outro. Quando as etiquetas estao ocultas a coluna recolhe a 0 (o olho ja nao mora la). Preferencia em localStorage (axio-etiquetas-visiveis). NAO confundir com #btn-reveal-keys (Configuracoes) nem com #btn-eye-diff (diff).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/projeto_etiquetas.js",
+        "linha": 66,
+        "conferido": [
+          1789601695.002,
+          9054
+        ]
+      }
+    },
+    {
+      "termo": "icone de atualizar as etiquetas",
+      "aliases": [
+        "icone de atualizar",
+        "setas de atualizar",
+        "atualizar as etiquetas",
+        "botao de etiquetar",
+        "refresh das etiquetas"
+      ],
+      "identificador": ".projeto-atualizar",
+      "descricao": "Icone do cabecalho da secao Estrutura, dentro da coluna do titulo ETIQUETAS (.projeto-coluna-titulo), ao lado do olho. Substituiu a antiga varinha: um unico icone (as setas do atualizar) que vira spinner enquanto a etiquetagem corre e mostra \"Etiquetando...\" no #lbl-status. So etiqueta o que falta ou mudou; na primeira abertura da arvore de um projeto sem nenhuma etiqueta a operacao dispara sozinha (estado_etiquetagem devolve inicial=True uma unica vez por projeto).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/projeto_etiquetas.js",
+        "linha": 96,
+        "conferido": [
+          1789601695.002,
+          9054
+        ]
+      }
+    },
+    {
+      "termo": "linha do separador da etiqueta",
+      "aliases": [
+        "fio vertical",
+        "fio das etiquetas",
+        "linha que separa as etiquetas",
+        "separador das etiquetas",
+        "linha fininha da etiqueta",
+        "fio do separador"
+      ],
+      "identificador": ".projeto-fio",
+      "descricao": "Fio vertical de 1px que separa os nomes das etiquetas na arvore do painel de informacoes do projeto. E UM UNICO elemento para a arvore inteira (nasce em .projeto-arvore, montado por projeto.js:_renderEstrutura), nao um ::after por linha: 124 riscos de 1px, cada um no seu contexto de pintura (o content-visibility das linhas cria-o), arredondavam para a grelha de pixels de forma diferente e apareciam uns mais grossos que outros. O olho desloca-o com transform: translateX(0) e desvanece-o.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 470,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "linha horizontal da arvore",
+      "aliases": [
+        "linhas horizontais da arvore",
+        "linha que liga a pasta ao ficheiro",
+        "traco horizontal dos ficheiros",
+        "guia horizontal da arvore",
+        "linha dos ficheiros da subpasta",
+        "linha completa da subpasta"
+      ],
+      "identificador": ".projeto-pasta > .projeto-filhos > .card-collapsible-clip > *::before",
+      "descricao": "Guia horizontal da arvore do painel de informacoes do projeto: pseudo-elemento de 20x1px (left: 0, top: 11px) em cada filho do clip da pasta, a ligar a guia vertical (o ::after do mesmo filho) ao nome do ficheiro/pasta. O recuo (padding-left) vive no FILHO - 20px na linha, 14px no bloco de pasta - e nao no clip: as linhas tem content-visibility, que implica paint containment, e um elemento contido so pinta dentro da propria caixa (com o recuo no clip a guia era recortada e sobrava um coto de 6px).",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 241,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "linha vertical da arvore",
+      "aliases": [
+        "fio vertical da arvore",
+        "linha que desce pelas pastas",
+        "traco vertical dos ficheiros",
+        "guia vertical da arvore"
+      ],
+      "identificador": ".projeto-pasta > .projeto-filhos > .card-collapsible-clip > *::after",
+      "descricao": "Guia vertical da arvore do painel de informacoes do projeto: um traco de 1x100% (background --border-suave) desenhado pelo ::after de CADA filho do clip, e nao o border-left do clip. Por filho porque so assim a guia pode PARAR no ultimo (o cotovelo): *:last-child::after mede 11px em vez de 100%. O clip leva padding-left 1px so para reservar a coluna. ARMADILHA: as linhas tem content-visibility (paint containment) e o recorte segue o border-radius - por isso as linhas do clip tem border-radius 0 6px 6px 0 (canto esquerdo quadrado), senao o arco de 6px come ~3,6px da guia em cima e em baixo de cada linha e a vertical fica com lacunas. NAO confundir com o .projeto-fio, que e o separador vertical das etiquetas.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 250,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "linhas de indentação da árvore",
+      "aliases": [
+        "linhas de indentacao",
+        "linhas de indentação",
+        "guias da arvore",
+        "linhas de guia da arvore"
+      ],
+      "identificador": ".card-collapsible-clip > *::after (a vertical) e > *::before (a horizontal)",
+      "descricao": "Guias verticais e horizontais que ligam uma pasta aos seus filhos na arvore do painel de informacoes do projeto. Tom --border-suave (#444), o mesmo do fio das etiquetas. A vertical e o ::after de cada filho (para poder parar no ultimo, o cotovelo) e a horizontal e o ::before. O recuo vive no filho (padding 20px na linha, 14px na pasta), nunca no clip, por causa do paint containment do content-visibility; e as linhas do clip tem o canto esquerdo quadrado (border-radius 0 6px 6px 0) porque o recorte do containment segue o arredondamento e cortaria a guia.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 225,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "cotovelo da arvore",
+      "aliases": [
+        "quebra da arvore",
+        "curva no final da arvore",
+        "curva do ultimo item",
+        "l da arvore",
+        "linha que para no ultimo filho",
+        "canto da arvore",
+        "quebra no final da indentacao"
+      ],
+      "identificador": ".projeto-pasta > .projeto-filhos > .card-collapsible-clip > *:last-child::after",
+      "descricao": "Cotovelo da arvore do painel de informacoes do projeto: a guia vertical tem de PARAR na altura da linha horizontal do ULTIMO filho da pasta, em vez de passar reto ate a base do clip (era o defeito que o utilizador via, com 12px de cauda). Feito com > *:last-child::after { height: 11px } - 11px e onde esta a horizontal (top: 11px do filho), logo as duas guias tocam-se no mesmo pixel. Vale para o ultimo filho ficheiro e para o ultimo filho pasta.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 259,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "card riscado do historico",
+      "aliases": [
+        "card apagado no historico",
+        "cards acesos",
+        "riscado do historico",
+        "card riscado",
+        "estado nao aplicado"
+      ],
+      "identificador": "marcarCheckpoint",
+      "descricao": "Risca (diminui + tachado, classe history-round-ahead) o card do historico cujo estado ja NAO esta aplicado ao disco. O criterio e derivado da linhagem do checkpoint restaurado (historico/checkpoint.js:_intervalosAplicados), nunca acumulado: restaurar para um ponto mais recente volta a acender os cards que uma restauracao para tras tinha riscado.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/historico/checkpoint.js",
+        "linha": 23,
+        "conferido": [
+          1789790891.875,
+          1608
+        ]
+      }
+    },
+    {
+      "termo": "doc",
+      "aliases": [
+        "o doc",
+        "documento",
+        "area do doc",
+        "coluna da direita",
+        "interagir com o doc"
+      ],
+      "identificador": "#editor-view",
+      "descricao": "O \"doc\" e a COLUNA DA DIREITA inteira (index.html:363): as abas #chat-view, #editor-view e #preview-view mais a barra #ws-top-bar. Dentro de #editor-view vivem o Monaco (#editor-host) e o dock de logs (#log-dock) com a arvore de ficheiros (#explorer-view). No clique-fora (renderer.js) a regra distingue CONTEUDO do doc de PAINEIS do doc: clicar no Monaco (#editor-host-wrap) ou no chat da direita (#chat-container-right) fecha os paineis que deslizam (historico e projeto), mas o dock do log fica; clicar na arvore ou no dock do log nao fecha nada.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 408,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "botao do terminal",
+      "aliases": [
+        "icone do terminal",
+        "abrir o terminal",
+        "ativar o terminal",
+        "abrir janela de terminal",
+        "btn-workspace"
+      ],
+      "identificador": "#btn-workspace",
+      "descricao": "Icone da barra lateral (title 'Terminal') que alterna a vista do terminal: toggleWorkspaceView (js/chat/ui.js:347), que troca #chat-mode/#terminal-mode com 220ms de transicao. Ao ABRIR o terminal, o handler (js/chat/renderer.js:~182) chama recolherPaineisLaterais() (~535) antes da troca: historico e painel de informacoes do projeto recolhem para nao ficarem a frente do terminal, mas isso NAO acontece quando o terminal ja esta aberto e o clique o fecha. Nao confundir com #term-input (campo do prompt) nem com #term-log (a janela com o output).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 230,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "tooltip do glossario",
+      "aliases": [
+        "balao do glossario",
+        "chip do glossario",
+        "dica do termo leigo",
+        "sugestao de termo",
+        "balao quer dizer"
+      ],
+      "identificador": "#glossary-chip",
+      "descricao": "Balao acima do input (dentro do #input-footer-inner) que sugere o identificador de codigo quando o texto digitado TERMINA num termo do glossario. A regra vive em findGlossaryMatch/showGlossaryChip (src/frontend/js/chat/ui.js:84), reavaliada a cada evento input: compara o FIM do texto normalizado contra termo+aliases, escolhe o candidato mais LONGO e NAO faz trim a direita - dar um espaco depois do termo ja fecha o balao, que so volta quando o termo tornar a ser o fim do texto. Com o termo repetido na frase, o [Tab] (applyGlossaryChip) troca a ULTIMA ocorrencia cortando o sufixo pelo comprimento do match, sem indexOf. ARMADILHA: trocar endsWith por includes faz o balao ficar persistente por cima do input enquanto o utilizador escreve outra coisa qualquer.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 261,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "coluna de arquivos do historico",
+      "aliases": [
+        "coluna 2 do historico",
+        "arquivos do historico",
+        "segunda janela do historico",
+        "painel de arquivos do historico",
+        "codigo do historico"
+      ],
+      "identificador": "#panel-col-2-history / #panel-col-3-history (vistaDe('historico') em colunas.js)",
+      "descricao": "Colunas 2 e 3 PROPRIAS do historico, dentro do #sliding-panel-container: nao sao as mesmas da doc. A coluna 2 desliza ao lado da lista quando se clica numa tarefa do #history-logs-wrapper. A vista e registada/criada em src/frontend/js/chat/colunas.js + files.js (vistaDe('dock') / vistaDe('historico'))",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 123,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "camada de codigo do historico",
+      "aliases": [
+        "codigo do historico",
+        "janela de codigo do historico",
+        "coluna 3 do historico",
+        "code view do historico",
+        "ferramentas do historico",
+        "chain of thought do historico",
+        "pensamentos do historico"
+      ],
+      "identificador": "#panel-col-3-history",
+      "descricao": "Camada do HISTORICO que abre POR CIMA da area do editor (o lugar do Monaco), com o code view, as ferramentas e o raciocinio da tarefa selecionada no historico. Nao e uma coluna do painel que desliza: nasce no HTML dentro do #sliding-panel-container e e montada em #editor-host-wrap no arranque por mountLogDockIntoWorkspace (js/editor/workspace.js), no MESMO ponto que monta a gemea #panel-col-3 (docs). Abre/fecha por opacity (position absolute, inset 0, z-index 6 - fica por cima da camada da doc, que e 5), e a vista do historico chama WorkspaceView.showEditor() antes de a mostrar. Os botoes que a abrem sao #btn-show-question-history/#btn-show-thoughts-history/#btn-show-tools-history no header da #panel-col-2-history, ligados em js/chat/renderer.js por ligarBotoesCol3.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 145,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "input de pesquisar do historico",
+      "aliases": [
+        "busca do historico",
+        "campo de busca do historico",
+        "lupa do historico",
+        "pesquisa do historico",
+        "painel de busca do historico"
+      ],
+      "identificador": "#history-search-panel",
+      "descricao": "Painel (campo + resultados) da busca do historico. E um BLOCO PROPRIO no FUNDO da coluna 1, IRMAO do #col1-stack - a lista de cards nunca e escondida nem substituida - e fica logo abaixo do ultimo card da lista (o card \"Salvo\", que e o ultimo a ser montado). Fechado: height 0 + opacity 0 + translateY(12px). Aberto, com a classe .history-search-open no #panel-col-1: height 50% FIXA (e o que mantem o campo na mesma posicao quando chegam resultados), com o campo em cima e #history-search-results-inline abaixo. A outra classe, .history-search-expanded, e so a LARGURA da janela (17.5vw -> calc(100vw - 3.5rem)); encolherBuscaInline tira so essa (a coluna 3 do historico abre). Abrir recolhe as pilhas expandidas (recolherPilhasExpandidas) porque o painel ocupa a metade de baixo. CSS em src/frontend/css/dock.css.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 107,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "interface muda",
+      "aliases": [
+        "interface parou de responder",
+        "nenhum botao responde",
+        "tela toda travada",
+        "interface morta",
+        "nao clico em nada",
+        "tela preta sem erro",
+        "interface sem responder"
+      ],
+      "identificador": "AxioDiagnostico",
+      "descricao": "Painel de diagnostico do arranque (o elemento e o #boot-diag, com CSS .diag-painel em src/frontend/css/diagnostico.css), pintado por src/frontend/js/boot-guard.js quando um modulo da interface nao carrega - em ES modules um import que nao resolve derruba o modulo inteiro em silencio. Mostra ficheiro:linha, o simbolo em falta, o modulo culpado e o motivo, e tem botao que copia o diagnostico. O script e CLASSICO de proposito (nao e um modulo) para sobreviver a modulos mortos; consulta GET /api/diagnostico_frontend, que le os imports reais do disco. O mesmo aviso aparece no #lbl-status, clicavel para reabrir o painel. Acesso manual na consola do browser: window.AxioDiagnostico.texto().",
+      "localizacao": {
+        "arquivo": "src/frontend/js/boot-guard.js",
+        "linha": 271,
+        "conferido": [
+          1789500521.191,
+          10839
+        ]
+      }
+    },
+    {
+      "termo": "aviso de import quebrado",
+      "aliases": [
+        "diagnostico do frontend",
+        "checar imports do frontend",
+        "erro de carregamento de modulo",
+        "import nao resolve",
+        "modulo nao carrega"
+      ],
+      "identificador": "/api/diagnostico_frontend",
+      "descricao": "Rota GET (src/backend/routes/static.py) que devolve, em JSON, os imports de modulos locais do frontend que NAO resolvem no disco - a mesma analise tree-sitter do gate de restauracao (defeitos_contrato_imports de src/backend/tools/js_contrato.py), mas sobre o estado atual e sem alteracoes projetadas. Custo medido: 0,137s. E o que o boot-guard.js consulta para avisar mesmo quando nenhum modulo consegue carregar para o reportar.",
+      "localizacao": {
+        "arquivo": "src/backend/routes/static.py",
+        "linha": 74,
+        "conferido": [
+          1789791684.814,
+          7414
+        ]
+      }
+    },
+    {
+      "termo": "menu ferramentas",
+      "aliases": [
+        "barra de menu",
+        "menu superior",
+        "dev tools",
+        "ferramentas de desenvolvedor",
+        "menu exibir",
+        "devtools"
+      ],
+      "identificador": "montarMenu (menu nativo do Electron)",
+      "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 695,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
+      }
+    },
+    {
+      "termo": "rolagem automatica do monaco",
+      "aliases": [
+        "rolagem do monaco",
+        "scroll automatico",
+        "rolar o monaco",
+        "rola no monaco",
+        "efeito de rolagem",
+        "salto no monaco",
+        "monaco rolando sozinho"
+      ],
+      "identificador": "openFileFromLog / enterLogMode / enterDiffMode / revelarLinhaComRolagem (src/frontend/js/editor/workspace.js:323 e src/frontend/js/editor/scroll.js:147)",
+      "descricao": "Rolagem que o Monaco fazia SOZINHO ao abrir um ficheiro pelo log. Removida em 2026-09-12 no caminho de entrada do log (workspace.js:openFileFromLog -> themes.js:enterLogMode/enterLogModeWithLines -> diff.js:enterDiffMode): o ficheiro muda e as cores mantem-se, mas a vista nao se mexe. Sobra so a revelacao pedida de proposito: editor.js loadFileIntoEditor dentro de if (opts.line) e workspace.js:openFileAtLine, ambas com smoothRevealLine; e, desde 2026-09-15, a TROCA DE MODO dentro do MESMO ficheiro (codigo substituido -> codigo novo/removido), que chama scroll.js:revelarLinhaComRolagem com a primeira linha alterada - nesse caso a vista desliza suavemente ate a alteracao, em vez de so piscar. A regra de nao mexer na vista quando se ABRE um ficheiro novo pelo log mantem-se: a revelacao so corre quando state.currentFile === path. A rolagem do code view HTML (#code-view-container) e outra coisa: rolarParaDestaque/rolarSuave em src/frontend/js/chat/files.js, essa mantem-se. A funcao revealSnippet (scroll.js) foi eliminada.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/scroll.js",
+        "linha": 240,
+        "conferido": [
+          1789775857.541,
+          9909
+        ]
+      }
+    },
+    {
+      "termo": "recolher as tabs",
+      "aliases": [
+        "recolher as tabs",
+        "abas recolhidas",
+        "recolhe o editor-tabs",
+        "tabs recolhidas",
+        "barra de cima recolhida",
+        "header alinhado com o topo",
+        "tabs escondidas",
+        "barra de abas recolhe quando nao devia",
+        "barra de abas volta a aparecer",
+        "abrir as notas recolhe a barra de abas"
+      ],
+      "identificador": "syncDocTopBar",
+      "descricao": "A barra de abas do doc (#ws-top-bar, com o #editor-tabs) recolhe em TRES casos: (a) quando o painel do historico esta aberto SEM o codigo dele no editor; (b) quando a camada do code view (#panel-col-3, a da doc) mostra um dos TRES PAINEIS (ferramentas, raciocinio, pergunta); (c) quando a CAMADA DE NOTAS (#panel-col-3-notes) esta aberta - condicao camadaNotasAberta() (layout.js:105), DERIVADA da vista 'notas' como todas as outras, nunca guardada a mao (era o defeito: um flag obsoleto mantinha a barra a mostra por baixo da camada). A barra e reavaliada quando a camada de notas abre (o abrirCol3 da vista chama syncDocTopBar) e quando fecha (aoFecharCol3). Com o historico aberto a barra so reaparece quando o codigo do historico entrou no Monaco (state.codigoDoHistoricoNoEditor) E a camada #panel-col-3-history ja fechou. Recolhida sobe 40px e o #editor-view passa a top:0.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/layout.js",
+        "linha": 117,
+        "conferido": [
+          1789790907.415,
+          9608
+        ]
+      }
+    },
+    {
+      "termo": "virar o monaco",
+      "aliases": [
+        "virar o monaco",
+        "entrega ao monaco",
+        "trocar pelo editor",
+        "o code view vira monaco",
+        "monaco no mesmo lugar do code view",
+        "entregar ao editor",
+        "clicar no code view",
+        "clique no code view nao faz nada",
+        "piscada ao entregar no monaco",
+        "code view do historico",
+        "entrega do historico",
+        "camada do historico fecha"
+      ],
+      "identificador": "entregarAoMonaco / transferirDaCamada / linhaDoTopo / linhaNoFicheiroAtual / alinharComLinha / codigoDoHistoricoNoEditor",
+      "descricao": "A troca da camada do code view pelo Monaco. REGRA: A CAMADA NAO TOCA NO MONACO AO ABRIR, SO NA ENTREGA. files.js:entregarAoMonaco(vista) le a linha do retrato (marcas [data-ln] -> linhaNoFicheiroAtual; vista de FICHEIRO -> a grelha) e chama SEMPRE workspace.js:transferirDaCamada(caminho, linha, arquivoOriginal), que sai do modo do Monaco sem fade, recarrega o ficheiro quando o modelo em maos nao e o ficheiro e alinha. O 4o argumento entrar do setCodeViewContent controla o fade de entrada (diff passa false). Duas vistas chamam isto: a doc (vistaDock) e o HISTORICO (vistaHistorico). NA DOC: o clique entrega e a camada sai em fade, sempre. NO HISTORICO (2026-09-15): (a) com CODIGO a mostra (vista de ficheiro ou diff) entrega como o dock e a camada sai - e a unica forma de ver o Monaco, porque a camada e inset 0 por cima do #editor-host-wrap; (b) com um PAINEL aberto (raciocinio, ferramentas ou pergunta) NAO fecha a camada nem le linha nenhuma (o corpo mostra o painel, nao codigo) - o guard olhava so para tools/thoughts, logo clicar no painel da PERGUNTA entregava com uma linha falsa e fechava a camada a meio da leitura. O abrirDiff do historico passou a chamar marcarLinhasAlteradas e a marcar caminhoEntrega E caminhoOriginal como o do dock (era o que deixava o diff do historico sem linha). O MONACO DEPOIS DA ENTREGA NAO FECHA O HISTORICO: entregar codigo do historico liga state.codigoDoHistoricoNoEditor, que isenta o clique no editor no clique-fora (renderer.js) - sem isso, clicar no Monaco fechava o painel do historico (closeHistoryPanel). Desliga-se no closeHistory, na entrega da doc e no axio-editor-file-open (arvore).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/files.js",
+        "linha": 370,
+        "conferido": [
+          1789601725.435,
+          39293
+        ]
+      }
+    },
+    {
+      "termo": "texto do code view grudado",
+      "aliases": [
+        "linhas coladas no code view",
+        "ficheiro num paragrafo",
+        "quebras perdidas no code view",
+        "codigo do ficheiro todo junto",
+        "aspas na mesma linha",
+        "aspa de fecho colada",
+        "linha que desaparece no code view"
+      ],
+      "identificador": ".code-view-plain (vista de ficheiro) e marcarLado (retrato do diff)",
+      "descricao": "As quebras que morriam no retrato, por DUAS vias distintas. (1) VISTA DE FICHEIRO: o texto entrava por textContent num contentor com white-space normal e o ficheiro inteiro virava um paragrafo; o pre vive no PROPRIO texto (files.js:setCodeViewContent com escapeHtml), nunca no contentor, onde o raciocinio/ferramentas/pergunta precisam de quebrar - css/dock.css:.code-view-plain. (2) RETRATO DO DIFF: files.js:marcarLado reconstroi cada linha num span proprio e deitava fora a quebra final de cada bloco .diff-*, logo o ultimo pedaco de um bloco \"added\" colava-se ao bloco seguinte (as tres frases e a aspa de fecho vem em blocos separados) - a flag quebraFinal repoe-a.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/files.js",
+        "linha": 160,
+        "conferido": [
+          1789601725.435,
+          39293
+        ]
+      }
+    },
+    {
+      "termo": "recuo do monaco",
+      "aliases": [
+        "texto do monaco deslocado",
+        "monaco mais afastado da borda",
+        "codigo do monaco fora do sitio",
+        "monaco desloca o texto",
+        "alinhamento da esquerda do monaco",
+        "monaco encostado a barra de abas",
+        "afastamento do topo do monaco",
+        "padding do topo do monaco",
+        "texto saltando no clique",
+        "afastamento lateral do diff",
+        "afastamento do diff do monaco",
+        "diff do monaco colado na lateral"
+      ],
+      "identificador": "PADDING_TOPO / RECUO_LATERAL / RECUO_COLUNA_DIREITA / opcoesBase()",
+      "descricao": "Recuos do codigo no Monaco (vertical e horizontal), a partir de um so sitio: metricas.js exporta as tres metricas e opcoesBase(), consumida por monaco.js, themes.js e diff.js. O recuo horizontal vem da goteria do folding com lineDecorationsWidth 0 no editor e no modo log, e da lineDecorationsWidth (16/12) no diff.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/metricas.js",
+        "linha": 4,
+        "conferido": [
+          1789498855.435,
+          774
+        ]
+      }
+    },
+    {
+      "termo": "barra de rolagem horizontal do diff",
+      "aliases": [
+        "scroll horizontal do diff",
+        "texto passando pro outro lado",
+        "coluna do diff rolando so uma",
+        "barra sincronizada dos dois lados"
+      ],
+      "identificador": ".diff-two-col > .diff-col / sincronizarColunasDiff",
+      "descricao": "Diff de duas colunas do retrato (Codigo Substituido): cada lado tem a sua rolagem horizontal e o scrollLeft das duas anda junto por files.js:sincronizarColunasDiff (listener em CAPTURE no contentor, porque o evento scroll nao borbulha; instalado nos contentores da doc e do historico). Sem a rolagem, a linha longa (ja sem quebra, como no Monaco) pintava 328px por cima da coluna vizinha. Medido: coluna de 279 com scrollWidth 608 e barra de 8px.",
+      "localizacao": {
+        "arquivo": "src/frontend/style.css",
+        "linha": 219,
+        "conferido": [
+          1789774233.012,
+          9188
+        ]
+      }
+    },
+    {
+      "termo": "nome da função grudado",
+      "aliases": [
+        "linhas grudadas no topo",
+        "barrinha que gruda o nome da funcao",
+        "nome da funcao sempre visivel",
+        "contexto grudado no topo",
+        "sticky scroll",
+        "faixa que fica no topo do editor"
+      ],
+      "identificador": "stickyScroll",
+      "descricao": "Faixa de linhas de contexto que o Monaco desenha no TOPO do editor enquanto o codigo rola - o nome da funcao que fica preso la em cima. E a opcao nativa stickyScroll, enabled: true por predefinicao, e ficou DESLIGADA em metricas.js:opcoesBase() porque o retrato do code view nao tem nada disso: a faixa tapava o recuo de 16px do topo e punha as duas vistas a comecar a alturas diferentes assim que a vista rolava. ARMADILHA: NAO era a causa do desalinhamento no clique (essa era a ancora do workspace.js:alinharComLinha, que somava a fraccao ao padding) - apesar de o sintoma parecer o mesmo, porque nos dois casos o recuo do topo so aparecia depois de rolar para cima.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/metricas.js",
+        "linha": 19,
+        "conferido": [
+          1789498855.435,
+          774
+        ]
+      }
+    },
+    {
+      "termo": "barra de rolagem do code view",
+      "aliases": [
+        "scrollbar do code view",
+        "barra do code view",
+        "scroll do code view",
+        "barra quadrada do codigo",
+        "barra de rolagem do retrato",
+        "barra larga do codigo",
+        "barra arredondada do diff",
+        "scrollbar do codigo substituido"
+      ],
+      "identificador": "#code-view-container",
+      "descricao": "Scrollbar das DUAS vistas de codigo do code view E das COLUNAS do diff (.diff-col, as duas metades do Codigo Substituido - cada uma tem a sua rolagem horizontal e por isso tinha a barra do desenho global). Em css/dock.css, com um seletor :is(#code-view-container, #code-view-container-history) que cobre o contentor e as colunas de uma so vez (as regras das colunas sao as mesmas, com ' .diff-col' no meio). Desenhada igual a que o Monaco pinta no #editor-host: vertical 14px e horizontal 12px, slider a ocupar a barra TODA (sem inset) e QUADRADO (border-radius 0), track transparente e slider que so aparece com o rato por cima. CORES das predefinicoes do tema dark do proprio Monaco (miscColors.js): slider #797979 a 40% (#79797966), hover #646464 a 70% (#646464b3); o track do Monaco e null, logo transparente - era aqui que estava o fundo preto. E O RECUO: o padding esquerdo do contentor e uma BORDER (padding-left 0 + border-left 16 transparente) para a barra horizontal comecar a 16 e nao a 0 - a barra e pintada dentro da padding-box, logo a border empurra-a e o padding nao. MEDIDO no contentor real com o CSS do projeto: barra horizontal x 16..385, vertical 14px em x 386..399, texto a x=16 (400 exatos). LIMITE: a barra horizontal de cada .diff-col vive na base da COLUNA (fim do conteudo), nao no fundo da janela. As restantes barras da interface continuam com o desenho global (style.css: 8px, thumb arredondado a 4px).",
+      "localizacao": {
+        "arquivo": "src/frontend/css/dock.css",
+        "linha": 347,
+        "conferido": [
+          1789774233.017,
+          11341
+        ]
+      }
+    },
+    {
+      "termo": "abriu a aba errada",
+      "aliases": [
+        "mesmo nome de ficheiro",
+        "ficheiros com nome repetido",
+        "aba do ficheiro errado",
+        "rolagem no ficheiro errado",
+        "dois session.py"
+      ],
+      "identificador": "encontrarArquivoUndo",
+      "descricao": "Ficheiros com o MESMO nome em pastas diferentes (src/backend/services/session.py e src/backend/routes/session.py) tem de ser identificados pelo CAMINHO, nunca pelo nome. encontrarArquivoUndo (files.js) procura match exato pelo caminho_relativo, depois por sufixo, e o nome simples SO se houver um unico candidato - antes havia um OR com o basename e, como o /api/undo_redo_status devolve a lista ordenada por nome, qualquer card abria sempre o PRIMEIRO da lista. O rotulo da aba e decidido por rotulosDasAbas (src/frontend/js/editor/editor.js, chamada por renderTabs): o PRIMEIRO ficheiro da lista fica com o nome simples e os seguintes ganham o sufixo da pasta (routes/session.py), subindo niveis enquanto houver colisao.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/files.js",
+        "linha": 178,
+        "conferido": [
+          1789601725.435,
+          39293
+        ]
+      }
+    },
+    {
+      "termo": "icone de notas",
+      "aliases": [
+        "botao de notas",
+        "icone do caderno",
+        "abrir as notas",
+        "icone de anotacoes",
+        "botao do bloco de notas",
+        "abrir a camada de notas"
+      ],
+      "identificador": "#btn-project-notes",
+      "descricao": "Icone ao lado do titulo do painel de informacoes do projeto que ABRE E FECHA (toggle) a camada de notas por cima da area do Monaco: js/chat/projeto_notas.js:alternarCamadaNotas. Deixou de ser o toggle de uma pagina dentro do painel em 2026-09-15 - o painel fica SEMPRE na pagina de informacoes e o #project-panel-title nunca muda de texto. Acende (classe .ativo) enquanto a camada esta aberta e, nesse estado, so muda a COR do icone para --oliva: o fundo --bg-hover-suave foi retirado de .projeto-icon-btn.ativo (css/projeto.css) para ficar igual ao hover dos botoes do historico.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 584,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "campo de notas",
+      "aliases": [
+        "caderno",
+        "bloco de notas",
+        "pagina de notas",
+        "campo pra digitar as notas",
+        "anotacoes persistentes",
+        "notas do projeto"
+      ],
+      "identificador": "#project-notes-editor",
+      "descricao": "Campo de escrita da camada de notas: Monaco sem enfeites (markdown, Ctrl+Z/Ctrl+Y, copia com indentacao preservada), flutuante - sem caixa nem contorno, porque o fundo do tema axio-editor (#1e1e1e) e o mesmo do painel. Grava sozinho em .axio/notas.json, por projeto, com varias abas (a versao antiga era uma nota so em .axio/notas.md, migrada na primeira leitura). O recuo de 16px e MARGEM (o Monaco mede clientWidth, que inclui padding). Desde 2026-09-15 vive na camada #panel-col-3-notes, em cima da area do Monaco, e nao dentro do painel de informacoes.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 614,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "varinha das notas",
+      "aliases": [
+        "varinha de traducao",
+        "traduzir a nota",
+        "varinha do caderno",
+        "traduzir termos leigos",
+        "botao da varinha",
+        "varinha do cabecalho das notas"
+      ],
+      "identificador": "#btn-notes-wand",
+      "descricao": "Botao do CABECALHO da camada de notas (#project-notes-header, index.html:555), encostado a direita do titulo 'Notas' - deixou de viver na barra das abas em 2026-09-15 (era o que punha titulo e varinha na mesma linha das abas). Traduz o trecho selecionado (ou a nota toda, sem selecao) para o vocabulario tecnico do projeto: o agente casa o glossario, consulta os identificadores reais no codigo e reescreve o texto, sempre com um aviso no fim de que foi reescrito pelo agente e pode conter erros. Enquanto corre, o PROPRIO botao fica desativado com o spinner (.a-trabalhar troca o SVG da varinha pelo .projeto-icone-spinner) e o chat NAO e bloqueado - a traducao corre em paralelo, numa thread propria, com a barra de status silenciada.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 602,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "aba das notas",
+      "aliases": [
+        "abas de notas",
+        "nova nota",
+        "botao de mais das notas",
+        "+ das notas",
+        "tabs das notas",
+        "nota fechada",
+        "voltar a abrir a nota"
+      ],
+      "identificador": "#project-notes-tabs",
+      "descricao": "Barra das abas do caderno dentro do #project-notes-bar (index.html:564), LOGO ABAIXO do cabecalho com o titulo 'Notas': desde 2026-09-15 as abas ja nao partilham a linha com o titulo nem com a varinha. Cada aba e uma nota (titulo + texto) e usa as MESMAS classes das abas do editor de codigo (.editor-tab), de proposito. O titulo renomeia-se no clique duplo; o X fecha e a ultima nunca desaparece (fica uma Nota 1 nova). CLIQUE DIREITO numa aba abre o #notes-context-menu com 'Voltar a abrir a nota fechada': as notas fechadas vao para uma pilha (notasFechadas, em js/chat/projeto_notas.js) e reabrem uma a uma na ordem INVERSA a que foram fechadas (LIFO), sem limite de abas. Ao fechar uma nota o texto e lido do modelo ANTES de o descartar (projeto_notas.js:_guardarFechada chamada dentro de _fecharAba) - a leitura depois do dispose traria texto vazio.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 612,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "barra das notas",
+      "aliases": [
+        "barra de cima das notas",
+        "barra flutuante das notas",
+        "barra da pagina de notas",
+        "titulo das notas",
+        "barra das abas de notas"
+      ],
+      "identificador": "#project-notes-bar",
+      "descricao": "Barra das ABAS da camada de notas, com 34px (variavel --projeto-notas-altura, definida em #panel-col-3-notes no css/dock.css): da esquerda para a direita tem o + (#btn-notes-add) e as abas (#project-notes-tabs). Desde 2026-09-15 o titulo 'Notas' e a varinha JA NAO vivem aqui: subiram para o cabecalho de 60px #project-notes-header (index.html:555), que fica LOGO ACIMA desta barra. Geometria medida com o CSS real: cabecalho y 0..60, barra y 60..94, editor a partir de 94, aviso de campo vazio a 110.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 608,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "bloco da raiz da arvore",
+      "aliases": [
+        "linha da raiz da arvore",
+        "raiz da arvore",
+        "primeiro item da arvore",
+        "pasta raiz"
+      ],
+      "identificador": ".projeto-pasta-raiz > .projeto-linha",
+      "descricao": "Primeira linha da arvore do painel de informacoes do projeto: o nome da pasta raiz, com o icone amarelo (--alerta) e a contagem (--text-suave). Nasce FECHADA em projeto.js:_noDaArvore e abre/recolhe no clique da propria linha (toggle de projeto-aberto), como as subpastas - nao tem cruz (o SVG_MAIS foi apagado). Usa o padding base das .projeto-linha (1px 6px), logo o icone comeca a x=6, o mesmo x do texto dos subelementos das outras secoes (requirements.txt).",
+      "localizacao": {
+        "arquivo": "src/frontend/css/projeto.css",
+        "linha": 201,
+        "conferido": [
+          1789774233.053,
+          13315
+        ]
+      }
+    },
+    {
+      "termo": "icone de copiar do historico",
+      "aliases": [
+        "icone de copiar",
+        "botao de copiar",
+        "copiar as ferramentas",
+        "copiar o raciocinio",
+        "copiar a pergunta",
+        "btn-copy-tools-history",
+        "icone de copiar sumiu",
+        "copiar o texto das ferramentas"
+      ],
+      "identificador": "syncCopyButtons",
+      "descricao": "Icones de copiar ao lado do titulo da coluna 3: #btn-copy-tools-history no historico e #btn-copy-tools na doc (ambos em dom.js). Os dois sao decididos por UMA funcao, layout.js:syncCopyButtons(vista, ativo): mostra so o da vista que tem painel ativo (raciocinio, ferramentas ou pergunta) e esconde os dois quando nao ha painel. E chamada por renderer.js:pintarBotoesCol3(botoes, ativo, vista) - o 3o argumento e a vista e vem de alternarPainelCol3/ligarBotoesCol3/aoFecharCol3 -, por question_panel.js:showQuestionPanel e por setupCol3ForFileView/resetCol3State/files.js:_modoCodigoHistorico. ANTES o icone do historico era escondido num sitio e mostrado noutro (o caminho da PERGUNTA em alternarPainelCol3 devolvia antes dos toggles e deixava-o escondido) e o alternarPainelCol3 nao limpava os isShowing* ao fechar o painel pelo proprio icone, o que estragava a copia (_copiarPainelAtivo escolhe o texto pelo flag). O clique vive em renderer.js:_copiarPainelAtivo.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/layout.js",
+        "linha": 127,
+        "conferido": [
+          1789790907.415,
+          9608
+        ]
+      }
+    },
+    {
+      "termo": "camada de notas",
+      "aliases": [
+        "notas no lugar do editor",
+        "camada do caderno",
+        "painel de notas do monaco",
+        "notas em cima do editor",
+        "segunda pagina do painel de informacoes que saiu do painel"
+      ],
+      "identificador": "#panel-col-3-notes (vistaDe('notas'))",
+      "descricao": "Terceira camada que abre POR CIMA da area do Monaco, gemea de #panel-col-3 (doc) e #panel-col-3-history (historico): nasce no #sliding-panel-container e e montada em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace, que tem as tres no MESMO array. Abre/fecha por opacity (position absolute, inset 0, z-index 7) com a classe .panel-col-closed, e a vista (id 'notas', criada em js/chat/projeto_notas.js) entra no mapa de colunas.js - por isso as tres camadas sao EXCLUSIVAS: abrir qualquer uma fecha as outras por colunas.js:fecharOutrasCamadas, e abrir um FICHEIRO pela arvore tambem as fecha (o listener axio-editor-file-open do renderer.js percorre ['dock','historico','notas']), senao o ficheiro recem-aberto ficava tapado por elas. Por dentro, de cima para baixo: cabecalho de 60px com o titulo 'Notas' e a varinha (#project-notes-header), barra das abas de 34px (#project-notes-bar), o Monaco das notas (#project-notes-editor) e o aviso de campo vazio (#project-notes-placeholder). ABRIR a camada RECOLHE a barra de abas do doc (layout.js:syncDocTopBar, parcela camadaNotasAberta). A camada mantem o #project-panel-container visivel e fecha quando o painel de informacoes fecha (js/chat/projeto.js:fecharProjetoInfo chama projeto_notas.js:fecharCamadaNotas).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 598,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "menu da nota fechada",
+      "aliases": [
+        "menu da nota",
+        "menu de contexto da aba",
+        "botao direito na aba",
+        "reabrir a nota fechada",
+        "menu das abas do caderno"
+      ],
+      "identificador": "#notes-context-menu",
+      "descricao": "Balao de contexto que abre no CLIQUE DIREITO de uma aba de nota, com uma unica opcao: 'Voltar a abrir a nota fechada'. Mesmo desenho e mesmo mecanismo do #fs-context-menu (classe .balao + .menu-open, css/workspace.css); a logica vive em js/chat/projeto_notas.js (_abrirMenuNotas/_fecharMenuNotas) e o item desativa-se (disabled) quando a pilha de notas fechadas esta vazia. Fecha com um clique em qualquer lado, com Escape ou quando a camada de notas fecha. O item reabre a ULTIMA nota fechada, com o titulo e o texto originais, e a nova aba fica ativa.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 556,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "arrastar as abas",
+      "aliases": [
+        "reordenar as abas",
+        "mover a aba de lugar",
+        "puxar a aba para o lado",
+        "arrastar a aba",
+        "ordenar as abas",
+        "abas como no chrome",
+        "trocar as abas de posicao",
+        "arrastar para reordenar",
+        "arrastar as abas do preview",
+        "mover as abas do preview de lugar",
+        "reordenar as tabs do preview"
+      ],
+      "identificador": "tornarAbasArrastaveis",
+      "descricao": "Modulo UNICO dos gestos de arrasto das TRES barras de abas: doc (#editor-tabs), notas (#project-notes-tabs) e preview (#preview-tabs). A assinatura tem um 3o argumento de opcoes - {seletor, excluir} - porque as abas do preview nao partilham as classes do editor (.preview-tab/.preview-tab-x e dataset.aba, em vez de .editor-tab/.editor-tab-close e dataset.path|dataset.id); sem opcoes o comportamento dos dois consumidores antigos fica igual. A classe visual do arrasto e 'aba-arrastando' (neutra) e o contentor ganha 'abas-arrastando'. A reordenacao da lista e a funcao pura ordenarPorChaves(itens, ordem, chaveDe), no mesmo ficheiro.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/arrastar_abas.js",
+        "linha": 24,
+        "conferido": [
+          1789774611.196,
+          4614
+        ]
+      }
+    },
+    {
+      "termo": "barra de busca do editor",
+      "aliases": [
+        "find bar",
+        "barra do find",
+        "busca do monaco",
+        "barra de pesquisa do codigo",
+        "busca no codigo substituido",
+        "find do diff",
+        "find na tela dividida",
+        "ctrl f do codigo"
+      ],
+      "identificador": "wireMonacoFindPush / :is(#editor-host, #diff-host) .monaco-editor .find-widget",
+      "descricao": "Barra de busca (Ctrl+F) do Monaco, tratada por nos para ficar a faixa colada na tab bar em vez do balao nativo do VS Code. Serve os DOIS sitios onde ha Monaco no doc: o editor (#editor-host) e o codigo substituido/diff (#diff-host). O estilo vem todo de css/editor.css com o prefixo ':is(#editor-host, #diff-host) .monaco-editor .find-widget' (33 regras: X nativo escondido, contorno azul do input fora, replace-part animado por max-height, contador de resultados movido para dentro dos controls, botao toggle a left 19px) - e a MESMA regra para os dois, por isso mudar uma muda a outra. O JS (findbar.js) instala-se por host (o editor o chama uma vez com state.editorHost e outra com state.diffHost, em monaco.js:ensureEditor). COMO SABE QUAL O EDITOR DONO: o diff tem DOIS editores, cada um com o seu find widget; o getFindWidget devolve o que tem a classe 'visible' e o editorDoFind procura a instancia Monaco cujo domNode contem esse widget, varrendo state.monaco.editor.getEditors() - por isso a view zone que empurra o codigo vai para o lado certo. ARMADILHA: as view zones sao guardadas por editor (Map editor->id); com um id unico, fechar no lado errado deixava uma zona orfa de 40px. E ao fechar, o widget perde o 'visible': o getFindWidget devolve o ULTIMO widget observado (fw) antes de cair no primeiro da lista, senao o close procuraria a zona no lado errado. A barra da tab bar (#ws-top-bar.find-open, que tira o border-bottom) e derivada de existir QUALQUER find widget visivel no #editor-host-wrap, nunca do widget de um host so.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/findbar.js",
+        "linha": 2,
+        "conferido": [
+          1789586152.469,
+          20117
+        ]
+      }
+    },
+    {
+      "termo": "cards do terminal",
+      "aliases": [
+        "card do processo",
+        "cards dos processos",
+        "cards de processo",
+        "processos no terminal",
+        "card do terminal",
+        "zona dos cards"
+      ],
+      "identificador": "#term-cards",
+      "descricao": "Zona ACIMA do PTY onde cada processo gerido vira um card: o header e o comando (bolinha de ligar/parar, repetir e X), o corpo e a saida. Unico dono: terminal_cards.js. SEM CAIXAS: o card nao tem borda, fundo nem border-radius - e so um `border-bottom: 1px solid var(--border-suave)` que separa de ponta a ponta. `#term-cards` tambem nao tem `background`, `border-bottom` nem `gap`: o fundo que se ve e o do proprio terminal (#121212, o mesmo que o xterm pinta). Padding lateral 20px, o MESMO do `#term-log .xterm`. EM MODO CARDS A ZONA OCUPA A ALTURA TODA da janela (`position: absolute` em workspace.css, top 2.5rem, bottom 0, `max-height: none`, `padding-bottom: 104px` para o ultimo card nao ficar debaixo da caixa do input) e so ganha barra de rolagem quando os cards somam mais que a janela (`scrollbar-gutter: stable`); o `#term-log` fica por baixo dela, invisivel mas com a caixa cheia - nao colapsa de proposito, senao o xterm mudava de tamanho e mandava um setwinsize falso ao ConPTY. O espaco vazio que se via em baixo era o log a reservar 45% da altura a toa (o antigo `max-height: 45%` da zona). NENHUM card tem scroll proprio: a saida de um card aberto cresce com TUDO o que tem dentro (o `max-height: 260px; overflow: auto` de `.term-card-saida` foi removido) e a unica barra e a da zona - por isso o \"seguir o fim\" vive agora na zona (`_rolarAteAoFim`/`_reavaliarSeguir`, que param de arrastar o scroll quando o utilizador rola para cima). Alimentada pelos eventos process_started/process_output/process_finished (workspace.js:handleSSE). Todo comando escrito no #term-input vira card gerido (POST /api/terminal/exec) ENQUANTO O SHELL ESTA INATIVO; com o modo shell ligado a zona esconde os cards por CSS (#terminal-mode.shell-ativo .term-card) e os comandos vao para o PTY - as ferramentas do agente continuam a criar cards, apenas ocultos. 'cd' e 'cls'/'clear' vao sempre ao PTY. Nascem recolhidos, um card SEM CORPO nao abre (nem expande nem seleciona, se for sugestao) e um ERRO nao abre o card sozinho (header a vermelho). Mostra tambem os cards de SUGESTOES e os avisos `.term-aviso` (estes continuam visiveis mesmo em modo shell). Ao arrancar, hidratarCards() reconstroi os cards de GET /api/processos, por isso um Ctrl+R nao os perde. Sem cards a zona recolhe a 0 (.term-cards-vazio).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 371,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "bolinha do card",
+      "aliases": [
+        "bolinha do processo",
+        "ponto do card",
+        "botao de iniciar e parar",
+        "bolinha vermelha",
+        "bolinha verde",
+        "reload do card",
+        "reiniciar o modulo",
+        "recarregar o card"
+      ],
+      "identificador": "_alternarExecucao",
+      "descricao": "Botao redondo de 10px no header do card de processo, e E o ligar/desligar (nao ha botao separado). Verde a pulsar = a correr, cinzento = parado, vermelho = erro (a classe .term-card-erro vive no card). Clicar com o processo a correr manda parar (POST /api/processo/<pid>/parar) e o card fica parado; clicar com ele parado REINICIA O COMANDO DE ARRANQUE DO CARD - `_alternarExecucao` chama `_executarNoCard(card)` sem comando, logo o alvo e `card.comando`, a IDENTIDADE do card (imutavel, ver 'card selecionado'). Era aqui o defeito de 2026-09-16: como o `_fundirCard` reescrevia `card.comando` com o ultimo comando escrito no card, o reload reexecutava o texto que o utilizador tinha escrito por engano em vez de reiniciar o modulo. O title do botao muda entre 'Parar o processo' e 'Executar de novo'; o botao do repetir (.term-card-repetir) faz exatamente o mesmo que a bolinha parada.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal_cards.js",
+        "linha": 300,
+        "conferido": [
+          1789592848.922,
+          18767
+        ]
+      }
+    },
+    {
+      "termo": "borrachinha",
+      "aliases": [
+        "borracha do terminal",
+        "botao de limpar o terminal",
+        "limpar o terminal",
+        "esvaziar o terminal",
+        "btn-clear"
+      ],
+      "identificador": "#btn-clear",
+      "descricao": "Botao do canto direito da barra de cima do terminal. Limpa a serio: manda 'cls' (ou 'clear') ao PTY pelo socket, limpa o buffer do xterm (termClear), apaga os cards de processo JA TERMINADOS, os avisos e a selecao da zona (terminal.js:clearLog -> terminal_cards.js:limparCards). NAO apaga os cards que NAS CEM de sugestao (a marca `card.persistente`, que NAO e limpa quando se da play: o card do modulo - o que o utilizador chama \"fixo\" - sobrevive a borrachinha mesmo depois de correr e terminar) NEM os cards que ainda CORREM. Persistencia por ORIGEM, nao por estado: se fosse por `card.sugerido` (que o play limpa), a borrachinha apagava o card do modulo depois de ele terminar. limparCards apaga o elemento e a entrada do Map SEM matar o processo, logo apagar um card a correr deixava o processo invisivel, sem forma de o ver, de o parar ou de lhe responder (e a saida seguinte perdia-se, nao ha card com aquele pid). Quem quer matar um processo usa o X ou a bolinha. Escrever 'cls' ou 'clear' no #term-input faz exatamente o mesmo (workspace.js, handler de keydown do termInput).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 367,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "card selecionado",
+      "aliases": [
+        "card ativo",
+        "card aceso",
+        "responder ao card",
+        "card que recebe a resposta",
+        "card marcado",
+        "card preso"
+      ],
+      "identificador": "_selecionarCard",
+      "descricao": "Card que recebe o que for escrito no #term-input. Seleciona-se clicando no CABECALHO (que tambem abre o card, se ele tiver saida) ou no CORPO. Um card de SUGESTAO nao seleciona nem abre (o clique no cabecalho sai cedo por card.sugerido). Desceleciona de TRES formas: clicando no corpo outra vez, clicando em QUALQUER lugar fora do card (o clique-fora e o Esc vivem no fim de terminal_cards.js, em listeners de document; ficam isentos apenas o proprio .term-card e o #term-input-footer, para clicar no input nao perder a selecao - ATENCAO: a isencao e por CARD e nao pela zona #term-cards, porque a zona em modo cards ocupa a janela toda e isenta-la tornava a selecao impossivel de largar), ou com o Esc em qualquer lugar (o listener e de document, nao do campo). O selecionado ganha FUNDO no header (.term-card-sel .term-card-cabeca, o branco a 8%). Com um card selecionado o Enter NAO cria card nenhum: se ele CORRE a linha vai para o stdin do processo (POST /api/processo/<pid>/input, com eco dentro do card); se ele JA TERMINOU o comando corre NESSE card (_executarNoCard) e o corpo ganha a linha '> comando' - mas o card NAO muda de nome nem de identidade (`card.comando` e imutavel, ver 'bolinha do card'), logo o reload continua a reiniciar o modulo. O guard e temCardSelecionado(). Ligar o modo shell descarta a selecao (terminal.js:ativarShell).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal_cards.js",
+        "linha": 58,
+        "conferido": [
+          1789592848.922,
+          18767
+        ]
+      }
+    },
+    {
+      "termo": "cards de sugestoes",
+      "aliases": [
+        "cards automaticos",
+        "card pausado",
+        "cards prontos a dar play",
+        "sugestoes de comando",
+        "cards que aparecem sozinhos",
+        "cards fixos do topo",
+        "card fixo"
+      ],
+      "identificador": "atualizarSugestoes",
+      "descricao": "Cards PAUSADOS que aparecem sozinhos no TOPO da zona dos cards com os comandos de arranque da pasta que o explorer mostra. Criados por atualizarSugestoes(pastaRel), chamada por explorer.js:renderExplorer a cada navegacao de pasta. Chave sintetica 'sug:<comando>' no Map interno (ainda nao tem pid). A bolinha diz 'Executar' e o rotulo do fim (.term-card-fim) mostra a ORIGEM ('scripts.start', 'ponto de entrada', 'Docker Compose'...). O CLIQUE NO CABECALHO de uma sugestao NAO faz nada - nem abre (nao tem corpo) nem seleciona (nao aceita resposta); so a bolinha (play) e o X respondem. PERSISTENTES: nascem com `card.persistente = true` e essa marca SOBREVIVE ao play, por isso limparCards (a borrachinha e o cls) salta-os - o card do modulo continua a vista mesmo depois de correr e terminar. Quem os leva e: o X do card, o Ctrl+R (nao vem do GET /api/processos) e o MUDAR DE PASTA, por _removerSugestoes (que filtra por `persistente` e nao por `sugerido`, e poupa os que ainda correm). NAO RECONSTROI O QUE NAO MUDOU: o fetch corre ANTES de tocar no DOM e _mesmasSugestoes compara com sugestoesAtuais, saindo cedo quando a lista e igual - sem isso a zona piscava a cada renderExplorer (que corre a cada files_changed).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal_cards.js",
+        "linha": 555,
+        "conferido": [
+          1789592848.922,
+          18767
+        ]
+      }
+    },
+    {
+      "termo": "sugestoes de arranque da pasta",
+      "aliases": [
+        "que comandos dao para arrancar",
+        "detetar ficheiro executavel",
+        "quais ficheiros arrancam",
+        "descobrir o comando de start"
+      ],
+      "identificador": "detectar_sugestoes",
+      "descricao": "Descobre os comandos de arranque plausiveis de uma pasta (a que o explorer mostra), expostos em GET /api/terminal/sugestoes?path=<rel> e consumidos pelos cards de sugestoes. Regras: package.json com scripts start/dev/serve; ficheiros .py com ponto de entrada (o ponto de entrada e decidido por AST - guarda `if __name__ == '__main__'` ou chamada app/uvicorn/socketio.run -, nunca por procura de texto); Docker Compose, Makefile, Cargo.toml, go.mod e ficheiros .bat. Limite de 6, sem repetidos. Le so o primeiro nivel da pasta. O resultado passa por _sem_recusados: quando a pasta E a raiz do Axio (APP_ROOT), saem as sugestoes que a rota /api/terminal/exec recusaria (npm start, python app.py, flask run) - um card que nunca arranca e ruido; fora da raiz nada e filtrado.",
+      "localizacao": {
+        "arquivo": "src/backend/services/sugestoes.py",
+        "linha": 27,
+        "conferido": [
+          1789592864.27,
+          5112
+        ]
+      }
+    },
+    {
+      "termo": "modo shell",
+      "aliases": [
+        "shell ativo",
+        "ligar o shell",
+        "ativar o shell",
+        "desligar o shell",
+        "botao shell",
+        "rotulo shell",
+        "trocar de terminal",
+        "escolha do cmd pwsh",
+        "dropdown do terminal",
+        "seletor de shell",
+        "pty",
+        "modo cards"
+      ],
+      "identificador": "setTerminalShell",
+      "descricao": "Barra de cima do terminal (#ws-shell) que escolhe entre os DOIS modos: dois botoes irmaos, 'Cards' (#ws-mode-cards) e 'Shell' (#ws-shell-label), mais o '>' (#ws-shell-arrow) que expande o menu de shells. Clicar num botao ACENDE-o (--oliva) e apaga o outro; clicar no que ja esta aceso nao repete nada (ativarShell/desativarShell saem cedo se o modo for o mesmo). Cards = todo o comando do #term-input vira card gerido e o #term-log fica INVISIVEL ('#terminal-mode:not(.shell-ativo) #term-log { visibility: hidden }', ver 'janela do shell'). Shell = o mesmo campo manda tudo ao PTY e os cards escondem-se ('#terminal-mode.shell-ativo .term-card'), com a sessao JA carregada - o PTY nasce no arranque do backend, nao ao ligar o modo. O '>' abre o menu com cmd/powershell/pwsh; escolher um shell LIGA o modo com ele, e o item marcado (.ws-shell-item.active) segue state.shellAtual MESMO com o modo desligado - clicar no que ja esta marcado nao repete o POST nem desliga (a saida e o botao Cards). Estado em state.shellAtivo/state.shellAtual (terminal.js:setTerminalShell, ativarShell, desativarShell), NUNCA no texto do rotulo: cdCommandFor e comandoLimparTerminal leem o state para decidir 'cd /d' vs 'cd' e 'cls' vs 'clear'. TODA a fiacao dos botoes vive no FIM do terminal.js (nao em workspace.js, que so importa o que usa); o clique-fora que recolhe o menu (document, fora de #ws-shell) tambem vive la. Se o backend recusar o shell, o modo DESLIGA em vez de ficar aceso a mentir. Em modo shell os avisos .term-aviso CONTINUAM a aparecer, porque texto local nunca pode entrar no buffer do PTY. Ctrl+C sem nada selecionado manda \\x03 pelo socket (interromperShell). Trocar de shell reinicia o PTY e o frontend limpa o buffer da sessao antiga (ver 'banner do shell').",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal.js",
+        "linha": 303,
+        "conferido": [
+          1789517962.482,
+          14765
+        ]
+      }
+    },
+    {
+      "termo": "banner do shell",
+      "aliases": [
+        "banner do cmd repetido",
+        "banner duplicado",
+        "banner aparece varias vezes",
+        "terminal poluido com banner",
+        "banner do powershell",
+        "banner acumulado",
+        "tres banners"
+      ],
+      "identificador": "pty:session",
+      "descricao": "Aviso de sessao nova do PTY, emitido por _pty_spawn_locked (src/backend/services/process_manager.py) logo apos cada spawn, com o nome do shell no payload. O frontend escuta-o em terminal.js:connectTermSocket e chama termClear() antes de o banner chegar - por isso cada sessao mostra UM banner e nao a soma das anteriores (era o que enchia o ecra de banners repetidos a cada troca de shell ou respawn). Sai da mesma thread/fila que o pty:output, logo a ordem limpeza -> banner esta garantida. Cobre SO a troca de shell/respawn: para o caso da recarga de pagina e do xterm que nasce tarde (o pty:session nao e reemitido, porque o PTY ja existe) quem devolve o ecra inteiro e o REPLAY ('replay do terminal'). O spawn limpa a historia do replay (`_pty_hist_limpar`) antes de anunciar a sessao, para o replay de uma sessao nova nunca trazer o banner da anterior.",
+      "localizacao": {
+        "arquivo": "src/backend/services/process_manager.py",
+        "linha": 143,
+        "conferido": [
+          1789675386.782,
+          9155
+        ]
+      }
+    },
+    {
+      "termo": "janela do shell",
+      "aliases": [
+        "log do terminal",
+        "area do terminal",
+        "texto do shell",
+        "terminal do shell"
+      ],
+      "identificador": "#term-log",
+      "descricao": "Janela do PTY dentro do #terminal-mode. Em modo cards (#terminal-mode SEM a classe shell-ativo) fica invisivel: `#terminal-mode:not(.shell-ativo) #term-log { visibility: hidden }` em css/workspace.css. E visibility e nao display:none de proposito - preserva o tamanho do xterm e evita um setwinsize falso para o ConPTY. O PTY continua a escrever para o buffer enquanto esta invisivel, por isso ligar o Shell mostra a sessao ja com o banner carregado.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/workspace.css",
+        "linha": 2,
+        "conferido": [
+          1789771179.35,
+          10786
+        ]
+      }
+    },
+    {
+      "termo": "replay do terminal",
+      "aliases": [
+        "pty:replay",
+        "recarregar o ecra do terminal",
+        "restaurar o ecra do shell",
+        "banner que volta depois do ctrl r",
+        "terminal vazio depois de recarregar",
+        "texto por cima no terminal",
+        "linhas sobrepostas no terminal",
+        "conpty dessincronizado",
+        "xterm dessincronizado"
+      ],
+      "identificador": "_pty_hist_texto / pty:replay",
+      "descricao": "O backend guarda os bytes que o PTY produziu desde o ultimo spawn (`_pty_hist`, teto de 200000 chars em process_manager.py) e reenvia-os a quem pedir `pty:replay`; o frontend limpa o xterm (`termClear`) e escreve o que recebe. E o que faz o ecra do shell voltar inteiro depois de um Ctrl+R e o que impede o desencontro de estado entre o xterm e o ConPTY - o sintoma era texto escrito por cima (caudas da linha antiga por baixo da nova) porque o ConPTY so reescreve as celulas que mudam. Corre no `_pty_pump`, com o append ANTES do emit do `pty:output`: por isso tudo o que o cliente ja recebeu esta garantidamente na historia, e limpar antes de escrever o replay nunca perde nem duplica.",
+      "localizacao": {
+        "arquivo": "src/backend/services/process_manager.py",
+        "linha": 209,
+        "conferido": [
+          1789675386.782,
+          9155
+        ]
+      }
+    },
+    {
+      "termo": "botao cards",
+      "aliases": [
+        "modo cards",
+        "cards no terminal",
+        "clicar em cards",
+        "botao de cards"
+      ],
+      "identificador": "#ws-mode-cards",
+      "descricao": "Primeiro dos dois botoes de modo da barra de cima do terminal, ANTES do Shell: clicar nele desliga o modo shell (terminal.js:desativarShell) e acende-se a si proprio por CSS (.ws-shell-label.aceso, a cor --oliva), deixando o terminal na interface de cards. E a saida do modo shell - o menu dos shells ja nao desliga nada. Partilha a classe .ws-shell-label com o botao Shell (pill de 2px 10px, sem borda nem fundo); o que distingue acendido de apagado e SO a cor (--oliva contra --text-suave), medido a pintar com o CSS real. Elemento irmao do Shell, do menu e do '>' dentro do #ws-shell.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 362,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "dom falso",
+      "aliases": [
+        "criardomfalso",
+        "document falso",
+        "window falso",
+        "harness de dom",
+        "stub de dom",
+        "testar codigo de browser",
+        "simular cliques",
+        "dom.serializar"
+      ],
+      "identificador": "criarDomFalso / _DOM_FALSO_JS",
+      "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/harness.py",
+        "linha": 973,
+        "conferido": [
+          1789783019.412,
+          62088
+        ]
+      }
+    },
+    {
+      "termo": "pilha do card",
+      "aliases": [
+        "comando na pilha do card",
+        "novo comando na pilha",
+        "corpo do card acumula",
+        "registo do comando no card",
+        "eco do comando"
+      ],
+      "identificador": "_registarComando",
+      "descricao": "O corpo do card deixa de ser substituido a cada execucao: quando um card selecionado ja terminou e o utilizador escreve nele, `_executarNoCard` chama `_registarComando(card, comando)`, que escreve a linha `> comando` (constante PREFIXO_ECO, linha 12) e deixa a saida nova acumular por baixo - o card passa a ser o registo das execucoes dele. `_registarComando` despeja primeiro o output pendente (`_despejar`) e so depois acrescenta, para a ordem do texto e a do <pre> nao divergirem. MOTIVO: antes o `_executarNoCard` zerava `card.texto`/`card.saida.textContent`, o que fazia um card ABERTO esvaziar (colapsar) e voltar a encher - o utilizador via isso como piscar. Se a rota recusar o comando, `_executarNoCard` restaura o texto anterior e pinta-o.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal_cards.js",
+        "linha": 230,
+        "conferido": [
+          1789592848.922,
+          18767
+        ]
+      }
+    },
+    {
+      "termo": "cards piscando",
+      "aliases": [
+        "cards piscam",
+        "piscar dos cards",
+        "cards que aparecem e desaparecem",
+        "card fantasma",
+        "terminal piscando",
+        "terreno piscando"
+      ],
+      "identificador": "_cardEmLancamento",
+      "descricao": "Tres causas distintas do terminal dos cards piscar, todas corrigidas em 2026-09-16. (1) CARD FANTASMA (a principal, ao mandar comando com um card selecionado): o backend emite `process_started` DENTRO de `iniciar_processo` (tools/process.py:446), logo o SSE chega ANTES de a rota responder com o pid; o `cardIniciar` nao conhecia o pid novo e criava um card do zero, que o `_fundirCard` apagava quando a resposta chegava. Corrigido com o Map `lancamentos` (preenchido em `_lancar`, limpo num finally) e por `_cardEmLancamento(comando)`, que funde o evento no card com um POST em curso em vez de criar outro. (2) CORPO ESVAZIADO no reuso do card (ver 'pilha do card'). (3) SUGESTOES RECRIADAS: `atualizarSugestoes` removia os cards ANTES do fetch e recriava-os depois, com o browser a pintar o vazio no meio - agora o fetch corre primeiro e `_mesmasSugestoes` faz sair cedo quando a lista e a mesma (o explorer e re-renderizado a cada files_changed, ou seja enquanto o agente trabalha).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal_cards.js",
+        "linha": 425,
+        "conferido": [
+          1789592848.922,
+          18767
+        ]
+      }
+    },
+    {
+      "termo": "busca do explorer",
+      "aliases": [
+        "pesquisar trecho no codigo",
+        "buscar codigo",
+        "achar trecho copiado",
+        "pesquisa do explorer",
+        "busca inteligente",
+        "pesquisar no explorer"
+      ],
+      "identificador": "buscar_no_projeto",
+      "descricao": "Busca da arvore de ficheiros: acha um trecho colado mesmo com indentacao, tabs, quebras de linha ou linhas coladas sem separador, porque compara com TODO o espaco em branco removido dos dois lados. Consumida pela rota /api/search_files (src/backend/routes/editor.py) e pelo #explorer-search-input (src/frontend/js/editor/workspace.js:performExplorerSearch).",
+      "localizacao": {
+        "arquivo": "src/backend/services/busca_texto.py",
+        "linha": 100,
+        "conferido": [
+          1789521393.936,
+          4955
+        ]
+      }
+    },
+    {
+      "termo": "acentos tortos no terminal",
+      "aliases": [
+        "caracteres estranhos",
+        "texto torto no card",
+        "nòo hß",
+        "encoding do terminal",
+        "acento errado nos cards",
+        "mojibake"
+      ],
+      "identificador": "_DecodificadorSaida",
+      "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
+      "localizacao": {
+        "arquivo": "src/backend/tools/process.py",
+        "linha": 299,
+        "conferido": [
+          1789824102.364,
+          30628
+        ]
+      }
+    },
+    {
+      "termo": "cinzento do find",
+      "aliases": [
+        "esmaecer o codigo fora do termo",
+        "tudo cinza menos o que pesquisei",
+        "esmaecer o codigo fora do termo pesquisado",
+        "o resto fica cinza na busca",
+        "acinzentar o codigo na busca",
+        "so o termo aceso"
+      ],
+      "identificador": "paintDimming",
+      "descricao": "Ao escrever na barra de busca do Monaco (Ctrl+F), tudo o que nao e o termo pesquisado fica cinzento e o termo mantem a cor do tema. Feito com decoracoes do editor (inlineClassName monaco-dim-text, o MESMO cinzento do modo log - --text-mutado #6b7280), esmaecendo os VAOS entre ocorrencias, nunca o ficheiro todo. Debounce de 170ms, minimo de 1 caractere e teto de 10000 ocorrencias. O dono vive no closure de wireMonacoFindPush (findbar.js): paintDimming pinta, applyDimming decide, scheduleDimming faz o debounce.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/findbar.js",
+        "linha": 438,
+        "conferido": [
+          1789586152.469,
+          20117
+        ]
+      }
+    },
+    {
+      "termo": "print",
+      "aliases": [
+        "capturar print",
+        "tirar print",
+        "print do ecra",
+        "screenshot",
+        "captura de ecra",
+        "foto do ecra",
+        "print da tela",
+        "pega o ecra todo",
+        "olhar para o ecra"
+      ],
+      "identificador": "tool_capturar_print",
+      "descricao": "Ferramenta que tira um print do ecra e o entrega ao agente como imagem (ImageGrab, com o processo declarado consciente de DPI para nao sair esticado). Grava o PNG em .axio/prints em resolucao cheia (maximo 50 ficheiros). O TETO DE RESOLUCAO E DA API: ela reduz toda a imagem a ~800x800 px equivalentes (640 000 px, teto de 384 tokens), logo um ecra 4K chega como 1066x600 e o texto pequeno desaparece. Para ler: (a) regiao estreita abaixo de ~640 000 px chega 1:1; (b) detalhe='tiles' parte a captura em pedacos de ate 1024x625 px que chegam TODOS 1:1. 'ecra' aceita 'principal', 'todos' ou o NUMERO de um monitor, e o retorno declara sempre o mapa dos ecras (numero, tamanho, posicao) - num PC com ecras de tamanhos diferentes, 'todos' inclui faixas pretas que se pagam em pedacos vazios. Captura so o que esta VISIVEL: janela tapada ou minimizada nao aparece.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/vision.py",
+        "linha": 250,
+        "conferido": [
+          1789790080.981,
+          19285
+        ]
+      }
+    },
+    {
+      "termo": "imagem que te envio",
+      "aliases": [
+        "foto que te mando",
+        "imagem anexada",
+        "print que colei",
+        "imagem colada no chat",
+        "anexo de imagem",
+        "print que te envio",
+        "imagem que nao consigo ler",
+        "print esbatido",
+        "print sem nitidez",
+        "melhora a resolucao do print"
+      ],
+      "identificador": "partes_da_imagem",
+      "descricao": "Caminho de uma imagem que o utilizador anexa ou cola no chat ate o modelo a ver: attach.js:addImage (frontend) manda o base64 do ficheiro ORIGINAL, sem reduzir nada -> payload.images -> routes/chat.py -> ai/loop.py:partes_usuario -> partes_da_imagem (services/imagem.py): dentro do orcamento de 640 000 px a imagem segue inteira e INTACTA; acima dele e CORTADA por tiles_da_imagem em pedacos de ate 1024x625 px, cada um em tamanho original (um pedaco paga 384 tokens). Teto de 16 pedacos por anexo (MAX_PEDACOS), com reducao previa quando passaria disso. Medido: 1920x1080 dava uma imagem unica de 1066x600 (escala 0,56) e passa a dar 4 pedacos a 1024x625 (escala 1,00); 2560x1440 = 9, 3840x2160 = 16, 6000x5000 = 15. preparar_imagem (:49) e o caminho de UMA imagem so, ainda usado pelo print em detalhe='unico' e por codificar_para_envio. As imagens so podem ir em mensagens do UTILIZADOR (nunca em system/assistant nem na resposta de uma ferramenta).",
+      "localizacao": {
+        "arquivo": "src/backend/services/imagem.py",
+        "linha": 63,
+        "conferido": [
+          1789790110.623,
+          8347
+        ]
+      }
+    },
+    {
+      "termo": "imagem do projeto",
+      "aliases": [
+        "ver imagem",
+        "abrir uma imagem",
+        "olhar para uma imagem",
+        "imagem que esta no codigo",
+        "icone do projeto"
+      ],
+      "identificador": "tool_ver_imagem",
+      "descricao": "Ferramenta que abre uma imagem que esta no projeto (png, jpg, gif, webp, bmp, ico) e a entrega ao agente como imagem, para ele olhar para um icone, um esquema ou um diagrama. Formato que a API nao aceita e convertido automaticamente para PNG (so a fonte que ja e JPEG continua JPEG). NAO confundir com 'print' (tool_capturar_print), que captura o ecra.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/vision.py",
+        "linha": 337,
+        "conferido": [
+          1789790080.981,
+          19285
+        ]
+      }
+    },
+    {
+      "termo": "pedacos do print",
+      "aliases": [
+        "tiles",
+        "pedacos",
+        "fatias do print",
+        "dividir o print",
+        "ver tudo nitido",
+        "print nitido"
+      ],
+      "identificador": "tiles_da_imagem",
+      "descricao": "Divisao de uma captura em PEDACOS que chegam ao modelo em tamanho original: a API reduz toda a imagem a ~800x800 px equivalentes (640 000 px, 384 tokens), logo nenhuma imagem unica entrega um ecra inteiro nitido. tiles_da_imagem (services/imagem.py) da a geometria - pedacos de ate 1024x625 px, com sobreposicao de 32 px para uma linha de texto cortada na fronteira aparecer inteira no pedaco vizinho - e tools/vision.py:_imagens_em_pedacos (:119) recorta e codifica. Accionado por tool_capturar_print com detalhe='tiles'; MAX_TILES=36 recusa regioes absurdas. Medicao num ecra 4K real: 16 pedacos, 0,8 MB em base64, 0,36 s, ~6144 tokens de imagem.",
+      "localizacao": {
+        "arquivo": "src/backend/services/imagem.py",
+        "linha": 89,
+        "conferido": [
+          1789790110.623,
+          8347
+        ]
+      }
+    },
+    {
+      "termo": "janela do preview",
+      "aliases": [
+        "preview",
+        "abrir o preview",
+        "botao do preview",
+        "icone do preview",
+        "aba do preview",
+        "janela de preview"
+      ],
+      "identificador": "criarViewDoTipo (previewViews.node / previewViews.web)",
+      "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 350,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
+      }
+    },
+    {
+      "termo": "barra de endereco do preview",
+      "aliases": [
+        "endereco do preview",
+        "campo de endereco",
+        "barra do preview",
+        "url do preview",
+        "barra dos links do preview",
+        "barra de navegacao do preview"
+      ],
+      "identificador": "#preview-address",
+      "descricao": "Campo da barra do preview onde se escreve o endereco. preview.js:destinoDaBarra decide entre TRES destinos, nesta ordem: (1) esquema explicito (http://, https://, file://) passa tal e qual; (2) letra de unidade, UNC ou barra inicial -> ficheiro; (3) localhost/127.0.0.1/IP -> web http://; (4) pareceEnderecoWeb (tem ponto e SEM extensao de ficheiro conhecida) -> web https://; (5) tem extensao de ficheiro OU separador de caminho -> ficheiro do projeto; (6) tudo o resto vira BUSCA no Google (https://www.google.com/search?q=...). DESDE 2026-09-25: escrever um endereco NAVEGA A ABA ATIVA (mesmo que ela seja de ficheiro - a aba passa a web), em vez de abrir outra aba ao lado; e se o https falhar por erro de ligacao num host em que o esquema foi escolhido pelo Axio, o preview desce uma vez para http:// (o tibia.com sem www so responde na porta 80). Escrever https:// a mao nunca desce. O 'abrirPreviewDoFicheiro' (pedidos anunciados pela arvore e pelo card) mantem a regra antiga, sem busca. O campo mostra sempre o alvo da aba ativa (preview_abas.js:pintarEndereco, que desiste enquanto o campo esta focado).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 501,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "motor do preview",
+      "aliases": [
+        "view nativa",
+        "webcontentsview",
+        "chromium do preview",
+        "navegador embutido",
+        "views do preview"
+      ],
+      "identificador": "criarViewDoTipo",
+      "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 350,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
+      }
+    },
+    {
+      "termo": "pagina nua no preview",
+      "aliases": [
+        "sem estilo no preview",
+        "preview sem css",
+        "preview em branco",
+        "pagina sem estilo"
+      ],
+      "identificador": "serve_ficheiro_do_projeto",
+      "descricao": "Rota /preview/<path:p> (src/backend/routes/static.py) que serve um ficheiro da pasta do projeto por HTTP. E o que faz um HTML do projeto carregar o CSS e o JS: por file:// os caminhos absolutos do documento (/css/dock.css, /editor/x.js) resolvem contra a raiz do disco e dao 404, e a pagina aparece nua. Usa resolver_caminho(permitir_extra=False), logo recusa tudo o que saia da pasta, e serve .mjs/.jsx como application/javascript (_MIME_EXTRA), porque o Python proporia text/plain e o browser recusa um modulo ES com esse tipo.",
+      "localizacao": {
+        "arquivo": "src/backend/routes/static.py",
+        "linha": 114,
+        "conferido": [
+          1789791684.814,
+          7414
+        ]
+      }
+    },
+    {
+      "termo": "play abre no preview",
+      "aliases": [
+        "abrir o card no preview",
+        "preview do card",
+        "o card abre a pagina",
+        "rodar e ver no preview",
+        "abrir a pagina do card"
+      ],
+      "identificador": "_anunciarUrl",
+      "descricao": "Quando um comando de card imprime um endereco local, o backend anexa essa URL ao evento process_output (tools/process.py:_emitir_saida_processo, deteccao em services/sugestoes.py:detectar_url_na_saida) e o card ganha um botao de preview no cabecalho e ABRE a janela do preview sozinho, uma vez por URL. O anuncio sai por um CustomEvent 'axio-preview-open' com detail.auto (true = automatico), escutado em preview.js; o clique no botao reabre sem recarregar se aquele endereco ja estiver a mostra.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/terminal_cards.js",
+        "linha": 456,
+        "conferido": [
+          1789592848.922,
+          18767
+        ]
+      }
+    },
+    {
+      "termo": "ponte do preview",
+      "aliases": [
+        "ponte",
+        "ponte com a janela",
+        "ligacao com o electron",
+        "servidor da ponte",
+        "ponte do python com a janela"
+      ],
+      "identificador": "iniciarPonte",
+      "descricao": "Servidor HTTP efemero que o processo principal do Electron abre em 127.0.0.1 no arranque (src/preview-cdp.js:iniciarPonte), com token aleatorio por sessao e so a aceitar pedidos de casa e so por POST. E o unico caminho pelo qual as minhas ferramentas (que vivem no Flask) alcancam o Chrome DevTools Protocol do preview: o Python nao fala IPC. A porta e o token chegam ao Flask por AXIO_PONTE_PORTA/AXIO_PONTE_TOKEN, injetados no ambiente do spawn (src/main.js:startFlask) - por isso um Flask nascido antes desta mudanca nao tem ponte nenhuma, e as ferramentas avisam para fechar e reabrir o Axio. Sem ponte: mensagem honesta, nunca falha silenciosa.",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1452,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "consola do preview",
+      "aliases": [
+        "erros da pagina",
+        "erros do preview",
+        "console do preview",
+        "log da pagina",
+        "que erro deu a pagina"
+      ],
+      "identificador": "acaoConsola",
+      "descricao": "O que a pagina do preview escreveu na consola, devolvido como DADO (nivel, origem, ficheiro:linha) e nao como imagem - e a primeira coisa a olhar quando um botao da pagina nao responde. Dona do buffer: a lista `consola` de src/preview-cdp.js, alimentada pelo evento `Runtime.consoleAPICalled` (e por `Runtime.exceptionThrown` e pelo `Log.entryAdded`, que apanha os 404 de recursos - a classe exacta do \"html nu\"). Ligada por preview-cdp.js:prepararDepurador no nascimento da view, esvaziada a cada navegacao. A ferramenta que a le e tool_observar_preview com acao='consola' (filtra por 'nivel' e limpa com o proprio pedido).",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1022,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "clique no preview",
+      "aliases": [],
+      "identificador": "acaoClicar / tool_operar_preview acao='clicar'",
+      "descricao": "Clique e escrita a serio na pagina do preview, pelo Chrome DevTools Protocol - o clique vai por Input.dispatchMouseEvent (mover, premir, largar, no centro do elemento) e o texto por Input.insertText, por isso funciona com React, Vue e ouvintes nativos. O seletor e RE-RESOLVIDO no instante do gesto (preview-cdp.js:caixaDoPedido) e, antes de disparar, um hit-test (funcao tapa, dentro do SNIPPET_ALVOS) pergunta quem esta no topo no ponto do gesto: se for OUTRO elemento, RECUSA e diz quem tapa; se o centro cair fora da janela, RECUSA tambem. O gesto devolve o proprio EFEITO (assinatura da pagina, erros novos da consola, pedidos falhados, estado do alvo). Ferramenta: tool_operar_preview em src/backend/tools/preview.py (acoes carregar, mostrar, clicar, escrever, teclar).",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1193,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "rede do preview",
+      "aliases": [
+        "pedidos falhados da pagina",
+        "404 na pagina",
+        "recursos que nao carregaram",
+        "css nao carregou",
+        "ver a rede",
+        "erros de rede da pagina"
+      ],
+      "identificador": "acaoRede",
+      "descricao": "O que a pagina do preview tentou carregar e falhou, devolvido como DADO (estado, URL, tipo, motivo) e nao como imagem - e o que explica uma pagina que aparece sem estilo ou sem os scripts. Dona do buffer: a lista `rede` de src/preview-cdp.js, alimentada por Network.responseReceived (so status >= 400: aviso para 4xx, erro para 5xx) e por Network.loadingFailed com canceled=false; o url/tipo das falhas vem do mapa `pedidos` (requestId -> url/type), alimentado por Network.requestWillBeSent. Ligada por preview-cdp.js:prepararDepurador (Network.enable) e esvaziada a cada navegacao por limparRegistos, junto com a consola. A ferramenta que a le e tool_observar_preview com acao='rede' (filtra por 'nivel' tal como a consola).",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1028,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "cursinho do preview",
+      "aliases": [
+        "cursinho verde",
+        "cursor do preview",
+        "bolinha verde no preview",
+        "onde ele clicou",
+        "ver onde a ia clica"
+      ],
+      "identificador": "desenharCursor",
+      "descricao": "Circulo de 14px com anel verde --oliva que aparece na PAGINA do preview, no ponto exato onde eu vou clicar ou escrever, para o utilizador ver o gesto a acontecer - o papel que no Codex cabe ao cursor do rato. E um div fixo injetado por Runtime.evaluate (id __axio_cursor, pointer-events none, z-index maximo) com estilos INLINE (nunca um <style>, que uma CSP restritiva bloquearia): aparece antes do gesto com uma pausa de PAUSA_CURSOR_MS (150ms), encolhe no clique e desvanece num setTimeout de 240ms. So corre quando cursorAVista(view) e verdadeiro (o preview a frente) - com o preview atras de outra vista o gesto nao ganha atraso nenhum e nada e injetado. Vive em preview-cdp.js:desenharCursor, usado por acaoClicar e acaoEscrever.",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1179,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "botão flutuante do preview",
+      "aliases": [
+        "popup do preview",
+        "botao flutuante",
+        "icone flutuante do preview",
+        "aviso do preview",
+        "botao que aparece quando o agente usa o preview",
+        "preview a flutuar"
+      ],
+      "identificador": "mostrarAvisoDeUso",
+      "descricao": "O #preview-float (index.html) e o botao que surge flutuando quando EU uso o preview e o icone #btn-preview nao esta a vista (barra #ws-top-bar escondida ou colapsada). Nasce no index.html logo acima do #ws-top-bar e e posicionado por preview.js:mostrarAvisoDeUso com a ULTIMA caixa vista do icone (state.previewIconeCaixa, memorizada por memorizarIcone sempre que ele esta dentro do ecra; sem medida nenhuma cai na CAIXA_DE_RECURSO 16/6). Tem o mesmo desenho e o mesmo tamanho do icone real e desliza para cima ao aparecer (transform translateY 14px -> 0). Fica 8s e sai; clicar nele abre a vista do preview. Todo o aviso de uso entra pelo canal 'preview:uso' (o main.js repassa o que a ponte classifica) e e aplicado por marcarUsoDoPreview, que acende o #btn-preview com a classe .preview-em-uso (verde --oliva a pulsar, 2.6s) e, quando a acao E DE AGIR, traz a vista para a frente sozinha.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/preview.js",
+        "linha": 283,
+        "conferido": [
+          1789839777.34,
+          21522
+        ]
+      }
+    },
+    {
+      "termo": "recarregar o preview sem cache",
+      "aliases": [
+        "recarregar o preview",
+        "atualizar o preview",
+        "ver o codigo novo no preview",
+        "a pagina do preview ta velha"
+      ],
+      "identificador": "acaoRecarregar / tool_operar_preview(acao='recarregar')",
+      "descricao": "Recarga da pagina do preview pelo CDP com ignoreCache: true, para eu testar codigo frontend recem-editado sem risco de estar a medir uma versao velha. Distinta do botao de recarregar da barra (main.js:recarregarPreview), que usa a cache como qualquer navegador. A janela principal continua a correr o JS antigo ate o utilizador fazer Ctrl+R; o preview apanha o novo sozinho.",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1344,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "barra do chromium",
+      "aliases": [
+        "barra do preview",
+        "barra do navegador",
+        "barra do preview do chromium"
+      ],
+      "identificador": "#preview-bar",
+      "descricao": "Barra de 40px no topo da vista do preview (classes .preview-bar em css/preview.css) com voltar, avancar, recarregar (#preview-reload, o unico recarregar da pagina), o campo de endereco (#preview-address), o zoom, abrir ficheiro do projeto, abrir no navegador e o icone #btn-preview. Sem X desde 2026-09-21: o #preview-close foi removido e o icone do preview, que ja era MOVIDO para ca quando a vista esta ativa (preview.js:posicionarIconeNaBarra, com a classe .preview-btn e appendChild no fim da barra), ficou no lugar dele - e ele que fecha o preview (workspace.js: state.btnPreview click -> fecharPreview quando currentView === 'preview'). Quando a vista do preview esta ativa, a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0 (css/workspace.css), ficando esta barra no TOPO da janela.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 490,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "mapa do preview",
+      "aliases": [
+        "mapa da pagina",
+        "dicionario da pagina",
+        "indice da pagina",
+        "ver todos os botoes da pagina",
+        "listar elementos interativos",
+        "mapear a pagina"
+      ],
+      "identificador": "_texto_do_mapa",
+      "descricao": "Indice de tudo o que responde a um gesto na pagina, devolvido numa so chamada: seletor, rotulo e coordenada de cada botao, ligacao e campo. Ja exclui os que estao tapados por outro elemento, fora da janela ou sem nome. Apanha DOIS tipos de candidato: tags/roles genericos e qualquer elemento com `cursor: pointer` cujo pai nao seja pointer (o que lhe permite ver os cards do Axio, que sao divs com listener, sem button nem role) - e prefere devolver um seletor POR DADO (`[data-turn-id=\"...\"]`) quando esse atributo identifica um unico elemento, em vez do caminho posicional. E a acao a usar ANTES de agir; quem monta o texto e _texto_do_mapa (preview.py) e quem o colhe na pagina e o ramo mapa de SNIPPET_ALVOS (preview-cdp.js).",
+      "localizacao": {
+        "arquivo": "src/backend/tools/preview.py",
+        "linha": 299,
+        "conferido": [
+          1789838493.237,
+          38315
+        ]
+      }
+    },
+    {
+      "termo": "roteiro de gestos",
+      "aliases": [
+        "roteiro",
+        "lote de gestos",
+        "varios gestos numa chamada",
+        "passos",
+        "sequencia de gestos",
+        "correr varios cliques"
+      ],
+      "identificador": "_correr_roteiro",
+      "descricao": "Varios gestos numa so chamada, na ordem dada em passos (JSON). Cada passo entra pela MESMA ferramenta de um gesto isolado (mesmo guard, mesmo relato de efeito) e o roteiro PARA no primeiro que falhar, para os seguintes nao agirem no sitio errado. Maximo de 12 passos; opcionalmente _passos_do_roteiro valida tudo antes de tocar na pagina.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/preview.py",
+        "linha": 95,
+        "conferido": [
+          1789838493.237,
+          38315
+        ]
+      }
+    },
+    {
+      "termo": "alternar as janelas",
+      "aliases": [
+        "voltar pra janela anterior",
+        "memoria da vista",
+        "volta pro preview",
+        "volta pro editor",
+        "preview nao fecha",
+        "fechar o terminal fecha o preview",
+        "alterna editor e preview",
+        "nao vejo mais a janela do chat",
+        "icone do editor so alterna entre preview e editor",
+        "lembra o estado da janela"
+      ],
+      "identificador": "alternarDoc / fecharPreview / state.vistaDeTrabalho",
+      "descricao": "O icone do editor e o TOGGLE DO DOC e lembra-se do estado: vista chat abre a vista de trabalho memorizada (state.vistaDeTrabalho = editor|preview), vista editor ou preview fecha o doc indo para chat - por isso fechar com o preview ativo e reabrir volta ao preview (alternarDoc() em explorer.js). fecharPreview() e o gesto de fechar o preview (X #preview-close e o icone #btn-preview com o preview ativo) e volta SEMPRE ao editor, nunca ao chat: e determinista de proposito, sem memoria de regresso, porque a antiga state.vistaAnterior era deturpada pelo vaivem do icone do editor e atirava o utilizador para o chat. abrirDoc(vista) em workspace.js faz ensureWorkspaceReady + setActive(true) + setView. Fechar o terminal NAO muda a vista do doc.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/explorer.js",
+        "linha": 86,
+        "conferido": [
+          1789840669.457,
+          15654
+        ]
+      }
+    },
+    {
+      "termo": "botao verde do editor",
+      "aliases": [
+        "botao do editor aceso",
+        "botao do editor ligado",
+        "verde oliva do editor",
+        "icone do editor verde",
+        "icone do editor desligado"
+      ],
+      "identificador": "aplicarVista (toggle 'sidebar-active' em #btn-editor)",
+      "descricao": "Pinta o #btn-editor com a classe sidebar-active (color var(--oliva), rgb(144,160,21)). Aceso APENAS quando a vista atual e de trabalho (editor OU preview); no chat fica sempre apagado, mesmo que o preview esteja memorizado em state.vistaDeTrabalho. A memoria de reabertura e outra coisa e continua a existir: alternarDoc() reabre na vista memorizada. Era uma assimetria antiga (no chat com preview memorizado o botao ficava verde) que o utilizador pediu para tirar, e foi o que matou a funcao docComEditorAceso.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/explorer.js",
+        "linha": 94,
+        "conferido": [
+          1789840669.457,
+          15654
+        ]
+      }
+    },
+    {
+      "termo": "janelas nativas",
+      "aliases": [
+        "operar qualquer programa",
+        "mexer em programa do windows",
+        "ui automation",
+        "controlar apps do pc",
+        "ferramenta de janelas"
+      ],
+      "identificador": "tool_operar_janela",
+      "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/janelas.py",
+        "linha": 890,
+        "conferido": [
+          1789829622.792,
+          42204
+        ]
+      }
+    },
+    {
+      "termo": "abrir qualquer programa",
+      "aliases": [
+        "abrir o photoshop",
+        "abrir o autocad",
+        "lancar um programa",
+        "abrir um exe",
+        "abrir app nativa",
+        "rodar um programa do windows"
+      ],
+      "identificador": "_acao_abrir",
+      "descricao": "Lanca um programa nativo pelo nome (ex: 'notepad', 'mspaint') ou pelo caminho completo, e devolve a janela dele ja com as contagens. Resolve pelo PATH e pelos App Paths do registo; NAO passa pela allowlist de _validar_comando_processo, que governa compilacao e nao abrir apps GUI.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/janelas.py",
+        "linha": 660,
+        "conferido": [
+          1789829622.792,
+          42204
+        ]
+      }
+    },
+    {
+      "termo": "desenhar na tela do programa",
+      "aliases": [
+        "desenhar na tela",
+        "desenhar no paint",
+        "tracar uma linha",
+        "arrastar o rato no programa",
+        "desenhar no photoshop",
+        "fazer um traco",
+        "polilinha na tela"
+      ],
+      "identificador": "_acao_arrastar",
+      "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/janelas.py",
+        "linha": 808,
+        "conferido": [
+          1789829622.792,
+          42204
+        ]
+      }
+    },
+    {
+      "termo": "abas do visualizador",
+      "aliases": [
+        "tabs do preview",
+        "barra de abas do preview",
+        "abas do navegador do preview",
+        "nova aba do preview",
+        "+ do preview"
+      ],
+      "identificador": "#preview-tabs",
+      "descricao": "Barra de abas do preview, no DOM DO AXIO desde 2026-09-24 (antes vivia dentro da pagina do viewer, em #vw-abas, que deixou de existir). Fica ACIMA da #preview-bar, dentro da #preview-view: o '+' (#preview-nova) e o primeiro filho e as abas entram a seguir. Quem manda e src/frontend/js/editor/preview_abas.js (state.previewAbas/state.previewAbaAtiva), com o preview.js a carregar a aba ativa por um callback (definirAoTrocarDeAba). Uma aba e {id, tipo:'ficheiro'|'web', alvo, nome}; o campo #preview-address mostra sempre o alvo da aba ativa. Estar no DOM e o que mantem as abas a vista quando a pagina da vista navega para a web. Visual: abas flutuantes sem bordas, separador de 1px so entre abas inativas, sem scrollbar-width (desliga o ::-webkit-scrollbar).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 487,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "gerar modelo de engenharia",
+      "aliases": [
+        "gerar o modelo",
+        "gerar ficheiro 3d",
+        "gerar ifc",
+        "gerar step",
+        "modelo parametrico",
+        "catalogo de modelos",
+        "exportar para o archicad",
+        "exportar para o solidworks"
+      ],
+      "identificador": "tool_gerar_modelo",
+      "descricao": "A ferramenta UNICA de modelagem - nao ha uma por modelo nem por programa. Sem 'modelo' devolve o catalogo (modelos, variantes e parametros com o valor de partida); com 'modelo' aceita ajustes 'nome=valor' separados por ';'. Os modelos vivem em geometry/catalogo.py (MODELOS: nome -> construtor + dataclass de parametros + variantes), os formatos em EXPORTADORES (geometry + extensao + escrever + medir + abre_em). Acrescentar um modelo e uma entrada no catalogo e uma funcao; acrescentar um formato e uma entrada e uma funcao.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/modelagem.py",
+        "linha": 58,
+        "conferido": [
+          1789826823.98,
+          11504
+        ]
+      }
+    },
+    {
+      "termo": "olho ifc",
+      "aliases": [
+        "olho",
+        "olho do ifc",
+        "olho da arvore",
+        "olho do modelo",
+        "ver o modelo",
+        "olhar para o modelo",
+        "vista do modelo"
+      ],
+      "identificador": "de_ficheiro / desenhar / vistas_do_pedido",
+      "descricao": "O motor de vista 3D do agente: le um modelo (.ifc pelo ifcopenshell, malhas pelo trimesh) e desenha-o visto de onde se pedir, com z-buffer por pixel em raster.py e filtro por nome ou classe de peca.",
+      "localizacao": {
+        "arquivo": "src/backend/geometry/vista.py",
+        "linha": 39,
+        "conferido": [
+          1789701695.959,
+          12324
+        ]
+      }
+    },
+    {
+      "termo": "flocos",
+      "aliases": [
+        "floco",
+        "flocos de neve",
+        "flocos da pele",
+        "estrelinhas da pele",
+        "enfeites da pele"
+      ],
+      "identificador": "_contorno_do_floco_2d",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "gerados/arvore/flocos.py",
+        "linha": 70,
+        "conferido": [
+          1789826815.083,
+          5273
+        ]
+      }
+    },
+    {
+      "termo": "estrela do topo",
+      "aliases": [
+        "estrela",
+        "grande estrela",
+        "estrela 3d",
+        "estrela de cima",
+        "estrela do topo da arvore"
+      ],
+      "identificador": "_estrela_da_ponta",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "gerados/arvore/estrela.py",
+        "linha": 6,
+        "conferido": [
+          1789825499.742,
+          3025
+        ]
+      }
+    },
+    {
+      "termo": "placa recortada",
+      "aliases": [
+        "floco recortado",
+        "placa vazada",
+        "recorte da placa",
+        "vao da placa",
+        "placa com o floco vazado",
+        "chapa com furo"
+      ],
+      "identificador": "placa_vazada",
+      "descricao": "Chapa com vaos recortados: o solido entre um contorno externo e os buracos (o floco, a janela, o logo). E o que faz a luz passar por entre os flocos - na referencia o floco NAO e uma peca colada por cima da placa, e o recorte dela. Aceita varios vaos e formas concavas; os buracos sao ligados ao contorno externo por pontes invisiveis e triangulados por ear clipping.",
+      "localizacao": {
+        "arquivo": "src/backend/geometry/malhas.py",
+        "linha": 268,
+        "conferido": [
+          1789828499.952,
+          16284
+        ]
+      }
+    },
+    {
+      "termo": "teto de contexto",
+      "aliases": [
+        "limite de tokens",
+        "teto do historico",
+        "aumentar o contexto",
+        "limite da rodada",
+        "quanto cabe na rodada",
+        "subir o contexto"
+      ],
+      "identificador": "tool_ajustar_contexto",
+      "descricao": "Quanto de conversa cabe antes de o Axio resumir e perder detalhe. Padrao no .env (LIMITE_TOKENS_HISTORICO=200000), maximo do modelo em LIMITE_TOKENS_HISTORICO_MAX (1000000). Numa tarefa longa (modelagem com varias iteracoes), subir o teto ANTES de chegar ao padrao evita compactar a conversa a meio. O ajuste vale so para a sessao.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/memory_tools.py",
+        "linha": 82,
+        "conferido": [
+          1789838569.002,
+          18117
+        ]
+      }
+    },
+    {
+      "termo": "comparar com a referencia",
+      "aliases": [
+        "lado a lado da referencia",
+        "comparar lado a lado",
+        "ver as duas juntas",
+        "referencia e vista juntas"
+      ],
+      "identificador": "comparar_com",
+      "descricao": "Parametro da tool_ver_imagem: entrega cada vista do modelo LADO A LADO com a imagem de referencia, na mesma imagem e na mesma altura (a referencia a esquerda). A composicao e a `lado_a_lado` de services/imagem.py. Usar sempre que se modela a partir de uma referencia visual - julgar semelhanca alternando entre duas imagens nao funciona.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/vision.py",
+        "linha": 353,
+        "conferido": [
+          1789790080.981,
+          19285
+        ]
+      }
+    },
+    {
+      "termo": "casca",
+      "aliases": [
+        "casca facetada",
+        "casca da arvore",
+        "paineis e costelas",
+        "sectores da casca",
+        "divisao da casca"
+      ],
+      "identificador": "Casca",
+      "descricao": "Modulo generico das cascas facetadas: cone dividido em sectores alternados (painel e costela) e aneis, com perfil de relevo e a lei da planicidade.",
+      "localizacao": {
+        "arquivo": "src/backend/geometry/casca.py",
+        "linha": 75,
+        "conferido": [
+          1789734807.615,
+          4202
+        ]
+      }
+    },
+    {
+      "termo": "estrela da base",
+      "aliases": [
+        "roseta do tambor",
+        "estrela entalhada da base",
+        "enfeite dos paineis da base"
+      ],
+      "identificador": "_roseta_do_tambor",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "gerados/arvore/conjuntos.py",
+        "linha": 22,
+        "conferido": [
+          1789826815.037,
+          6077
+        ]
+      }
+    },
+    {
+      "termo": "entalhe da casca",
+      "aliases": [
+        "entalho",
+        "desenho recortado",
+        "piso hidraulico",
+        "pedaco do desenho em cada chapa",
+        "floco que atravessa a chapa"
+      ],
+      "identificador": "_entalhes_da_casca",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "gerados/arvore/chapas.py",
+        "linha": 52,
+        "conferido": [
+          1789826814.962,
+          6520
+        ]
+      }
+    },
+    {
+      "termo": "perfil do relevo",
+      "aliases": [
+        "vala em u",
+        "quina das placas",
+        "serra do relevo",
+        "placas que entram e saem",
+        "padrao da casca"
+      ],
+      "identificador": "DESENHO_DO_RELEVO",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "gerados/arvore/desenho.py",
+        "linha": 62,
+        "conferido": [
+          1789824689.467,
+          5391
+        ]
+      }
+    },
+    {
+      "termo": "compute use",
+      "aliases": [
+        "computer use",
+        "uso do computador",
+        "controlar o navegador",
+        "navegar pelo navegador",
+        "mexer no navegador",
+        "gemini flash navega"
+      ],
+      "identificador": "tool_computador / executar_computador",
+      "descricao": "Ferramenta nativa computer_use do Gemini (Interactions API + Playwright), so declarada ao modelo quando ai_model == \"gemini-flash\". Corre num Chromium proprio do Playwright, nao no navegador do utilizador, e exige chave do AI Studio (o Vertex nao serve esta rota).",
+      "localizacao": {
+        "arquivo": "src/backend/ai/computer_use.py",
+        "linha": 244,
+        "conferido": [
+          1789767276.89,
+          13253
+        ]
+      }
+    },
+    {
+      "termo": "api de uma dependencia",
+      "aliases": [
+        "api da dependencia",
+        "que opcoes tem a biblioteca",
+        "assinatura do pacote instalado",
+        "ver os parametros da lib"
+      ],
+      "identificador": "tool_consultar_api_dependencia",
+      "descricao": "Le a API de uma dependencia JA INSTALADA, do codigo dela no disco, em vez do conhecimento do modelo (regra 28). Num pacote npm devolve o ficheiro de declaracoes - o campo types/typings, ou um index.d.ts na raiz, ou o primeiro .d.ts encontrado ate 3 niveis (o dxf-viewer guarda o dele em src/) - e, sem declaracoes, o README. Num modulo Python devolve os nomes publicos de topo por AST, incluindo as REEXPORTACOES (`Flask = app.Flask`), que e o que quase todos os pacotes fazem no __init__.py. Aceita 'filtro' para trazer so as linhas com um termo. Nasceu a 2026-09-21 de um atrito medido: descobrir as opcoes do dxf-viewer custou seis leituras a mao dentro de node_modules.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/pacotes.py",
+        "linha": 933,
+        "conferido": [
+          1789823553.453,
+          42382
+        ]
+      }
+    },
+    {
+      "termo": "indentação",
+      "aliases": [
+        "indentacao",
+        "ativar a indentacao",
+        "ativei a indentacao",
+        "linhas de indentacao",
+        "numeracao e linhas de indentacao",
+        "guias de indentacao"
+      ],
+      "identificador": "#btn-line-numbers",
+      "descricao": "Botao da barra do editor que alterna a numeracao de linhas E as guias de indentacao (o title e 'Exibir/Ocultar numeracao e linhas de identacao'). Handler em src/frontend/js/editor/workspace.js:~730: chama fadeGutterSwap -> applyLineGutterState + updateLineNumbersButton, e o fadeGutterSwap chama state.editor.layout() no fim (src/frontend/js/editor/scroll.js:~76) - foi esse layout() que 'destravava' o codigo invisivel quando o Monaco ficava com dimensoes obsoletas. Fonte de verdade do estado: state.showLineNumbers.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 463,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "duplo clique no scroll do mouse",
+      "aliases": [
+        "duplo clique com o botao do meio",
+        "duplo clique no scroll",
+        "centrar o desenho",
+        "botao do meio duas vezes",
+        "zoom extents"
+      ],
+      "identificador": "aoDuploCliqueDoMeio",
+      "descricao": "Gesto classico dos CAD, que o utilizador chama \"duplo clique no scroll\": DOIS mousedown do botao 1 (do meio) dentro de 420 ms. Nenhuma das bibliotecas tem gesto nativo para centrar - o que existe e FitView/GetBounds/GetOrigin no DXF (leitores/dxf.js:enquadrar, com a origem da cena subtraida) e camera.fitToItems() no IFC (leitores/ifc.js:enquadrar). O duplo clique ESQUERDO faz o mesmo. O helper devolve a funcao que desliga o listener, chamada no destruir.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/viewer/gestos.js",
+        "linha": 3,
+        "conferido": [
+          1789770167.751,
+          605
+        ]
+      }
+    },
+    {
+      "termo": "zoom da roda do desenho",
+      "aliases": [
+        "roda do mouse",
+        "zoom suave",
+        "zoom de frame em frame",
+        "bolinha do mouse",
+        "aproximar com a roda",
+        "zoom do dxf"
+      ],
+      "identificador": "aoRoda",
+      "descricao": "Zoom pela roda reimplementado (o OrbitControls interno do dxf-viewer da 16,6% de salto por clique porque zoomSpeed=3, e o deltaY so decide o sinal). Listener em area com capture+passive:false, preventDefault e stopPropagation; o zoom usa a API publica SetView(centro, largura) perseguindo o alvo com amortecimento de 85 ms em requestAnimationFrame, com a ancora no cursor. ESCALA_DA_RODA = 1.0013 por pixel de deltaY (deltaMode 1 -> x16, deltaMode 2 -> x100), limites 0.02x..40x.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/viewer/leitores/dxf.js",
+        "linha": 114,
+        "conferido": [
+          1789770184.601,
+          6918
+        ]
+      }
+    },
+    {
+      "termo": "barra de rolagem do preview",
+      "aliases": [
+        "barra branca do preview",
+        "scrollbar do preview",
+        "setinhas da barra",
+        "barra de rolagem com fundo branco",
+        "barra fininha do preview"
+      ],
+      "identificador": "::-webkit-scrollbar (src/frontend/vendor/viewer/viewer.css:14)",
+      "descricao": "Barras de rolagem da pagina do visualizador, no MESMO tom e espessura das do Axio desde 2026-09-23: width/height 8px, track transparente, polegar #333 com border-radius 4px e hover #555 (o Axio usa var(--border)=#333 e var(--scrollbar-thumb-hover)=#555 em src/frontend/style.css:79). Antes era 10px e #4b4f55 - mais claro, e o utilizador notou. O que fazia a barra parecer BRANCA era a falta de `color-scheme: dark` em :root do viewer.css: sem ele o Chromium desenha a barra do tema claro (fundo branco e setas). ::-webkit-scrollbar-button{display:none} tira as setas e ::-webkit-scrollbar-corner fica transparente. A barra HORIZONTAL das abas do preview vive no Axio (#preview-tabs, css/preview.css, 6px) e segue o mesmo padrao. ARMADILHA: `scrollbar-width: thin` DESLIGA todo o ::-webkit-scrollbar - nunca misturar as duas familias de propriedades.",
+      "localizacao": {
+        "arquivo": "src/frontend/vendor/viewer/viewer.css",
+        "linha": 16,
+        "conferido": [
+          1789777107.476,
+          5510
+        ]
+      }
+    },
+    {
+      "termo": "imagens que voltam ao cancelar",
+      "aliases": [
+        "imagens voltam ao parar",
+        "anexo volta no stop",
+        "minhas imagens voltaram",
+        "cancelar e recuperar as imagens",
+        "stop devolve os anexos"
+      ],
+      "identificador": "restaurarImagensDoTurno",
+      "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/messages.js",
+        "linha": 652,
+        "conferido": [
+          1789827996.595,
+          40751
+        ]
+      }
+    },
+    {
+      "termo": "barra de titulo",
+      "aliases": [
+        "barra do topo da janela",
+        "barra onde fica o nome do app",
+        "barra do exibir e ferramentas",
+        "topo da janela",
+        "linha do titulo"
+      ],
+      "identificador": "#title-bar",
+      "descricao": "Faixa de 32px no TOPO de tudo (primeiro filho do body), com o logo (#title-bar-logo) e os dois menus (#title-bar-exibir, #title-bar-ferramentas). SUBSTITUIU a barra de titulo nativa e a barra de menu do Electron, que ocupavam duas linhas: a janela usa titleBarStyle 'hidden' + titleBarOverlay {color:'#1e1e1e', symbolColor:'#d6d8dc', height:32} (src/main.js:createWindow), o que esconde o titulo mas devolve os botoes nativos (minimizar/maximizar/fechar) POR CIMA da pagina. A altura, largura e recuo vem das env vars env(titlebar-area-height/width/x) - e o que impede o conteudo de ficar debaixo dos botoes. O arrasto da janela e o -webkit-app-region: drag na barra, no-drag nos botoes. CSS em src/frontend/css/titulo.css. O menu nativo continua a ser construido (montarMenu) para os aceleradores Ctrl+Shift+R/B/I funcionarem - so a barra visual foi escondida.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 26,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "menu do topo",
+      "aliases": [
+        "menu exibir",
+        "menu ferramentas",
+        "dropdown do exibir",
+        "menu da barra de titulo"
+      ],
+      "identificador": "#titulo-menu (dropdown HTML da barra de titulo; o conteudo vem de itensExibir/itensFerramentas)",
+      "descricao": "Balão fixo que serve de dropdown dos botões #title-bar-exibir e #title-bar-ferramentas. Abre pela classe .menu-open (opacity/visibility/pointer-events em workspace.css). O conteúdo é construído por titulo.js:construirItem a partir das listas itensExibir/itensFerramentas e cada clique manda menu:acao por IPC ao main (filtrado por sender). O menu nativo do Electron continua a ser construído (montarMenu) mas está escondido: existe pelos aceleradores. ATENÇÃO: é position:fixed, logo conta como camada flutuante que esconde a vista nativa do preview (preview.js:camadaFlutuante).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 563,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "lupa do pdf",
+      "aliases": [
+        "botao de zoom do pdf",
+        "menos e mais do pdf",
+        "ampliar o pdf",
+        "reduzir o pdf"
+      ],
+      "identificador": "botaoDeZoom",
+      "descricao": "Os dois botoes de zoom do leitor de PDF, agora LUPA (circulo + cabo; o de ampliar leva mais o traco vertical). Antes eram texto 'menos'/'mais' (pedido do utilizador: 'coloque uma lupinha ao inves do texto'). A classe .vw-ferramenta virou um circulo de 26x26 com svg de 16px (viewer.css). Os botoes entram na barra #vw-ferramentas pelo ctx.ferramentas.append(anterior, proximo, contagem) no aoAtivar.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/viewer/leitores/pdf.js",
+        "linha": 126,
+        "conferido": [
+          1789773795.15,
+          5193
+        ]
+      }
+    },
+    {
+      "termo": "zoom da interface",
+      "aliases": [
+        "zoom global",
+        "aumentar a resolucao da interface",
+        "diminuir a interface",
+        "zoom da janela",
+        "menu zoom",
+        "traco do zoom",
+        "slider do zoom"
+      ],
+      "identificador": "zoomDaInterface",
+      "descricao": "Zoom global do Axio (0.5 a 2), aplicado por main.js:definirZoomDaInterface com webContents.setZoomFactor na janela principal E na vista do preview. O slider vive no menu Exibir (titulo.js:construirZoom) e manda menu:acao 'zoom'. Persiste em data/settings.json na chave interface.zoom (escrita atómica por gravarZoom, leitura no arranque por lerZoomPersistido). ARMADILHA: o zoom do Chromium e SAME-ORIGIN (doc oficial) - janela principal e preview estao os dois em 127.0.0.1:5000, logo um zoom num propaga-se ao outro; e por isso que existe um so zoom. ARMADILHA 2: getBoundingClientRect devolve CSS px mas WebContentsView.setBounds espera DIP - com zoom != 1 os dois divergem pelo fator, e main.js:escalarLimites corrige (sem isso o preview desloca-se e sobra espaco na lateral). Atalhos: Ctrl+= / Ctrl+- / Ctrl+0.",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 40,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
+      }
+    },
+    {
+      "termo": "aba do ficheiro apagado",
+      "aliases": [
+        "aba vermelha e riscada",
+        "aba riscada",
+        "ficheiro excluido na tab",
+        "tab vermelha",
+        "aba do ficheiro que nao existe",
+        "nome riscado na aba"
+      ],
+      "identificador": "tabsApagadas / _marcarAbaApagada / reconciliarAbas",
+      "descricao": "Aba do #editor-tabs que fica com .editor-tab-apagado (color var(--perigo) + line-through no nome) quando o ficheiro ja nao existe no disco. A marca vive no Set tabsApagadas (editor.js) e e aplicada por renderTabs. Quem a acende: marcarAbaApagada, chamada pelo trashPath (via rapida do explorer) e por reconciliarAbas, que pergunta a POST /api/fs_existem quais das abas abertas desapareceram - cobre tambem o agente a apagar, o del no terminal e o ficheiro apagado fora do Axio. Gatilhos de reconciliarAbas: agendarReconciliacaoDeAbas (debounce 300ms) no files_changed (workspace.js:handleSSE) e no focus da janela. limparAbaApagada desmarca quando o ficheiro volta (restauro da lixeira, git checkout) ou quando a aba e reaberta (openFileInEditor).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/editor.js",
+        "linha": 236,
+        "conferido": [
+          1789775419.735,
+          32114
+        ]
+      }
+    },
+    {
+      "termo": "barra de zoom da interface",
+      "aliases": [
+        "barra de zoom",
+        "traco do zoom no menu",
+        "slider do zoom",
+        "item zoom do menu exibir",
+        "menu de zoom"
+      ],
+      "identificador": "construirZoom",
+      "descricao": "Item 'Zoom' do dropdown Exibir da barra de titulo (construirZoom em titulo.js). Expande um painel inline com um slider de 50 a 200 em passos de 10, a percentagem no rotulo e um botao 'Repor 100%'. O zoom e GLOBAL e unico: o setZoomLevel do Chromium e same-origin, logo a janela principal e a vista nativa do preview (ambas em 127.0.0.1:5000) partilham o mesmo nivel - e por isso que o zoom do menu e o antigo +/- do preview mexiam na interface toda. O `input` do slider so pinta o rotulo e agenda a aplicacao a 400ms (ESPERA_DO_ZOOM_MS); o `change` (o valor commitado, ao largar o handle) aplica e cancela o temporizador. Aplicar no `input` fazia uma mudanca de zoom por pixel arrastado - setZoomFactor + redimensionar a vista do preview + gravar data/settings.json a cada passo - e era isso que fazia a janela piscar. O valor persiste em data/settings.json (interface.zoom) e o main le-o no arranque.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/titulo.js",
+        "linha": 93,
+        "conferido": [
+          1789839781.738,
+          6736
+        ]
+      }
+    },
+    {
+      "termo": "leitores abertos do preview",
+      "aliases": [
+        "cache dos leitores",
+        "trocar de aba recarrega",
+        "nao recarregar ao trocar de aba",
+        "manter aberto na memoria",
+        "ficheiros abertos ao mesmo tempo no preview"
+      ],
+      "identificador": "leitores / podar / MAX_LEITORES",
+      "descricao": "Map caminho->registro com os leitores montados vivos. Trocar de aba so alterna a classe vw-visivel das caixas: nao volta a ler nem a converter o ficheiro. MAX_LEITORES=4; podar() liberta o menos usado (registro.usado) e nunca o ativo. O irmao no processo principal e carregarRespeitandoPaginaPresa (src/main.js), que mata a vista quando a pagina nao responde a sonda.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/viewer/viewer.js",
+        "linha": 9,
+        "conferido": [
+          1789777107.484,
+          6144
+        ]
+      }
+    },
+    {
+      "termo": "pagina presa do preview",
+      "aliases": [
+        "preview travado",
+        "trocar de aba nao muda nada",
+        "janela do carregamento do ifc nao sai",
+        "preview congelado",
+        "ifc preso a converter"
+      ],
+      "identificador": "paginaResponde / carregarRespeitandoPaginaPresa",
+      "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 499,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
+      }
+    },
+    {
+      "termo": "transicao entre abas do preview",
+      "aliases": [
+        "crossfade",
+        "efeito de transicao",
+        "fade entre abas",
+        "transicao suave entre paginas do preview",
+        "troca de aba com fade"
+      ],
+      "identificador": ".vw-caixa.vw-visivel (opacity + visibility, --vw-cruzar)",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "src/frontend/vendor/viewer/viewer.css",
+        "linha": 115,
+        "conferido": [
+          1789777107.476,
+          5510
+        ]
+      }
+    },
+    {
+      "termo": "arvore de ficheiros nao atualiza",
+      "aliases": [
+        "explore three",
+        "explorer nao atualiza",
+        "arvore nao atualiza",
+        "ficheiro largado de fora nao aparece",
+        "jogar ficheiro do windows na pasta",
+        "arrastar ficheiro do windows pro projeto",
+        "colar ficheiro na pasta do projeto",
+        "so aparece quando mudo de pasta e volto",
+        "atualizar a arvore de ficheiros",
+        "refresh da arvore"
+      ],
+      "identificador": "_deve_avisar / _processar / notificar_mudanca_arquivos",
+      "descricao": "Portao do watcher que decide o que avisar a interface e emissor do SSE files_changed que faz o explorer.js:reloadExplorer redeszenhar a arvore. Antes nao chamava notificar_mudanca_arquivos (a arvore so se atualizava ao navegar de pasta) e filtrava por extensao de texto (um PNG/IFC/DXF largado de fora nem era considerado). A interface espera 250ms e respeita um recuo de 1200ms depois de navegar (scroll.js:scheduleExplorerReload), que agora re-agenda em vez de descartar.",
+      "localizacao": {
+        "arquivo": "src/backend/services/file_watcher.py",
+        "linha": 51,
+        "conferido": [
+          1789775851.545,
+          6088
+        ]
+      }
+    },
+    {
+      "termo": "icones do leitor no preview",
+      "aliases": [
+        "terceira tab do preview",
+        "terceira aba do preview",
+        "icone de zoom do dxf",
+        "camadas do dxf",
+        "ferramentas do leitor",
+        "barra de ferramentas do preview",
+        "icones do pdf",
+        "1 pagina(s)",
+        "5 camada(s)",
+        "desalinhado com o mais de nova aba",
+        "barra do leitor desalinhada"
+      ],
+      "identificador": "#vw-ferramentas / .vw-ferramenta",
+      "descricao": "A terceira barra da janela do preview - a do leitor ativo (zoom, camadas do DXF/IFC, \"1 pagina(s)\"): fica na pagina do viewer, NAO no DOM do Axio. NAO tem declaracao no index.html do Axio: e o #vw-ferramentas da pagina #vendor/viewer/index.html, preenchido pelo leitor ativo via ctx.ferramentas. DESDE 2026-09-25 nasce OCULTA por CSS (viewer.css: #vw-ferramentas{display:none}) e so aparece quando o body daquela pagina ganha a classe vw-com-ferramentas - o que acontece quando o utilizador carrega no botao de 3 pontinhos da barra do preview (#preview-opcoes). A regra de exibicao e body.vw-com-ferramentas #vw-ferramentas:not(:empty). Alinhamento horizontal (medido): #vw-ferramentas com 12px de recuo lateral e botoes de 28x28, os MESMOS numeros do #preview-nova e do voltar da barra do Axio.",
+      "localizacao": {
+        "arquivo": "src/frontend/vendor/viewer/viewer.css",
+        "linha": 82,
+        "conferido": [
+          1789777107.476,
+          5510
+        ]
+      }
+    },
+    {
+      "termo": "ifc que nao precisa converter de novo",
+      "aliases": [
+        "ifc que converte sempre",
+        "ifc que reconverte",
+        "ifc que volta a converter",
+        "converter o ifc uma vez",
+        "cache do ifc",
+        "cache do modelo",
+        "nao recarregar o ifc",
+        "modelo convertido"
+      ],
+      "identificador": "ler",
+      "descricao": "Cache em disco do modelo convertido (IFC -> Fragments/.frag): chave sha1 do caminho + marca mtime_ns/tamanho da origem; GET sem cache devolve 204 e o leitor cai no caminho antigo",
+      "localizacao": {
+        "arquivo": "src/backend/services/cache_modelos.py",
+        "linha": 30,
+        "conferido": [
+          1789776657.706,
+          3269
+        ]
+      }
+    },
+    {
+      "termo": "icone de 3 pontinhos do preview",
+      "aliases": [
+        "3 pontinhos",
+        "tres pontinhos",
+        "botao de opcoes do ficheiro",
+        "icone de opcoes do preview",
+        "pontinhos verticais",
+        "mostrar as ferramentas do ficheiro",
+        "exibir a terceira barra",
+        "ocultar a terceira barra",
+        "botao de opcoes da pagina"
+      ],
+      "identificador": "#preview-opcoes",
+      "descricao": "Botao da barra do preview que mostra/oculta a TERCEIRA barra - a do leitor (#vw-ferramentas, na pagina do viewer). Fica a DIREITA do campo de endereco e a ESQUERDA da pasta (#preview-file): a ordem na barra e #preview-opcoes, #preview-file, #preview-external. Nasce DESLIGADO (disabled) e so liga quando a aba ativa e um ficheiro que abre no viewer (preview.js:atualizarOpcoesDoFicheiro). O clique chama preview.js:alternarFerramentasDoFicheiro, que acende a classe .preview-btn-ativo (cor --oliva) e manda a acao 'ferramentas' pelo IPC preview:acao; o main injeta um CustomEvent 'axio-ferramentas' na pagina do viewer, que troca a classe vw-com-ferramentas do body. A barra do leitor nasce oculta por CSS.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 503,
+        "conferido": [
+          1789833790.889,
+          77757
+        ]
+      }
+    },
+    {
+      "termo": "ifc que carrega em segundo plano",
+      "aliases": [
+        "ifc rodando em segundo plano",
+        "ifc que continua carregando",
+        "aba do ifc em segundo plano",
+        "converter o ifc sem travar",
+        "navegar enquanto o ifc carrega",
+        "ifc convertendo em background"
+      ],
+      "identificador": "workerDeConversao / ifc_worker.js",
+      "descricao": "Conversao IFC -> Fragments num Web Worker proprio (IfcImporter do @thatopen/fragments), fora da linha principal: a pagina continua a responder e a conversao prossegue mesmo mudando de ficheiro.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/viewer/leitores/ifc.js",
+        "linha": 77,
+        "conferido": [
+          1789778488.726,
+          8546
+        ]
+      }
+    },
+    {
+      "termo": "aba do preview que ja nao recarrega",
+      "aliases": [
+        "ifc que recarrega ao trocar de aba",
+        "trocar de aba recarrega",
+        "voltar para a aba do ifc reconverte",
+        "aba que perde o estado",
+        "pagina que recarrega ao voltar",
+        "mesma aba sem recarregar"
+      ],
+      "identificador": "mesmoAlvoCarregado",
+      "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 455,
+        "conferido": [
+          1789844546.459,
+          29336
+        ]
+      }
+    },
+    {
+      "termo": "aba do preview que nao acompanha a pagina",
+      "aliases": [
+        "aba do preview desatualizada",
+        "barra de abas do preview a mentir",
+        "aba mostra outro ficheiro",
+        "endereco do preview preso",
+        "aba nao muda quando a ia carrega uma pagina",
+        "aba do preview errada"
+      ],
+      "identificador": "ativarAlvoJaCarregado",
+      "descricao": "A barra de abas e o campo de endereco do preview passam a mostrar o que a ferramenta carregou na vista: main.js manda 'preview:alvo' com o alvo resolvido e o renderer adota a aba do mesmo alvo (ou cria uma nova), ativa-a e pinta, SEM pedir novo carregamento.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/preview_abas.js",
+        "linha": 129,
+        "conferido": [
+          1789781091.617,
+          6489
+        ]
+      }
+    },
+    {
+      "termo": "separador sob os botoes da janela",
+      "aliases": [
+        "risca sob os botoes",
+        "linha debaixo dos icones da janela",
+        "separador com sombra",
+        "linha sob minimizar maximizar fechar"
+      ],
+      "identificador": "#title-bar::after",
+      "descricao": "Enchimento que fecha o vao a direita da barra de titulo: um pseudo-elemento de #title-bar posicionado a left:100% com largura calc(100vw - env(titlebar-area-width) - env(titlebar-area-x)) e fundo var(--bg-panel). Existe porque o overlay nativo (32 DIP) acaba ~1px fisico antes da barra HTML (env(titlebar-area-height) com o zoom da interface por cima) e a barra nao tem largura para chegar debaixo dos botoes - sem ele, essa ultima linha mostrava o fundo do body e lia-se como uma risca escura sob os icones de minimizar/maximizar/fechar.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/titulo.css",
+        "linha": 17,
+        "conferido": [
+          1789788294.394,
+          3024
+        ]
+      }
+    },
+    {
+      "termo": "print de uma janela especifica",
+      "aliases": [
+        "olhar para uma janela",
+        "capturar a janela",
+        "print da janela do programa",
+        "ver a janela do axio",
+        "captura da janela por titulo"
+      ],
+      "identificador": "_acao_print",
+      "descricao": "tool_operar_janela com acao='print' e 'janela' = trecho do titulo (ex: 'Axio Coder'): a resolucao da janela e pelo _janela() (hwnd ou texto do titulo) e a captura e pelo _acao_print -> _capturar_janela, que usa janela.capture_as_image() (composicao do sistema, do pywinauto) e o ImageGrab so como ultimo recurso - ou seja, funciona mesmo com a janela TAPADA, ao contrario do tool_capturar_print, que fotografa o ecra e so ve o que esta a vista. O 'regiao' deste print e RELATIVO a janela (crop no bitmap dela), nao coordenadas do ecra. NAO reimplementar resolucao de janelas por win32gui.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/janelas.py",
+        "linha": 635,
+        "conferido": [
+          1789829622.792,
+          42204
+        ]
+      }
+    },
+    {
+      "termo": "arvore giratoria",
+      "aliases": [
+        "arvore de natal",
+        "arvore giratoria",
+        "modelo da arvore",
+        "arvore 30 m",
+        "arvore de 30 metros"
+      ],
+      "identificador": "construir",
+      "descricao": "",
+      "localizacao": {
+        "arquivo": "gerados/arvore/modelo.py",
+        "linha": 49,
+        "conferido": [
+          1789826815.125,
+          7924
+        ]
+      }
+    },
+    {
+      "termo": "pasta dos modelos gerados",
+      "aliases": [
+        "pasta gerados",
+        "gerados",
+        "pasta de modelos",
+        "onde salva os modelos",
+        "pasta do que eu gero"
+      ],
+      "identificador": "PASTA_PADRAO",
+      "descricao": "Pasta padrao de tudo o que se gera (gerados/), uma subpasta por assunto, criada sozinha se faltar. Sem 'destino', o tool_gerar_modelo grava em gerados/<modelo>/<modelo>.<formato> (destino_padrao) e _alvo_em_pasta aceita uma pasta existente. Vale para qualquer projeto: um IFC, um DXF, um PDF, um documento ou um script de apoio cai sempre em gerados/<assunto>/.",
+      "localizacao": {
+        "arquivo": "src/backend/geometry/catalogo.py",
+        "linha": 8,
+        "conferido": [
+          1789826814.935,
+          1644
+        ]
+      }
+    },
+    {
+      "termo": "fonte confiavel da pesquisa",
+      "aliases": [
+        "blog",
+        "linkedin",
+        "fonte duvidosa",
+        "site oficial",
+        "documentacao oficial",
+        "pesquisa boa",
+        "blog japones",
+        "fonte verdadeira"
+      ],
+      "identificador": "_nivel_da_fonte / DOMINIOS_OFICIAIS",
+      "descricao": "Etiqueta cada fonte da busca por confianca (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG) usando a tabela DOMINIOS_OFICIAIS/DOMINIOS_FRACOS; sem fonte oficial entre as encontradas, avisa e manda refazer a busca com 'dominios' (um filtro que privilegia o dominio da documentacao oficial).",
+      "localizacao": {
+        "arquivo": "src/backend/tools/web.py",
+        "linha": 73,
+        "conferido": [
+          1789828486.839,
+          13121
+        ]
+      }
+    },
+    {
+      "termo": "subida automatica do teto de contexto",
+      "aliases": [
+        "teto sobe sozinho",
+        "aumentar a memoria da rodada sozinho",
+        "teto automatico",
+        "memoria da rodada chegou a 85%",
+        "aviso do teto de contexto"
+      ],
+      "identificador": "ajustar_teto_automatico",
+      "descricao": "Sobe o teto da rodada quando a memoria chega a TETO_AUTOMATICO_LIMIAR (85%): dob ra o teto, no maximo TETO_AUTOMATICO_PASSOS (2) vezes por sessao, nunca abaixo do padrao do .env. Emite context_limit (com motivo) e um status; a interface reflete no anel, nas barras, no rotulo e no texto de ajuda",
+      "localizacao": {
+        "arquivo": "src/backend/ai/context.py",
+        "linha": 58,
+        "conferido": [
+          1789827996.552,
+          11544
+        ]
+      }
+    },
+    {
+      "termo": "cofre",
+      "aliases": [
+        "cofre de credenciais",
+        "aba cofre",
+        "senhas guardadas",
+        "onde salvo as chaves",
+        "guardar a senha do email",
+        "cofre das configuracoes",
+        "valores mascarados",
+        "deposito de credenciais"
+      ],
+      "identificador": "tool_gerenciar_cofre",
+      "descricao": "Aba de Configuracoes onde o utilizador guarda o que eu reuso entre sessoes: identidade, email (com servidor_imap), contas de sites, chaves de API e acessos a servidores. E UM ficheiro so (data/cofre.json no DATA_DIR do Axio), logo partilhado por TODOS os projetos. Cada entrada e um cartao que RECOLHE (so a linha do titulo, clicar expande) e TRAVA depois de guardar (botao vira 'Editar'); o selo 'falta: <campo>' so acende a falta de um campo sensivel. O segredo usa-se sem ser visto: '{{cofre:<id>.<campo>}}' no texto de tool_operar_preview/janela(escrever). Servico em src/backend/services/cofre.py, UI em src/frontend/js/chat/cofre.js.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/cofre.py",
+        "linha": 64,
+        "conferido": [
+          1789836481.377,
+          8003
+        ]
+      }
+    },
+    {
+      "termo": "olhinho do cofre",
+      "aliases": [],
+      "identificador": "_alternarValores / #btn-cofre-revelar",
+      "descricao": "Olho do cofre (aba Configuracoes -> Cofre) que mostra e esconde as senhas guardadas. NAO recolhe os cards: troca os valores nos inputs ja pintados, sem re-renderizar (era isso que fechava os cards). Mesmo efeito e mesmos icones do olho da aba de APIs.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/cofre.js",
+        "linha": 244,
+        "conferido": [
+          1789836480.903,
+          14444
+        ]
+      }
+    },
+    {
+      "termo": "preferencias de estilo",
+      "aliases": [],
+      "identificador": "tool_gerenciar_preferencias / preferencias.bloco",
+      "descricao": "Bloco de preferencias permanentes de layout e estilo do utilizador (bordas, transicoes, scrollbar, cards, pills, indentacao), guardado no DATA_DIR do Axio e injetado em TODAS as rodadas e em qualquer projeto. area e a chave: escrever na mesma area substitui.",
+      "localizacao": {
+        "arquivo": "src/backend/services/preferencias.py",
+        "linha": 95,
+        "conferido": [
+          1789832875.959,
+          3401
+        ]
+      }
+    },
+    {
+      "termo": "sinal do cartao do cofre",
+      "aliases": [],
+      "identificador": ".cofre-sinal",
+      "descricao": "O sinal de abrir e fechar um cartao do cofre: um + desenhado com duas barras (.cofre-sinal::before horizontal e ::after vertical); aberto, a vertical desaparece com scaleY(0). Substituiu a setinha (transform rotate).",
+      "localizacao": {
+        "arquivo": "src/frontend/css/geral.css",
+        "linha": 236,
+        "conferido": [
+          1789836550.602,
+          13529
+        ]
+      }
+    },
+    {
+      "termo": "raio-x do desenho",
+      "aliases": [
+        "ver como a pagina e feita",
+        "extrair o layout",
+        "copiar o estilo da pagina",
+        "tokens de design",
+        "medidas e cores da pagina"
+      ],
+      "identificador": "SNIPPET_ESTILO / acaoEstilo",
+      "descricao": "Le o desenho ja computado pelo browser pelo tool_observar_preview(acao='estilo').",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 458,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "inspecionar no preview",
+      "aliases": [
+        "inspecionar a pagina do preview",
+        "modo inspecionar dentro do preview",
+        "inspetor no preview",
+        "inspecionar ifc dxf pdf"
+      ],
+      "identificador": "SNIPPET_INSPECIONAR / inspecionarPreview",
+      "descricao": "Overlay injetado DENTRO da pagina do preview (nao e o inspetor do Axio, que so ve o DOM do Axio): destaca o elemento sob o cursor, e no clique mostra seletor, caixa, layout, cores e fonte num painel na propria pagina, e manda o mesmo por console marcado para o campo de mensagem do Axio. Shift+clique interage, Esc sai. Sem DOM (canvas do IFC/DXF/PDF) nao ha o que apanhar alem do viewport.",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 527,
+        "conferido": [
+          1789844546.388,
+          56500
+        ]
+      }
+    },
+    {
+      "termo": "campo e-mail ou usuario do cofre",
+      "aliases": [
+        "e-mail/usuario",
+        "campo do login da conta",
+        "usuario do site",
+        "campo de email da conta de site"
+      ],
+      "identificador": "usuario (campo da categoria 'site') - o rotulo mostra \"E-mail / usuario\"",
+      "descricao": "Um campo so para o login da conta de site, porque o site tem uma caixa so: aceita email ou nome de utilizador. Substituiu os dois campos (usuario + email) que existiam antes.",
+      "localizacao": {
+        "arquivo": "src/backend/services/cofre.py",
+        "linha": 51,
+        "conferido": [
+          1789836550.624,
+          16366
+        ]
+      }
+    },
+    {
+      "termo": "arvore de ficheiros lenta ao entrar na pasta",
+      "aliases": [
+        "explorer lento",
+        "clico na pasta e demora",
+        "navegacao lenta do explorer",
+        "entrar na pasta demora",
+        "arvore demora a abrir",
+        "arvore que fica a pensar"
+      ],
+      "identificador": "prefetchPasta / listasDePastas",
+      "descricao": "Cache de listagens de pasta (VALIDADE_DA_LISTA_MS=6000, MAX_PASTAS_LISTADAS=24) e prefetch no hover com intencao de 90ms; com a lista em cache o clique em loadExplorer desenha sem pedido de rede. Consumidores: loadExplorer, reloadExplorer, ligarPrefetchDePastas.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/explorer.js",
+        "linha": 139,
+        "conferido": [
+          1789840669.457,
+          15654
+        ]
       }
     }
   ]

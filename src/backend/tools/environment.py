@@ -1,10 +1,36 @@
+import importlib.util
 import os
 import sys
 
 from src.backend.state import estado, emit_event
+from src.backend.tools.registry import register, tool_names
 from src.backend.services.file_service import versao_pacote, venv_projeto, dirs_leitura_extra
 from src.backend.services.process_manager import detectar_shell
 
+CAPACIDADES = (
+    ("Imagem: abrir, recortar e converter (.png .jpg .gif .webp .bmp .ico)", "PIL", "pillow"),
+    ("Imagem: analise por pixel e visao de ecra (.png .jpg)", "cv2", "opencv-python"),
+    ("PDF: ler texto e renderizar a pagina (.pdf)", "pymupdf", "pymupdf"),
+    ("OCR: texto de imagem digitalizada (exige o binario tesseract instalado)", "pytesseract", "pytesseract"),
+    ("IFC/BIM: criar, ler e medir o modelo (.ifc)", "ifcopenshell", "ifcopenshell"),
+    ("CAD: ler e criar desenho vetorial (.dxf)", "ezdxf", "ezdxf"),
+    ("CAD 3D: criar e ler solido B-rep e gravar STEP para CAD mecanico (.step)", "cadquery", "cadquery"),
+    ("Geometria 2D: booleanas, areas e distancias", "shapely", "shapely"),
+    ("Malhas 3D: ler e medir (.stl .obj .glb)", "trimesh", "trimesh"),
+    ("Arrays e algebra numerica", "numpy", "numpy"),
+    ("Graficos: desenhar dados em imagem (.png .svg)", "matplotlib", "matplotlib"),
+    ("HTML: extrair dados de paginas", "bs4", "beautifulsoup4"),
+    ("Planilha: ler e criar (.xlsx)", "openpyxl", "openpyxl"),
+    ("Documento: ler e criar (.docx)", "docx", "python-docx"),
+    ("Audio: ler e analisar (.wav .flac)", "soundfile", "soundfile"),
+)
+
+@register(
+    "tool_info_ambiente",
+    'Retorna metadados do ambiente: caminho do venv em uso, versões de Python, Mempalace e ChromaDB, diretórios de leitura permitidos e estado do palace do mempalace. Traz também o relatório de CAPACIDADES por família de formato (imagem, PDF, OCR, IFC/BIM, CAD/DXF, CAD 3D/STEP, malhas 3D, planilha, documento, áudio) — é aqui que se responde "eu consigo ler/criar este formato?" antes de dizer que não: cada família mostra OK com a versão ou FALTA com o pacote pip candidato.',
+    {
+    },
+)
 def tool_info_ambiente():
     emit_event("executing", function="Coletando informações do ambiente")
     raiz = estado.get("pasta_raiz") or "(nenhuma)"
@@ -18,6 +44,7 @@ def tool_info_ambiente():
         f"Versão Python: {sys.version.split()[0]}",
         f"Versão Mempalace: {versao_pacote('mempalace')}",
         f"Versão ChromaDB: {versao_pacote('chromadb')}",
+        f"Ferramentas registadas (tools/registry.py): {len(tool_names())}",
     ]
     venv_proj = venv_projeto()
     if venv_proj:
@@ -33,4 +60,24 @@ def tool_info_ambiente():
         linhas.append("Dica: se buscas filtradas por wing falharem, rode 'mempalace repair' (issue #1035 do MemPalace).")
     else:
         linhas.append("Palace do mempalace: não encontrado.")
+    linhas.extend(_capacidades())
     return "\n".join(linhas)
+
+
+def _capacidades():
+    """Bloco de capacidades por familia de formato: o que este ambiente ja sabe ler e escrever."""
+    linhas = ["Capacidades por familia de formato (FALTA = sem leitor instalado; o candidato e o pacote pip):"]
+    for rotulo, modulo, pacote in CAPACIDADES:
+        try:
+            presente = importlib.util.find_spec(modulo) is not None
+        except Exception:
+            presente = False
+        if not presente:
+            linhas.append(f"  FALTA  {rotulo}: candidato -> pip install {pacote}")
+            continue
+        try:
+            versao = versao_pacote(pacote)
+        except Exception:
+            versao = "?"
+        linhas.append(f"  OK     {rotulo}: {modulo} {versao}")
+    return linhas

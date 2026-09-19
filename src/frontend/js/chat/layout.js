@@ -1,9 +1,10 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
-import { collapseHistorySearchInline, moveColsToDock, moveColsToHistory } from './history.js';
+import { vistaDe } from './colunas.js';
+import { collapseHistorySearchInline } from './historico/busca.js';
 import { recolherContextPopup, syncMenuIcons, syncWorkspaceTopBar } from './ui.js';
 
-const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, btnEyeDiff, btnHistorySearch, btnRedo, btnShowQuestion, btnShowThoughts, btnShowTools, btnUndo, codeViewContainer, col3Title, lblRedoCount, lblUndoCount, logDock, modeSubmenu, panelCol1, panelCol2, panelCol3, panelLogSession, plusMenu, slidingPanelContainer, wrap } = dom;
+const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles, btnDockLogSession, btnEyeDiff, btnHistorySearch, btnRedo, btnShowQuestion, btnShowThoughts, btnShowTools, btnUndo, col3Header, col3Title, lblRedoCount, lblUndoCount, logDock, modeSubmenu, panelCol2, panelCol3, panelLogSession, plusMenu, slidingPanelContainer } = dom;
 
 
     function closePlusMenus() {
@@ -30,7 +31,7 @@ const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, b
         state.isShowingThoughts = false;
         state.isShowingQuestions = false;
         resetToolButtonsState();
-        if (btnCopyTools) btnCopyTools.classList.add('hidden');
+        syncCopyButtons();
         if (btnUndo) btnUndo.classList.remove('hidden');
         if (btnRedo) btnRedo.classList.remove('hidden');
         if (btnEyeDiff) {
@@ -45,15 +46,16 @@ const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, b
         col3Title.classList.remove('text-[var(--text)]', 'text-[var(--text-branco)]');
         col3Title.classList.add('cursor-pointer', 'hover:underline', 'text-[var(--oliva)]');
         col3Title.ondblclick = null;
+
+        syncDocTopBar();
     }
-    function resetCol3State() {
+    function resetCol3State(vista) {
         state.isShowingTools = false;
         state.isShowingThoughts = false;
         state.isShowingQuestions = false;
         state.currentActiveFileBalloonHtml = "";
         state.currentUndoFile = null;
         state.currentFileDataRef = null;
-        // Limpa o destaque de seleção da pilha de edições
         document.querySelectorAll('.diff-selected').forEach(el => el.classList.remove('diff-selected'));
         document.querySelectorAll('.file-card-selected').forEach(el => el.classList.remove('file-card-selected'));
         resetToolButtonsState();
@@ -61,23 +63,29 @@ const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, b
             btnHistorySearch.classList.remove('text-[var(--oliva)]');
             btnHistorySearch.classList.add('text-[var(--text-mutado)]');
         }
-        if (btnCopyTools) btnCopyTools.classList.add('hidden');
+        syncCopyButtons();
         if (btnUndo) btnUndo.classList.add('hidden');
         if (btnRedo) btnRedo.classList.add('hidden');
         if (btnEyeDiff) btnEyeDiff.classList.add('hidden');
         if (lblUndoCount) lblUndoCount.classList.add('hidden');
         if (lblRedoCount) lblRedoCount.classList.add('hidden');
         state.currentOpenedDiff = null;
-        col3Title.textContent = 'Codigo';
-        col3Title.onclick = null;
-        col3Title.ondblclick = null;
-        col3Title.title = "";
-        col3Title.classList.remove('cursor-pointer', 'hover:underline', 'text-[var(--oliva)]');
-        col3Title.classList.add('text-[var(--text)]');
-        // Restaura o layout padrão da Col 3 (usado pelo modo de busca).
-        codeViewContainer.style.display = '';
-        codeViewContainer.style.flexDirection = '';
-        codeViewContainer.style.padding = '';
+        const alvo = vista || vistaDe('dock');
+        if (alvo && alvo.titulo) {
+            alvo.titulo.textContent = 'Codigo';
+            alvo.titulo.onclick = null;
+            alvo.titulo.ondblclick = null;
+            alvo.titulo.title = "";
+            alvo.titulo.classList.remove('cursor-pointer', 'hover:underline', 'text-[var(--oliva)]');
+            alvo.titulo.classList.add('text-[var(--text)]');
+        }
+        if (alvo && alvo.codigo) {
+            alvo.codigo.style.display = '';
+            alvo.codigo.style.flexDirection = '';
+            alvo.codigo.style.padding = '';
+        }
+
+        syncDocTopBar();
     }
     function syncDockButtons() {
         if (btnDockLogSession) {
@@ -89,46 +97,50 @@ const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, b
         if (btnDockFiles) btnDockFiles.classList.add('hidden');
         if (btnDockCode) btnDockCode.classList.add('hidden');
     }
-    function syncLogDockFlex() {
-        if (!logDock) return;
-        const col3InDock = panelCol3 && panelCol3.parentNode === logDock;
-        const col3Open = col3InDock && !panelCol3.classList.contains('panel-col-closed');
-        logDock.classList.toggle('has-code', col3Open);
+    function camadaCol3Aberta() {
+        return !!panelCol3 && !panelCol3.classList.contains('panel-col-closed');
     }
-    function syncHistoryContainerWidth() {
-        if (!slidingPanelContainer) return;
-        const col3InHistory = panelCol3 && panelCol3.parentNode === slidingPanelContainer;
-        if (!col3InHistory || slidingPanelContainer.classList.contains('history-search-expanded')) {
-            slidingPanelContainer.style.width = '';
-            return;
-        }
-        if (!panelCol3.classList.contains('panel-col-closed')) {
-            slidingPanelContainer.style.width = '100vw';
-            return;
-        }
-        let openCount = 0;
-        if (panelCol1 && !panelCol1.classList.contains('panel-col-closed')) openCount++;
-        if (panelCol2 && !panelCol2.classList.contains('panel-col-closed')) openCount++;
-        const colWidth = panelCol1 ? panelCol1.offsetWidth : 0;
-        let w = openCount * colWidth;
-        const cs = window.getComputedStyle(slidingPanelContainer);
-        w += parseFloat(cs.paddingLeft) || 0;
-        w += parseFloat(cs.paddingRight) || 0;
-        slidingPanelContainer.style.width = Math.round(w) + 'px';
+
+    function camadaCol3MostraPaineis() {
+        return !!(state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions);
+    }
+
+    function camadaNotasAberta() {
+        const notas = vistaDe('notas');
+        return !!(notas && notas.col3Aberta());
+    }
+
+    function vistaPreviewAtiva() {
+        return state.vistaDocAtual === 'preview';
+    }
+
+    function syncDocTopBar() {
+        const paineis = camadaCol3MostraPaineis();
+        const historico = vistaDe('historico');
+        const historicoNoEditor = state.codigoDoHistoricoNoEditor && !(historico && historico.col3Aberta());
+        const esconder = vistaPreviewAtiva() || camadaNotasAberta() || (paineis && camadaCol3Aberta()) || (isHistoryOpen() && !historicoNoEditor);
+        syncWorkspaceTopBar(esconder);
+
+        if (col3Header) col3Header.style.display = paineis ? '' : 'none';
+    }
+
+    function syncCopyButtons(vista, ativo) {
+        const alvo = vista || vistaDe('dock');
+        const mostrar = !!(ativo && alvo);
+        if (btnCopyTools) btnCopyTools.classList.toggle('hidden', !(mostrar && alvo.id === 'dock'));
+        if (btnCopyToolsHistory) btnCopyToolsHistory.classList.toggle('hidden', !(mostrar && alvo.id === 'historico'));
     }
     function openPanelCol(panel) {
         if (!panel) return;
         panel.classList.remove('panel-col-closed');
         syncDockButtons();
-        if (panel === panelCol3) syncLogDockFlex();
-        syncHistoryContainerWidth();
+        syncDocTopBar();
     }
     function closePanelCol(panel) {
         if (!panel) return;
         panel.classList.add('panel-col-closed');
         syncDockButtons();
-        if (panel === panelCol3) syncLogDockFlex();
-        syncHistoryContainerWidth();
+        syncDocTopBar();
     }
     function toggleLogColumn(panel) {
         if (!panel) return;
@@ -141,85 +153,31 @@ const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, b
         }
         syncDockButtons();
     }
-    function col3IsOverlay() {
-        return panelCol3 && panelCol3.classList.contains('col3-overlay');
-    }
-    function moveCol3ToOverlay() {
-        if (!wrap || !panelCol3) return;
-        clearTimeout(state.col3OverlayCloseTimer);
-        state.col3OverlayCloseTimer = null;
-        if (panelCol3.parentNode !== wrap) {
-            panelCol3.classList.add('col3-overlay');
-            wrap.appendChild(panelCol3);
-            void panelCol3.offsetWidth;
-        }
-    }
-    function openCol3Overlay() {
+    function openCol3Panel() {
+   
         if (window.WorkspaceView && typeof window.WorkspaceView.showEditor === 'function') {
             window.WorkspaceView.showEditor();
         }
-        moveCol3ToOverlay();
-        panelCol3.classList.add('col3-overlay');
-        panelCol3.classList.remove('panel-col-closed');
-        panelCol3.classList.add('col3-overlay-open');
-        syncDockButtons();
-        syncLogDockFlex();
-        syncHistoryContainerWidth();
-    }
-    function clearCol3Overlay() {
-        clearTimeout(state.col3OverlayCloseTimer);
-        state.col3OverlayCloseTimer = null;
-        if (panelCol3) {
-            panelCol3.classList.remove('col3-overlay', 'col3-overlay-open');
-        }
-    }
-    function closeCol3Overlay() {
-        if (!col3IsOverlay()) return;
-        panelCol3.classList.remove('col3-overlay-open');
-        panelCol3.classList.add('panel-col-closed');
-        clearTimeout(state.col3OverlayCloseTimer);
-        state.col3OverlayCloseTimer = window.setTimeout(() => {
-            state.col3OverlayCloseTimer = null;
-            if (!col3IsOverlay()) return;
-            clearCol3Overlay();
-            moveColsToHistory();
-            syncHistoryContainerWidth();
-        }, 320);
-    }
-    function openCol3Panel() {
-        if (isHistoryOpen()) {
-            openCol3Overlay();
-        } else {
-            openPanelCol(panelCol3);
-        }
+        openPanelCol(panelCol3);
     }
     function closeCol3() {
-        if (col3IsOverlay()) {
-            closeCol3Overlay();
-        } else {
-            closePanelCol(panelCol3);
-        }
+        closePanelCol(panelCol3);
         resetCol3State();
     }
     function isLogDockOpen() {
         return panelLogSession && !panelLogSession.classList.contains('panel-col-closed');
-    }
-    function isCol3Open() {
-        return panelCol3 && !panelCol3.classList.contains('panel-col-closed');
     }
     function openLogDock() {
         if (!logDock) return;
         logDock.classList.remove('dock-closed');
         if (panelLogSession) panelLogSession.classList.remove('panel-col-closed');
         syncDockButtons();
-        syncLogDockFlex();
     }
     function closeLogDock() {
         if (panelLogSession) panelLogSession.classList.add('panel-col-closed');
         if (panelCol2) panelCol2.classList.add('panel-col-closed');
         if (panelCol3) panelCol3.classList.add('panel-col-closed');
         syncDockButtons();
-        syncLogDockFlex();
     }
     function isHistoryOpen() {
         return !slidingPanelContainer.classList.contains('dock-closed');
@@ -227,24 +185,28 @@ const { aiSubmenu, btnCopyTools, btnDockCode, btnDockFiles, btnDockLogSession, b
     function openHistory() {
         recolherContextPopup();
         slidingPanelContainer.classList.remove('dock-closed');
+        syncDocTopBar();
     }
     function closeHistory() {
+
+        state.codigoDoHistoricoNoEditor = false;
+        const vistaHistorico = vistaDe('historico');
+        if (vistaHistorico) vistaHistorico.fecharCol3();
         slidingPanelContainer.classList.add('dock-closed');
+
+        state.isShowingSessionHistory = false;
         if (state.historySearchInlineActive) {
             collapseHistorySearchInline();
         }
+        syncDocTopBar();
     }
-    function closeHistoryAndResetDock() {
+    function closeHistoryPanel() {
         closeHistory();
-        closePanelCol(panelCol2);
-        closeCol3();
         if (window.WorkspaceView && typeof window.WorkspaceView.setFocusMode === 'function') {
             window.WorkspaceView.setFocusMode(false);
         }
-        moveColsToDock();
-        syncLogDockFlex();
         syncMenuIcons();
-        syncWorkspaceTopBar(false);
+        syncDocTopBar();
         if (window.WorkspaceView && typeof window.WorkspaceView.expandDockForFocus === 'function') {
             window.WorkspaceView.expandDockForFocus();
         }
@@ -261,25 +223,19 @@ export {
     setupCol3ForFileView,
     resetCol3State,
     syncDockButtons,
-    syncLogDockFlex,
-    syncHistoryContainerWidth,
+    syncCopyButtons,
     openPanelCol,
     closePanelCol,
     toggleLogColumn,
-    col3IsOverlay,
-    moveCol3ToOverlay,
-    openCol3Overlay,
-    clearCol3Overlay,
-    closeCol3Overlay,
     openCol3Panel,
     closeCol3,
     isLogDockOpen,
-    isCol3Open,
     openLogDock,
     closeLogDock,
     isHistoryOpen,
     openHistory,
     closeHistory,
-    closeHistoryAndResetDock,
-    openLogDockInWorkspace
+    closeHistoryPanel,
+    openLogDockInWorkspace,
+    syncDocTopBar
 };

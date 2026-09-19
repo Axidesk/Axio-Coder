@@ -1,19 +1,18 @@
 import os
-import shutil
 import threading
 
 from flask import Blueprint, request, jsonify
 
-from src.backend.state import MSG_SEM_PASTA, notificar_mudanca_arquivos
+from src.backend.state import notificar_mudanca_arquivos
 from src.backend.services.file_service import (
-    caminho_contido,
     resolver_caminho,
     raiz_abs,
     mover_para_lixeira,
     raiz_lixeira,
     listar_lixeira,
     listar_conteudo_lixeira,
-    caminho_original_lixeira,
+    resolver_item_lixeira,
+    restaurar_item_lixeira,
     limpar_dirs_vazios,
     limpar_item_lixeira_vazio,
     enviar_para_lixeira_sistema,
@@ -118,6 +117,24 @@ def fs_trash():
     notificar_mudanca_arquivos()
     return jsonify({"status": "movido", "caminho": rel})
 
+@files_bp.route('/api/fs_existem', methods=['POST'])
+def fs_existem():
+    """Caminhos recebidos que ja nao existem: sem pasta de projeto devolve lista vazia."""
+    dados = request.get_json(silent=True) or {}
+    caminhos = dados.get("caminhos")
+    if not isinstance(caminhos, list):
+        return jsonify({"error": "ERRO: 'caminhos' tem de ser uma lista."}), 400
+    if not raiz_abs():
+        return jsonify({"ausentes": []})
+    ausentes = []
+    for caminho in caminhos:
+        if not isinstance(caminho, str) or not caminho:
+            continue
+        alvo, erro = resolver_caminho(caminho, permitir_extra=False)
+        if erro or not os.path.exists(alvo):
+            ausentes.append(caminho)
+    return jsonify({"ausentes": ausentes})
+
 @files_bp.route('/api/trash', methods=['GET'])
 def trash_list():
     return jsonify({"items": listar_lixeira()})
@@ -131,45 +148,24 @@ def _resolver_item_lixeira():
 
     Devolve (lixeira_raiz, item_id, origem, erro_response). Quando erro_response
     nao e None, o chamador deve devolve-lo imediatamente. O item pode ser um
-    arquivo ou um diretorio.
+    arquivo ou um diretorio. A validacao em si vive em services/file_service,
+    para ser a MESMA que as ferramentas de lixeira usam.
     """
     dados = request.get_json(silent=True) or {}
-    item_id = dados.get("id") or ""
-    lixeira_raiz = raiz_lixeira()
-    if not lixeira_raiz:
-        return None, None, None, (jsonify({"error": MSG_SEM_PASTA}), 400)
-    if not item_id:
-        return None, None, None, (jsonify({"error": "ERRO: item não informado."}), 400)
-    origem = os.path.abspath(os.path.join(lixeira_raiz, item_id.replace("/", os.sep)))
-    if not caminho_contido(origem, lixeira_raiz):
-        return None, None, None, (jsonify({"error": "ERRO: caminho inválido da lixeira."}), 400)
-    if not os.path.exists(origem):
-        return None, None, None, (jsonify({"error": "ERRO: item não encontrado na lixeira."}), 404)
-    return lixeira_raiz, item_id, origem, None
+    item_id = (dados.get("id") or "").strip()
+    origem, erro = resolver_item_lixeira(item_id)
+    if erro:
+        return None, item_id, None, (jsonify({"error": erro}), 400)
+    return raiz_lixeira(), item_id, origem, None
 
 @files_bp.route('/api/trash_restore', methods=['POST'])
 def trash_restore():
-    lixeira_raiz, item_id, origem, erro = _resolver_item_lixeira()
+    dados = request.get_json(silent=True) or {}
+    rel_original, erro = restaurar_item_lixeira((dados.get("id") or "").strip())
     if erro:
-        return erro
-    ts_dir = item_id.split("/")[0]
-    rel_original = caminho_original_lixeira(lixeira_raiz, item_id, origem)
-    if not rel_original:
-        return jsonify({"error": "ERRO: não foi possível determinar o caminho original."}), 400
-    destino = os.path.abspath(os.path.join(raiz_abs(), rel_original.replace("/", os.sep)))
-    if not caminho_contido(destino, raiz_abs()):
-        return jsonify({"error": "ERRO: destino escapa da pasta do projeto."}), 400
-    try:
-        os.makedirs(os.path.dirname(destino), exist_ok=True)
-        if os.path.exists(destino):
-            return jsonify({"error": "ERRO: já existe um item em '" + rel_original + "'."}), 409
-        shutil.move(origem, destino)
-        limpar_dirs_vazios(os.path.dirname(origem), os.path.join(lixeira_raiz, ts_dir))
-        limpar_item_lixeira_vazio(lixeira_raiz, ts_dir)
-        notificar_mudanca_arquivos()
-        return jsonify({"status": "restaurado", "caminho": rel_original})
-    except OSError as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": erro}), 400
+    notificar_mudanca_arquivos()
+    return jsonify({"status": "restaurado", "caminho": rel_original})
 
 @files_bp.route('/api/trash_delete', methods=['POST'])
 def trash_delete():

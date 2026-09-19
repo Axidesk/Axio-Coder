@@ -1,13 +1,12 @@
 import os
 import sys
-import subprocess
-import threading
 
 from flask import Blueprint, request, jsonify
 from src.backend.config import APP_ROOT
-from src.backend.state import estado, emit_event
-from src.backend.services.file_service import venv_projeto, calcular_posicao_relativa, raiz_abs
-from src.backend.services.settings import atualizar_settings
+from src.backend.state import estado
+from src.backend.services.file_service import venv_projeto, calcular_posicao_relativa, raiz_abs, resolver_caminho
+from src.backend.services.settings import atualizar_settings, load_settings
+from src.backend.services.sugestoes import detectar_sugestoes
 from src.backend.services.process_manager import (
     pty_lock,
     pty_kill_locked,
@@ -17,11 +16,9 @@ from src.backend.services.process_manager import (
     comando_inicia_axio,
 )
 from src.backend.tools.process import (
-    id_processo,
-    matar_arvore,
+    escrever_stdin_processo,
+    iniciar_processo,
     parar_processo_reg,
-    ler_saida_stream,
-    montar_env_processo,
 )
 
 terminal_bp = Blueprint("terminal", __name__)
@@ -53,6 +50,20 @@ def processo_parar(pid):
     parar_processo_reg(pid, reg)
     return jsonify({"status": "parado", "id": pid})
 
+@terminal_bp.route('/api/processo/<pid>/input', methods=['POST'])
+def processo_input(pid):
+    """Escreve uma linha no stdin de um processo gerido (a resposta a um prompt do card)."""
+    if pid not in estado.get("processos", {}):
+        return jsonify({"error": "processo não encontrado"}), 404
+    data = request.json or {}
+    texto = data.get("texto")
+    if texto is None:
+        return jsonify({"error": "texto vazio"}), 400
+    ok, motivo = escrever_stdin_processo(pid, texto)
+    if not ok:
+        return jsonify({"error": motivo}), 409
+    return jsonify({"status": "enviado", "id": pid})
+
 @terminal_bp.route('/api/env_info', methods=['GET'])
 def env_info():
     venv = venv_projeto()
@@ -68,6 +79,7 @@ def env_info():
         "has_project_venv": bool(venv),
         "python": sys.version.split()[0],
         "folder": estado.get("pasta_raiz", ""),
+        "ultima_pasta": (load_settings().get("projeto") or {}).get("ultima_pasta", ""),
         "shell": detectar_shell().get("nome", "cmd")
     })
 
@@ -136,6 +148,8 @@ def terminal_set_shell():
 
 @terminal_bp.route('/api/terminal/exec', methods=['POST'])
 def terminal_exec():
+    """Arranca um comando como processo gerido (card no terminal) e devolve o pid logo;
+    a saida chega por SSE e o fim por process_finished. Nao espera pela conclusao."""
     data = request.json or {}
     cmd = (data.get("cmd") or "").strip()
     if not cmd:
@@ -143,46 +157,21 @@ def terminal_exec():
     cwd = data.get("cwd") or estado.get("pasta_raiz", "")
     if not cwd or not os.path.isdir(cwd):
         cwd = estado.get("pasta_raiz", "") or os.getcwd()
-    raiz_app = APP_ROOT
-    if os.path.normcase(os.path.abspath(cwd)) == os.path.normcase(raiz_app) and comando_inicia_axio(cmd):
-        return jsonify({
-            "exit_code": 1,
-            "status": "bloqueado",
-            "output": "[bloqueado] Este comando iniciaria o proprio Axio (porta 5000 ja em uso).\nUse o terminal externo para subir o Axio, ou troque para a pasta de outro projeto."
-        })
-    pid = id_processo()
-    reg = {"id": pid, "comando": cmd, "status": "rodando", "log": [], "cwd": cwd, "popen": None}
-    estado["processos"][pid] = reg
-    emit_event("process_started", pid=pid, comando=cmd, modo="terminal")
+    if os.path.normcase(os.path.abspath(cwd)) == os.path.normcase(APP_ROOT) and comando_inicia_axio(cmd):
+        return jsonify({"error": "Este comando iniciaria o proprio Axio (porta 5000 ja em uso)."}), 400
     try:
-        kwargs = {
-            "shell": True,
-            "cwd": cwd,
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.STDOUT,
-            "stdin": subprocess.DEVNULL,
-            "env": montar_env_processo(cmd),
-        }
-        if os.name == "nt":
-            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-        else:
-            kwargs["start_new_session"] = True
-        popen = subprocess.Popen(cmd, **kwargs)
-        reg["popen"] = popen
-        leitor = threading.Thread(target=ler_saida_stream, args=(pid, popen), daemon=True)
-        leitor.start()
-        try:
-            popen.wait(timeout=60)
-        except subprocess.TimeoutExpired:
-            matar_arvore(popen)
-            reg["status"] = "timeout"
-            emit_event("process_finished", pid=pid, exit_code=None, status="timeout")
-            return jsonify({"exit_code": None, "status": "timeout", "output": "\n".join(reg["log"][-200:])})
-        leitor.join(timeout=5)
-        reg["status"] = "ok" if popen.returncode == 0 else "erro"
-        emit_event("process_finished", pid=pid, exit_code=popen.returncode, status=reg["status"])
-        return jsonify({"exit_code": popen.returncode, "status": reg["status"], "output": "\n".join(reg["log"][-200:])})
-    except Exception as e:
-        reg["status"] = "erro"
-        emit_event("process_finished", pid=pid, exit_code=None, status="erro")
-        return jsonify({"exit_code": None, "status": "erro", "output": str(e)})
+        reg = iniciar_processo(cmd, cwd=cwd, modo="terminal", acompanhar=True, stdin_pipe=True)
+    except OSError as e:
+        return jsonify({"error": f"nao consegui iniciar: {e}"}), 500
+    return jsonify({"id": reg["id"], "comando": cmd, "status": reg["status"], "rodando": True})
+
+@terminal_bp.route('/api/terminal/sugestoes', methods=['GET'])
+def terminal_sugestoes():
+    """Comandos de arranque plausiveis para a pasta aberta no explorador (cards prontos a dar play)."""
+    caminho_rel = request.args.get("path", "") or ""
+    if not estado.get("pasta_raiz"):
+        return jsonify({"sugestoes": [], "path": caminho_rel})
+    caminho_alvo, erro = resolver_caminho(caminho_rel, permitir_extra=True)
+    if erro:
+        return jsonify({"error": erro}), 400
+    return jsonify({"sugestoes": detectar_sugestoes(caminho_alvo), "path": caminho_rel})
