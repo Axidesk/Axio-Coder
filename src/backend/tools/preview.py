@@ -231,6 +231,9 @@ def _texto_do_efeito(efeito):
         )
     else:
         linha = "Nada detetavel mudou na pagina."
+    if efeito.get("repetido"):
+        linha += (" O gesto foi repetido uma vez: a 1a tentativa nao mexeu na pagina"
+                  " (alvo a meio de uma re-renderizacao) e a repeticao resolveu.")
     novas = efeito.get("consola") or []
     if novas:
         mostra = "; ".join(

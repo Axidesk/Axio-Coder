@@ -12,6 +12,7 @@ const PAUSA_CURSOR_MS = 150;
 const ESPERA_VISTA_MS = 450;
 const ESPERA_RECARGA_MS = 6000;
 const ESPERA_EFEITO_MS = 220;
+const ESPERA_REPETICAO_MS = 900;
 const TETO_EFEITO = 6;
 const MARCA_DA_INSPECAO = '__axio_inspecionar__:';
 const TOKEN = crypto.randomBytes(24).toString('hex');
@@ -1190,6 +1191,25 @@ function apagarCursor(depurador, x, y) {
   setTimeout(() => { desenharCursor(depurador, x, y, 0, 1); }, 240);
 }
 
+async function dispararClique(depurador, x, y, botao) {
+  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: x, y: y, button: 'none', buttons: 0
+  });
+  for (const tipo of ['mousePressed', 'mouseReleased']) {
+    await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+      type: tipo, x: x, y: y, button: botao, buttons: 1, clickCount: 1
+    });
+  }
+}
+
+function semReacao(efeito) {
+  if (!efeito || !efeito.depois) return false;
+  if (efeito.navegou) return false;
+  if ((efeito.consola || []).length) return false;
+  if ((efeito.rede || []).length) return false;
+  return JSON.stringify(efeito.antes) === JSON.stringify(efeito.depois);
+}
+
 async function acaoClicar(view, params) {
   await esperarAVista(view, ESPERA_VISTA_MS);
   const pronto = await prepararAlvo(view, params);
@@ -1233,19 +1253,25 @@ async function acaoClicar(view, params) {
       };
     }
   }
-  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
-    type: 'mouseMoved', x: x, y: y, button: 'none', buttons: 0
-  });
-  for (const tipo of ['mousePressed', 'mouseReleased']) {
-    await enviarComando(depurador, 'Input.dispatchMouseEvent', {
-      type: tipo, x: x, y: y, button: botao, buttons: 1, clickCount: 1
-    });
-  }
+  await dispararClique(depurador, x, y, botao);
   if (aVista) {
     await desenharCursor(depurador, x, y, 1, 0.55);
     apagarCursor(depurador, x, y);
   }
-  return { ok: true, x: x, y: y, onde: onde, cursor: aVista, efeito: await efeitoDoGesto(depurador, marca, seletor) };
+  let efeito = await efeitoDoGesto(depurador, marca, seletor);
+  if (seletor && semReacao(efeito)) {
+    await aguardar(ESPERA_REPETICAO_MS);
+    efeito = await efeitoDoGesto(depurador, marca, seletor);
+    if (semReacao(efeito)) {
+      await dispararClique(depurador, x, y, botao);
+      efeito = await efeitoDoGesto(depurador, marca, seletor);
+      efeito.repetido = true;
+    }
+  }
+  return {
+    ok: true, x: x, y: y, onde: onde, cursor: aVista,
+    efeito: Object.assign(efeito, { repetido: Boolean(efeito.repetido) })
+  };
 }
 
 async function acaoEscrever(view, params) {
