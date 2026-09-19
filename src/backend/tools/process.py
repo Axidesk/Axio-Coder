@@ -10,6 +10,7 @@ import time
 import webbrowser
 
 from src.backend.services.process_manager import montar_env_processo, tokenizar_linha
+from src.backend.services.saida import recortar_linhas
 from src.backend.services.sugestoes import detectar_url_na_saida
 from src.backend.state import emit_event, estado
 from src.backend.tools.registry import register
@@ -514,14 +515,6 @@ def _registrar_linha_processo(pid, linha):
     emit_event("process_output", pid=pid, line=linha)
     _anexar_log_processo(pid, linha)
 
-def _relatorio_do_log(linhas, teto_cabeca=12, teto_cauda=50):
-    """Cabeca e cauda: a cauda sozinha escondia o resumo que os comandos poem no topo."""
-    if len(linhas) <= teto_cabeca + teto_cauda:
-        return "\n".join(linhas)
-    omitidas = len(linhas) - teto_cabeca - teto_cauda
-    aviso = f"... ({omitidas} de {len(linhas)} linhas registadas omitidas entre as duas pontas)"
-    return "\n".join(linhas[:teto_cabeca] + [aviso] + linhas[-teto_cauda:])
-
 def _abrir_quando_pronto(pid, porta):
     url = f"http://127.0.0.1:{porta}"
     if not _porta_responde(porta, timeout=30):
@@ -593,7 +586,7 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
         leitor.join(timeout=5)
         reg["status"] = "ok" if popen.returncode == 0 else "erro"
         emit_event("process_finished", pid=pid, exit_code=popen.returncode, status=reg["status"])
-        saida = _relatorio_do_log(reg["log"])
+        saida = recortar_linhas(reg["log"])
         if reg["status"] == "ok":
             base = saida if saida.strip() else "SUCESSO: processo concluído sem saída."
             return base + nota_porta

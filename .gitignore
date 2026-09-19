@@ -58,6 +58,10 @@ data/cofre.json
 # Cache dos modelos convertidos do visualizador (IFC -> Fragments)
 data/cache_modelos/
 
-# Modelos gerados: o codigo que os produz (gerados/<modelo>/*.py) entra no git,
-# o binario resultante nao - reproduz-se a partir do codigo em segundos
-gerados/**/*.ifc
+# Material gerado pelo agente: cada geracao vive na sua subpasta no disco,
+# no git fica o codigo que a reproduz
+gerados/
+
+# Documentos internos de planeamento
+PLANO.md
+REFACTOR_PLAN.md

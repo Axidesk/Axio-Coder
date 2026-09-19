@@ -21,12 +21,12 @@ import sys
 import tempfile
 
 from src.backend.config import APP_ROOT
+from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado
 from src.backend.tools.process import id_processo, run_com_timeout
 from src.backend.tools.registry import register
 
 _TIMEOUT_TRECHO_MAX = 300
-_LIMITE_SAIDA_TRECHO = 4000
 _PREFIXO_TEMP_PYTHON = "axio_python_"
 _PREFIXO_TEMP_JS = "axio_js_"
 
@@ -1249,18 +1249,12 @@ def _snippet_js(codigo, raiz_projeto):
     cabecalho = _CABECALHO_JS.replace("{RAIZ_JS}", json.dumps(raiz_projeto or ""))
     return cabecalho + _DOM_FALSO_JS + _sem_imports_repetidos(codigo) + "\n"
 
-def _recortar_saida(texto, limite=_LIMITE_SAIDA_TRECHO):
-    texto = (texto or "").strip()
-    if len(texto) <= limite:
-        return texto
-    return texto[:limite] + f"\n... (saida cortada; {len(texto) - limite} caracteres omitidos)"
-
 def _relatorio_execucao(proc, limite, linguagem):
     veredito = "OK" if proc.returncode == 0 else f"FALHOU (codigo de saida {proc.returncode})"
     partes = [f"TRECHO {linguagem}: {veredito} | limite {limite}s | ficheiro temporario apagado",
               "--- stdout ---",
-              _recortar_saida(proc.stdout) or "(vazio)"]
-    erro = _recortar_saida(proc.stderr)
+              recortar_texto(proc.stdout) or "(vazio)"]
+    erro = recortar_texto(proc.stderr)
     if erro:
         partes.append("--- stderr ---")
         partes.append(erro)
@@ -1282,7 +1276,7 @@ def _espelhar_teste_no_terminal(pid, proc):
     erro = proc.stderr or ""
     if erro.strip():
         saida = f"{saida}\n--- stderr ---\n{erro}"
-    texto = _recortar_saida(saida) or "(sem saida)"
+    texto = recortar_texto(saida) or "(sem saida)"
     emit_event("process_output", pid=pid, chunk=texto + "\n")
     emit_event("process_finished", pid=pid, exit_code=proc.returncode,
                status="ok" if proc.returncode == 0 else "erro")
