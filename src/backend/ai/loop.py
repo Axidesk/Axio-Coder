@@ -43,6 +43,7 @@ from src.backend.tools import (
     preferencias,
     preview,
     process,
+    publicacao,
     py_imports,
     read,
     refactor,
