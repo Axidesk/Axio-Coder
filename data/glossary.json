@@ -3219,10 +3219,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 653,
+        "linha": 648,
         "conferido": [
-          1789848926.017,
-          41566
+          1789850532.048,
+          41439
         ]
       }
     },
@@ -3685,8 +3685,8 @@
         "arquivo": "src/backend/ai/context.py",
         "linha": 58,
         "conferido": [
-          1789827996.552,
-          11544
+          1789850524.17,
+          11516
         ]
       }
     },
@@ -3931,7 +3931,12 @@
       "descricao": "Balao de contexto que abre no CLIQUE DIREITO dentro de qualquer das duas colunas de conversa (#chat-container-left, a esquerda, e #chat-container-right, o chat do doc), com uma unica opcao: 'Limpar conversa'. A opcao limpa as DUAS colunas de uma vez (decisao do utilizador de 2026-09-19: limpar uma so confundia), logo o painel clicado ja nao escolhe nada - so abre o menu no ponto do clique. Mesmo desenho e mesmo mecanismo do #notes-context-menu (classe .balao + .menu-open em css/workspace.css, no MESMO par de listas de ids); a ligacao vive em js/chat/menu_conversa.js e a limpeza em js/chat/messages.js:limparConversa (sem parametro). O item so fica desativado quando as DUAS colunas estao vazias. NAO e o mesmo que 'limpar o contexto' (#btn-clear-context, dentro do #context-usage-popup), que zera a memoria acumulada no backend: este limpa so o que esta pintado no ecra, o historico do backend (estado['historico_chat']) e o dock do log (#panel-log-session) ficam intactos - nada se perde de facto, apenas sai da vista. INVARIANTES (nao reverter): (a) so sao removidos os nos que existiam no instante do clique (Array.from antes do fade), para uma mensagem que chegue durante a animacao nao ser apagada; (b) currentAIMessageDiv/currentPlanContainer/window.currentAIMessageDiv vao a null em qualquer limpeza (antes so ao limpar a direita), senao a resposta a seguir era escrita num no ja desligado; (c) a saida e um fade de 300ms (preset .conversa-saindo em css/editor.css, casado com SAIDA_CONVERSA em messages.js) e so no fim e que os nos sao removidos; (d) o clique direito sobre um link, bloco de codigo, imagem ou campo - ou com texto selecionado dentro da coluna - devolve o menu NATIVO do browser (para copiar), por isso ai o balao nao abre e a selecao e preservada.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/menu_conversa.js",
-        "linha": ""
+        "linha": "",
+        "conferido": [
+          1789850536.323,
+          1924
+        ],
+        "ausente": true
       }
     }
   ]

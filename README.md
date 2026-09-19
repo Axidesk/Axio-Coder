@@ -4,9 +4,15 @@ Agente de programação que vive dentro do próprio IDE: lê e edita código, co
 
 Não é um chat com uma caixa de texto ao lado do código. É uma janela de trabalho onde o agente e o utilizador mexem no mesmo projeto, com as ações dele à vista — o ficheiro que abre, o comando que corre, a página que inspeciona, o raciocínio que faz.
 
+A janela é escura e sem ruído — sem molduras nem caixas a contornar, só o trabalho da vez. Uma barra de ícones à esquerda troca de ferramenta, o trabalho fica ao centro e a conversa à direita; e nada aparece aos saltos, tudo entra e sai por transição.
+
+![A janela de trabalho do Axio Coder](docs/interface/interface.jpg)
+
 **A atualização que o VS Code nunca teve.** Imagine criar software completo com um único comando — o Axio Coder foi construído por um arquiteto exatamente para isso, e pensado também para quem nunca escreveu um `hello world`. Descreva o que quer, sem escrever código. **Imagine. E o Axio executa.**
 
-![Árvore de ficheiros, histórico de sessões com o diff e o editor](docs/interface/historico.jpg)
+**Vê cada edição antes e depois.** Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o que saiu a vermelho, o que entrou a verde, as linhas evidenciadas e a linha exata onde a mudança aconteceu. Chega-se lá com **um clique** — pelo cartão do **log da sessão**, que lista cada ficheiro tocado naquela rodada, ou pela tarefa no **histórico** das sessões, que guarda o rastro completo do que foi feito. Olhar para o que mudou é a operação mais frequente de quem trabalha com um agente, e é por isso que ela está a um clique de distância em vez de escondida num menu.
+
+![Histórico das sessões, com o ficheiro editado aberto no diff lado a lado](docs/interface/historico.jpg)
 
 ## O que ele faz
 
@@ -22,7 +28,7 @@ Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e
 
 O mesmo olho serve para ti. Com o **modo inspecionar** ligado, passar o rato por qualquer elemento — na página do preview ou na própria interface do Axio — abre o cartão do que ele é: o seletor, a fonte, a cor, as classes e a localização no código (`src/frontend/index.html:487`, com ligação que abre o ficheiro naquela linha). A **descrição** por baixo do nome não é rótulo genérico: sai do glossário do projeto, logo explica aquele elemento naquele projeto. `Tab` anda pelos campos, `Enter` copia o valor (ou abre o ficheiro), `Shift+clique` deixa o clique passar para o elemento e `Esc` sai.
 
-![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/interface/preview-navegador-inspecionar.jpg)
+![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/interface/navegador-no-preview-inspecionar.jpg)
 
 **Lê formatos de engenharia.** IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
 
@@ -32,9 +38,7 @@ O mesmo olho serve para ti. Com o **modo inspecionar** ligado, passar o rato por
 
 ![Terminal em modo cards](docs/interface/terminal-cards.jpg)
 
-**Opera programas nativos.** Pela camada de acessibilidade do Windows, o agente abre qualquer programa, encontra os controlos por nome (não por pixel), clica, escreve e arrasta. Foi assim que desenhou este foguete no Paint, por coordenadas:
-
-![Agente a desenhar no Paint](docs/interface/janela-paint.jpg)
+**Opera programas nativos.** Pela camada de acessibilidade do Windows, o agente abre qualquer programa, encontra os controlos por nome (não por pixel), clica, escreve e arrasta. Também desenha: foi assim que fez um foguete no Paint, traço a traço — escolhe a ferramenta, arrasta daqui até ali e volta a olhar para o ecrã antes de continuar.
 
 Num programa de desenho complexo, o mesmo mecanismo trabalha pelo lado certo — a cena abaixo foi montada no GIMP por script, com o agente a ler a imagem de volta para conferir o resultado:
 
@@ -52,7 +56,11 @@ E cada pasta e ficheiro da árvore ganha uma **etiqueta** com o papel que cumpre
 
 ![Notas do projeto em abas, com a varinha ao lado do título](docs/interface/notas.jpg)
 
-**Guarda as tuas credenciais.** Um cofre único, fora do repositório, com identidade, contas e chaves de API. Um segredo pode ser usado sem entrar no contexto da conversa: escreve-se `{{cofre:id.campo}}` e o valor é trocado no instante de escrever no ecrã.
+**Configura-se num sítio só.** A janela de Configurações tem duas abas. Em **APIs** colam-se as chaves e liga-se o interruptor de cada uma: **Google Gemini** (a chave do AI Studio, ou o JSON da conta de serviço do **Vertex AI**) e **DeepSeek**. Ao lado de cada campo está o "i" com o passo a passo de como obter a chave — a mesma caixa onde se troca, no campo do DeepSeek, para a chave do **Tavily**, que liga a busca na web.
+
+Em **Cofre** fica tudo o que eu uso por ti: a identidade, o email — para eu abrir a caixa de entrada e ler os códigos de confirmação — e as contas dos sites que usarmos, **cada uma com a chave de API dela no mesmo cartão**. Um cartão só entra em cena quando é preciso, e o que lhe falta está à vista na própria lista. É **um cofre só, partilhado por todos os projetos**, e vive em `data/cofre.json`, fora do repositório. Os valores são guardados em claro: não há palavra-passe mestra, logo não há cifra que valha. A proteção está no uso — eu recebo sempre a versão tapada e, para escrever uma senha num campo, refiro-a pelo nome: `{{cofre:id.campo}}` é trocado pelo valor no instante do gesto, sem passar pelo meu contexto nem pelo histórico da conversa.
+
+![A janela de Configurações, na aba do Cofre](docs/interface/config.jpg)
 
 **Lê o que lhe dás.** Documentos com texto, tabelas e imagens são lidos de facto, e cruzados entre si — não resumidos por alto.
 
@@ -64,7 +72,7 @@ Aqui o caminho é o inverso. A página do preview entrega o **índice** dos seus
 
 É a diferença entre uma captura e uma ida ao modelo por passo, e uma chamada de texto que devolve o mapa inteiro. Quando o modelo novo fechou, a bateria que operava o preview desceu de ~95 chamadas em ~7 minutos para ~17 em ~2, sem perder um gesto: dez gestos seguidos vão numa só chamada e param no primeiro que falhar, em vez de cascatearem sobre uma página que já mudou. E os gestos que o programa sabe executar por padrão — invocar, escrever, marcar — funcionam com o ecrã trancado e não te roubam o rato.
 
-O agente também sabe onde a árvore acaba. Numa tela plana como o Paint não há controlos lá dentro, mas também não é preciso adivinhar: o píxel do ecrã *é* o píxel do desenho, e foi por isso que o foguete lá em cima saiu num traço contínuo, por coordenadas. Já num viewport de CAD ou de 3D, o mesmo píxel vale distâncias diferentes conforme o zoom — e aí a resposta não é olhar melhor, é falar com a API do próprio programa e **calcular** onde o ponto cai. O olho é o último recurso, nunca o primeiro.
+O agente também sabe onde a árvore acaba. Numa tela plana como o Paint não há controlos lá dentro, mas também não é preciso adivinhar: o píxel do ecrã *é* o píxel do desenho, e foi dessa certeza que saiu o traço do foguete. Já num viewport de CAD ou de 3D, o mesmo píxel vale distâncias diferentes conforme o zoom — e aí a resposta não é olhar melhor, é falar com a API do próprio programa e **calcular** onde o ponto cai. O olho é o último recurso, nunca o primeiro.
 
 ## O raciocínio fica à vista
 
@@ -85,7 +93,7 @@ O agente pensa em voz alta: o painel mostra o que ele está a considerar, o que 
 | Formatos (front) | pdfjs-dist, docx-preview, xlsx, dxf-viewer, pptx-renderer |
 | Geometria (back) | ifcopenshell, cadquery, trimesh, shapely |
 | Memória | ChromaDB + mempalace, embeddings locais |
-| IA | Google Gemini, OpenAI, Tavily (busca web) |
+| IA | Google Gemini, DeepSeek, Tavily (busca web) |
 
 ## Como correr
 
@@ -108,7 +116,7 @@ npm start
 
 `npm run build:viewer` é obrigatório no primeiro arranque: o visualizador de formatos é gerado por esse passo e o resultado não vai no repositório. Depois da primeira vez, só é preciso repetir se mexeres no `scripts/build_viewer.mjs` ou atualizares as bibliotecas de visualização.
 
-**Antes de usar, abre Configurações e insere uma chave de API** (Gemini ou OpenAI). Sem chave, o agente não raciocina. As chaves ficam em `data/settings.json`, que não é versionado.
+**Antes de usar, abre Configurações e insere uma chave de API** (Google Gemini ou DeepSeek), ligando o interruptor ao lado dela. Sem isso, o agente não raciocina. As chaves ficam em `data/settings.json`, que não é versionado.
 
 ## Estrutura
 
