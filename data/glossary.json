@@ -3849,10 +3849,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 284,
+        "linha": 309,
         "conferido": [
-          1789853671.87,
-          17863
+          1789855643.782,
+          24870
         ]
       }
     },
@@ -3869,10 +3869,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 258,
+        "linha": 280,
         "conferido": [
-          1789853671.87,
-          17863
+          1789855643.782,
+          24870
         ]
       }
     },
@@ -3921,22 +3921,18 @@
       "aliases": [
         "limpar conversa",
         "limpar o chat",
-        "limpar a janela do texto",
-        "apagar as mensagens do chat",
-        "limpar a conversa da esquerda",
-        "limpar a conversa da direita",
-        "limpar as duas janelas de texto"
+        "limpar as duas janelas de texto",
+        "apagar as mensagens do chat"
       ],
       "identificador": "#chat-context-menu",
-      "descricao": "Balao de contexto que abre no CLIQUE DIREITO dentro de qualquer das duas colunas de conversa (#chat-container-left, a esquerda, e #chat-container-right, o chat do doc), com uma unica opcao: 'Limpar conversa'. A opcao limpa as DUAS colunas de uma vez (decisao do utilizador de 2026-09-19: limpar uma so confundia), logo o painel clicado ja nao escolhe nada - so abre o menu no ponto do clique. Mesmo desenho e mesmo mecanismo do #notes-context-menu (classe .balao + .menu-open em css/workspace.css, no MESMO par de listas de ids); a ligacao vive em js/chat/menu_conversa.js e a limpeza em js/chat/messages.js:limparConversa (sem parametro). O item so fica desativado quando as DUAS colunas estao vazias. NAO e o mesmo que 'limpar o contexto' (#btn-clear-context, dentro do #context-usage-popup), que zera a memoria acumulada no backend: este limpa so o que esta pintado no ecra, o historico do backend (estado['historico_chat']) e o dock do log (#panel-log-session) ficam intactos - nada se perde de facto, apenas sai da vista. INVARIANTES (nao reverter): (a) so sao removidos os nos que existiam no instante do clique (Array.from antes do fade), para uma mensagem que chegue durante a animacao nao ser apagada; (b) currentAIMessageDiv/currentPlanContainer/window.currentAIMessageDiv vao a null em qualquer limpeza (antes so ao limpar a direita), senao a resposta a seguir era escrita num no ja desligado; (c) a saida e um fade de 300ms (preset .conversa-saindo em css/editor.css, casado com SAIDA_CONVERSA em messages.js) e so no fim e que os nos sao removidos; (d) o clique direito sobre um link, bloco de codigo, imagem ou campo - ou com texto selecionado dentro da coluna - devolve o menu NATIVO do browser (para copiar), por isso ai o balao nao abre e a selecao e preservada.",
+      "descricao": "Balao do botao direito sobre qualquer uma das duas colunas do chat: o item limpa AS DUAS colunas de uma vez e apaga so o que esta pintado - a memoria da rodada no backend fica intacta (quem a zera e o X do anel de tokens).",
       "localizacao": {
-        "arquivo": "src/frontend/js/chat/menu_conversa.js",
-        "linha": "",
+        "arquivo": "src/frontend/index.html",
+        "linha": 563,
         "conferido": [
-          1789850536.323,
-          1924
-        ],
-        "ausente": true
+          1789848909.704,
+          78464
+        ]
       }
     },
     {
@@ -3953,10 +3949,50 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 427,
+        "linha": 563,
         "conferido": [
-          1789853671.87,
-          17863
+          1789855643.782,
+          24870
+        ]
+      }
+    },
+    {
+      "termo": "vitrine do repositorio",
+      "aliases": [
+        "vitrine",
+        "vitrine do git",
+        "vitrine do github",
+        "como esta o repositorio la fora",
+        "apresentacao do repositorio"
+      ],
+      "identificador": "_linhas_da_vitrine",
+      "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/git.py",
+        "linha": 414,
+        "conferido": [
+          1789855643.782,
+          24870
+        ]
+      }
+    },
+    {
+      "termo": "publicar o release",
+      "aliases": [
+        "criar o release",
+        "lancamento no github",
+        "publicar a versao",
+        "release da etiqueta",
+        "lancar a versao"
+      ],
+      "identificador": "tool_publicar_release",
+      "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/git.py",
+        "linha": 334,
+        "conferido": [
+          1789855643.782,
+          24870
         ]
       }
     }
