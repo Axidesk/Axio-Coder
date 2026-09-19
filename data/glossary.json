@@ -3837,24 +3837,35 @@
     {
       "termo": "manda pro git",
       "aliases": [
-        "versiona",
-        "versiona tudo",
-        "sincroniza o repositorio",
-        "subir pro github",
-        "commitar",
         "commit e push",
-        "mandar pro git",
-        "estado do git"
+        "commitar",
+        "push",
+        "publicar no git",
+        "subir pro github",
+        "versionar",
+        "sincronizar o repositorio"
       ],
-      "identificador": "tool_estado_git",
-      "descricao": "Retrato do repositorio numa so chamada: branch e remoto, ultimo commit, tags com o commit que apontam, o que esta em stage e o que mudou fora dele. Leitura apenas; o add/commit/push continuam pelo tool_executar_processo.",
+      "identificador": "tool_publicar_git",
+      "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 110,
-        "conferido": [
-          1789845830.714,
-          4802
-        ]
+        "linha": 276
+      }
+    },
+    {
+      "termo": "estado do git",
+      "aliases": [
+        "retrato do repositorio",
+        "como esta o repositorio",
+        "o que falta commitar",
+        "git status",
+        "o que mudou no git"
+      ],
+      "identificador": "tool_estado_git",
+      "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/git.py",
+        "linha": 250
       }
     }
   ]

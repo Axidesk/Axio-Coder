@@ -1,5 +1,8 @@
 """Retrato do repositorio git numa so chamada: onde esta, como esta e o que falta commitar."""
 
+import os
+import tempfile
+
 from src.backend.config import APP_ROOT
 from src.backend.services.file_service import git_saida, raiz_repositorio
 from src.backend.state import estado
@@ -7,6 +10,15 @@ from src.backend.tools.registry import register
 
 _TAGS_POR_OMISSAO = 6
 _MAX_ITENS_LISTADOS = 40
+_SEGREDOS = (
+    ".env",
+    ".axio/",
+    "data/settings.json",
+    "data/cofre.json",
+    "data/vertex_credentials.json",
+    "entities.json",
+    "mempalace.yaml",
+)
 
 
 def _curto(pasta, revisao):
@@ -94,6 +106,134 @@ def _linhas_do_repositorio(raiz, tags):
     return partes
 
 
+def _e_segredo(nome):
+    limpo = nome.replace("\\", "/")
+    if limpo.startswith("./"):
+        limpo = limpo[2:]
+    for segredo in _SEGREDOS:
+        if segredo.endswith("/"):
+            if limpo.startswith(segredo):
+                return True
+        elif limpo == segredo or limpo.startswith(segredo + "."):
+            return True
+    return False
+
+
+def _nomes_do_status(raiz):
+    texto, erro = git_saida(raiz, "status", "--short")
+    if erro:
+        return [], erro
+    nomes = []
+    for linha in (texto or "").splitlines():
+        if len(linha) > 3:
+            nomes.append(linha[3:].strip().strip('"'))
+    return nomes, ""
+
+
+def _lista_de_ficheiros(raiz, ficheiros):
+    texto = (ficheiros or "").strip()
+    if not texto:
+        return []
+    if "," in texto:
+        return [p.strip() for p in texto.split(",") if p.strip()]
+    pedacos = texto.split()
+    if len(pedacos) > 1 and os.path.exists(os.path.join(raiz, texto)):
+        return [texto]
+    return pedacos
+
+
+def _ficheiro_da_mensagem(mensagem):
+    caminho = os.path.join(tempfile.gettempdir(), f"axio_git_msg_{os.getpid()}.txt")
+    with open(caminho, "w", encoding="utf-8") as f:
+        f.write(mensagem)
+    return caminho
+
+
+def _ficheiros_em_stage(raiz):
+    saida, _ = git_saida(raiz, "diff", "--cached", "--name-only")
+    return [n.strip().strip('"') for n in (saida or "").splitlines() if n.strip()]
+
+
+def _recusa_de_publicacao(segredos):
+    return ("RECUSADO: entre o que iria para o commit aparece " + ", ".join(segredos) +
+            ". Nada foi commitado - tira esses caminhos do pedido ou poe-os no .gitignore.")
+
+
+def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
+    if not (mensagem or "").strip():
+        return ["ERRO: sem mensagem nao ha commit - escreve o que mudou."]
+    nomes, erro = _nomes_do_status(raiz)
+    if erro:
+        return [f"ERRO: git recusou o estado do repositorio: {erro}"]
+    if not nomes:
+        return ["NADA A PUBLICAR: o repositorio esta limpo."]
+    segredos = [n for n in nomes if _e_segredo(n)]
+    if segredos:
+        return [_recusa_de_publicacao(segredos) + " Nada foi posto em stage."]
+
+    antes = _ficheiros_em_stage(raiz)
+    linhas = []
+    lista = _lista_de_ficheiros(raiz, ficheiros)
+    if lista:
+        _, erro = git_saida(raiz, "add", "--", *lista)
+        linhas.append("git add " + " ".join(lista) + ": " + (f"ERRO: {erro}" if erro else "ok"))
+    else:
+        _, erro = git_saida(raiz, "add", "-A")
+        linhas.append("git add -A: " + (f"ERRO: {erro}" if erro else "ok"))
+    if erro:
+        return linhas
+
+    entrada, _ = git_saida(raiz, "diff", "--cached", "--name-status")
+    itens = [l for l in (entrada or "").splitlines() if l.strip()]
+    if not itens:
+        return linhas + ["NADA EM STAGE depois do add: nao ha o que commitar."]
+    segredos = [n for n in _ficheiros_em_stage(raiz) if _e_segredo(n)]
+    if segredos:
+        nota = " O stage ficou como estava antes."
+        if git_saida(raiz, "reset")[1]:
+            git_saida(raiz, "rm", "--cached", "--quiet", "--", *segredos)
+            nota = " Tirei esses caminhos do stage; o resto ficou la."
+        elif antes:
+            git_saida(raiz, "add", "--", *antes)
+        return linhas + [_recusa_de_publicacao(segredos) + nota]
+    linhas += _linhas_do_estado("ENTRA NO COMMIT", itens)
+
+    caminho_msg = _ficheiro_da_mensagem(mensagem)
+    try:
+        saida, erro = git_saida(raiz, "commit", "-F", caminho_msg)
+        if erro:
+            return linhas + [f"ERRO no commit: {erro}"]
+        linhas.append("COMMIT: " + " ".join((saida or "").split()))
+
+        etiqueta = (tag or "").strip()
+        if etiqueta:
+            _, erro = git_saida(raiz, "tag", "-a", etiqueta, "-F", caminho_msg)
+            linhas.append(f"ETIQUETA {etiqueta}: " + (f"ERRO: {erro}" if erro else "criada"))
+    finally:
+        try:
+            os.remove(caminho_msg)
+        except OSError:
+            pass
+
+    if not empurrar:
+        linhas.append("SEM PUSH (empurrar=false): o commit ficou so no disco local.")
+        return linhas
+
+    ramo, _ = git_saida(raiz, "rev-parse", "--abbrev-ref", "HEAD")
+    ramo = (ramo or "").strip() or "main"
+    _, erro = git_saida(raiz, "push", "origin", ramo)
+    linhas.append(f"PUSH {ramo}: " + (f"ERRO: {erro}" if erro else "aceite pelo remoto"))
+    etiqueta = (tag or "").strip()
+    if etiqueta:
+        _, erro = git_saida(raiz, "push", "origin", etiqueta)
+        linhas.append(f"PUSH da etiqueta {etiqueta}: " + (f"ERRO: {erro}" if erro else "aceite pelo remoto"))
+    sincronia, _ = git_saida(raiz, "status", "--short", "--branch")
+    cabecalho = (sincronia or "").splitlines()
+    if cabecalho:
+        linhas.append("ESTADO FINAL: " + cabecalho[0].lstrip("#").strip())
+    return linhas
+
+
 @register(
     "tool_estado_git",
     "Retrato do repositorio git numa so chamada: raiz, branch e relacao com o remoto, ultimo commit, "
@@ -114,3 +254,29 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO):
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
                 "(nenhuma pasta .git a subir a partir dai).")
     return "\n".join(_linhas_do_repositorio(raiz, tags))
+
+
+@register(
+    "tool_publicar_git",
+    "Publica no repositorio o que esta no disco: poe em stage (tudo o que mudou, ou so os caminhos "
+    "indicados), grava o commit, cria a etiqueta anotada quando pedida e empurra para o remoto, "
+    "terminando com a sincronia entre o ramo local e o remoto. Leva a mensagem por ficheiro, por isso "
+    "acentos e varias linhas passam intactos. RECUSA-SE a publicar quando entre os ficheiros aparece "
+    "algum de credencial ou de estado local (.env, data/settings.json, data/cofre.json, "
+    "data/vertex_credentials.json, entities.json, mempalace.yaml, .axio/) - e nesse caso nao toca em "
+    "nada, nem no stage. ESCREVE no repositorio: ve o que vai entrar com 'tool_estado_git' antes.",
+    {
+        'mensagem': {"tipo": "STRING", "desc": "Mensagem do commit (a mesma serve de mensagem a etiqueta)"},
+        'ficheiros': {"tipo": "STRING", "desc": "Caminhos a publicar, separados por espaco - ou por virgula quando o caminho tiver espacos (padrao: tudo o que mudou)", "padrao": ""},
+        'tag': {"tipo": "STRING", "desc": "Etiqueta anotada a criar neste commit (padrao: nenhuma)", "padrao": ""},
+        'empurrar': {"tipo": "BOOLEAN", "desc": "Empurrar o commit (e a etiqueta) para o remoto", "padrao": True},
+        'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
+    },
+)
+def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho=""):
+    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    raiz = raiz_repositorio(base)
+    if not raiz:
+        return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
+                "(nenhuma pasta .git a subir a partir dai).")
+    return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar))
