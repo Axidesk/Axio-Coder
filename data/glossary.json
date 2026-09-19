@@ -3849,7 +3849,11 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 276
+        "linha": 276,
+        "conferido": [
+          1789847401.657,
+          11756
+        ]
       }
     },
     {
@@ -3865,7 +3869,11 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 250
+        "linha": 250,
+        "conferido": [
+          1789847401.657,
+          11756
+        ]
       }
     }
   ]

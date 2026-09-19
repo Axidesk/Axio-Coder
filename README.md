@@ -10,7 +10,11 @@ Não é um chat com uma caixa de texto ao lado do código. É uma janela de trab
 
 ## O que ele faz
 
-**Escreve e refatora código.** Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio. Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e são riscadas à medida que fecham.
+**Escreve e refatora código.** Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio.
+
+**Refatorações grandes com margem de erro praticamente nula.** Para partir um ficheiro que cresceu demais, o código não é redigitado: é movido **verbatim**, copiando os bytes exatos do disco, com o alcance da função medido por AST no Python e por balanceamento de chaves no JavaScript. Um `preview` mostra as linhas e o **SHA-256** antes de tocar em nada; no fim sai o hash do corpo movido, e há uma ferramenta dedicada a reconfirmar a integridade, comparando hash e byte a byte. Como o corpo nunca passa pelas mãos do modelo, não há margem para lhe trocar uma vírgula — e o que não encaixa é recusado em vez de gravado: funções aninhadas (a indentação herdada invalidaria o destino), funções que já existem no ficheiro de destino, e corpos com chaves desbalanceadas.
+
+Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e são riscadas à medida que fecham.
 
 ![Plano da tarefa em curso](docs/interface/plano-visual.jpg)
 
@@ -45,6 +49,16 @@ Num programa de desenho complexo, o mesmo mecanismo trabalha pelo lado certo —
 **Lê o que lhe dás.** Documentos com texto, tabelas e imagens são lidos de facto, e cruzados entre si — não resumidos por alto.
 
 ![Resposta a um memorial com imagens e tabelas](docs/interface/leitura-de-documento.jpg)
+
+## O que um computer use faz, por outro caminho
+
+Os assistentes que operam o computador trabalham por captura de ecrã: tiram uma imagem, decidem onde está o botão e clicam na coordenada. É uma capacidade real — e caríssima de treinar, porque o olho que acerta no píxel calibra-se à custa de milhares de ensaios com um veredito automático a dizer se acertou.
+
+Aqui o caminho é o inverso. A página do preview entrega o **índice** dos seus controlos — seletor, nome, caixa e coordenada — e uma janela nativa do Windows declara a sua **árvore de acessibilidade**. O agente não aponta para um sítio: escolhe um alvo que já tem nome. E escolher entre opções que já vêm descritas é uma tarefa de leitura, que é precisamente o que um modelo de linguagem faz bem — a parte difícil, que era localizar, sai do modelo e passa a ser uma medição.
+
+É a diferença entre uma captura e uma ida ao modelo por passo, e uma chamada de texto que devolve o mapa inteiro. Quando o modelo novo fechou, a bateria que operava o preview desceu de ~95 chamadas em ~7 minutos para ~17 em ~2, sem perder um gesto: dez gestos seguidos vão numa só chamada e param no primeiro que falhar, em vez de cascatearem sobre uma página que já mudou. E os gestos que o programa sabe executar por padrão — invocar, escrever, marcar — funcionam com o ecrã trancado e não te roubam o rato.
+
+O agente também sabe onde a árvore acaba. Numa tela plana como o Paint não há controlos lá dentro, mas também não é preciso adivinhar: o píxel do ecrã *é* o píxel do desenho, e foi por isso que o foguete lá em cima saiu num traço contínuo, por coordenadas. Já num viewport de CAD ou de 3D, o mesmo píxel vale distâncias diferentes conforme o zoom — e aí a resposta não é olhar melhor, é falar com a API do próprio programa e **calcular** onde o ponto cai. O olho é o último recurso, nunca o primeiro.
 
 ## O raciocínio fica à vista
 
