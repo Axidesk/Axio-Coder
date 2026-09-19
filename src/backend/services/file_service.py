@@ -155,7 +155,7 @@ def raiz_repositorio(caminho):
             return ""
         atual = pai
 
-def _git(raiz, *args):
+def git_saida(raiz, *args):
     """Roda git dentro da raiz do repositorio. Devolve (saida_texto, erro)."""
     try:
         proc = subprocess.run(["git", "-C", raiz] + list(args), capture_output=True, timeout=30)
@@ -182,7 +182,7 @@ def conteudo_de_revisao(caminho_relativo, revisao):
     if erro:
         return None, erro
     raiz, rel = dados
-    texto, erro_git = _git(raiz, "show", f"{revisao}:{rel}")
+    texto, erro_git = git_saida(raiz, "show", f"{revisao}:{rel}")
     if erro_git:
         return None, f"ERRO: '{rel}' nao existe na revisao {revisao} ({erro_git})."
     return texto, None
@@ -198,7 +198,7 @@ def buscar_em_revisao(termo, revisao, raiz_projeto):
     raiz = raiz_repositorio(raiz_projeto)
     if not raiz:
         return None, "ERRO: a pasta do projeto nao e um repositorio git; nao ha revisoes para consultar."
-    listagem, erro = _git(raiz, "ls-tree", "-r", "--name-only", "-z", revisao)
+    listagem, erro = git_saida(raiz, "ls-tree", "-r", "--name-only", "-z", revisao)
     if erro:
         return None, f"ERRO: revisao '{revisao}' indisponivel ({erro})."
     termo_norm = normalizar_unicode(termo)
@@ -212,7 +212,7 @@ def buscar_em_revisao(termo, revisao, raiz_projeto):
             continue
         if rel.endswith(EXT_FORA_DA_BUSCA):
             continue
-        texto, erro_ficheiro = _git(raiz, "show", f"{revisao}:{rel}")
+        texto, erro_ficheiro = git_saida(raiz, "show", f"{revisao}:{rel}")
         if erro_ficheiro or not texto or len(texto) > 512000:
             continue
         for i, linha in enumerate(texto.splitlines()):
