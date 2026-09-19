@@ -1,7 +1,14 @@
 """Retrato do repositorio git numa so chamada: onde esta, como esta e o que falta commitar."""
 
+import io
 import os
+import re
 import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from PIL import Image
 
 from src.backend.config import APP_ROOT
 from src.backend.services.file_service import git_saida, raiz_repositorio
@@ -281,3 +288,146 @@ def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="")
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
                 "(nenhuma pasta .git a subir a partir dai).")
     return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar))
+
+
+def _base_do_remoto(raiz, ramo):
+    saida, erro = git_saida(raiz, "remote", "get-url", "origin")
+    url = (saida or "").strip()
+    if erro or not url:
+        return ""
+    if url.startswith("git@"):
+        _, _, resto = url.partition("git@")
+        host, _, caminho = resto.partition(":")
+    else:
+        partes = urllib.parse.urlparse(url)
+        host, caminho = partes.netloc or partes.path, partes.path
+        if partes.netloc:
+            caminho = partes.path
+    host = host.split("@")[-1].strip("/")
+    caminho = caminho.strip("/")
+    if caminho.endswith(".git"):
+        caminho = caminho[:-4]
+    if not host or "/" not in caminho:
+        return ""
+    if not ramo:
+        nome, _ = git_saida(raiz, "rev-parse", "--abbrev-ref", "HEAD")
+        ramo = (nome or "").strip() or "main"
+    if "github.com" in host:
+        return f"https://raw.githubusercontent.com/{caminho}/{ramo}"
+    return f"https://{host}/{caminho}/raw/{ramo}"
+
+
+def _leitor_sem_proxy():
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+def _ler_remoto(leitor, url):
+    with leitor.open(url, timeout=30) as resposta:
+        return resposta.read()
+
+
+def _tamanho_da_imagem(bruto):
+    try:
+        with Image.open(io.BytesIO(bruto)) as imagem:
+            return f"{imagem.width}x{imagem.height}"
+    except Exception:
+        return ""
+
+
+def _caminhos_de_imagem(texto):
+    return re.findall(r"!\[[^\]]*\]\(([^)\s]+)", texto)
+
+
+def _sem_marcacao(texto):
+    texto = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", texto)
+    texto = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", texto)
+    texto = re.sub(r"[*`_#>|]", " ", texto)
+    return re.sub(r"\s+", " ", texto).strip()
+
+
+def _blocos_em_falta(disco, publicado, maximo):
+    limpo = _sem_marcacao(publicado)
+    faltam = []
+    for bruto in re.split(r"\n\s*\n", disco):
+        frase = _sem_marcacao(bruto)
+        if len(frase) < 40 or frase in limpo:
+            continue
+        faltam.append(frase[:200])
+    return faltam[:maximo]
+
+
+def _linhas_da_conferencia(raiz, ficheiro, ramo, max_frases):
+    caminho_local = os.path.join(raiz, ficheiro)
+    try:
+        with open(caminho_local, "r", encoding="utf-8") as f:
+            disco = f.read()
+    except OSError as falha:
+        return [f"ERRO: nao consegui ler '{caminho_local}' ({falha})."]
+    base = _base_do_remoto(raiz, ramo)
+    if not base:
+        return ["ERRO: o remoto 'origin' nao deu um endereco de leitura (esperado: GitHub ou um host com '/raw/')."]
+    leitor = _leitor_sem_proxy()
+    url = f"{base}/{ficheiro}"
+    try:
+        publicado = _ler_remoto(leitor, url).decode("utf-8", errors="replace")
+    except Exception as falha:
+        return [f"ERRO: nao consegui ler '{url}' ({falha})."]
+
+    partes = [f"PUBLICADO: {url}", f"  {len(publicado)} chars no remoto | {len(disco)} chars no disco"]
+
+    caminhos = _caminhos_de_imagem(publicado)
+    partes.append(f"IMAGENS no publicado: {len(caminhos)}")
+    falhas = 0
+    for caminho_img in caminhos:
+        alvo = f"{base}/{caminho_img.lstrip('./')}"
+        try:
+            bruto = _ler_remoto(leitor, alvo)
+            partes.append(f"  OK   {_tamanho_da_imagem(bruto):<11} {len(bruto)/1024:7.1f} KB  {caminho_img}")
+        except urllib.error.HTTPError as falha:
+            falhas += 1
+            partes.append(f"  {falha.code}  FALHA                    {caminho_img}")
+        except Exception as falha:
+            falhas += 1
+            partes.append(f"  ?    FALHA ({falha})  {caminho_img}")
+
+    try:
+        limite = max(1, int(max_frases))
+    except (TypeError, ValueError):
+        limite = 12
+    faltam = _blocos_em_falta(disco, publicado, limite)
+    if faltam:
+        partes.append(f"BLOCO(S) DO DISCO QUE NAO APARECEM INTEIROS NO PUBLICADO: {len(faltam)}")
+        for frase in faltam:
+            partes.append(f"  - {frase}")
+    else:
+        partes.append("BLOCO(S) DO DISCO QUE NAO APARECEM INTEIROS NO PUBLICADO: nenhum")
+
+    veredito = ("o publicado bate com o disco" if not falhas and not faltam
+                else f"o publicado DIVERGE do disco ({falhas} imagem(ns) em falta, {len(faltam)} bloco(s) por publicar)")
+    partes.append(f"VEREDITO: {veredito}")
+    return partes
+
+
+@register(
+    "tool_conferir_publicacao",
+    "Le o que esta PUBLICADO no remoto e confere-o contra o disco, sem depender dos olhos de ninguem: "
+    "pede o ficheiro de texto no endereco de leitura do remoto, pede CADA imagem que ele referencia "
+    "(com o status HTTP e as dimensoes reais, que denunciam a imagem servida por um endereco em cache) e "
+    "lista os blocos que existem no disco e ainda nao aparecem inteiros no publicado. Use DEPOIS de "
+    "publicar e antes de dizer que a pagina esta pronta: foi o que provou que uma imagem tida como "
+    "'desatualizada' no GitHub era, afinal, cache da URL - o ficheiro publicado era byte a byte o do disco."
+    ,
+    {
+        'ficheiro': {"tipo": "STRING", "desc": "Ficheiro de texto a conferir no remoto (padrao: README.md)", "padrao": "README.md"},
+        'ramo': {"tipo": "STRING", "desc": "Ramo do remoto (padrao: o ramo atual do repositorio)", "padrao": ""},
+        'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
+        'max_frases': {"tipo": "INTEGER", "desc": "Quantos blocos em falta listar", "padrao": 12},
+    },
+)
+def tool_conferir_publicacao(ficheiro="README.md", ramo="", caminho="", max_frases=12):
+    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    raiz = raiz_repositorio(base)
+    if not raiz:
+        return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
+                "(nenhuma pasta .git a subir a partir dai).")
+    return "\n".join(_linhas_da_conferencia(raiz, ficheiro, ramo, max_frases))
