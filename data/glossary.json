@@ -3995,6 +3995,23 @@
           24870
         ]
       }
+    },
+    {
+      "termo": "divulgar",
+      "aliases": [
+        "divulgar",
+        "publicar um artigo",
+        "publicar no dev",
+        "divulgar no devto",
+        "postar o artigo",
+        "publicar nos canais"
+      ],
+      "identificador": "tool_publicar_artigo",
+      "descricao": "Ferramenta que publica um artigo (Markdown) num canal externo de divulgacao, com a chave lida do cofre. Cria ou atualiza (com id_artigo) e sai como RASCUNHO por omissao.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/publicacao.py",
+        "linha": 36
+      }
     }
   ]
 }
