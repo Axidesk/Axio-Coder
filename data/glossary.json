@@ -3849,10 +3849,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 277,
+        "linha": 284,
         "conferido": [
-          1789850345.008,
-          11832
+          1789853671.87,
+          17863
         ]
       }
     },
@@ -3869,10 +3869,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 251,
+        "linha": 258,
         "conferido": [
-          1789850345.008,
-          11832
+          1789853671.87,
+          17863
         ]
       }
     },
@@ -3937,6 +3937,27 @@
           1924
         ],
         "ausente": true
+      }
+    },
+    {
+      "termo": "conferir o que esta publicado",
+      "aliases": [
+        "conferir o readme publicado",
+        "ver se subiu pro git",
+        "imagem que continua a antiga no github",
+        "cache da url",
+        "o que esta no github bate com o disco",
+        "conferir as imagens do readme"
+      ],
+      "identificador": "tool_conferir_publicacao",
+      "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/git.py",
+        "linha": 427,
+        "conferido": [
+          1789853671.87,
+          17863
+        ]
       }
     }
   ]

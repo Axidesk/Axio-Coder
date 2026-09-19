@@ -1,6 +1,7 @@
 """Retrato do repositorio git numa so chamada: onde esta, como esta e o que falta commitar."""
 
 import io
+import json
 import os
 import re
 import tempfile
@@ -40,11 +41,17 @@ def _commits_por_cima(pasta, revisao):
     return (saida or "").strip() if not erro else "?"
 
 
-def _linhas_das_tags(pasta, quantas):
+def _nomes_das_tags(pasta):
     saida, erro = git_saida(pasta, "tag", "--list", "--sort=-creatordate")
     if erro:
+        return [], erro
+    return [n.strip() for n in (saida or "").splitlines() if n.strip()], ""
+
+
+def _linhas_das_tags(pasta, quantas):
+    nomes, erro = _nomes_das_tags(pasta)
+    if erro:
         return [f"TAGS: nao foi possivel listar ({erro})"]
-    nomes = [n.strip() for n in (saida or "").splitlines() if n.strip()]
     if not nomes:
         return ["TAGS: nenhuma"]
     try:
@@ -248,20 +255,27 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
     "as tags com o commit que apontam e quantos commits ficaram por cima, o que esta em stage e o que "
     "mudou fora dele. Use ANTES de commitar (ver o que entra) e ao escolher o nome de uma tag: o "
     "'git tag --list' local nao diz se o nome ja foi publicado, para isso use 'git ls-remote --tags "
-    "origin' pelo tool_executar_processo. Nao escreve nada no repositorio: so le."
+    "origin' pelo tool_executar_processo. Le tambem a VITRINE do remoto pela API do GitHub quando o "
+    "origin e um repositorio publico: descricao, topics, licenca, estrelas, discussions e quantos "
+    "RELEASES existem - e a diferenca entre a tag (que so leva o codigo) e o Release (que notifica "
+    "quem segue o repositorio). Nao escreve nada no repositorio: so le."
     ,
     {
         'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
         'tags': {"tipo": "INTEGER", "desc": "Quantas tags mostrar, das mais recentes", "padrao": _TAGS_POR_OMISSAO},
+        'vitrine': {"tipo": "BOOLEAN", "desc": "Ler tambem a vitrine do repositorio remoto pela API do GitHub (descricao, topics, licenca, Releases)", "padrao": True},
     },
 )
-def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO):
+def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True):
     base = caminho or estado.get("pasta_raiz") or APP_ROOT
     raiz = raiz_repositorio(base)
     if not raiz:
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
                 "(nenhuma pasta .git a subir a partir dai).")
-    return "\n".join(_linhas_do_repositorio(raiz, tags))
+    linhas = _linhas_do_repositorio(raiz, tags)
+    if vitrine:
+        linhas = linhas + _linhas_da_vitrine(raiz)
+    return "\n".join(linhas)
 
 
 @register(
@@ -290,24 +304,29 @@ def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="")
     return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar))
 
 
-def _base_do_remoto(raiz, ramo):
+def _slug_do_remoto(raiz):
     saida, erro = git_saida(raiz, "remote", "get-url", "origin")
     url = (saida or "").strip()
     if erro or not url:
-        return ""
+        return "", ""
     if url.startswith("git@"):
         _, _, resto = url.partition("git@")
         host, _, caminho = resto.partition(":")
     else:
         partes = urllib.parse.urlparse(url)
         host, caminho = partes.netloc or partes.path, partes.path
-        if partes.netloc:
-            caminho = partes.path
     host = host.split("@")[-1].strip("/")
     caminho = caminho.strip("/")
     if caminho.endswith(".git"):
         caminho = caminho[:-4]
     if not host or "/" not in caminho:
+        return "", ""
+    return host, caminho
+
+
+def _base_do_remoto(raiz, ramo):
+    host, caminho = _slug_do_remoto(raiz)
+    if not host:
         return ""
     if not ramo:
         nome, _ = git_saida(raiz, "rev-parse", "--abbrev-ref", "HEAD")
@@ -324,6 +343,64 @@ def _leitor_sem_proxy():
 def _ler_remoto(leitor, url):
     with leitor.open(url, timeout=30) as resposta:
         return resposta.read()
+
+
+def _pedido_json(url):
+    pedido = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json",
+                                                  "User-Agent": "axio"})
+    with _leitor_sem_proxy().open(pedido, timeout=25) as resposta:
+        return json.loads(resposta.read().decode("utf-8", "replace"))
+
+
+def _linhas_da_vitrine(raiz):
+    host, caminho = _slug_do_remoto(raiz)
+    if "github.com" not in host:
+        return [f"VITRINE: o remoto nao e GitHub ('{host or 'sem origin'}') - sem leitura da vitrine."]
+    try:
+        dados = _pedido_json(f"https://api.github.com/repos/{caminho}")
+        releases = _pedido_json(f"https://api.github.com/repos/{caminho}/releases")
+    except urllib.error.HTTPError as fora:
+        if fora.code == 404:
+            return ["VITRINE: a API do GitHub devolveu 404 - o repositorio remoto nao e publico."]
+        return [f"VITRINE: a API do GitHub recusou a consulta ({fora.code})."]
+    except Exception as falha:
+        return [f"VITRINE: nao consegui consultar a API do GitHub ({falha})."]
+
+    partes = [f"VITRINE de {caminho} (o que o GitHub mostra a quem chega):"]
+    em_falta = []
+    descricao = (dados.get("description") or "").strip()
+    if descricao:
+        partes.append(f"  descricao: {descricao}")
+    else:
+        em_falta.append("descricao (a frase que aparece na busca e ao lado do nome)")
+    topics = dados.get("topics") or []
+    if topics:
+        partes.append(f"  topics ({len(topics)}): {', '.join(topics)}")
+    else:
+        em_falta.append("topics (e por eles que o repositorio aparece nas buscas e nas paginas de assunto)")
+    licenca = (dados.get("license") or {}).get("spdx_id")
+    if licenca:
+        partes.append(f"  licenca: {licenca}")
+    else:
+        em_falta.append("licenca (sem ela ninguem pode usar nem distribuir o teu codigo)")
+    if dados.get("homepage"):
+        partes.append(f"  homepage: {dados['homepage']}")
+    partes.append(f"  estrelas: {dados.get('stargazers_count', 0)} | "
+                  f"quem segue: {dados.get('subscribers_count', 0)} | "
+                  f"forkes: {dados.get('forks_count', 0)}")
+    if not dados.get("has_discussions"):
+        partes.append("  discussions: desligado (e onde as perguntas ficam em publico)")
+
+    nomes = [r.get("tag_name") for r in releases]
+    partes.append(f"RELEASES publicados: {len(nomes)}" + (f" ({', '.join(nomes)})" if nomes else ""))
+    locais, erro = _nomes_das_tags(raiz)
+    sem_release = [t for t in locais if t not in nomes] if not erro else []
+    if sem_release:
+        partes.append(f"  TAGS SEM RELEASE: {', '.join(sem_release)} - a tag leva o codigo ao remoto, "
+                      "mas e o Release que notifica quem segue o repositorio e aparece em /releases")
+    if em_falta:
+        partes.append("EM FALTA NA VITRINE: " + "; ".join(em_falta))
+    return partes
 
 
 def _tamanho_da_imagem(bruto):
