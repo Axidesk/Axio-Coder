@@ -40,7 +40,7 @@ let pontePorta = 0;
 let ponteToken = '';
 let zoomDaInterface = 1;
 let raciocinioView = null;
-let raciocinioRecolhido = false;
+let raciocinioRecolhido = true;
 let raciocinioLargo = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
@@ -648,7 +648,7 @@ function descartarRaciocinioView() {
     raciocinioAnimando = null;
   }
   raciocinioView = null;
-  raciocinioRecolhido = false;
+  raciocinioRecolhido = true;
   raciocinioLargo = false;
   raciocinioBuffer = [];
   raciocinioPronto = false;
@@ -757,7 +757,7 @@ function alimentarRaciocinio(evento) {
   if (evento.tipo === 'inicio' || evento.tipo === 'fim') {
     raciocinioBuffer = [];
     raciocinioEmTurno = evento.tipo === 'inicio';
-    if (evento.tipo === 'inicio') definirRecolhaDoRaciocinio(false);
+    if (evento.tipo === 'inicio') definirRecolhaDoRaciocinio(true);
     else esconderRaciocinioView();
   } else {
     raciocinioBuffer.push(evento);

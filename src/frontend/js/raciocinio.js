@@ -19,7 +19,7 @@ const registo = document.getElementById('rc-registo');
 const MARGEM_DO_FIM_PX = 4;
 const VIGIA_DA_ENTRADA_MS = 1000;
 
-let recolhido = false;
+let recolhido = true;
 let passos = 0;
 let colado = true;
 let pendentes = [];
@@ -112,7 +112,7 @@ function aplicar(evento) {
         return;
     }
     limpar();
-    if (evento.tipo === 'inicio') definirRecolha(false);
+    if (evento.tipo === 'inicio') definirRecolha(true);
 }
 
 function rotuloDaRecolha() {
@@ -166,6 +166,7 @@ registo.addEventListener('scroll', acompanharRolagem, { passive: true });
 registo.addEventListener('wheel', marcarGesto, { passive: true });
 registo.addEventListener('pointerdown', marcarGesto, { passive: true });
 new ResizeObserver(marcarCorteNoTopo).observe(registo);
+definirRecolha(true);
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
 setTimeout(() => {

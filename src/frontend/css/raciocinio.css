@@ -105,6 +105,21 @@ body.rc-recolhido #rc-contador {
 
 #rc-largo {
     margin-left: auto;
+    transition:
+        opacity var(--rc-fade) var(--ease-fluid),
+        visibility 0s linear 0s,
+        background-color var(--dur-3) var(--ease-fluid),
+        color var(--dur-3) var(--ease-fluid);
+}
+
+body.rc-recolhido #rc-largo {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity var(--rc-fade) var(--ease-fluid),
+        visibility 0s linear var(--rc-fade),
+        background-color var(--dur-3) var(--ease-fluid),
+        color var(--dur-3) var(--ease-fluid);
 }
 
 #rc-largo:hover,
