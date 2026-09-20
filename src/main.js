@@ -525,10 +525,10 @@ function garantirRaciocinioNoTopo() {
   mainWindow.contentView.addChildView(raciocinioView);
 }
 
-function aplicarLimitesDoRaciocinio() {
+function aplicarLimitesDoRaciocinio(avisarCaixa) {
   if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  avisarCaixaDoRaciocinio(limitesDoRaciocinio(), false);
+  if (avisarCaixa !== false) avisarCaixaDoRaciocinio(limitesDoRaciocinio(), false);
   const destino = caixaDeToqueDoRaciocinio();
   if (mesmoRect(raciocinioView.getBounds(), destino)) return;
   raciocinioView.setBounds(destino);
@@ -715,7 +715,7 @@ function definirRecolhaDoRaciocinio(recolhido) {
       aplicarLimitesDoRaciocinio();
     }, RACIOCINIO_ASSENTO_MS);
   }
-  aplicarLimitesDoRaciocinio();
+  aplicarLimitesDoRaciocinio(false);
   avisarCaixaDoRaciocinio(limitesDoRaciocinio(), true);
 }
 
