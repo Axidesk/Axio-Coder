@@ -1,5 +1,6 @@
 """Janelas nativas do Windows: ver e operar qualquer app por UI Automation."""
 
+import ctypes
 import io
 import os
 import re
@@ -8,6 +9,7 @@ import subprocess
 import time
 import winreg
 
+from ctypes import wintypes
 from PIL import ImageGrab
 
 from src.backend.services import cofre
@@ -154,7 +156,7 @@ def _janela(identificador):
         for janela in abertas:
             if str(janela.handle) == pedido:
                 return janela, ""
-        return None, SEM_JANELA
+        return _procurar_no_win32(pedido)
     if pedido.lower().startswith("pid:"):
         numero = pedido[4:].strip()
         if not numero.isdigit():
@@ -162,13 +164,13 @@ def _janela(identificador):
         for janela in abertas:
             if getattr(janela.element_info, "process_id", None) == int(numero):
                 return janela, ""
-        return None, SEM_JANELA
+        return _procurar_no_win32(pedido)
     procurado = pedido.lower()
     exatas = [w for w in abertas if _texto(w).lower() == procurado]
     parciais = [w for w in abertas if procurado in _texto(w).lower()]
     escolhidas = exatas or parciais
     if not escolhidas:
-        return None, SEM_JANELA
+        return _procurar_no_win32(pedido)
     return escolhidas[0], ""
 
 
@@ -325,6 +327,7 @@ def _janelas_do_pid(pid):
 
 
 AREA_MINIMA_DE_JANELA = 1600
+LIMITE_JANELAS_AVULSAS = 12
 
 
 def _janelas_abertas():
@@ -393,6 +396,89 @@ def _esperar_janela(processo, antes, segundos=ESPERA_JANELA):
         f"o processo {processo.pid} corre, mas nao apareceu janela nova com titulo em"
         f" {segundos:.0f}s. Se o programa ja estava aberto, use acao='janelas'"
     )
+
+
+def _janelas_do_win32():
+    """(handle, titulo, pid, area) de cada janela de topo, pelo proprio Win32.
+
+    A enumeracao do pywinauto nao devolve certas janelas reais: as de ferramenta, sem entrada
+    na barra de tarefas (a janela do raciocinio e uma delas) existem para o Win32 e respondem a
+    gestos, mas nunca aparecem na lista. Esta varredura e o caminho para as alcancar.
+    """
+    user32 = ctypes.windll.user32
+    registos = []
+
+    def recolher(handle, _):
+        comprimento = user32.GetWindowTextLengthW(handle)
+        titulo = ctypes.create_unicode_buffer(comprimento + 1)
+        user32.GetWindowTextW(handle, titulo, comprimento + 1)
+        caixa = wintypes.RECT()
+        user32.GetWindowRect(handle, ctypes.byref(caixa))
+        processo = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(handle, ctypes.byref(processo))
+        registos.append({
+            "handle": int(handle),
+            "titulo": titulo.value,
+            "pid": processo.value,
+            "visivel": bool(user32.IsWindowVisible(handle)),
+            "area": max(0, caixa.right - caixa.left) * max(0, caixa.bottom - caixa.top),
+        })
+        return True
+
+    retorno = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows(retorno(recolher), 0)
+    return registos
+
+
+def _janela_avulsa(handle):
+    """Wrapper UIA de uma janela que a enumeracao normal nao devolve, ou None."""
+    try:
+        from pywinauto import Application
+        return Application(backend="uia").connect(handle=handle).window(handle=handle).wrapper_object()
+    except Exception:
+        return None
+
+
+def _procurar_no_win32(pedido):
+    """(janela, erro): a janela procurada como o Win32 a ve, para o que a arvore nao devolve."""
+    try:
+        registos = _janelas_do_win32()
+    except Exception:
+        return None, SEM_JANELA
+    if pedido.isdigit():
+        candidatos = [r for r in registos if str(r["handle"]) == pedido]
+    elif pedido.lower().startswith("pid:"):
+        numero = pedido[4:].strip()
+        candidatos = [r for r in registos if r["pid"] == int(numero)] if numero.isdigit() else []
+    else:
+        procurado = pedido.lower()
+        candidatos = [r for r in registos if r["titulo"] and procurado in r["titulo"].lower()]
+    candidatos = [r for r in candidatos if r["titulo"] or r["area"] >= AREA_MINIMA_DE_JANELA]
+    candidatos.sort(key=lambda r: r["area"], reverse=True)
+    for registo in candidatos:
+        janela = _janela_avulsa(registo["handle"])
+        if janela is not None:
+            return janela, ""
+    return None, SEM_JANELA
+
+
+def _janelas_avulsas(vistas):
+    """(janelas, restantes): as que existem no Win32 e a enumeracao normal nao devolveu."""
+    try:
+        registos = _janelas_do_win32()
+    except Exception:
+        return [], 0
+    candidatos = [
+        r for r in registos
+        if r["handle"] not in vistas and r["visivel"] and r["area"] >= AREA_MINIMA_DE_JANELA
+    ]
+    candidatos.sort(key=lambda r: r["area"], reverse=True)
+    janelas = []
+    for registo in candidatos[:LIMITE_JANELAS_AVULSAS]:
+        janela = _janela_avulsa(registo["handle"])
+        if janela is not None:
+            janelas.append(janela)
+    return janelas, max(0, len(candidatos) - LIMITE_JANELAS_AVULSAS)
 
 
 def _focar(janela):
@@ -928,14 +1014,18 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
             abertas = _janelas_abertas()
         except Exception as exc:
             return f"ERRO: nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
+        vistas = {int(getattr(w, "handle", 0) or 0) for w in abertas}
+        avulsas, restantes = _janelas_avulsas(vistas)
+        abertas.extend(avulsas)
         if not abertas:
             return "Nenhuma janela aberta."
         linhas = [
             f"  hwnd={w.handle:<12} {_tipo(w):<8} pid={getattr(w.element_info, 'process_id', 0):<7} {_texto(w)[:70] or '(sem titulo)'}"
             for w in abertas
         ]
+        falta = f" (+{restantes} ocultas)" if restantes else ""
         return (
-            f"{len(abertas)} janelas abertas (use o hwnd, 'pid:<numero>' ou um trecho do titulo em 'janela'):\n"
+            f"{len(abertas)} janelas abertas{falta} (use o hwnd, 'pid:<numero>' ou um trecho do titulo em 'janela'):\n"
             + "\n".join(linhas)
         )
 
