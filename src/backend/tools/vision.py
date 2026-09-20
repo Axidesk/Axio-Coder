@@ -25,6 +25,7 @@ from src.backend.services.imagem import (
     codificar_para_envio,
     dimensoes_da_imagem,
     lado_a_lado,
+    registar_imagem_olhada,
     retangulo_da_regiao,
     tiles_da_imagem,
 )
@@ -364,6 +365,8 @@ def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_c
             for bruto, legenda in desenhos
         ]
         juntas = f" Cada vista saiu lado a lado com '{comparar_com}' (a esquerda)."
+
+    registar_imagem_olhada(alvo)
 
     imagens = []
     partes = []

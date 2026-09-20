@@ -12,15 +12,27 @@ esse teto o caminho e PARTIR a imagem (tiles_da_imagem): cada pedaco tem o seu
 proprio teto e chega em tamanho original.
 """
 import base64
+import hashlib
 import io
+import json
+import os
+import time
+import urllib.error
+import urllib.request
 
 from PIL import Image
+
+from src.backend.config import APP_ROOT
+from src.backend.services.persistencia import gravar_json_atomico
+from src.backend.state import caminho_estado_projeto, estado
 
 PIXELS_MODELO = 800 * 800
 TOKENS_POR_IMAGEM = 384
 LADO_TILE = 1024
 SOBREPOSICAO_TILE = 32
 MAX_PEDACOS = 16
+LIMITE_IMAGEM_REDE = 12 * 1024 * 1024
+LIMITE_VISTAS = 400
 
 FORMATOS_ACEITOS = ("image/jpeg", "image/png", "image/gif", "image/webp")
 
@@ -203,3 +215,77 @@ def _inicios(tamanho, lado, passo):
             break
         inicios.append(proximo)
     return inicios
+
+
+def _registo_das_vistas():
+    return caminho_estado_projeto("imagens_vistas.json") or os.path.join(APP_ROOT, ".axio", "imagens_vistas.json")
+
+
+def _vistas_guardadas():
+    caminho = _registo_das_vistas()
+    if not os.path.isfile(caminho):
+        return {}
+    try:
+        with open(caminho, "r", encoding="utf-8") as ficheiro:
+            dados = json.load(ficheiro)
+        return dados if isinstance(dados, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def registar_imagem_olhada(caminho):
+    """Grava o sha256 do que acabou de ser olhado: e a prova de que ESTA imagem foi vista."""
+    if not caminho or not os.path.isfile(caminho):
+        return ""
+    with open(caminho, "rb") as ficheiro:
+        marca = hashlib.sha256(ficheiro.read()).hexdigest()
+    vistas = _vistas_guardadas()
+    vistas[marca] = {"nome": os.path.basename(caminho), "visto": time.strftime("%Y-%m-%d %H:%M:%S")}
+    if len(vistas) > LIMITE_VISTAS:
+        recentes = sorted(vistas.items(), key=lambda item: item[1].get("visto", ""))
+        vistas = dict(recentes[-LIMITE_VISTAS:])
+    gravar_json_atomico(_registo_das_vistas(), vistas)
+    return marca
+
+
+def _bytes_do_endereco(endereco):
+    if endereco.lower().startswith(("http://", "https://")):
+        pedido = urllib.request.Request(endereco, headers={"User-Agent": "axio"})
+        try:
+            with urllib.request.urlopen(pedido, timeout=25) as resposta:
+                return resposta.read(LIMITE_IMAGEM_REDE + 1), ""
+        except urllib.error.HTTPError as falha:
+            return None, f"respondeu {falha.code}"
+        except Exception as falha:
+            return None, str(falha)[:120]
+    raiz = estado.get("pasta_raiz") or APP_ROOT
+    caminho = endereco if os.path.isabs(endereco) else os.path.join(raiz, endereco)
+    if not os.path.isfile(caminho):
+        return None, "ficheiro nao encontrado"
+    try:
+        with open(caminho, "rb") as ficheiro:
+            return ficheiro.read(LIMITE_IMAGEM_REDE + 1), ""
+    except OSError as falha:
+        return None, str(falha)[:120]
+
+
+def conferir_imagens(enderecos):
+    """Confere cada imagem antes de sair para a rede: carrega mesmo, e ja foi olhada?
+
+    A identidade e o CONTEUDO (sha256 dos bytes), nunca o caminho: a imagem servida
+    pelo raw do GitHub e a do disco dao a mesma marca, e uma imagem que mudou deixa
+    de passar - e e isso que impede publicar as cegas.
+    """
+    vistas = _vistas_guardadas()
+    problemas = []
+    for endereco in dict.fromkeys(alvo for alvo in enderecos if alvo):
+        bruto, erro = _bytes_do_endereco(endereco)
+        if erro:
+            problemas.append((endereco, f"nao carrega ({erro})"))
+            continue
+        if len(bruto) > LIMITE_IMAGEM_REDE:
+            problemas.append((endereco, "maior do que o limite de leitura"))
+            continue
+        if hashlib.sha256(bruto).hexdigest() not in vistas:
+            problemas.append((endereco, "nunca foi olhada por mim"))
+    return problemas
