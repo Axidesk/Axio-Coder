@@ -1083,6 +1083,7 @@ app.on('ready', () => {
     },
     acoesDeFora: {
       carregar: (view, params) => {
+        mostrarJanelaRaciocinio();
         const resultado = carregarNoPreview(params.alvo);
         if (resultado && resultado.ok && resultado.alvo) {
           avisarPreview('preview:alvo', { alvo: resultado.alvo });
