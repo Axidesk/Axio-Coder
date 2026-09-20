@@ -7,6 +7,9 @@ import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId } from './historico
 
 const LIMITE_COMMITS = 12;
 
+const RASCUNHOS = new Map();
+const SUGERIDAS = new Set();
+
 const COMANDO_DE_DEPENDENCIA = {
     'requirements.txt': 'python -m pip install -r requirements.txt',
     'package.json': 'npm install'
@@ -19,11 +22,43 @@ const COMANDO_DE_DEPENDENCIA = {
         if (!grupo) return '';
         return grupo.displayName || grupo.title || grupo.name || '';
     }
+    function nomeRealDaTarefa(grupo) {
+        const nome = grupo ? String(grupo.name || '').replace(/\s+/g, ' ').trim() : '';
+        return /^Tarefa \d+$/.test(nome) ? '' : nome;
+    }
     function mensagemProposta(grupo) {
+        const nome = nomeRealDaTarefa(grupo);
+        if (nome) return nome.slice(0, 72);
         const perguntas = (grupo && grupo.questions) || [];
         const pergunta = String(perguntas[0] || '').replace(/\s+/g, ' ').trim();
-        if (pergunta) return pergunta.slice(0, 72);
-        return nomeDaTarefa(grupo) || 'Tarefa sem titulo';
+        return pergunta.slice(0, 72);
+    }
+    function valorDoCampo(grupo) {
+        if (!grupo) return '';
+        const guardado = RASCUNHOS.get(String(grupo.id));
+        return guardado === undefined ? mensagemProposta(grupo) : guardado;
+    }
+    function textoDaOrigem(grupo) {
+        if (!grupo) return '';
+        const chave = String(grupo.id);
+        const guardado = RASCUNHOS.get(chave);
+        if (guardado !== undefined && SUGERIDAS.has(chave)) {
+            return 'Sugestao da IA para esta tarefa. Confere antes de commitar.';
+        }
+        if (guardado !== undefined && guardado !== mensagemProposta(grupo)) {
+            return 'Mensagem escrita por ti para esta tarefa.';
+        }
+        if (nomeRealDaTarefa(grupo)) {
+            return 'Proposta a partir do nome desta tarefa. Podes mudar a mensagem antes de commitar.';
+        }
+        if (mensagemProposta(grupo)) {
+            return 'Esta tarefa ainda nao tem nome: a proposta e o inicio da tua pergunta nesta tarefa. Podes mudar a mensagem antes de commitar.';
+        }
+        return 'Escreve a mensagem do commit, ou pede uma sugestao a IA.';
+    }
+    function atualizarOrigem(painel, grupo) {
+        const alvo = painel ? painel.querySelector('#git-origem') : null;
+        if (alvo) alvo.textContent = textoDaOrigem(grupo);
     }
     function ficheirosDaTarefa(grupo) {
         return (grupo && grupo.files ? grupo.files : [])
@@ -102,8 +137,8 @@ const COMANDO_DE_DEPENDENCIA = {
         if (ficheiros.length && porCommitar !== null) {
             html += linhaRotulo(String(porCommitar), 'por commitar');
         }
-        const proposta = mensagemProposta(grupo);
-        html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(proposta)}" placeholder="Mensagem do commit">`;
+        html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(valorDoCampo(grupo))}" placeholder="Mensagem do commit">`;
+        html += `<div id="git-origem" class="git-origem">${escapeHtml(textoDaOrigem(grupo))}</div>`;
         html += '<div class="git-acoes">';
         html += pill('sugerir', 'Sugerir com IA');
         if (podeCommitar) html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
@@ -223,6 +258,14 @@ const COMANDO_DE_DEPENDENCIA = {
     function ligarAcoes(vista) {
         const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;
         if (!painel) return;
+        painel.addEventListener('input', (e) => {
+            if (!e.target || e.target.id !== 'git-mensagem') return;
+            const grupo = grupoAtivo();
+            if (!grupo) return;
+            RASCUNHOS.set(String(grupo.id), e.target.value);
+            SUGERIDAS.delete(String(grupo.id));
+            atualizarOrigem(painel, grupo);
+        });
         painel.addEventListener('click', async (e) => {
             const botao = e.target.closest('[data-git-acao]');
             if (!botao) return;
@@ -250,6 +293,8 @@ const COMANDO_DE_DEPENDENCIA = {
             });
             if (dados && dados.status === 'ok') {
                 grupo.commit = dados.hash || '';
+                RASCUNHOS.delete(String(grupo.id));
+                SUGERIDAS.delete(String(grupo.id));
                 updateRoundCardCommitByTurnId(grupo.id, dados.hash || '');
                 await renderGitPanel(vista);
                 return;
@@ -279,6 +324,9 @@ const COMANDO_DE_DEPENDENCIA = {
             });
             if (dados && dados.status === 'ok' && campo) {
                 campo.value = dados.mensagem;
+                RASCUNHOS.set(String(grupo.id), campo.value);
+                SUGERIDAS.add(String(grupo.id));
+                atualizarOrigem(painel, grupo);
             } else {
                 avisarNoPainel(vista, (dados && dados.message) || 'Nao foi possivel sugerir uma mensagem.');
             }
@@ -312,6 +360,5 @@ const COMANDO_DE_DEPENDENCIA = {
 export {
     renderGitPanel,
     grupoAtivo,
-    ficheirosDaTarefa,
-    mensagemProposta
+    ficheirosDaTarefa
 };

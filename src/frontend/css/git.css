@@ -111,6 +111,13 @@
     outline: none;
 }
 
+.git-origem {
+    margin-top: 6px;
+    color: var(--text-mutado);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
 .git-detalhes {
     margin-top: 4px;
 }
