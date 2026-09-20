@@ -18,11 +18,9 @@ Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o q
 
 ![Histórico das sessões, com o ficheiro editado aberto no diff lado a lado](docs/interface/historico.jpg)
 
-## Escreve e refatora código.
+## Refatorações grandes com margem de erro praticamente nula.
 
 Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio.
-
-## Refatorações grandes com margem de erro praticamente nula.
 
 Para partir um ficheiro que cresceu demais, o código não é redigitado: é movido **verbatim**, copiando os bytes exatos do disco, com o alcance da função medido por AST no Python e por balanceamento de chaves no JavaScript. Um `preview` mostra as linhas e o **SHA-256** antes de tocar em nada; no fim sai o hash do corpo movido, e há uma ferramenta dedicada a reconfirmar a integridade, comparando hash e byte a byte. Como o corpo nunca passa pelas mãos do modelo, não há margem para lhe trocar uma vírgula — e o que não encaixa é recusado em vez de gravado: funções aninhadas (a indentação herdada invalidaria o destino), funções que já existem no ficheiro de destino, e corpos com chaves desbalanceadas.
 
