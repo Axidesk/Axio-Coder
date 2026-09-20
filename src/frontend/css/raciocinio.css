@@ -10,7 +10,7 @@ body {
 
 :root {
     --rc-fade: 0.11s;
-    --rc-recolha: 0.15s;
+    --rc-zoom: 1;
 }
 
 #rc-janela {
@@ -28,15 +28,12 @@ body {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
     transition:
-        width var(--rc-recolha) var(--ease-fluid),
-        height var(--rc-recolha) var(--ease-fluid),
         opacity var(--rc-fade) var(--ease-fluid),
         transform var(--dur-3) var(--ease-fluid);
 }
 
-body.rc-recolhido #rc-janela {
-    width: calc(100% * 200 / 380);
-    height: calc(100% * 38 / 200);
+body.rc-trocando #rc-janela {
+    opacity: 0;
 }
 
 body.rc-saindo #rc-janela {
@@ -45,7 +42,7 @@ body.rc-saindo #rc-janela {
 }
 
 #rc-barra {
-    height: 38px;
+    height: calc(38px / var(--rc-zoom));
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -164,6 +161,7 @@ body.rc-recolhido #rc-conteudo {
 
 #rc-estado {
     margin: 0;
+    min-height: 36px;
     padding-bottom: 10px;
     font-size: 12.5px;
     line-height: 1.45;
@@ -174,10 +172,6 @@ body.rc-recolhido #rc-conteudo {
     overflow: hidden;
 }
 
-#rc-estado:empty {
-    display: none;
-}
-
 #rc-estado:not(:empty) + #rc-registo {
     border-top: 1px solid var(--border-suave);
 }
@@ -186,6 +180,7 @@ body.rc-recolhido #rc-conteudo {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-anchor: none;
     padding-top: 10px;
     user-select: text;
 }

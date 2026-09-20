@@ -115,6 +115,15 @@ function alternarRecolha() {
 
 function animarEntrada() {
     document.body.classList.remove('rc-saindo');
+    document.body.classList.remove('rc-trocando');
+}
+
+function marcarTroca(valor) {
+    document.body.classList.toggle('rc-trocando', !!valor);
+}
+
+function aplicarEscala(zoom) {
+    document.documentElement.style.setProperty('--rc-zoom', String(zoom > 0 ? zoom : 1));
 }
 
 function sair() {
@@ -125,8 +134,16 @@ botao.addEventListener('click', alternarRecolha);
 registo.addEventListener('scroll', () => {
     seguirFim = noFimDoRegisto();
 }, { passive: true });
+registo.addEventListener('wheel', () => {
+    seguirFim = false;
+}, { passive: true });
+registo.addEventListener('pointerdown', () => {
+    seguirFim = false;
+}, { passive: true });
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
+api.aoTrocar(marcarTroca);
+api.aoEscala(aplicarEscala);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);
 api.aoEvento(aplicar);
