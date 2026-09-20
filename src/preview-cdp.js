@@ -14,6 +14,10 @@ const ESPERA_VISTA_MS = 450;
 const ESPERA_RECARGA_MS = 6000;
 const ESPERA_EFEITO_MS = 220;
 const ESPERA_REPETICAO_MS = 900;
+const PASSO_DO_ARRASTO_PX = 24;
+const FATIAS_MAXIMAS_DO_ARRASTO = 60;
+const PASSOS_MAXIMOS_DO_ARRASTO = 400;
+const NOTCHES_PADRAO_DA_RODA = -240;
 const TETO_EFEITO = 6;
 const MARCA_DA_INSPECAO = '__axio_inspecionar__:';
 const TOKEN = crypto.randomBytes(24).toString('hex');
@@ -35,7 +39,7 @@ const vigiados = new WeakSet();
 const escolhedores = new Map();
 
 const SEM_PAGINA = new Set(['estado', 'consola', 'rede', 'carregar', 'mostrar']);
-const ACOES_QUE_AGEM = new Set(['carregar', 'mostrar', 'clicar', 'escrever', 'teclar', 'recarregar', 'ficheiro']);
+const ACOES_QUE_AGEM = new Set(['carregar', 'mostrar', 'clicar', 'escrever', 'teclar', 'arrastar', 'roda', 'recarregar', 'ficheiro']);
 
 const TECLAS = {
   Enter: { key: 'Enter', code: 'Enter', vk: 13, texto: '\r' },
@@ -1249,6 +1253,64 @@ async function dispararClique(depurador, x, y, botao) {
   }
 }
 
+function pontosDoArrasto(params) {
+  const bruto = params.pontos || params.ponto;
+  const lista = Array.isArray(bruto) ? bruto : String(bruto || '').trim().split(/\s+/);
+  const pontos = [];
+  for (const item of lista) {
+    const par = Array.isArray(item) ? item : String(item).split(',');
+    if (!par || par.length !== 2) return null;
+    const x = Number(par[0]);
+    const y = Number(par[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    pontos.push([Math.round(x), Math.round(y)]);
+  }
+  return pontos.length >= 2 ? pontos : null;
+}
+
+async function dispararArrasto(depurador, pontos, botao, aoAndar) {
+  const primeiro = pontos[0];
+  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: primeiro[0], y: primeiro[1], button: 'none', buttons: 0
+  });
+  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: primeiro[0], y: primeiro[1], button: botao, buttons: 1, clickCount: 1
+  });
+  let atual = primeiro;
+  let ultimo = primeiro;
+  let andados = 0;
+  for (let i = 1; i < pontos.length && andados < PASSOS_MAXIMOS_DO_ARRASTO; i++) {
+    const alvo = pontos[i];
+    const dx = alvo[0] - atual[0];
+    const dy = alvo[1] - atual[1];
+    const fatias = Math.max(1, Math.min(FATIAS_MAXIMAS_DO_ARRASTO, Math.ceil(Math.hypot(dx, dy) / PASSO_DO_ARRASTO_PX)));
+    for (let f = 1; f <= fatias && andados < PASSOS_MAXIMOS_DO_ARRASTO; f++) {
+      const x = Math.round(atual[0] + (dx * f) / fatias);
+      const y = Math.round(atual[1] + (dy * f) / fatias);
+      await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+        type: 'mouseMoved', x: x, y: y, button: 'none', buttons: 1
+      });
+      ultimo = [x, y];
+      andados++;
+    }
+    atual = alvo;
+    if (aoAndar && andados) await aoAndar(ultimo);
+  }
+  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: ultimo[0], y: ultimo[1], button: botao, buttons: 0, clickCount: 1
+  });
+  return { x: ultimo[0], y: ultimo[1], passos: andados };
+}
+
+async function dispararRoda(depurador, x, y, delta) {
+  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: x, y: y, button: 'none', buttons: 0
+  });
+  await enviarComando(depurador, 'Input.dispatchMouseEvent', {
+    type: 'mouseWheel', x: x, y: y, deltaX: 0, deltaY: delta, button: 'none', buttons: 0
+  });
+}
+
 function semReacao(efeito) {
   if (!efeito || !efeito.depois) return false;
   if (efeito.navegou) return false;
@@ -1318,6 +1380,71 @@ async function acaoClicar(view, params) {
   return {
     ok: true, x: x, y: y, onde: onde, cursor: aVista,
     efeito: Object.assign(efeito, { repetido: Boolean(efeito.repetido) })
+  };
+}
+
+async function acaoArrastar(view, params) {
+  await esperarAVista(view, ESPERA_VISTA_MS);
+  const pontos = pontosDoArrasto(params);
+  if (!pontos) {
+    return {
+      ok: false,
+      erro: 'Indique dois ou mais pontos em "ponto" ("x1,y1 x2,y2 ...") nas coordenadas da janela do preview.'
+    };
+  }
+  const depurador = depuradorDe(view);
+  if (!depurador) return { ok: false, erro: 'A pagina do preview nao esta a falar com o depurador.' };
+  const botao = String(params.botao || 'left').toLowerCase();
+  const aVista = cursorAVista(view);
+  const marca = await marcarGesto(depurador, '');
+  if (aVista) {
+    await desenharCursor(depurador, pontos[0][0], pontos[0][1], 1, 1);
+    await aguardar(PAUSA_CURSOR_MS);
+  }
+  const fim = await dispararArrasto(
+    depurador,
+    pontos,
+    botao,
+    aVista ? (ponto) => desenharCursor(depurador, ponto[0], ponto[1], 1, 1) : null
+  );
+  if (aVista) {
+    await desenharCursor(depurador, fim.x, fim.y, 1, 0.55);
+    apagarCursor(depurador, fim.x, fim.y);
+  }
+  return {
+    ok: true, x: fim.x, y: fim.y, de: pontos[0], pontos: pontos.length, movimentos: fim.passos,
+    cursor: aVista, efeito: await efeitoDoGesto(depurador, marca, '')
+  };
+}
+
+async function acaoRoda(view, params) {
+  await esperarAVista(view, ESPERA_VISTA_MS);
+  const pronto = await prepararAlvo(view, params);
+  if (pronto.erro) return { ok: false, erro: pronto.erro };
+  const depurador = pronto.depurador;
+  const alvo = pronto.alvo;
+  if (!alvo.centro) {
+    return { ok: false, erro: 'Indique "ponto" x,y (ou um "seletor") por cima de onde a roda deve girar.' };
+  }
+  const pedido = Number(params.delta);
+  const delta = Number.isFinite(pedido) && pedido !== 0 ? Math.round(pedido) : NOTCHES_PADRAO_DA_RODA;
+  const x = Math.round(alvo.centro.x);
+  const y = Math.round(alvo.centro.y);
+  const seletor = String(params.seletor || '').trim();
+  const aVista = cursorAVista(view);
+  const marca = await marcarGesto(depurador, seletor);
+  if (aVista) {
+    await desenharCursor(depurador, x, y, 1, 1);
+    await aguardar(PAUSA_CURSOR_MS);
+  }
+  await dispararRoda(depurador, x, y, delta);
+  if (aVista) {
+    await desenharCursor(depurador, x, y, 1, 0.55);
+    apagarCursor(depurador, x, y);
+  }
+  return {
+    ok: true, x: x, y: y, onde: alvo.onde, delta: delta, cursor: aVista,
+    efeito: await efeitoDoGesto(depurador, marca, seletor)
   };
 }
 
@@ -1483,6 +1610,8 @@ const ACOES = {
   estilo: (view, params) => acaoEstilo(view, params),
   print: (view, params) => acaoPrint(view, params),
   clicar: (view, params) => acaoClicar(view, params),
+  arrastar: (view, params) => acaoArrastar(view, params),
+  roda: (view, params) => acaoRoda(view, params),
   escrever: (view, params) => acaoEscrever(view, params),
   teclar: (view, params) => acaoTeclar(view, params),
   recarregar: (view) => acaoRecarregar(view),

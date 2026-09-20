@@ -20,7 +20,7 @@ from src.backend.state import emit_event
 from src.backend.tools.registry import register
 
 ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "print")
-ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
+ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
 LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
 
@@ -55,6 +55,26 @@ def _ponto_do_texto(ponto):
         return (int(round(float(partes[0]))), int(round(float(partes[1])))), ""
     except ValueError:
         return None, f"ponto invalido: '{ponto}' nao sao dois numeros"
+
+
+def _pontos_do_texto(pontos):
+    """[(x, y), ...] de 'x1,y1 x2,y2 ...' - o mesmo formato que a ferramenta das janelas nativas."""
+    partes = [p for p in str(pontos or "").replace(";", " ").split(" ") if p.strip()]
+    if len(partes) < 2:
+        return None, (
+            "ponto invalido: um arrasto tem dois ou mais pontos separados por espaco, "
+            "no formato 'x1,y1 x2,y2' (ex: '300,200 520,260')"
+        )
+    lista = []
+    for parte in partes:
+        par = [v.strip() for v in parte.split(",")]
+        if len(par) != 2:
+            return None, f"ponto invalido: '{parte}' nao e 'x,y'"
+        try:
+            lista.append((int(round(float(par[0]))), int(round(float(par[1])))))
+        except ValueError:
+            return None, f"ponto invalido: '{parte}' nao sao dois numeros"
+    return lista, ""
 
 
 def _passos_do_roteiro(passos):
@@ -680,7 +700,10 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
     "frente, para o utilizador ver o que esta a ser feito) e 'ficheiro' (poe um ficheiro do disco "
     "num campo de ficheiro da pagina - envio de imagem, anexo - SEM abrir a janela do Windows: o "
     "campo recebe o ficheiro e o evento de mudanca, e a pagina reage como se o utilizador o tivesse escolhido). "
-    "'clicar', 'escrever' e 'teclar' "
+    "'arrastar' cobre o gesto que um canvas exige e que um clique nao substitui: press no "
+    "primeiro ponto, movimentos e release no ultimo, com o botao premido todo o caminho "
+    "(desenhar, panoramizar, arrastar um objeto); 'roda' e a roda do rato por cima de um ponto "
+    "(o zoom de um mapa ou de um desenho). 'clicar', 'escrever', 'teclar', 'arrastar' e 'roda' "
     "devolvem ja o EFEITO do gesto - se a pagina mudou, se o campo guardou mesmo o texto e os "
     "erros ou pedidos falhados que ele causou - por isso nao precisa de uma segunda chamada "
     "so para saber o que aconteceu.",
@@ -688,7 +711,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         "acao": {
             "tipo": "STRING", "obrig": True, "padrao": "",
             "enum": list(ACOES_DE_OPERACAO),
-            "desc": "'clicar', 'escrever', 'teclar', 'roteiro' (varios gestos numa so chamada), 'carregar' (abrir endereco ou ficheiro), 'recarregar' (recarregar ignorando a cache), 'mostrar' (trazer o preview para a frente) ou 'ficheiro' (colocar um ficheiro do disco num campo de ficheiro da pagina, sem abrir a janela do Windows).",
+            "desc": "'clicar', 'escrever', 'teclar', 'arrastar' (traco continuo do rato entre pontos - desenhar, panoramizar, puxar um objeto), 'roda' (roda do rato por cima de um ponto: o zoom de um mapa ou de um desenho), 'roteiro' (varios gestos numa so chamada), 'carregar' (abrir endereco ou ficheiro), 'recarregar' (recarregar ignorando a cache), 'mostrar' (trazer o preview para a frente) ou 'ficheiro' (colocar um ficheiro do disco num campo de ficheiro da pagina, sem abrir a janela do Windows).",
         },
         "seletor": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -696,7 +719,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         },
         "ponto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Em 'clicar' sem seletor: 'x,y' em pixeis da janela do preview, como devolvido por tool_observar_preview.",
+            "desc": "Em 'clicar' e 'roda': 'x,y' em pixeis da janela do preview, como devolvido por tool_observar_preview. Em 'arrastar': o caminho do traco, com dois ou mais pontos separados por espaco ('x1,y1 x2,y2 ...'), o mesmo formato da ferramenta das janelas nativas.",
         },
         "alvo": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -704,7 +727,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         },
         "texto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Em 'escrever': o texto a inserir no campo.",
+            "desc": "Em 'escrever': o texto a inserir no campo. Em 'roda': quantos pixeis rolar (negativo aproxima, positivo afasta; por omissao -240).",
         },
         "limpar": {
             "tipo": "BOOLEAN", "obrig": False, "padrao": False,
@@ -771,6 +794,51 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'o clique falhou'}."
         return _com_efeito(f"Clique feito em {onde} (x={dados.get('x')}, y={dados.get('y')}).", dados)
+
+    if pedido == "arrastar":
+        lista, falha = _pontos_do_texto(ponto)
+        if falha:
+            return f"ERRO: {falha}."
+        dados, erro = ponte_preview.pedir("arrastar", pontos=[list(par) for par in lista])
+        if erro:
+            return f"ERRO: {erro}."
+        if not dados.get("ok"):
+            return f"ERRO: {dados.get('erro') or 'o arrasto falhou'}."
+        primeiro = lista[0]
+        return _com_efeito(
+            f"Arrasto de {primeiro[0]},{primeiro[1]} ate (x={dados.get('x')}, y={dados.get('y')})"
+            f" em {len(lista)} ponto(s) e {dados.get('movimentos')} movimento(s) - botao premido"
+            " todo o caminho.",
+            dados
+        )
+
+    if pedido == "roda":
+        posicao, _ = _ponto_do_texto(ponto)
+        delta = None
+        if str(texto or "").strip():
+            try:
+                delta = int(round(float(str(texto).strip())))
+            except ValueError:
+                return (f"ERRO: em 'roda', 'texto' e quanto rolar em pixeis (negativo aproxima,"
+                        f" positivo afasta); '{texto}' nao e um numero.")
+        if posicao:
+            dados, erro = ponte_preview.pedir("roda", x=posicao[0], y=posicao[1], delta=delta)
+            onde = ponto
+        elif seletor.strip():
+            dados, erro = ponte_preview.pedir("roda", seletor=seletor, delta=delta)
+            onde = seletor
+        else:
+            return "ERRO: indique 'ponto' (x,y) ou 'seletor' no sitio onde a roda deve girar."
+        if erro:
+            return f"ERRO: {erro}."
+        if not dados.get("ok"):
+            return f"ERRO: {dados.get('erro') or 'a roda falhou'}."
+        sentido = "para cima (aproxima)" if (dados.get("delta") or 0) < 0 else "para baixo (afasta)"
+        return _com_efeito(
+            f"Roda girada {sentido} {dados.get('delta')} px em {onde}"
+            f" (x={dados.get('x')}, y={dados.get('y')}).",
+            dados
+        )
 
     if pedido == "escrever":
         if not texto and not limpar:
