@@ -22,6 +22,17 @@ def _localizar_funcao_py(linhas, nome_funcao):
             return (no.lineno, fim)
     return f"ERRO: Função ou classe '{nome_funcao}' não encontrada no Python."
 
+def _range_com_decoradores_py(linhas, nome_funcao):
+    """Estende o range da funcao para cima, ate aos decoradores dela (@rota, @register)."""
+    r = _localizar_funcao_py(linhas, nome_funcao)
+    if isinstance(r, str):
+        return r
+    inicio, fim = r
+    idx = inicio - 2
+    while idx >= 0 and linhas[idx].lstrip().startswith("@"):
+        idx -= 1
+    return (idx + 2, fim)
+
 def _fim_funcao_js(linhas, inicio):
     texto = "".join(linhas)
     offsets = [0]
@@ -372,6 +383,88 @@ def tool_verificar_integridade_refatoracao(arquivo_origem, nome_funcao, arquivo_
                 elif parte["type"] == "added":
                     linhas.append(f"    + [destino] {texto}")
     return "\n".join(linhas)
+
+@register(
+    "tool_remover_funcao",
+    'Remove uma funcao, classe ou rota inteira de um ficheiro, por nome, sem redigitar nada: o range sai do AST no Python (ja com os decoradores @ incluidos, que de outro modo ficariam orfaos) ou do balanceamento de chaves no JavaScript. A gravacao entra na pilha de undo. RECUSA quando o nome ainda e usado noutro ponto do MESMO ficheiro e lista as linhas - o uso no projeto inteiro confirma-se com tool_pesquisar_no_projeto. Em Python volta a parsear o ficheiro depois de cortar e NAO apaga se o corte quebrar a sintaxe (ex: o corpo ficava so com a funcao removida). Use preview=true para ver as linhas e o SHA-256 sem tocar em nada. E o caminho para apagar codigo morto (regra 17) sem citar o corpo inteiro no tool_substituir_texto.',
+    {
+        'arquivo': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'nome_funcao': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'preview': {"tipo": "BOOLEAN", "padrao": False},
+    },
+    disponivel="edicao",
+)
+def tool_remover_funcao(arquivo, nome_funcao, preview=False):
+    if estado.get("bloquear_edicao"):
+        return "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
+    emit_event("executing", function=f"Apagando funcao: {nome_funcao}")
+    if isinstance(preview, str):
+        preview = preview.strip().lower() in ("1", "true", "sim", "yes", "s")
+    alvo_abs, erro = resolver_caminho(arquivo, permitir_escrita=True)
+    if erro:
+        return erro
+    if not os.path.exists(alvo_abs):
+        return f"ERRO: Arquivo '{arquivo}' não existe."
+    with open(alvo_abs, "r", encoding="utf-8", errors="ignore") as f:
+        conteudo_orig = f.read()
+    linhas = conteudo_orig.replace("\r\n", "\n").splitlines(keepends=True)
+    r = _range_com_decoradores_py(linhas, nome_funcao) if alvo_abs.endswith(".py") else _localizar_funcao_js(linhas, nome_funcao)
+    if isinstance(r, str):
+        return r
+    inicio, fim = r
+    if inicio < 1 or fim < inicio or fim > len(linhas):
+        return f"ERRO: range inválido ({inicio}-{fim}) para '{nome_funcao}'. Nada foi apagado."
+    corpo = "".join(linhas[inicio - 1:fim])
+    hash_corpo = hashlib.sha256(corpo.encode("utf-8")).hexdigest()
+    padrao = re.compile(r"\b" + re.escape(nome_funcao) + r"\b")
+    usos = [i + 1 for i, linha in enumerate(linhas) if not (inicio - 1 <= i < fim) and padrao.search(linha)]
+    if preview:
+        if usos:
+            amostra = ", ".join(str(n) for n in usos[:8])
+            aviso = f"AVISO: ainda ha {len(usos)} referencia(s) no mesmo ficheiro (linhas {amostra}{'...' if len(usos) > 8 else ''}) - a remocao seria recusada."
+        else:
+            aviso = "Sem referencias no mesmo ficheiro."
+        return (
+            f"PREVIEW (dry-run): '{nome_funcao}' localizada em '{arquivo}'.\n"
+            f"Linhas: {inicio}-{fim} ({fim - inicio + 1} linha(s))\n"
+            f"SHA-256 do corpo: {hash_corpo}\n"
+            f"Primeira linha: {corpo.splitlines()[0].strip() if corpo else ''}\n"
+            f"{aviso}\n"
+            f"Nada foi apagado."
+        )
+    if usos:
+        amostra = ", ".join(str(n) for n in usos[:8])
+        resto = "..." if len(usos) > 8 else ""
+        return (
+            f"ERRO: '{nome_funcao}' ainda é usada em {len(usos)} ponto(s) deste ficheiro (linhas {amostra}{resto}). "
+            "Apagar agora deixaria essas referências penduradas. Trate primeiro quem a chama (ou apague os dois lados "
+            "na mesma edição com tool_substituir_texto). Nada foi apagado."
+        )
+    del linhas[inicio - 1:fim]
+    corte = inicio - 1
+    while 0 < corte < len(linhas) and not linhas[corte].strip() and not linhas[corte - 1].strip():
+        del linhas[corte]
+    novo = "".join(linhas)
+    if alvo_abs.endswith(".py"):
+        try:
+            ast.parse(novo)
+        except SyntaxError as e:
+            return (
+                f"ERRO: apagar '{nome_funcao}' quebraria a sintaxe do ficheiro (linha {e.lineno}: {e.msg}). "
+                "Costuma ser um corpo que ficava só com esta função. Nada foi apagado - apague pelo bloco com "
+                "tool_substituir_texto e ajuste o que fica à mão."
+            )
+    registrar_edicao(alvo_abs, conteudo_orig, novo)
+    with open(alvo_abs, "w", encoding="utf-8", errors="ignore") as f:
+        f.write(novo)
+    emit_event("action_diff", actionName=arquivo, diff=gerar_diff(conteudo_orig, novo))
+    notificar_mudanca_arquivos()
+    return (
+        f"SUCESSO: '{nome_funcao}' removida de '{arquivo}'.\n"
+        f"Linhas apagadas: {inicio}-{fim} ({fim - inicio + 1} linha(s))\n"
+        f"SHA-256 do corpo: {hash_corpo}\n"
+        "Desfazível com tool_desfazer; confirme a sintaxe com tool_validar_sintaxe."
+    )
 
 @register(
     "tool_mover_bloco_verbatim",
