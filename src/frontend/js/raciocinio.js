@@ -6,7 +6,8 @@ const api = window.raciocinio || {
     aoSair: () => {},
     aoCaixa: () => {},
     aoEscala: () => {},
-    alternar: () => {}
+    alternar: () => {},
+    assentar: () => {}
 };
 
 const botao = document.getElementById('rc-recolher');
@@ -183,6 +184,7 @@ function aplicarCaixa(caixa) {
 function assentarCaixa() {
     movimentoDaCaixa = null;
     if (caixaDaJanela) recorte.style.width = (caixaDaJanela.largura / escala) + 'px';
+    api.assentar();
 }
 
 function sair() {

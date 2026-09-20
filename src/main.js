@@ -35,6 +35,7 @@ let previewAtiva = null;
 let previewVisivel = false;
 let previewFerramentas = false;
 let previewLimites = null;
+let previewBase = null;
 let pontePorta = 0;
 let ponteToken = '';
 let zoomDaInterface = 1;
@@ -44,6 +45,7 @@ let raciocinioBuffer = [];
 let raciocinioOcioso = null;
 let raciocinioSaidaEm = null;
 let raciocinioAssentando = null;
+let raciocinioEspera = null;
 let raciocinioPronto = false;
 let raciocinioSaindo = false;
 let raciocinioQuerido = false;
@@ -62,7 +64,8 @@ const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
 const RACIOCINIO_RAIO_JANELA = 12;
 const RACIOCINIO_SAIDA_MS = 200;
-const RACIOCINIO_ASSENTO_MS = 260;
+const RACIOCINIO_ASSENTO_TETO_MS = 1200;
+const RACIOCINIO_ESPERA_LIMITES_MS = 320;
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
 
@@ -459,7 +462,9 @@ function trazerParaFrente() {
 function aplicarLimitesDoPreview(limites) {
   const caixa = escalarLimites(limites, zoomDaJanela());
   if (!caixa) return;
+  if (caixa.width < RACIOCINIO_LARGURA_RECOLHIDA || caixa.height < RACIOCINIO_ALTURA_RECOLHIDA) return;
   previewLimites = caixa;
+  previewBase = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getContentBounds() : null;
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
     if (view) view.setBounds(previewLimites);
@@ -525,9 +530,26 @@ function garantirRaciocinioNoTopo() {
   mainWindow.contentView.addChildView(raciocinioView);
 }
 
+function limitesDoPreviewEmUso() {
+  if (!previewLimites) return true;
+  if (!previewBase) return true;
+  if (!mainWindow || mainWindow.isDestroyed()) return true;
+  const caixa = mainWindow.getContentBounds();
+  return previewBase.width === caixa.width && previewBase.height === caixa.height;
+}
+
 function aplicarLimitesDoRaciocinio(avisarCaixa) {
   if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!limitesDoPreviewEmUso()) {
+    if (raciocinioEspera) return;
+    raciocinioEspera = setTimeout(() => {
+      raciocinioEspera = null;
+      previewBase = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.getContentBounds() : previewBase;
+      aplicarLimitesDoRaciocinio(avisarCaixa);
+    }, RACIOCINIO_ESPERA_LIMITES_MS);
+    return;
+  }
   if (avisarCaixa !== false) avisarCaixaDoRaciocinio(limitesDoRaciocinio(), false);
   const destino = caixaDeToqueDoRaciocinio();
   if (mesmoRect(raciocinioView.getBounds(), destino)) return;
@@ -713,7 +735,7 @@ function definirRecolhaDoRaciocinio(recolhido) {
     raciocinioAssentando = setTimeout(() => {
       raciocinioAssentando = null;
       aplicarLimitesDoRaciocinio();
-    }, RACIOCINIO_ASSENTO_MS);
+    }, RACIOCINIO_ASSENTO_TETO_MS);
   }
   aplicarLimitesDoRaciocinio(false);
   avisarCaixaDoRaciocinio(limitesDoRaciocinio(), true);
@@ -988,6 +1010,14 @@ app.on('ready', () => {
     if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
     if (e.sender !== raciocinioView.webContents) return;
     definirRecolhaDoRaciocinio(!raciocinioRecolhido);
+  });
+  ipcMain.on('raciocinio:assentou', (e) => {
+    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+    if (e.sender !== raciocinioView.webContents) return;
+    if (!raciocinioAssentando) return;
+    clearTimeout(raciocinioAssentando);
+    raciocinioAssentando = null;
+    aplicarLimitesDoRaciocinio();
   });
   function montarMenu() {
     const menu = Menu.buildFromTemplate([
