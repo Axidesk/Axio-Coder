@@ -37,7 +37,8 @@ SEM_BIBLIOTECA = (
 )
 SEM_JANELA = (
     "nao encontrei essa janela. Use acao='janelas' para ver o que esta aberto: 'janela' aceita"
-    " o numero do hwnd ou um trecho do titulo (ex: 'Bloco de notas')"
+    " o numero do hwnd, 'pid:<numero>' (para escolher pelo processo) ou um trecho do titulo"
+    " (ex: 'Bloco de notas')"
 )
 CHAVE_UNINSTALL = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 CHAVE_UNINSTALL_WOW = "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
@@ -141,9 +142,9 @@ def _valor(elemento):
 
 
 def _janela(identificador):
-    """(janela, erro): escolhida pelo hwnd ou por um trecho do titulo."""
+    """(janela, erro): escolhida pelo hwnd, pelo processo ou por um trecho do titulo."""
     try:
-        abertas = [w for w in _desktop().windows() if _texto(w)]
+        abertas = _janelas_abertas()
     except Exception as exc:
         return None, f"nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
     pedido = str(identificador or "").strip()
@@ -152,6 +153,14 @@ def _janela(identificador):
     if pedido.isdigit():
         for janela in abertas:
             if str(janela.handle) == pedido:
+                return janela, ""
+        return None, SEM_JANELA
+    if pedido.lower().startswith("pid:"):
+        numero = pedido[4:].strip()
+        if not numero.isdigit():
+            return None, "o pid tem de ser um numero (ex: 'pid:12345')."
+        for janela in abertas:
+            if getattr(janela.element_info, "process_id", None) == int(numero):
                 return janela, ""
         return None, SEM_JANELA
     procurado = pedido.lower()
@@ -313,6 +322,23 @@ def _janelas_do_pid(pid):
     except Exception:
         return []
     return sorted(encontradas, key=_area, reverse=True)
+
+
+AREA_MINIMA_DE_JANELA = 1600
+
+
+def _janelas_abertas():
+    """Todas as janelas que valem um gesto: as que tem titulo e as sem titulo com area util.
+
+    Enumerar so pelo titulo escondia janelas reais: uma janela de ferramenta (a do raciocinio,
+    por exemplo) nao aparece na barra de tarefas e pode nao se declarar. O filtro que sobra e
+    de TAMANHO, porque a arvore do Windows esta cheia de janelas de 0x0 que ninguem quer operar.
+    """
+    abertas = []
+    for janela in _desktop().windows():
+        if _texto(janela) or (_visivel(janela) and _area(janela) >= AREA_MINIMA_DE_JANELA):
+            abertas.append(janela)
+    return abertas
 
 
 def _esperar_janela(processo, antes, segundos=ESPERA_JANELA):
@@ -863,7 +889,7 @@ def _acao_arrastar(janela, pedido):
         },
         "janela": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Qual janela: o numero do hwnd (visto em acao='janelas') ou um trecho do titulo, ex: 'Bloco de notas'. Obrigatorio em todas as acoes menos 'janelas'.",
+            "desc": "Qual janela: o numero do hwnd (visto em acao='janelas'), 'pid:<numero>' (escolhe pelo processo - e o caminho para uma janela SEM titulo) ou um trecho do titulo, ex: 'Bloco de notas'. Obrigatorio em todas as acoes menos 'janelas'.",
         },
         "alvo": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -899,17 +925,17 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
 
     if acao == "janelas":
         try:
-            abertas = [w for w in _desktop().windows() if _texto(w)]
+            abertas = _janelas_abertas()
         except Exception as exc:
             return f"ERRO: nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
         if not abertas:
-            return "Nenhuma janela com titulo visivel."
+            return "Nenhuma janela aberta."
         linhas = [
-            f"  hwnd={w.handle:<12} {_tipo(w):<8} {_texto(w)[:70]}"
+            f"  hwnd={w.handle:<12} {_tipo(w):<8} pid={getattr(w.element_info, 'process_id', 0):<7} {_texto(w)[:70] or '(sem titulo)'}"
             for w in abertas
         ]
         return (
-            f"{len(abertas)} janelas abertas (use o hwnd ou um trecho do titulo em 'janela'):\n"
+            f"{len(abertas)} janelas abertas (use o hwnd, 'pid:<numero>' ou um trecho do titulo em 'janela'):\n"
             + "\n".join(linhas)
         )
 

@@ -259,10 +259,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 959,
+        "linha": 1047,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -443,10 +443,10 @@
       "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 254,
+        "linha": 263,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -842,10 +842,10 @@
       "descricao": "Acao acao='compactar' de tool_gerenciar_banco_vetorial. Roda sqlite3 VACUUM no chroma.sqlite3 sob memoria_lock para devolver ao disco o espaco das drawers apagadas: o SQLite marca as paginas como livres mas NAO encolhe o ficheiro sem VACUUM. Precisa de ate 2x o tamanho do ficheiro em espaco livre.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 799,
+        "linha": 834,
         "conferido": [
-          1789827092.677,
-          37883
+          1789909295.919,
+          39601
         ]
       }
     },
@@ -856,10 +856,10 @@
       "descricao": "Progresso textual das operacoes pesadas do vetor (varredura, limpeza, reparo, compactacao). Gravado por _marcar_progresso em estado[\"vetor_ocupado\"][\"progresso\"] e exibido por _ocupacao_atual no acao='status'. E o unico sinal que sobrevive ao timeout da tool: como a operacao continua em background, o resultado da ferramenta perde-se, mas a marca de ocupacao (com o progresso) continua em RAM ate terminar. A mesma marca serve o minerador de memorias (sem campo de progresso), que a grava enquanto minera - ver o termo \"trava da memoria\".",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 505,
+        "linha": 540,
         "conferido": [
-          1789827092.677,
-          37883
+          1789909295.919,
+          39601
         ]
       }
     },
@@ -1101,10 +1101,10 @@
       "descricao": "Recusa (texto) quando ja ha operacao pesada no vetor; a marca de ocupacao (estado[\"vetor_ocupado\"]) inclui agora o minerador de memorias, e as gravacoes/exclusoes de notas adiam-se numa fila (_fila_vetor, drenada por esvaziar_fila_do_vetor) em vez de disputarem o memoria_lock.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 529,
+        "linha": 564,
         "conferido": [
-          1789827092.677,
-          37883
+          1789909295.919,
+          39601
         ]
       }
     },
@@ -1121,10 +1121,10 @@
       "descricao": "Grava a identidade do embedder no sidecar do palace. O aviso 'has no recorded embedder identity; assuming the current model' sai UMA vez, no arranque em que a identidade e gravada (a verificacao corre antes da gravacao) e nao volta enquanto o sidecar tiver a chave. Apagar o palace apaga o sidecar, logo o aviso reaparece uma vez na reconstrucao.",
       "localizacao": {
         "arquivo": "src/backend/tools/code_index.py",
-        "linha": 63,
+        "linha": 64,
         "conferido": [
-          1789827236.694,
-          21937
+          1789909298.752,
+          21997
         ]
       }
     },
@@ -1533,10 +1533,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 927,
+        "linha": 1015,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -2450,10 +2450,10 @@
       "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 375,
+        "linha": 384,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -2491,10 +2491,10 @@
       "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 375,
+        "linha": 384,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -2704,10 +2704,10 @@
       "descricao": "Indice de tudo o que responde a um gesto na pagina, devolvido numa so chamada: seletor, rotulo e coordenada de cada botao, ligacao e campo. Ja exclui os que estao tapados por outro elemento, fora da janela ou sem nome. Apanha DOIS tipos de candidato: tags/roles genericos e qualquer elemento com `cursor: pointer` cujo pai nao seja pointer (o que lhe permite ver os cards do Axio, que sao divs com listener, sem button nem role) - e prefere devolver um seletor POR DADO (`[data-turn-id=\"...\"]`) quando esse atributo identifica um unico elemento, em vez do caminho posicional. E a acao a usar ANTES de agir; quem monta o texto e _texto_do_mapa (preview.py) e quem o colhe na pagina e o ramo mapa de SNIPPET_ALVOS (preview-cdp.js).",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 359,
+        "linha": 409,
         "conferido": [
-          1789874969.947,
-          45272
+          1789909345.915,
+          47671
         ]
       }
     },
@@ -2725,10 +2725,10 @@
       "descricao": "Varios gestos numa so chamada, na ordem dada em passos (JSON). Cada passo entra pela MESMA ferramenta de um gesto isolado (mesmo guard, mesmo relato de efeito) e o roteiro PARA no primeiro que falhar, para os seguintes nao agirem no sitio errado. Maximo de 12 passos; opcionalmente _passos_do_roteiro valida tudo antes de tocar na pagina.",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 138,
+        "linha": 188,
         "conferido": [
-          1789874969.947,
-          45272
+          1789909345.915,
+          47671
         ]
       }
     },
@@ -3301,8 +3301,8 @@
         "arquivo": "src/main.js",
         "linha": 40,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -3380,10 +3380,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 723,
+        "linha": 811,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -3540,10 +3540,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 679,
+        "linha": 767,
         "conferido": [
-          1789876001.006,
-          37960
+          1789908812.45,
+          40691
         ]
       }
     },
@@ -4118,15 +4118,11 @@
         "recolher o raciocinio",
         "botao de menos e mais da janela flutuante"
       ],
-      "identificador": "criarJanelaRaciocinio / limitesDoRaciocinio / mostrarJanelaRaciocinio",
-      "descricao": "Segunda BrowserWindow do Electron (transparente, sem moldura, always-on-parent, nao focavel) que mostra o raciocinio do agente ENQUANTO ele opera o preview - existe porque a vista do preview e uma WebContentsView, que fica SEMPRE por cima do DOM. A pagina e servida em /raciocinio (nao por loadFile: o CORS do file:// bloqueia type=module). ANCORADA A AREA DO PREVIEW, nao a janela-mae: centro horizontal sobre a area e base a 16px do fundo dela (limitesDoRaciocinio, com Math.max(0,...) a impedir transbordo quando a area e estreita). So vive enquanto o preview estiver visivel: definirVisibilidadeDoPreview(false) esconde-a e (true) pre-cria-a. Surge na primeira acao do agente no preview e reabre a cada turno. O rectangulo e SEMPRE do tamanho exacto do painel (aberta 380x200, recolhida 200x38): uma area transparente maior engolia cliques no preview por baixo. O '-' vira '+' e a recolha anima 130ms (10 quadros x 13ms) com o CSS a acompanhar em --rc-recolha. O estado de recolhido tem DONO UNICO no main: o renderer pede raciocinio:alternar e recebe raciocinio:recolhido de volta. Ao fechar o preview desliza e desvanece em 200ms (--dur-3, o mesmo fade-out do preview).",
+      "identificador": "criarJanelaRaciocinio / limitesDoRaciocinio / definirRecolhaDoRaciocinio",
+      "descricao": "Segunda BrowserWindow do Electron (transparente, sem moldura, parent da principal, nao focavel) que mostra o raciocinio do agente ENQUANTO ele opera o preview - existe porque a vista do preview e uma WebContentsView, que fica SEMPRE por cima do DOM. Servida em /raciocinio. ANCORADA A AREA DO PREVIEW (limitesDoRaciocinio): centro horizontal sobre a area e base a 16px do fundo. O rect nativo e SEMPRE exacto ao painel (aberta 380x200, recolhida 200x38, em DIP) porque janela transparente engole cliques. A RECOLHA ANIMA NO CSS: #rc-janela tem width/height em PERCENTAGEM DA JANELA (100%; recolhida calc(100%*200/380) x calc(100%*38/200)) e ancoragem left:50%+bottom:0+translateX(-50%), com transition em width/height (--rc-recolha 0.15s). Medido com o CSS real em Chromium a 380x200: aberta x=0 y=0 380x200, recolhida x=90 y=162 200x38 - o MESMO fundo (200) e o MESMO centro (190) da janela. PERCENTAGEM E NAO PX DE PROPOSITO: o zoom da interface e por origem e esta pagina e 127.0.0.1:5000 como a principal, por isso px fixos dariam um painel maior que a janela sempre que o zoom nao fosse 100%. O redimensionamento NATIVO acontece UMA so vez, quando o painel ja ocupa a caixa nova - como as duas caixas partilham centro e fundo, cortar a janela so tira area transparente e no ecra nao se ve nada (era o piscar de 10 setBounds seguidos). Ordem: recolher esmaece->anima->corta no fim; exibir corta primeiro->anima->mostra. Estado de recolhido com DONO UNICO no main (renderer pede raciocinio:alternar e recebe raciocinio:recolhido). O registo pinta em LOTE, uma vez por quadro (requestAnimationFrame).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 550,
-        "conferido": [
-          1789876001.006,
-          37960
-        ]
+        "linha": 567
       }
     },
     {

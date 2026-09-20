@@ -7,25 +7,25 @@ const api = window.raciocinio || {
     alternar: () => {}
 };
 
-const janela = document.getElementById('rc-janela');
 const botao = document.getElementById('rc-recolher');
 const contador = document.getElementById('rc-contador');
 const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
 
-const ENTRADA = [
-    { opacity: 0, transform: 'translateY(12px) scale(0.985)' },
-    { opacity: 1, transform: 'translateY(0) scale(1)' }
-];
-
-const DURACAO_DA_ENTRADA_MS = 180;
 const MARGEM_DO_FIM_PX = 24;
 
 let recolhido = false;
 let passos = 0;
 let seguirFim = true;
+let pendentes = [];
+let agendado = 0;
 
 function limpar() {
+    if (agendado) {
+        cancelAnimationFrame(agendado);
+        agendado = 0;
+    }
+    pendentes = [];
     while (registo.firstChild) registo.removeChild(registo.firstChild);
     estado.textContent = '';
     passos = 0;
@@ -40,13 +40,6 @@ function noFimDoRegisto() {
 function aoFundo() {
     if (!seguirFim) return;
     registo.scrollTop = registo.scrollHeight;
-}
-
-function acrescentar(elemento) {
-    registo.appendChild(elemento);
-    passos += 1;
-    contador.textContent = passos === 1 ? '1 passo' : passos + ' passos';
-    aoFundo();
 }
 
 function linhaDaFerramenta(evento) {
@@ -72,12 +65,33 @@ function linhaDoPensamento(evento) {
     return linha;
 }
 
+function despejar() {
+    agendado = 0;
+    const lista = pendentes;
+    pendentes = [];
+    if (!lista.length) return;
+    for (const evento of lista) {
+        registo.appendChild(evento.tipo === 'ferramenta' ? linhaDaFerramenta(evento) : linhaDoPensamento(evento));
+        passos += 1;
+    }
+    contador.textContent = passos === 1 ? '1 passo' : passos + ' passos';
+    aoFundo();
+}
+
+function agendarDespejo() {
+    if (agendado) return;
+    agendado = requestAnimationFrame(despejar);
+}
+
 function aplicar(evento) {
     if (!evento || !evento.tipo) return;
-    if (evento.tipo === 'ferramenta') return acrescentar(linhaDaFerramenta(evento));
-    if (evento.tipo === 'pensamento') return acrescentar(linhaDoPensamento(evento));
     if (evento.tipo === 'estado') {
         estado.textContent = evento.texto || '';
+        return;
+    }
+    if (evento.tipo === 'ferramenta' || evento.tipo === 'pensamento') {
+        pendentes.push(evento);
+        agendarDespejo();
         return;
     }
     limpar();
@@ -101,8 +115,6 @@ function alternarRecolha() {
 
 function animarEntrada() {
     document.body.classList.remove('rc-saindo');
-    if (typeof janela.animate !== 'function') return;
-    janela.animate(ENTRADA, { duration: DURACAO_DA_ENTRADA_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
 }
 
 function sair() {
@@ -113,6 +125,7 @@ botao.addEventListener('click', alternarRecolha);
 registo.addEventListener('scroll', () => {
     seguirFim = noFimDoRegisto();
 }, { passive: true });
+document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);

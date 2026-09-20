@@ -10,11 +10,15 @@ body {
 
 :root {
     --rc-fade: 0.11s;
+    --rc-recolha: 0.15s;
 }
 
 #rc-janela {
     position: fixed;
-    inset: 0;
+    left: 50%;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background: var(--bg-panel);
@@ -22,13 +26,22 @@ body {
     overflow: hidden;
     box-shadow: 0 22px 45px -18px rgba(0, 0, 0, 0.75);
     opacity: 1;
-    transform: translateY(0) scale(1);
-    transition: opacity var(--dur-3) var(--ease-fluid), transform var(--dur-3) var(--ease-fluid);
+    transform: translateX(-50%) translateY(0) scale(1);
+    transition:
+        width var(--rc-recolha) var(--ease-fluid),
+        height var(--rc-recolha) var(--ease-fluid),
+        opacity var(--rc-fade) var(--ease-fluid),
+        transform var(--dur-3) var(--ease-fluid);
+}
+
+body.rc-recolhido #rc-janela {
+    width: calc(100% * 200 / 380);
+    height: calc(100% * 38 / 200);
 }
 
 body.rc-saindo #rc-janela {
     opacity: 0;
-    transform: translateY(26px) scale(0.97);
+    transform: translateX(-50%) translateY(26px) scale(0.97);
 }
 
 #rc-barra {
