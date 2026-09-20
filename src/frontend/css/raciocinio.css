@@ -158,35 +158,6 @@ body.rc-recolhido #rc-conteudo {
     transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear var(--rc-fade);
 }
 
-#rc-estado {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1;
-    margin: 0;
-    box-sizing: border-box;
-    padding: 0 14px 14px;
-    font-size: 12.5px;
-    line-height: 1.45;
-    color: var(--text-claro);
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    background: var(--bg-panel);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 12px), rgba(0, 0, 0, 0) 100%);
-    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 12px), rgba(0, 0, 0, 0) 100%);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear var(--rc-fade);
-}
-
-#rc-estado:not(:empty) {
-    opacity: 1;
-    visibility: visible;
-    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear 0s;
-}
-
 #rc-registo {
     flex: 1;
     min-height: 0;

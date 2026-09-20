@@ -66,7 +66,7 @@ const RACIOCINIO_CAIXA_MS = 250;
 const RACIOCINIO_MOVIMENTO_MS = 160;
 const RACIOCINIO_SALTO_PX = 40;
 const RACIOCINIO_QUADRO_MS = 8;
-const RACIOCINIO_FUNDO_VAZIO = '#00000000';
+const RACIOCINIO_FUNDO = '#1e1e1e';
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
 
@@ -131,9 +131,12 @@ function createWindow() {
   });
 
   mainWindow.on('resize', () => acompanharGeometriaDaJanela());
-  mainWindow.on('resized', () => acompanharGeometriaDaJanela());
-  mainWindow.on('maximize', () => acompanharGeometriaDaJanela());
-  mainWindow.on('unmaximize', () => acompanharGeometriaDaJanela());
+  mainWindow.on('move', () => acompanharGeometriaDaJanela());
+  mainWindow.on('resized', () => assentarGeometriaDaJanela());
+  mainWindow.on('moved', () => assentarGeometriaDaJanela());
+  mainWindow.on('maximize', () => assentarGeometriaDaJanela());
+  mainWindow.on('unmaximize', () => assentarGeometriaDaJanela());
+  mainWindow.on('restore', () => assentarGeometriaDaJanela());
 
   mainWindow.on('closed', function () {
     descartarPreviewView();
@@ -465,6 +468,9 @@ function aplicarLimitesDoPreview(limites) {
   const caixa = escalarLimites(limites, zoomDaJanela());
   if (!caixa) return;
   if (caixa.width < RACIOCINIO_LARGURA_RECOLHIDA || caixa.height < RACIOCINIO_ALTURA_RECOLHIDA) return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const cliente = mainWindow.getContentBounds();
+  if (caixa.x + caixa.width > cliente.width + 2 || caixa.y + caixa.height > cliente.height + 2) return;
   previewLimites = caixa;
   previewAncora = ancorarLimites(caixa);
   posicionarPreview(limitesDoPreview());
@@ -503,6 +509,16 @@ function posicionarPreview(caixa) {
 function acompanharGeometriaDaJanela() {
   posicionarPreview(limitesDoPreview());
   aplicarLimitesDoRaciocinio();
+}
+
+function invalidarPainel() {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  raciocinioView.webContents.invalidate();
+}
+
+function assentarGeometriaDaJanela() {
+  acompanharGeometriaDaJanela();
+  invalidarPainel();
 }
 
 function escalarLimites(limites, fator) {
@@ -624,7 +640,7 @@ function criarRaciocinioView() {
       spellcheck: false
     }
   });
-  raciocinioView.setBackgroundColor(RACIOCINIO_FUNDO_VAZIO);
+  raciocinioView.setBackgroundColor(RACIOCINIO_FUNDO);
   raciocinioView.setBorderRadius(Math.round(RACIOCINIO_RAIO_JANELA * zoomDaInterface));
   raciocinioView.setBounds(caixaDeToqueDoRaciocinio());
   raciocinioView.setVisible(false);
@@ -739,7 +755,11 @@ function definirRecolhaDoRaciocinio(recolhido) {
     return;
   }
   if (!mudou) return;
-  avisarRecolhaDoRaciocinio(alvo);
+  if (alvo) {
+    avisarRecolhaDoRaciocinio(true);
+    definirCaixaDoRaciocinio(caixaDeToqueDoRaciocinio(), RACIOCINIO_CAIXA_MS);
+    return;
+  }
   definirCaixaDoRaciocinio(caixaDeToqueDoRaciocinio(), RACIOCINIO_CAIXA_MS);
 }
 
@@ -752,6 +772,7 @@ function definirCaixaDoRaciocinio(destino, duracao) {
   const inicio = raciocinioView.getBounds();
   if (mesmoRect(inicio, destino) || !(duracao > 0)) {
     if (!mesmoRect(inicio, destino)) raciocinioView.setBounds(destino);
+    avisarRecolhaDoRaciocinio(raciocinioRecolhido);
     return;
   }
   const partida = Date.now();
@@ -766,6 +787,7 @@ function definirCaixaDoRaciocinio(destino, duracao) {
       clearInterval(raciocinioAnimando);
       raciocinioAnimando = null;
       if (!mesmoRect(raciocinioView.getBounds(), destino)) raciocinioView.setBounds(destino);
+      avisarRecolhaDoRaciocinio(raciocinioRecolhido);
       return;
     }
     const quadro = {

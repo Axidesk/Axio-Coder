@@ -10,7 +10,6 @@ const api = window.raciocinio || {
 
 const botao = document.getElementById('rc-recolher');
 const contador = document.getElementById('rc-contador');
-const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
 
 const MARGEM_DO_FIM_PX = 4;
@@ -33,7 +32,6 @@ function limpar() {
     while (registo.firstChild) registo.removeChild(registo.firstChild);
     registo.classList.remove('rc-por-cima');
     registo.scrollTop = 0;
-    estado.textContent = '';
     passos = 0;
     contador.textContent = '';
     colado = true;
@@ -103,11 +101,7 @@ function agendarDespejo() {
 }
 
 function aplicar(evento) {
-    if (!evento || !evento.tipo) return;
-    if (evento.tipo === 'estado') {
-        estado.textContent = evento.texto || '';
-        return;
-    }
+    if (!evento || !evento.tipo || evento.tipo === 'estado') return;
     if (evento.tipo === 'ferramenta' || evento.tipo === 'pensamento') {
         pendentes.push(evento);
         agendarDespejo();

@@ -1,7 +1,6 @@
 const ARGUMENTOS_VISIVEIS = 2;
 const LIMITE_TEXTO = 600;
 const LIMITE_ARGUMENTO = 70;
-const EVENTOS_DE_ESTADO = new Set(['status', 'executing']);
 const EVENTOS_DE_FIM = new Set(['done', 'cancel', 'error']);
 
 let ipcRenderer = null;
@@ -15,7 +14,7 @@ let turnoAtual = null;
 
 function recortar(texto, limite) {
     const limpo = String(texto == null ? '' : texto).trim();
-    return limpo.length > limite ? limpo.slice(0, limite - 1) + '\u2026' : limpo;
+    return limpo.length > limite ? limpo.slice(0, limite - 1) + '…' : limpo;
 }
 
 function numaLinha(texto) {
@@ -36,7 +35,7 @@ function resumoDosArgumentos(args) {
         partes.push(chave + ': ' + recortar(texto.replace(/\s+/g, ' '), LIMITE_ARGUMENTO));
         if (partes.length >= ARGUMENTOS_VISIVEIS) break;
     }
-    return partes.join(' \u00b7 ');
+    return partes.join(' · ');
 }
 
 function eventoDoRaciocinio(dados) {
@@ -45,9 +44,6 @@ function eventoDoRaciocinio(dados) {
     }
     if (dados.type === 'tool_used') {
         return { tipo: 'ferramenta', nome: nomeDaFerramenta(dados.name), resumo: resumoDosArgumentos(dados.args) };
-    }
-    if (EVENTOS_DE_ESTADO.has(dados.type)) {
-        return { tipo: 'estado', texto: numaLinha(dados.function || dados.message) };
     }
     return null;
 }
