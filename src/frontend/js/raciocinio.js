@@ -16,7 +16,7 @@ const ENTRADA = [
     { opacity: 1, transform: 'translateY(0) scale(1)' }
 ];
 
-const ESPERA_DA_RECOLHA_MS = 220;
+const ESPERA_DA_RECOLHA_MS = 130;
 
 let recolhido = false;
 let passos = 0;

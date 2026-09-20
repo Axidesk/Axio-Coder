@@ -42,17 +42,19 @@ let janelaRaciocinio = null;
 let raciocinioRecolhido = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
+let raciocinioAnimacao = null;
 const ALTURA_DA_BARRA_DE_TITULO = 32;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
 const ZOOM_MAXIMO = 2;
 const PASSOS_DE_ZOOM = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
-const RACIOCINIO_LARGURA = 560;
-const RACIOCINIO_ALTURA = 340;
-const RACIOCINIO_LARGURA_RECOLHIDA = 280;
-const RACIOCINIO_ALTURA_RECOLHIDA = 42;
-const RACIOCINIO_TOPO = 0.08;
-const RACIOCINIO_TOPO_MINIMO = 52;
+const RACIOCINIO_LARGURA = 380;
+const RACIOCINIO_ALTURA = 200;
+const RACIOCINIO_LARGURA_RECOLHIDA = 200;
+const RACIOCINIO_ALTURA_RECOLHIDA = 38;
+const RACIOCINIO_MARGEM_FUNDO = 16;
+const RACIOCINIO_QUADRO_MS = 16;
+const RACIOCINIO_QUADROS = 12;
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
 
@@ -415,6 +417,7 @@ function definirVisibilidadeDoPreview(visivel) {
   const alguma = viewDoTipo('node') || viewDoTipo('web');
   if (!visivel && !alguma) return;
   previewVisivel = !!visivel;
+  if (!previewVisivel) esconderJanelaRaciocinio();
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
     if (!view) continue;
@@ -459,26 +462,60 @@ function limitesDeArranque() {
 }
 
 function limitesDoRaciocinio() {
-  const caixa = mainWindow.getContentBounds();
   const largura = raciocinioRecolhido ? RACIOCINIO_LARGURA_RECOLHIDA : RACIOCINIO_LARGURA;
   const altura = raciocinioRecolhido ? RACIOCINIO_ALTURA_RECOLHIDA : RACIOCINIO_ALTURA;
-  const topo = Math.max(RACIOCINIO_TOPO_MINIMO, Math.round(caixa.height * RACIOCINIO_TOPO));
+  const caixa = (mainWindow && !mainWindow.isDestroyed())
+    ? mainWindow.getContentBounds()
+    : { x: 0, y: 0, width: largura, height: altura };
+  const area = previewLimites || { x: 0, y: 0, width: caixa.width, height: caixa.height };
   return {
-    x: Math.round(caixa.x + (caixa.width - largura) / 2),
-    y: Math.round(caixa.y + topo),
+    x: Math.round(caixa.x + area.x + (area.width - largura) / 2),
+    y: Math.round(caixa.y + area.y + Math.max(0, area.height - altura - RACIOCINIO_MARGEM_FUNDO)),
     width: largura,
     height: altura
   };
 }
 
+function pararAnimacaoDoRaciocinio() {
+  if (!raciocinioAnimacao) return;
+  clearInterval(raciocinioAnimacao);
+  raciocinioAnimacao = null;
+}
+
+function animarRaciocinio(destino) {
+  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
+  pararAnimacaoDoRaciocinio();
+  const inicio = janelaRaciocinio.getBounds();
+  let quadro = 0;
+  raciocinioAnimacao = setInterval(() => {
+    quadro += 1;
+    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return pararAnimacaoDoRaciocinio();
+    if (quadro >= RACIOCINIO_QUADROS) {
+      pararAnimacaoDoRaciocinio();
+      janelaRaciocinio.setBounds(destino);
+      return;
+    }
+    const suave = 1 - Math.pow(1 - quadro / RACIOCINIO_QUADROS, 3);
+    const passo = (a, b) => Math.round(a + (b - a) * suave);
+    janelaRaciocinio.setBounds({
+      x: passo(inicio.x, destino.x),
+      y: passo(inicio.y, destino.y),
+      width: passo(inicio.width, destino.width),
+      height: passo(inicio.height, destino.height)
+    });
+  }, RACIOCINIO_QUADRO_MS);
+}
+
 function aplicarLimitesDoRaciocinio() {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  pararAnimacaoDoRaciocinio();
   janelaRaciocinio.setBounds(limitesDoRaciocinio());
 }
 
 function descartarJanelaRaciocinio() {
   const janela = janelaRaciocinio;
+  pararAnimacaoDoRaciocinio();
   janelaRaciocinio = null;
   raciocinioRecolhido = false;
   raciocinioBuffer = [];
@@ -570,7 +607,7 @@ function alimentarRaciocinio(evento) {
 
 function definirRecolhaDoRaciocinio(recolhido) {
   raciocinioRecolhido = !!recolhido;
-  aplicarLimitesDoRaciocinio();
+  animarRaciocinio(limitesDoRaciocinio());
 }
 
 function urlDoAlvo(texto) {

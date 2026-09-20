@@ -259,10 +259,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 868,
+        "linha": 905,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -443,10 +443,10 @@
       "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 247,
+        "linha": 249,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -1533,10 +1533,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 836,
+        "linha": 873,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -2450,10 +2450,10 @@
       "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 368,
+        "linha": 370,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -2491,10 +2491,10 @@
       "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 368,
+        "linha": 370,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -2550,10 +2550,10 @@
       "descricao": "Servidor HTTP efemero que o processo principal do Electron abre em 127.0.0.1 no arranque (src/preview-cdp.js:iniciarPonte), com token aleatorio por sessao e so a aceitar pedidos de casa e so por POST. E o unico caminho pelo qual as minhas ferramentas (que vivem no Flask) alcancam o Chrome DevTools Protocol do preview: o Python nao fala IPC. A porta e o token chegam ao Flask por AXIO_PONTE_PORTA/AXIO_PONTE_TOKEN, injetados no ambiente do spawn (src/main.js:startFlask) - por isso um Flask nascido antes desta mudanca nao tem ponte nenhuma, e as ferramentas avisam para fechar e reabrir o Axio. Sem ponte: mensagem honesta, nunca falha silenciosa.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1562,
+        "linha": 1691,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -2570,10 +2570,10 @@
       "descricao": "O que a pagina do preview escreveu na consola, devolvido como DADO (nivel, origem, ficheiro:linha) e nao como imagem - e a primeira coisa a olhar quando um botao da pagina nao responde. Dona do buffer: a lista `consola` de src/preview-cdp.js, alimentada pelo evento `Runtime.consoleAPICalled` (e por `Runtime.exceptionThrown` e pelo `Log.entryAdded`, que apanha os 404 de recursos - a classe exacta do \"html nu\"). Ligada por preview-cdp.js:prepararDepurador no nascimento da view, esvaziada a cada navegacao. A ferramenta que a le e tool_observar_preview com acao='consola' (filtra por 'nivel' e limpa com o proprio pedido).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1070,
+        "linha": 1074,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -2584,10 +2584,10 @@
       "descricao": "Clique e escrita a serio na pagina do preview, pelo Chrome DevTools Protocol - o clique vai por Input.dispatchMouseEvent (mover, premir, largar, no centro do elemento) e o texto por Input.insertText, por isso funciona com React, Vue e ouvintes nativos. O seletor e RE-RESOLVIDO no instante do gesto (preview-cdp.js:caixaDoPedido) e, antes de disparar, um hit-test (funcao tapa, dentro do SNIPPET_ALVOS) pergunta quem esta no topo no ponto do gesto: se for OUTRO elemento, RECUSA e diz quem tapa; se o centro cair fora da janela, RECUSA tambem. O gesto devolve o proprio EFEITO (assinatura da pagina, erros novos da consola, pedidos falhados, estado do alvo). Ferramenta: tool_operar_preview em src/backend/tools/preview.py (acoes carregar, mostrar, clicar, escrever, teclar).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1260,
+        "linha": 1322,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -2605,10 +2605,10 @@
       "descricao": "O que a pagina do preview tentou carregar e falhou, devolvido como DADO (estado, URL, tipo, motivo) e nao como imagem - e o que explica uma pagina que aparece sem estilo ou sem os scripts. Dona do buffer: a lista `rede` de src/preview-cdp.js, alimentada por Network.responseReceived (so status >= 400: aviso para 4xx, erro para 5xx) e por Network.loadingFailed com canceled=false; o url/tipo das falhas vem do mapa `pedidos` (requestId -> url/type), alimentado por Network.requestWillBeSent. Ligada por preview-cdp.js:prepararDepurador (Network.enable) e esvaziada a cada navegacao por limparRegistos, junto com a consola. A ferramenta que a le e tool_observar_preview com acao='rede' (filtra por 'nivel' tal como a consola).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1076,
+        "linha": 1080,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -2625,10 +2625,10 @@
       "descricao": "Circulo de 14px com anel verde --oliva que aparece na PAGINA do preview, no ponto exato onde eu vou clicar ou escrever, para o utilizador ver o gesto a acontecer - o papel que no Codex cabe ao cursor do rato. E um div fixo injetado por Runtime.evaluate (id __axio_cursor, pointer-events none, z-index maximo) com estilos INLINE (nunca um <style>, que uma CSP restritiva bloquearia): aparece antes do gesto com uma pausa de PAUSA_CURSOR_MS (150ms), encolhe no clique e desvanece num setTimeout de 240ms. So corre quando cursorAVista(view) e verdadeiro (o preview a frente) - com o preview atras de outra vista o gesto nao ganha atraso nenhum e nada e injetado. Vive em preview-cdp.js:desenharCursor, usado por acaoClicar e acaoEscrever.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1227,
+        "linha": 1231,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -2665,10 +2665,10 @@
       "descricao": "Recarga da pagina do preview pelo CDP com ignoreCache: true, para eu testar codigo frontend recem-editado sem risco de estar a medir uma versao velha. Distinta do botao de recarregar da barra (main.js:recarregarPreview), que usa a cache como qualquer navegador. A janela principal continua a correr o JS antigo ate o utilizador fazer Ctrl+R; o preview apanha o novo sozinho.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1423,
+        "linha": 1550,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -2704,10 +2704,10 @@
       "descricao": "Indice de tudo o que responde a um gesto na pagina, devolvido numa so chamada: seletor, rotulo e coordenada de cada botao, ligacao e campo. Ja exclui os que estao tapados por outro elemento, fora da janela ou sem nome. Apanha DOIS tipos de candidato: tags/roles genericos e qualquer elemento com `cursor: pointer` cujo pai nao seja pointer (o que lhe permite ver os cards do Axio, que sao divs com listener, sem button nem role) - e prefere devolver um seletor POR DADO (`[data-turn-id=\"...\"]`) quando esse atributo identifica um unico elemento, em vez do caminho posicional. E a acao a usar ANTES de agir; quem monta o texto e _texto_do_mapa (preview.py) e quem o colhe na pagina e o ramo mapa de SNIPPET_ALVOS (preview-cdp.js).",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 339,
+        "linha": 359,
         "conferido": [
-          1789873216.748,
-          41680
+          1789874969.947,
+          45272
         ]
       }
     },
@@ -2725,10 +2725,10 @@
       "descricao": "Varios gestos numa so chamada, na ordem dada em passos (JSON). Cada passo entra pela MESMA ferramenta de um gesto isolado (mesmo guard, mesmo relato de efeito) e o roteiro PARA no primeiro que falhar, para os seguintes nao agirem no sitio errado. Maximo de 12 passos; opcionalmente _passos_do_roteiro valida tudo antes de tocar na pagina.",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 118,
+        "linha": 138,
         "conferido": [
-          1789873216.748,
-          41680
+          1789874969.947,
+          45272
         ]
       }
     },
@@ -3301,8 +3301,8 @@
         "arquivo": "src/main.js",
         "linha": 40,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -3380,10 +3380,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 632,
+        "linha": 669,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -3540,10 +3540,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 588,
+        "linha": 625,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -3768,10 +3768,10 @@
       "descricao": "Le o desenho ja computado pelo browser pelo tool_observar_preview(acao='estilo').",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 481,
+        "linha": 485,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -3787,10 +3787,10 @@
       "descricao": "Overlay injetado DENTRO da pagina do preview (nao e o inspetor do Axio, que so ve o DOM do Axio): destaca o elemento sob o cursor, e no clique mostra seletor, caixa, layout, cores e fonte num painel na propria pagina, e manda o mesmo por console marcado para o campo de mensagem do Axio. Shift+clique interage, Esc sai. Sem DOM (canvas do IFC/DXF/PDF) nao ha o que apanhar alem do viewport.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 550,
+        "linha": 554,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -4099,10 +4099,10 @@
       "descricao": "tool_operar_preview(acao='ficheiro', alvo='<caminho>') poe um ficheiro do disco num campo de ficheiro da pagina SEM abrir a janela nativa do Windows (DOM.setFileInputFiles, por backendNodeId se a propria pagina ja abriu o escolhedor, ou pelo objectId do campo). O campo recebe o ficheiro e o evento de mudanca, logo React/Vue reagem. O caminho resolve-se por resolver_caminho_arquivo (relativo a raiz do projeto ou absoluto). A alternativa para dialogos nativos de OUTROS programas e tool_operar_janela (UI Automation: escrever no campo \"Nome do ficheiro\" e invocar \"Abrir\"). Os dialogos da propria pagina (alert/confirm/beforeunload) fecham-se sozinhos e ficam registados na consola do preview.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1446,
+        "linha": 1573,
         "conferido": [
-          1789873164.162,
-          61724
+          1789875005.773,
+          66877
         ]
       }
     },
@@ -4122,10 +4122,10 @@
       "descricao": "Janela propria do Electron (transparente, sem moldura, always-on-parent) que mostra o raciocinio do agente ENQUANTO ele opera o preview - existe porque a coluna 3 do Monaco fica tapada quando a vista ativa e o preview. Surge sozinha na primeira acao do agente no preview (gancho aoUsar da ponte), centrada um pouco abaixo do topo da janela-mae, e some quando o turno acaba (evento SSE done/cancel/error -> tipo 'fim'). O rectangulo da janela e SEMPRE do tamanho exacto do painel: recolhida encolhe para a barra, senao a area transparente engolia cliques no preview por baixo. O '-' vira '+' na barra e o corpo recolhe com grid-template-rows 0fr->1fr.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 547,
+        "linha": 584,
         "conferido": [
-          1789874221.138,
-          34461
+          1789875354.998,
+          35872
         ]
       }
     },
@@ -4165,7 +4165,11 @@
       "descricao": "O gesto que um canvas exige e que um clique nao substitui: press no primeiro ponto, movimentos interpolados (fatias de ~24 px, teto de 60 por segmento e 400 no total) com o botao premido, e release onde o rato parou. 'ponto' leva dois ou mais pontos ('x1,y1 x2,y2 ...'), o mesmo formato da ferramenta das janelas nativas. Nasceu da queixa do utilizador a 2026-10 ('interage com o canvas pra gente testar'): sem ele o agente nao tinha como desenhar, panoramizar ou puxar nada dentro de uma pagina.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1386
+        "linha": 1386,
+        "conferido": [
+          1789875005.773,
+          66877
+        ]
       }
     },
     {
@@ -4181,7 +4185,11 @@
       "descricao": "Roda do rato por cima de um ponto da pagina (ou do centro de um 'seletor'), o gesto do zoom de um mapa ou de um desenho: manda um 'mouseWheel' pelo CDP com deltaY em pixeis (negativo aproxima, positivo afasta; sem valor, -240). O canvas do visualizador DXF tem um ouvinte de 'wheel' proprio (src/frontend/js/viewer/leitores/dxf.js:aoRoda:114), logo so uma roda a serio o move.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1420
+        "linha": 1420,
+        "conferido": [
+          1789875005.773,
+          66877
+        ]
       }
     }
   ]
