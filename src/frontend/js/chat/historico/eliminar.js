@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import * as dom from '../dom.js';
 import { showAlert } from '../ui.js';
 import { updateActionButtons } from './acoes.js';
-import { renderSalvoCardIfNeeded } from './cards.js';
+import { renderVersoesCards } from './cards.js';
 
 const { confirmDeleteContent, confirmDeletePopup, lblDeleteMessage } = dom;
 
@@ -61,7 +61,7 @@ const { confirmDeleteContent, confirmDeletePopup, lblDeleteMessage } = dom;
                 if (state.sessionDetailCache[filename]) {
                     state.sessionDetailCache[filename] = state.sessionDetailCache[filename].filter(l => String(l.id) !== String(turn_id));
                 }
-                renderSalvoCardIfNeeded();
+                renderVersoesCards();
                 showAlert('Tarefa excluída.');
             } else {
                 showAlert(data && data.message ? data.message : 'Erro ao excluir tarefa.');

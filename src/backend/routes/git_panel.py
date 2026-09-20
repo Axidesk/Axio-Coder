@@ -59,10 +59,28 @@ def git_estado():
         return jsonify({"status": "sem_repo", "message": info.get("motivo", ""), "estado": info})
     arvore = git_repo.historico(pasta)
     info["commits"] = arvore.get("commits", [])
-    info["tags"] = arvore.get("tags", [])
+    info["tags"] = git_repo.tags_com_ponto(pasta)
     info["erro_historico"] = arvore.get("erro", "")
     info["manifestos"] = git_repo.manifestos_diferentes(info.get("raiz", ""), "HEAD")
     return jsonify({"status": "ok", "estado": info})
+
+
+@git_bp.route("/api/git/versoes", methods=["GET"])
+def git_versoes():
+    info = git_repo.versoes(_pasta())
+    if not info.get("repo"):
+        return jsonify({
+            "status": "sem_repo",
+            "message": info.get("motivo", ""),
+            "tags": [],
+            "ramos": [],
+        })
+    return jsonify({
+        "status": "ok",
+        "tags": info.get("tags", []),
+        "ramos": info.get("ramos", []),
+        "erro": info.get("erro", ""),
+    })
 
 
 @git_bp.route("/api/git/commit", methods=["POST"])

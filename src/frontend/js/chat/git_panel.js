@@ -3,7 +3,7 @@ import { vistaDe } from './colunas.js';
 import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
 import { requestGitRestore } from './historico/restauro.js';
-import { updateRoundCardCommitByTurnId } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId } from './historico/cards.js';
 
 const LIMITE_COMMITS = 12;
 
@@ -100,27 +100,49 @@ const COMANDO_DE_DEPENDENCIA = {
         html += '</div>';
         return html;
     }
-    function htmlHistorico(estado) {
+    function htmlHistorico(estado, grupo) {
+        const pontoDaTarefa = (grupo && grupo.commit) || '';
         let html = '<div class="git-seccao"><div class="git-seccao-titulo">Historico do repositorio</div>';
         const commits = (estado.commits || []).slice(0, LIMITE_COMMITS);
         if (!commits.length) {
             html += '<div class="git-vazio">Nenhum commit neste repositorio.</div></div>';
             return html;
         }
-        commits.forEach(c => {
-            const marcas = (c.tags || []).map(t => `<span class="git-tag">${escapeHtml(t)}</span>`).join('');
-            html += `<div class="git-commit${c.head ? ' git-commit-head' : ''}">
+        const visiveis = commits.slice(0, LIMITE_COMMITS);
+        const daTarefa = pontoDaTarefa ? commits.find(c => c.hash === pontoDaTarefa) : null;
+        const extra = daTarefa && !visiveis.includes(daTarefa) ? daTarefa : null;
+        const linhaCommit = (c, daTarefa) => {
+            const marcas = (c.tags || []).map(t => `<span class="git-tag${daTarefa ? ' git-tag-acesa' : ''}">${escapeHtml(t)}</span>`).join('');
+            return `<div class="git-commit${c.head ? ' git-commit-head' : ''}${daTarefa ? ' git-commit-da-tarefa' : ''}">
                 <span class="git-hash">${escapeHtml(c.curto)}</span>
                 <span class="git-commit-msg">${escapeHtml(c.mensagem)}</span>
                 ${marcas}
             </div>`;
-        });
+        };
+        visiveis.forEach(c => { html += linhaCommit(c, !!pontoDaTarefa && c.hash === pontoDaTarefa); });
+        if (extra) {
+            html += `<div class="git-nota">e mais ${commits.indexOf(extra) - visiveis.length} commit(s) ate ao desta tarefa</div>`;
+            html += linhaCommit(extra, true);
+        }
         html += '</div>';
         const tags = estado.tags || [];
         if (tags.length) {
             html += '<div class="git-seccao"><div class="git-seccao-titulo">Etiquetas</div><div class="git-tags">';
-            html += tags.slice(0, 20).map(t => `<span class="git-tag">${escapeHtml(t)}</span>`).join('');
-            html += '</div></div>';
+            tags.slice(0, 20).forEach(t => {
+                const nome = typeof t === 'string' ? t : t.nome;
+                const ponto = typeof t === 'string' ? '' : t.ponto;
+                const curto = typeof t === 'string' ? '' : t.curto;
+                const acesa = !!pontoDaTarefa && ponto === pontoDaTarefa;
+                const dono = ponto ? nomeDaTarefaDoCommit(ponto) : '';
+                const titulo = curto ? `aponta para ${curto}${dono ? ` · ${dono}` : ''}` : '';
+                html += `<span class="git-tag${acesa ? ' git-tag-acesa' : ''}" title="${escapeHtml(titulo)}">${escapeHtml(nome)}`
+                    + (curto ? `<span class="git-tag-ponto">${escapeHtml(curto)}</span>` : '')
+                    + (dono ? `<span class="git-tag-dono">${escapeHtml(dono)}</span>` : '')
+                    + '</span>';
+            });
+            html += '</div>';
+            html += '<div class="git-nota">Cada etiqueta mostra o ponto a que aponta. Acende quando esse ponto e o commit da tarefa selecionada.</div>';
+            html += '</div>';
         }
         return html;
     }
@@ -156,7 +178,7 @@ const COMANDO_DE_DEPENDENCIA = {
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado);
         html += htmlDaTarefa(grupo, estado);
-        html += htmlHistorico(estado);
+        html += htmlHistorico(estado, grupo);
         html += htmlDependencias(estado);
         html += '</div>';
         return html;

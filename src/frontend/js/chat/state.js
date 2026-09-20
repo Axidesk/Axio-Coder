@@ -29,6 +29,8 @@ export const state = {
     sessionHistoryList: [],
     sessionDetailCache: {},
     sessionIndiceEmCurso: null,
+    versoesGit: null,
+    versoesEmCurso: null,
     sessionHistoryLoaded: false,
     currentTurnLogs: [],
     currentTurnSummary: '',

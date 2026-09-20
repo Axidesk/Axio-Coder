@@ -6,8 +6,11 @@ import re
 from src.backend.services.file_service import git_saida, raiz_repositorio
 
 _MANIFESTOS = ("requirements.txt", "package.json")
-_LIMITE_HISTORICO = 20
+_LIMITE_HISTORICO = 60
 _LIMITE_FICHEIROS = 80
+_LIMITE_TAGS = 24
+_LIMITE_INTERVALO = 200
+_LIMITE_HISTORIA = 500
 _SEPARADOR = "\x1f"
 
 
@@ -148,9 +151,140 @@ def historico(pasta, limite=_LIMITE_HISTORICO):
             "tags": [m[5:] for m in marcas if m.startswith("tag: ")],
             "head": "HEAD" in marcas,
         })
-    tags_texto, _ = git_saida(raiz, "tag", "--list", "--sort=-creatordate")
-    tags = [t.strip() for t in (tags_texto or "").splitlines() if t.strip()]
-    return {"repo": True, "raiz": raiz, "commits": commits, "tags": tags, "erro": erro_log}
+    return {"repo": True, "raiz": raiz, "commits": commits, "erro": erro_log}
+
+
+def _tags_com_ponto(raiz):
+    """Cada etiqueta com o commit exato a que aponta. Numa etiqueta anotada o alvo esta em *objectname."""
+    formato = _SEPARADOR.join([
+        "%(refname:short)", "%(objecttype)", "%(objectname)", "%(*objectname)",
+        "%(creatordate:iso-strict)", "%(subject)", "%(*subject)",
+    ])
+    saida, erro = git_saida(raiz, "for-each-ref", "--sort=-creatordate", f"--format={formato}", "refs/tags")
+    if erro:
+        return [], erro
+    tags = []
+    for linha in (saida or "").splitlines():
+        if not linha.strip():
+            continue
+        campos = linha.split(_SEPARADOR)
+        if len(campos) < 7:
+            continue
+        anotada = campos[1] == "tag"
+        ponto = campos[3] if anotada else campos[2]
+        mensagem = campos[6] if anotada else campos[5]
+        tags.append({
+            "nome": campos[0],
+            "ponto": ponto,
+            "curto": curto(ponto),
+            "data": campos[4],
+            "mensagem": (mensagem or "").strip(),
+        })
+    return tags[:_LIMITE_TAGS], ""
+
+
+def tags_com_ponto(pasta):
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return []
+    return _tags_com_ponto(raiz)[0]
+
+
+def _commits_do_intervalo(raiz, ponta, base):
+    argumentos = ["rev-list", f"--max-count={_LIMITE_INTERVALO}", ponta]
+    if base:
+        argumentos.extend(["--not", base])
+    saida, erro = git_saida(raiz, *argumentos)
+    if erro:
+        return [], erro
+    return [l.strip() for l in (saida or "").splitlines() if l.strip()], ""
+
+
+def _preencher_intervalos(raiz, tags):
+    """Commits de cada intervalo e quantos vieram depois, de UMA leitura do log (sem uma chamada por etiqueta)."""
+    formato = "%H" + _SEPARADOR + "%D"
+    saida, erro = git_saida(raiz, "log", f"--max-count={_LIMITE_HISTORIA}", f"--pretty=format:{formato}")
+    hashes = []
+    if not erro:
+        hashes = [l.split(_SEPARADOR)[0].strip() for l in (saida or "").splitlines() if l.strip()]
+    indice = {h: i for i, h in enumerate(hashes)}
+    cortado = len(hashes) >= _LIMITE_HISTORIA
+    conhecidas = []
+    for tag in tags:
+        tag["commits"] = []
+        tag["truncado"] = False
+        tag["fora"] = False
+        tag["depois"] = 0
+        posicao = indice.get(tag["ponto"])
+        if posicao is None:
+            tag["fora"] = True
+            continue
+        tag["depois"] = posicao
+        conhecidas.append((posicao, tag))
+    conhecidas.sort(key=lambda par: par[0])
+    for ordem, (posicao, tag) in enumerate(conhecidas):
+        ultima = ordem + 1 >= len(conhecidas)
+        fim = len(hashes) if ultima else conhecidas[ordem + 1][0]
+        tag["commits"] = hashes[posicao:fim]
+        tag["truncado"] = bool(ultima and cortado)
+
+
+def _ramo_principal(raiz):
+    for nome in ("main", "master"):
+        if not git_saida(raiz, "rev-parse", "--verify", f"refs/heads/{nome}")[1]:
+            return nome
+    return ""
+
+
+def _base_do_ramo(raiz, nome, upstream, principal):
+    if upstream:
+        return upstream
+    remoto = f"origin/{nome}"
+    if not git_saida(raiz, "rev-parse", "--verify", f"refs/remotes/{remoto}")[1]:
+        return remoto
+    return principal if nome != principal else ""
+
+
+def _ramos_com_ponto(raiz):
+    principal = _ramo_principal(raiz)
+    formato = _SEPARADOR.join([
+        "%(refname:short)", "%(objectname)", "%(HEAD)", "%(upstream:short)",
+        "%(committerdate:iso-strict)", "%(subject)",
+    ])
+    saida, erro = git_saida(raiz, "for-each-ref", "--sort=-committerdate", f"--format={formato}", "refs/heads")
+    if erro:
+        return [], erro
+    ramos = []
+    for linha in (saida or "").splitlines():
+        campos = linha.split(_SEPARADOR)
+        if len(campos) < 6:
+            continue
+        nome = campos[0]
+        base = _base_do_ramo(raiz, nome, campos[3].strip(), principal)
+        commits, _ = _commits_do_intervalo(raiz, nome, base) if base else ([], "")
+        ramos.append({
+            "nome": nome,
+            "ponto": campos[1],
+            "curto": curto(campos[1]),
+            "atual": campos[2].strip() == "*",
+            "base": base,
+            "por_publicar": len(commits),
+            "commits": commits,
+            "data": campos[4],
+            "mensagem": (campos[5] or "").strip(),
+        })
+    return ramos, ""
+
+
+def versoes(pasta):
+    """Etiquetas e ramos com o ponto exato de cada um e os commits do intervalo de cada etiqueta."""
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return {"repo": False, "motivo": erro, "tags": [], "ramos": []}
+    tags, erro_tags = _tags_com_ponto(raiz)
+    _preencher_intervalos(raiz, tags)
+    ramos, erro_ramos = _ramos_com_ponto(raiz)
+    return {"repo": True, "raiz": raiz, "tags": tags, "ramos": ramos, "erro": erro_tags or erro_ramos}
 
 
 def _validar_caminhos(ficheiros):

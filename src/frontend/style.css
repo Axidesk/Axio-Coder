@@ -302,6 +302,16 @@ body {
     text-decoration: line-through;
     opacity: 0.7;
 }
+.history-round-tag {
+    color: var(--oliva);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 1px 7px;
+    border-radius: 9999px;
+    background: var(--bg-selecao);
+    white-space: nowrap;
+}
 .file-card-header {
     background: transparent;
     transition: background var(--dur-1);
