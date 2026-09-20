@@ -87,6 +87,9 @@
 #history-search-cols {
     display: flex;
 }
+.busca-coluna {
+    border-right: 1px solid var(--border-suave);
+}
 .busca-coluna-topo {
     display: flex;
     align-items: baseline;

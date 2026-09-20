@@ -7,8 +7,6 @@ import { assignDisplayNamesByDay, ensureSessionDetailsLoaded, rebuildGroupFromSa
 
 const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
-const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas suas perguntas.</div>';
-const MSG_BUSCA_RESPOSTAS = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas minhas respostas.</div>';
 const MSG_VAZIO_PERGUNTAS = 'Nenhuma pergunta encontrada com esse termo.';
 const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
 
@@ -35,7 +33,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         if (historySearchBox) historySearchBox.classList.add('aberta');
         const termoAberto = historySearchInputInline ? historySearchInputInline.value.trim() : '';
         if (termoAberto) performHistorySearch(termoAberto);
-        else if (!jaAberta) limparColunas(MSG_BUSCA_INICIAL, MSG_BUSCA_RESPOSTAS);
+        else if (!jaAberta) limparColunas();
         ligarBuscaInline();
         if (historySearchInputInline) historySearchInputInline.focus();
     }
@@ -57,7 +55,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
             clearTimeout(searchTimer);
             const termo = historySearchInputInline.value.trim();
             if (!termo) {
-                limparColunas(MSG_BUSCA_INICIAL, MSG_BUSCA_RESPOSTAS);
+                limparColunas();
                 return;
             }
             searchTimer = setTimeout(() => performHistorySearch(termo), 200);
@@ -94,9 +92,9 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         pintarColuna(historySearchResultsInline, buscaContaPerguntas, perguntas, termoLower, MSG_VAZIO_PERGUNTAS);
         pintarColuna(historySearchRespostas, buscaContaRespostas, respostas, termoLower, MSG_VAZIO_RESPOSTAS);
     }
-    function limparColunas(esquerda, direita) {
-        if (historySearchResultsInline) historySearchResultsInline.innerHTML = esquerda;
-        if (historySearchRespostas) historySearchRespostas.innerHTML = direita;
+    function limparColunas() {
+        if (historySearchResultsInline) historySearchResultsInline.innerHTML = '';
+        if (historySearchRespostas) historySearchRespostas.innerHTML = '';
         if (buscaContaPerguntas) buscaContaPerguntas.textContent = '';
         if (buscaContaRespostas) buscaContaRespostas.textContent = '';
     }
@@ -136,6 +134,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
             if (!r.saved) return;
             const group = rebuildGroupFromSaved(r.saved);
             group.displayName = r.nome;
+            collapseHistorySearchInline();
             selectHistoryTaskInPile(r.dia, r.saved.id);
             openFilesPanel(group, vistaDe('historico'));
         });
