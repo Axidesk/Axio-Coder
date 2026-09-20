@@ -83,6 +83,33 @@ def _classes_fora_do_css(html, estilo, ficheiros_css):
             if not re.search(r"\." + re.escape(c) + r"(?![A-Za-z0-9_-])", alvo)]
 
 
+_USO_DE_VARIAVEL = re.compile(r"var\(\s*(--[A-Za-z0-9_-]+)")
+
+
+def _variaveis_sem_valor(html, estilo, ficheiros_css):
+    """Variaveis CSS usadas na medicao que nenhuma folha carregada define.
+
+    Uma folha que use var(--oliva) sem que ninguem defina --oliva cai no valor
+    HERDADO, e o browser nao reclama de uma variavel ausente: a cor sai outra e
+    a paleta nao e a do produto, em silencio. Foi assim que uma medicao devolveu
+    uma grelha de cinzentos onde se esperava o verde da etiqueta acesa - sem
+    este aviso, o defeito parece estar no CSS que se esta a medir.
+    """
+    folhas = ""
+    for caminho in ficheiros_css:
+        try:
+            with open(caminho, encoding="utf-8") as f:
+                folhas += f.read()
+        except OSError:
+            continue
+    texto = folhas + "\n" + estilo + "\n" + html
+    usadas = []
+    for nome in _USO_DE_VARIAVEL.findall(texto):
+        if nome not in usadas:
+            usadas.append(nome)
+    return [n for n in usadas if not re.search(re.escape(n) + r"\s*:", texto)]
+
+
 def _url(caminho):
     return "file:///" + os.path.abspath(caminho).replace("\\", "/")
 
@@ -291,6 +318,13 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
                                   % (len(fora), ", ".join(fora[:14]) + (" ..." if len(fora) > 14 else "")))
                     linhas.append("       (largura, altura ou display vindos dalguma delas NAO foram aplicados:"
                                   " nao se tira conclusao de uma folga medida com elas)");
+        sem_valor = _variaveis_sem_valor(html, estilo or "", ficheiros)
+        if sem_valor:
+            linhas.append("AVISO: %d variavel(eis) CSS usada(s) nesta medicao nao esta(o) definida(s) em nenhuma folha carregada: %s"
+                          % (len(sem_valor), ", ".join(sem_valor[:14]) + (" ..." if len(sem_valor) > 14 else "")))
+            linhas.append("       As regras que dependem delas caem no valor HERDADO, logo a paleta nao e a do produto."
+                          " Carregue a folha que as define (no Axio o :root vive no style.css).")
+
         geo = os.path.join(tmp, "geo.json")
         if os.path.exists(geo):
             with open(geo, encoding="utf-8") as f:

@@ -103,7 +103,7 @@
     font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: background var(--dur-2) var(--ease-fluid), color var(--dur-2) var(--ease-fluid);
+    transition: background var(--dur-1) var(--ease-fluid), color var(--dur-1) var(--ease-fluid);
 }
 
 .git-pill:hover {
