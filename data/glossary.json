@@ -1166,10 +1166,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1378,
+        "linha": 1403,
         "conferido": [
-          1789933093.528,
-          64044
+          1789933931.626,
+          65126
         ]
       }
     },
@@ -2235,10 +2235,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 977,
+        "linha": 1002,
         "conferido": [
-          1789933093.528,
-          64044
+          1789933931.626,
+          65126
         ]
       }
     },
@@ -4035,7 +4035,11 @@
       "descricao": "A lupa vive na BARRA DE TITULO (#btn-chat-search, dentro de #chat-search-wrap) e o campo abre ALI MESMO, na propria barra - nao na conversa. O efeito e o da lupa do explorer: o botao encolhe e some (.hide, scale 0.4) enquanto #chat-search-box cresce em largura da direita para a esquerda (width 0 -> 340px, ancorada a right:0). FILTRA as duas colunas - as mensagens de #chat-inner-left (utilizador) e de #chat-inner-right (agente): as que nao contem o termo levam .conversa-busca-fora (display none) e a contagem aparece no proprio campo. ACRESCENTADO A 2026-10-01: as mensagens que casam levam tambem .conversa-busca-casa (color --text-usuario, cinza no texto corrido) e cada ocorrencia do termo fica VERDE, envolvida por um span .busca-termo - a mesma classe que a busca do historico usa, definida em src/frontend/css/busca.css. Quem faz o destaque e marcarTermo/limparMarcas (src/frontend/js/chat/marcar_termo.js), a primitiva que percorre os nos de texto da mensagem; o cinza so apanha o texto que herda cor, logo o codigo, os links e o nome do agente mantem a cor deles. O botao ou a lupa de dentro do campo abrem e fecham (alternarBuscaChat); reavaliarBuscaChat volta a aplicar o filtro quando chega mensagem nova (chamado por messages.js); fecharBuscaChat limpa o campo, as marcas e repoe tudo. ARMADILHA: a barra tem -webkit-app-region: drag, logo o wrap e a caixa precisam de no-drag, senao o campo nao recebe o clique nem o foco.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/busca_chat.js",
-        "linha": 83
+        "linha": 83,
+        "conferido": [
+          1789933834.658,
+          3249
+        ]
       }
     },
     {
@@ -4276,7 +4280,11 @@
       "descricao": "Primitiva generica do frontend que tira de cena conteudo PESADO (muito texto) enquanto um gesto de LAYOUT corre, para o browser nao repintar glifos a cada frame - a estrategia do painel do raciocinio aplicada dentro da janela. esmaecerEmGesto({conteudo, observar, janela, folga}) marca os elementos de 'conteudo' com a classe .a-esmaecer (css/geral.css: opacity 0 + visibility hidden, fade --dur-fade) enquanto algum dos elementos de 'observar' tiver uma transicao CSS de LAYOUT a correr (transitionrun/transitionend/transitioncancel, contadas por propriedade, com a lista de propriedades de layout) ou a janela estiver a ser redimensionada (folga de 140ms apos o ultimo evento). Teto de 1500ms como rede de seguranca se um transitionend nunca chegar. Devolve a funcao de limpeza. USO: a busca do historico (src/frontend/js/chat/historico/busca.js) esmaece #history-search-cols observando #sliding-panel-container e #panel-col-1. MEDIDO ao vivo no preview com 80 cards: o texto fica op=0 durante TODA a expansao e volta depois de a coluna parar; esconder NAO colapsa o layout (a caixa mantem a geometria). O FICHEIRO VIVE EM js/chat/ DE PROPOSITO: um modulo em /chat/historico/ nao consegue referir a raiz /js/ com um caminho relativo que funcione ao mesmo tempo na URL e no disco - ver a nota de memoria sobre os caminhos relativos do frontend.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/esmaecer.js",
-        "linha": 15
+        "linha": 15,
+        "conferido": [
+          1789933828.356,
+          3424
+        ]
       }
     }
   ]

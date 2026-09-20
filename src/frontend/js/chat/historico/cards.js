@@ -18,22 +18,27 @@ const { historyLogsWrapper } = dom;
             displayName: saved.displayName || '',
             __session: saved.__session || '',
             __date: saved.__date || '',
+            __saved: saved,
             snapshot: saved.snapshot || {},
             aiResponse: saved.aiResponse || '',
             salvo: !!saved.salvo,
             duration: saved.duration || 0,
+            nFerramentas: saved.nFerramentas,
             tools: saved.tools || [],
             thoughts: saved.thoughts || [],
             questions: saved.questions || [],
-            files: (saved.files || []).map(f => ({
-                name: f.name,
-                deleted: !!f.deleted,
-                diffElements: (f.diffs || []).map(d => createChildBalloon(
-                    d.title, d.htmlContent, d.snippetHtml, d.rawTextOld, d.rawTextNew, d.fileName,
-                    null, d.fullOriginalText, d.fullNewText, d.deletedLines, d.addedLines, d.origToMod, d.modToOrig, d.subtitle
-                ))
-            }))
+            files: filesDoSaved(saved)
         };
+    }
+    function filesDoSaved(saved) {
+        return (saved.files || []).map(f => ({
+            name: f.name,
+            deleted: !!f.deleted,
+            diffElements: (f.diffs || []).map(d => createChildBalloon(
+                d.title, d.htmlContent, d.snippetHtml, d.rawTextOld, d.rawTextNew, d.fileName,
+                null, d.fullOriginalText, d.fullNewText, d.deletedLines, d.addedLines, d.origToMod, d.modToOrig, d.subtitle
+            ))
+        }));
     }
     function createLogGroupCard(group) {
         const card = document.createElement('div');
@@ -112,7 +117,7 @@ const { historyLogsWrapper } = dom;
             const isSelected = state.currentSelectedHistoryGroup === group;
             if (!isSelected) {
                 selectHistoryTask(group, sub);
-                openFilesPanel(await carregarRodadaCompleta(group), vista);
+                openFilesPanel(await hidratarGroup(group), vista);
                 return;
             }
             if (vista.col3Aberta()) {
@@ -336,6 +341,18 @@ const { historyLogsWrapper } = dom;
         }
         return saved;
     }
+    async function hidratarGroup(group) {
+        if (!group || !group.__saved) return group;
+        const saved = await carregarRodadaCompleta(group.__saved);
+        group.snapshot = saved.snapshot || {};
+        group.aiResponse = saved.aiResponse || '';
+        group.tools = saved.tools || [];
+        group.thoughts = saved.thoughts || [];
+        group.questions = saved.questions || [];
+        group.nFerramentas = group.tools.length || saved.nFerramentas || 0;
+        group.files = filesDoSaved(saved);
+        return group;
+    }
     async function loadSavedRoundCards(body) {
         await ensureSessionDetailsLoaded();
         assignDisplayNamesByDay();
@@ -357,32 +374,35 @@ const { historyLogsWrapper } = dom;
         body.innerHTML = '';
         groups.forEach(group => body.appendChild(createHistoryRoundCard(group)));
     }
-    function selectHistoryTaskInPile(dia, turnId) {
-        if (!dia || !turnId) return;
+    async function selectHistoryTaskInPile(dia, turnId) {
+        if (!dia || !turnId) return null;
         const dayCard = Array.from(document.querySelectorAll('.session-history-card')).find(c => c.dataset.dia === dia);
-        if (!dayCard) return;
+        if (!dayCard) return null;
         const header = dayCard.querySelector('.session-history-header');
         const body = dayCard.querySelector('.session-history-body');
-        if (!header || !body) return;
+        if (!header || !body) return null;
         const selectRound = () => {
             const round = Array.from(body.querySelectorAll('.history-round-card')).find(el => el.dataset.turnId === turnId);
-            if (!round) return false;
+            if (!round) return null;
             document.querySelectorAll('.history-round-card').forEach(el => el.classList.remove('history-round-selected'));
             round.classList.add('history-round-selected');
             state.currentSelectedHistoryGroup = round._group || null;
             state.currentSelectedHistoryEl = round;
             updateActionButtons();
             round.scrollIntoView({ block: 'nearest' });
-            return true;
+            return round._group || null;
         };
         if (!body.classList.contains('card-collapsible-open')) {
             header.click();
         }
-        if (selectRound()) return;
-        let tentativas = 0;
-        const poll = setInterval(() => {
-            if (selectRound() || ++tentativas >= 30) clearInterval(poll);
-        }, 100);
+        const direto = selectRound();
+        if (direto) return direto;
+        for (let tentativas = 0; tentativas < 30; tentativas++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const grupo = selectRound();
+            if (grupo) return grupo;
+        }
+        return null;
     }
     function renderDayRoundCards(savedLogs, body) {
         if (!savedLogs || savedLogs.length === 0) {
@@ -416,7 +436,7 @@ export {
     renderSalvoCardIfNeeded,
     assignDisplayNamesByDay,
     ensureSessionDetailsLoaded,
-    carregarRodadaCompleta,
+    hidratarGroup,
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
     updateRoundCardNameByTurnId,
