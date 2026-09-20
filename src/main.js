@@ -632,6 +632,7 @@ function aplicarLimitesDoRaciocinio() {
   if (raciocinioAnimando) {
     clearInterval(raciocinioAnimando);
     raciocinioAnimando = null;
+    avisarAnimacaoDoRaciocinio(false);
   }
   raciocinioView.setBounds(destino);
 }
@@ -787,6 +788,12 @@ function avisarEscalaDoRaciocinio() {
   raciocinioView.webContents.send('raciocinio:escala', zoom);
 }
 
+function avisarAnimacaoDoRaciocinio(animando) {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  if (raciocinioView.webContents.isLoading()) return;
+  raciocinioView.webContents.send('raciocinio:animando', !!animando);
+}
+
 function definirRecolhaDoRaciocinio(recolhido) {
   const alvo = !!recolhido;
   const mudou = alvo !== raciocinioRecolhido;
@@ -818,6 +825,7 @@ function definirLargoDoRaciocinio(largo) {
 
 function definirCaixaDoRaciocinio(destino, duracao) {
   if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  const animava = !!raciocinioAnimando;
   if (raciocinioAnimando) {
     clearInterval(raciocinioAnimando);
     raciocinioAnimando = null;
@@ -825,9 +833,11 @@ function definirCaixaDoRaciocinio(destino, duracao) {
   const inicio = raciocinioView.getBounds();
   if (mesmoRect(inicio, destino) || !(duracao > 0)) {
     if (!mesmoRect(inicio, destino)) raciocinioView.setBounds(destino);
+    if (animava) avisarAnimacaoDoRaciocinio(false);
     avisarRecolhaDoRaciocinio(raciocinioRecolhido);
     return;
   }
+  avisarAnimacaoDoRaciocinio(true);
   const partida = Date.now();
   raciocinioAnimando = setInterval(() => {
     if (!raciocinioView || raciocinioView.webContents.isDestroyed()) {
@@ -840,6 +850,7 @@ function definirCaixaDoRaciocinio(destino, duracao) {
       clearInterval(raciocinioAnimando);
       raciocinioAnimando = null;
       if (!mesmoRect(raciocinioView.getBounds(), destino)) raciocinioView.setBounds(destino);
+      avisarAnimacaoDoRaciocinio(false);
       avisarRecolhaDoRaciocinio(raciocinioRecolhido);
       return;
     }

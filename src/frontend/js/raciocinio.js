@@ -4,6 +4,7 @@ const api = window.raciocinio || {
     aoHistorico: () => {},
     aoRecolha: () => {},
     aoLargo: () => {},
+    aoAnimando: () => {},
     aoSair: () => {},
     aoEscala: () => {},
     alternar: () => {},
@@ -141,6 +142,10 @@ function definirLargo(valor) {
     botaoLargo.setAttribute('aria-label', rotulo);
 }
 
+function definirAnimando(valor) {
+    document.body.classList.toggle('rc-animando', !!valor);
+}
+
 function animarEntrada() {
     entradaResolvida = true;
     document.body.classList.remove('rc-saindo');
@@ -170,6 +175,7 @@ api.aoEscala(aplicarEscala);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);
 api.aoLargo(definirLargo);
+api.aoAnimando(definirAnimando);
 api.aoEvento(aplicar);
 api.aoHistorico((lista) => {
     limpar();
