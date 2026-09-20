@@ -38,11 +38,23 @@ let previewLimites = null;
 let pontePorta = 0;
 let ponteToken = '';
 let zoomDaInterface = 1;
+let janelaRaciocinio = null;
+let raciocinioRecolhido = false;
+let raciocinioBuffer = [];
+let raciocinioOcioso = null;
 const ALTURA_DA_BARRA_DE_TITULO = 32;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
 const ZOOM_MAXIMO = 2;
 const PASSOS_DE_ZOOM = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+const RACIOCINIO_LARGURA = 560;
+const RACIOCINIO_ALTURA = 340;
+const RACIOCINIO_LARGURA_RECOLHIDA = 280;
+const RACIOCINIO_ALTURA_RECOLHIDA = 42;
+const RACIOCINIO_TOPO = 0.08;
+const RACIOCINIO_TOPO_MINIMO = 52;
+const RACIOCINIO_MEMORIA = 80;
+const RACIOCINIO_OCIOSO_MS = 300000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -69,6 +81,7 @@ function createWindow() {
   mainWindow.webContents.setZoomFactor(zoomDaInterface);
   mainWindow.webContents.on('did-finish-load', () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoomDaInterface);
+    descartarJanelaRaciocinio();
   });
   mainWindow.loadURL('http://127.0.0.1:5000/');
 
@@ -103,8 +116,13 @@ function createWindow() {
     }
   });
 
+  mainWindow.on('resize', aplicarLimitesDoRaciocinio);
+  mainWindow.on('move', aplicarLimitesDoRaciocinio);
+  mainWindow.on('minimize', esconderJanelaRaciocinio);
+
   mainWindow.on('closed', function () {
     descartarPreviewView();
+    descartarJanelaRaciocinio();
     previewLimites = null;
     previewVisivel = false;
     mainWindow = null;
@@ -440,6 +458,121 @@ function limitesDeArranque() {
   return { x: 0, y: 0, width: Math.max(1, caixa.width), height: Math.max(1, caixa.height) };
 }
 
+function limitesDoRaciocinio() {
+  const caixa = mainWindow.getContentBounds();
+  const largura = raciocinioRecolhido ? RACIOCINIO_LARGURA_RECOLHIDA : RACIOCINIO_LARGURA;
+  const altura = raciocinioRecolhido ? RACIOCINIO_ALTURA_RECOLHIDA : RACIOCINIO_ALTURA;
+  const topo = Math.max(RACIOCINIO_TOPO_MINIMO, Math.round(caixa.height * RACIOCINIO_TOPO));
+  return {
+    x: Math.round(caixa.x + (caixa.width - largura) / 2),
+    y: Math.round(caixa.y + topo),
+    width: largura,
+    height: altura
+  };
+}
+
+function aplicarLimitesDoRaciocinio() {
+  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  janelaRaciocinio.setBounds(limitesDoRaciocinio());
+}
+
+function descartarJanelaRaciocinio() {
+  const janela = janelaRaciocinio;
+  janelaRaciocinio = null;
+  raciocinioRecolhido = false;
+  raciocinioBuffer = [];
+  if (janela && !janela.isDestroyed()) janela.destroy();
+}
+
+function criarJanelaRaciocinio() {
+  if (janelaRaciocinio && !janelaRaciocinio.isDestroyed()) return janelaRaciocinio;
+  const caixa = limitesDoRaciocinio();
+  janelaRaciocinio = new BrowserWindow({
+    x: caixa.x,
+    y: caixa.y,
+    width: caixa.width,
+    height: caixa.height,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: false,
+    hasShadow: false,
+    parent: mainWindow,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'frontend', 'js', 'raciocinio_preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+      spellcheck: false
+    }
+  });
+  janelaRaciocinio.on('closed', () => {
+    janelaRaciocinio = null;
+  });
+  janelaRaciocinio.webContents.on('did-fail-load', (evento, codigo, descricao, url, quadroPrincipal) => {
+    if (quadroPrincipal && codigo !== -3) descartarJanelaRaciocinio();
+  });
+  janelaRaciocinio.webContents.on('did-finish-load', () => {
+    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
+    janelaRaciocinio.webContents.send('raciocinio:historico', raciocinioBuffer);
+    if (janelaRaciocinio.isVisible()) janelaRaciocinio.webContents.send('raciocinio:abrir');
+  });
+  janelaRaciocinio.loadURL('http://127.0.0.1:5000/raciocinio');
+  return janelaRaciocinio;
+}
+
+function esperarOciosidadeDoRaciocinio() {
+  if (raciocinioOcioso) clearTimeout(raciocinioOcioso);
+  raciocinioOcioso = setTimeout(esconderJanelaRaciocinio, RACIOCINIO_OCIOSO_MS);
+}
+
+function esconderJanelaRaciocinio() {
+  if (raciocinioOcioso) {
+    clearTimeout(raciocinioOcioso);
+    raciocinioOcioso = null;
+  }
+  if (janelaRaciocinio && !janelaRaciocinio.isDestroyed() && janelaRaciocinio.isVisible()) {
+    janelaRaciocinio.hide();
+  }
+}
+
+function mostrarJanelaRaciocinio() {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return;
+  const janela = criarJanelaRaciocinio();
+  janela.setBounds(limitesDoRaciocinio());
+  if (!janela.isVisible()) janela.showInactive();
+  if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:abrir');
+  esperarOciosidadeDoRaciocinio();
+}
+
+function alimentarRaciocinio(evento) {
+  if (!evento || typeof evento !== 'object' || !evento.tipo) return;
+  if (evento.tipo === 'inicio' || evento.tipo === 'fim') {
+    raciocinioBuffer = [];
+    if (evento.tipo === 'fim') esconderJanelaRaciocinio();
+  } else {
+    raciocinioBuffer.push(evento);
+    if (raciocinioBuffer.length > RACIOCINIO_MEMORIA) raciocinioBuffer.shift();
+    esperarOciosidadeDoRaciocinio();
+  }
+  if (janelaRaciocinio && !janelaRaciocinio.isDestroyed() && !janelaRaciocinio.webContents.isLoading()) {
+    janelaRaciocinio.webContents.send('raciocinio:evento', evento);
+  }
+}
+
+function definirRecolhaDoRaciocinio(recolhido) {
+  raciocinioRecolhido = !!recolhido;
+  aplicarLimitesDoRaciocinio();
+}
+
 function urlDoAlvo(texto) {
   const temEsquema = /^[a-z][a-z0-9+.-]*:\/\//i.test(texto);
   if (temEsquema || /^(localhost|127\.0\.0\.1):/i.test(texto)) {
@@ -691,6 +824,14 @@ app.on('ready', () => {
   ipcMain.on('preview:visivel', (e, visivel) => {
     if (veioDaJanelaPrincipal(e)) definirVisibilidadeDoPreview(!!visivel);
   });
+  ipcMain.on('raciocinio:evento', (e, evento) => {
+    if (veioDaJanelaPrincipal(e)) alimentarRaciocinio(evento);
+  });
+  ipcMain.on('raciocinio:recolher', (e, estado) => {
+    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
+    if (e.sender !== janelaRaciocinio.webContents) return;
+    definirRecolhaDoRaciocinio(!!estado);
+  });
 
   function montarMenu() {
     const menu = Menu.buildFromTemplate([
@@ -782,7 +923,10 @@ app.on('ready', () => {
 
   iniciarPonte({
     obterPreview: () => previewVivo(),
-    aoUsar: (acao, interage) => avisarPreview('preview:uso', { acao: acao, interage: !!interage }),
+    aoUsar: (acao, interage) => {
+      avisarPreview('preview:uso', { acao: acao, interage: !!interage });
+      mostrarJanelaRaciocinio();
+    },
     aoInspecionar: (info) => {
       if (info && info.sair) {
         if (inspectAtivo) pedirInspect(false);

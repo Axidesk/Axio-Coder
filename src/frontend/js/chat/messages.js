@@ -11,6 +11,7 @@ import { escapeHtml } from './escape.js';
 import { formatMessage, formatInlineText, formatInline } from './markdown.js';
 import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao } from './plan_cards.js';
 import { reavaliarBuscaChat } from './busca_chat.js';
+import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
 
 const { alertPopup, alertPopupContent, btnSend, btnShowThoughts, btnShowTools, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, contextAcumuladaFill, contextInfoLimite, contextSessaoFill, contextUsage, contextUsageAcumulada, contextUsageFill, contextUsageLabel, contextUsageSessao, currentLogsList, currentLogsWrapper, inputText, lblExecuting, lblFolder, lblMetrics, lblStatus, terminalMode } = dom;
 
@@ -177,6 +178,7 @@ function startSSE() {
             return;
         }
         if (data.turn_id && data.turn_id !== state.currentTurnId) return;
+        alimentarRaciocinio(data);
         if (window.WorkspaceView && typeof window.WorkspaceView.onSSE === 'function') {
             window.WorkspaceView.onSSE(data);
         }

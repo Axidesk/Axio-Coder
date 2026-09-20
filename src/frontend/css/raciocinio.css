@@ -1,0 +1,196 @@
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    user-select: none;
+}
+
+#rc-janela {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 22px 45px -18px rgba(0, 0, 0, 0.75);
+}
+
+#rc-barra {
+    height: 42px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px 0 14px;
+}
+
+#rc-sinal {
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--oliva);
+    box-shadow: 0 0 6px var(--oliva-glow);
+    animation: rc-pulso 1.6s ease-in-out infinite;
+}
+
+@keyframes rc-pulso {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+#rc-titulo {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-suave);
+}
+
+#rc-contador {
+    font-size: 11px;
+    color: var(--text-mutado);
+}
+
+#rc-recolher {
+    margin-left: auto;
+    position: relative;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    border-radius: 9999px;
+    cursor: pointer;
+    color: var(--text-suave);
+    transition: background-color var(--dur-3) var(--ease-fluid), color var(--dur-3) var(--ease-fluid);
+}
+
+#rc-recolher:hover {
+    background: var(--bg-hover-suave);
+    color: var(--text-branco);
+}
+
+.rc-traco-h,
+.rc-traco-v {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: currentColor;
+    border-radius: 1px;
+    transition: transform var(--dur-5) var(--ease-fluid);
+}
+
+.rc-traco-h {
+    width: 12px;
+    height: 1.5px;
+    transform: translate(-50%, -50%);
+}
+
+.rc-traco-v {
+    width: 1.5px;
+    height: 12px;
+    transform: translate(-50%, -50%) scaleY(0);
+}
+
+body.rc-recolhido .rc-traco-v {
+    transform: translate(-50%, -50%) scaleY(1);
+}
+
+#rc-clip {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--dur-5) var(--ease-fluid);
+}
+
+body.rc-recolhido #rc-clip {
+    grid-template-rows: 0fr;
+}
+
+#rc-conteudo {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0 14px 12px;
+}
+
+#rc-estado {
+    margin: 0;
+    padding-bottom: 10px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-claro);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#rc-estado:empty {
+    display: none;
+}
+
+#rc-estado:not(:empty) + #rc-registo {
+    border-top: 1px solid var(--border-suave);
+}
+
+#rc-registo {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-top: 10px;
+    user-select: text;
+}
+
+#rc-registo::-webkit-scrollbar {
+    width: 8px;
+}
+
+#rc-registo::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#rc-registo::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 9999px;
+}
+
+#rc-registo::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.rc-ferramenta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 0;
+    font-family: 'Cascadia Mono', Consolas, monospace;
+    font-size: 11.5px;
+}
+
+.rc-nome {
+    color: var(--oliva);
+    flex-shrink: 0;
+}
+
+.rc-resumo {
+    color: var(--text-mutado);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rc-pensamento {
+    margin: 0;
+    padding: 5px 0 7px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text-suave);
+    white-space: pre-wrap;
+    word-break: break-word;
+}

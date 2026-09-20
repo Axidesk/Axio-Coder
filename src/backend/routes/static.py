@@ -55,6 +55,11 @@ def serve_index():
     return _servir_pasta(('src', 'frontend'), 'index.html', None)
 
 
+@static_bp.route('/raciocinio')
+def serve_raciocinio():
+    return _servir_pasta(('src', 'frontend'), 'raciocinio.html', None)
+
+
 @static_bp.route('/chat/<path:p>')
 def serve_chat_module(p):
     return _servir_pasta(('src', 'frontend', 'js', 'chat'), p, 'application/javascript')
