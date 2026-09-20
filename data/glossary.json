@@ -2550,10 +2550,10 @@
       "descricao": "Servidor HTTP efemero que o processo principal do Electron abre em 127.0.0.1 no arranque (src/preview-cdp.js:iniciarPonte), com token aleatorio por sessao e so a aceitar pedidos de casa e so por POST. E o unico caminho pelo qual as minhas ferramentas (que vivem no Flask) alcancam o Chrome DevTools Protocol do preview: o Python nao fala IPC. A porta e o token chegam ao Flask por AXIO_PONTE_PORTA/AXIO_PONTE_TOKEN, injetados no ambiente do spawn (src/main.js:startFlask) - por isso um Flask nascido antes desta mudanca nao tem ponte nenhuma, e as ferramentas avisam para fechar e reabrir o Axio. Sem ponte: mensagem honesta, nunca falha silenciosa.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1452,
+        "linha": 1478,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -2570,10 +2570,10 @@
       "descricao": "O que a pagina do preview escreveu na consola, devolvido como DADO (nivel, origem, ficheiro:linha) e nao como imagem - e a primeira coisa a olhar quando um botao da pagina nao responde. Dona do buffer: a lista `consola` de src/preview-cdp.js, alimentada pelo evento `Runtime.consoleAPICalled` (e por `Runtime.exceptionThrown` e pelo `Log.entryAdded`, que apanha os 404 de recursos - a classe exacta do \"html nu\"). Ligada por preview-cdp.js:prepararDepurador no nascimento da view, esvaziada a cada navegacao. A ferramenta que a le e tool_observar_preview com acao='consola' (filtra por 'nivel' e limpa com o proprio pedido).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1022,
+        "linha": 1023,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -2584,10 +2584,10 @@
       "descricao": "Clique e escrita a serio na pagina do preview, pelo Chrome DevTools Protocol - o clique vai por Input.dispatchMouseEvent (mover, premir, largar, no centro do elemento) e o texto por Input.insertText, por isso funciona com React, Vue e ouvintes nativos. O seletor e RE-RESOLVIDO no instante do gesto (preview-cdp.js:caixaDoPedido) e, antes de disparar, um hit-test (funcao tapa, dentro do SNIPPET_ALVOS) pergunta quem esta no topo no ponto do gesto: se for OUTRO elemento, RECUSA e diz quem tapa; se o centro cair fora da janela, RECUSA tambem. O gesto devolve o proprio EFEITO (assinatura da pagina, erros novos da consola, pedidos falhados, estado do alvo). Ferramenta: tool_operar_preview em src/backend/tools/preview.py (acoes carregar, mostrar, clicar, escrever, teclar).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1193,
+        "linha": 1213,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -2605,10 +2605,10 @@
       "descricao": "O que a pagina do preview tentou carregar e falhou, devolvido como DADO (estado, URL, tipo, motivo) e nao como imagem - e o que explica uma pagina que aparece sem estilo ou sem os scripts. Dona do buffer: a lista `rede` de src/preview-cdp.js, alimentada por Network.responseReceived (so status >= 400: aviso para 4xx, erro para 5xx) e por Network.loadingFailed com canceled=false; o url/tipo das falhas vem do mapa `pedidos` (requestId -> url/type), alimentado por Network.requestWillBeSent. Ligada por preview-cdp.js:prepararDepurador (Network.enable) e esvaziada a cada navegacao por limparRegistos, junto com a consola. A ferramenta que a le e tool_observar_preview com acao='rede' (filtra por 'nivel' tal como a consola).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1028,
+        "linha": 1029,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -2625,10 +2625,10 @@
       "descricao": "Circulo de 14px com anel verde --oliva que aparece na PAGINA do preview, no ponto exato onde eu vou clicar ou escrever, para o utilizador ver o gesto a acontecer - o papel que no Codex cabe ao cursor do rato. E um div fixo injetado por Runtime.evaluate (id __axio_cursor, pointer-events none, z-index maximo) com estilos INLINE (nunca um <style>, que uma CSP restritiva bloquearia): aparece antes do gesto com uma pausa de PAUSA_CURSOR_MS (150ms), encolhe no clique e desvanece num setTimeout de 240ms. So corre quando cursorAVista(view) e verdadeiro (o preview a frente) - com o preview atras de outra vista o gesto nao ganha atraso nenhum e nada e injetado. Vive em preview-cdp.js:desenharCursor, usado por acaoClicar e acaoEscrever.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1179,
+        "linha": 1180,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -2665,10 +2665,10 @@
       "descricao": "Recarga da pagina do preview pelo CDP com ignoreCache: true, para eu testar codigo frontend recem-editado sem risco de estar a medir uma versao velha. Distinta do botao de recarregar da barra (main.js:recarregarPreview), que usa a cache como qualquer navegador. A janela principal continua a correr o JS antigo ate o utilizador fazer Ctrl+R; o preview apanha o novo sozinho.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1344,
+        "linha": 1370,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -2704,10 +2704,10 @@
       "descricao": "Indice de tudo o que responde a um gesto na pagina, devolvido numa so chamada: seletor, rotulo e coordenada de cada botao, ligacao e campo. Ja exclui os que estao tapados por outro elemento, fora da janela ou sem nome. Apanha DOIS tipos de candidato: tags/roles genericos e qualquer elemento com `cursor: pointer` cujo pai nao seja pointer (o que lhe permite ver os cards do Axio, que sao divs com listener, sem button nem role) - e prefere devolver um seletor POR DADO (`[data-turn-id=\"...\"]`) quando esse atributo identifica um unico elemento, em vez do caminho posicional. E a acao a usar ANTES de agir; quem monta o texto e _texto_do_mapa (preview.py) e quem o colhe na pagina e o ramo mapa de SNIPPET_ALVOS (preview-cdp.js).",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 299,
+        "linha": 302,
         "conferido": [
-          1789838493.237,
-          38315
+          1789857761.525,
+          38518
         ]
       }
     },
@@ -2727,8 +2727,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 95,
         "conferido": [
-          1789838493.237,
-          38315
+          1789857761.525,
+          38518
         ]
       }
     },
@@ -3768,10 +3768,10 @@
       "descricao": "Le o desenho ja computado pelo browser pelo tool_observar_preview(acao='estilo').",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 458,
+        "linha": 459,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -3787,10 +3787,10 @@
       "descricao": "Overlay injetado DENTRO da pagina do preview (nao e o inspetor do Axio, que so ve o DOM do Axio): destaca o elemento sob o cursor, e no clique mostra seletor, caixa, layout, cores e fonte num painel na propria pagina, e manda o mesmo por console marcado para o campo de mensagem do Axio. Shift+clique interage, Esc sai. Sem DOM (canvas do IFC/DXF/PDF) nao ha o que apanhar alem do viewport.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 527,
+        "linha": 528,
         "conferido": [
-          1789844546.388,
-          56500
+          1789857758.321,
+          57365
         ]
       }
     },
@@ -4010,7 +4010,27 @@
       "descricao": "Ferramenta que publica um artigo (Markdown) num canal externo de divulgacao, com a chave lida do cofre. Cria ou atualiza (com id_artigo) e sai como RASCUNHO por omissao.",
       "localizacao": {
         "arquivo": "src/backend/tools/publicacao.py",
-        "linha": 36
+        "linha": 36,
+        "conferido": [
+          1789857549.98,
+          4120
+        ]
+      }
+    },
+    {
+      "termo": "lupa do chat",
+      "aliases": [
+        "lupa da janela principal",
+        "pesquisa do chat",
+        "busca nas conversas do chat",
+        "filtrar as mensagens do chat",
+        "buscar nas mensagens enviadas e recebidas"
+      ],
+      "identificador": "#btn-chat-search (botao) + alternarBuscaChat (comportamento)",
+      "descricao": "A lupa que fica no fim da barra de titulo, ao lado dos botoes da janela: abre o campo de busca por cima da conversa e esconde as mensagens que nao contem o termo - nas DUAS colunas (#chat-inner-left, do utilizador, e #chat-inner-right, da IA). A contagem (\"2 de 4\") fica no proprio campo; fechar ou limpar devolve tudo.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/busca_chat.js",
+        "linha": ""
       }
     }
   ]

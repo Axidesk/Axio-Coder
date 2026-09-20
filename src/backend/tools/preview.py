@@ -23,6 +23,27 @@ LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
 
 
+def _endereco_local(destino):
+    alvo = destino.strip().lower()
+    if alvo.startswith("http://") or alvo.startswith("https://"):
+        return "127.0.0.1" in alvo or "localhost" in alvo
+    return True
+
+
+def _renovar_pagina_local(destino):
+    if not _endereco_local(destino):
+        return ""
+    for _ in range(20):
+        vista, falha = ponte_preview.pedir("estado")
+        if falha or not vista.get("carregando"):
+            break
+        time.sleep(0.15)
+    _, falha = ponte_preview.pedir("recarregar")
+    if falha:
+        return f" (AVISO: nao consegui forcar a recarga sem cache: {falha})"
+    return " Recarreguei sem cache, para nao servir codigo guardado."
+
+
 def _ponto_do_texto(ponto):
     """(x, y) de um 'x,y' escrito a mao - o mesmo formato que a ferramenta das regioes."""
     partes = [p.strip() for p in str(ponto or "").split(",")]
@@ -695,7 +716,9 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'nao foi possivel carregar'}."
-        return f"Preview a carregar {dados.get('alvo') or destino}. Use acao='estado' para confirmar que ficou."
+        aviso = _renovar_pagina_local(destino)
+        return (f"Preview a carregar {dados.get('alvo') or destino}.{aviso} "
+                "Use acao='estado' para confirmar que ficou.")
 
     if pedido == "mostrar":
         dados, erro = ponte_preview.pedir("mostrar")

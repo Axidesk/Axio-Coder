@@ -58,6 +58,13 @@
     background: var(--bg-hover-suave);
 }
 
+#btn-chat-search {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    padding: 0 8px;
+}
+
 .titulo-item {
     display: flex;
     align-items: center;

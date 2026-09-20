@@ -746,6 +746,44 @@ body.theme-espacial #editor-view { background: var(--bg-panel); }
     transform: translateY(-6px);
     pointer-events: none;
 }
+#chat-search-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-5) var(--ease-fluid);
+}
+#chat-search-panel.aberta { grid-template-rows: 1fr; }
+.chat-search-clip {
+    overflow: hidden;
+    min-height: 0;
+}
+.chat-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 24px 0;
+    padding: 7px 16px;
+    border-radius: 9999px;
+    background: var(--bg-input);
+}
+#chat-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+}
+#chat-search-input::placeholder { color: var(--text-mutado); }
+#chat-search-count {
+    flex: 0 0 auto;
+    font-size: 11px;
+    white-space: nowrap;
+    color: var(--text-mutado);
+}
+#chat-inner-left > .conversa-busca-fora,
+#chat-inner-right > .conversa-busca-fora { display: none !important; }
 body.theme-espacial #ws-top-bar + div {
     background: var(--bg-panel);
 }

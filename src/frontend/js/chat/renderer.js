@@ -103,6 +103,7 @@ import { copiarTexto } from './clipboard.js';
 import { abrirProjetoInfo, fecharProjetoInfo, projetoInfoAberto } from './projeto.js';
 import { alternarCamadaNotas, criarNota, traduzirNota } from './projeto_notas.js';
 import './menu_conversa.js';
+import './busca_chat.js';
 
     chatContainerLeft.addEventListener('scroll', () => {
         const currentScrollTop = chatContainerLeft.scrollTop;

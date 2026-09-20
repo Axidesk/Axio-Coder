@@ -27,6 +27,9 @@
         <img id="title-bar-logo" src="/icons/icon.ico" alt="">
         <button type="button" class="title-bar-menu" id="title-bar-exibir" aria-haspopup="true">Exibir</button>
         <button type="button" class="title-bar-menu" id="title-bar-ferramentas" aria-haspopup="true">Ferramentas</button>
+        <button type="button" class="title-bar-menu" id="btn-chat-search" title="Buscar nas conversas" aria-label="Buscar nas conversas">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+        </button>
     </div>
 
     <div id="inspect-tooltip" class="balao hidden"></div>
@@ -252,6 +255,15 @@
 
         <div class="w-[35%] shrink-0 flex flex-col border-r border-[var(--border)] relative">
             <div id="chat-mode" class="absolute inset-0 flex flex-col">
+            <div id="chat-search-panel">
+                <div class="chat-search-clip">
+                    <div class="chat-search-box">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-[var(--text-mutado)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                        <input id="chat-search-input" type="text" placeholder="Buscar nas mensagens enviadas e recebidas" autocomplete="off" spellcheck="false">
+                        <span id="chat-search-count"></span>
+                    </div>
+                </div>
+            </div>
             <main id="chat-container-left" class="flex-1 overflow-y-auto pt-4 pb-28 px-6">
                 <div id="chat-inner-left" class="w-full flex flex-col">
                 </div>
