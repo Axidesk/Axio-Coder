@@ -13,13 +13,7 @@ from src.backend.services.diff import gerar_diff
 from src.backend.tools.syntax import aviso_estrutural_pos_edicao, aviso_import_local, bloquear_import_local, validar_arquivo_apos_edicao
 
 
-def _preparar_substituicao(caminho_relativo, rotulo, texto_antigo, texto_novo):
-    """Valida o caminho, le o arquivo alvo e normaliza os textos (NFC).
-
-    Devolve ((caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc,
-    texto_novo_nfc, ocorrencias), erro). Quando `erro` nao for None, o chamador
-    deve devolve-lo imediatamente.
-    """
+def _ler_para_edicao(caminho_relativo, rotulo):
     if estado.get("bloquear_edicao"):
         return None, "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
     emit_event("executing", function=f"{rotulo}: {caminho_relativo}")
@@ -33,7 +27,20 @@ def _preparar_substituicao(caminho_relativo, rotulo, texto_antigo, texto_novo):
             conteudo = f.read()
     except Exception as e:
         return None, f"ERRO: {str(e)}"
-    conteudo_nfc = normalizar_unicode(conteudo)
+    return (caminho_absoluto, conteudo, normalizar_unicode(conteudo)), None
+
+
+def _preparar_substituicao(caminho_relativo, rotulo, texto_antigo, texto_novo):
+    """Valida o caminho, le o arquivo alvo e normaliza os textos (NFC).
+
+    Devolve ((caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc,
+    texto_novo_nfc, ocorrencias), erro). Quando `erro` nao for None, o chamador
+    deve devolve-lo imediatamente.
+    """
+    dados, erro = _ler_para_edicao(caminho_relativo, rotulo)
+    if erro:
+        return None, erro
+    caminho_absoluto, conteudo, conteudo_nfc = dados
     texto_antigo_nfc = normalizar_unicode(texto_antigo)
     texto_novo_nfc = normalizar_unicode(texto_novo)
     return (caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc, texto_novo_nfc, conteudo_nfc.count(texto_antigo_nfc)), None
@@ -85,6 +92,90 @@ def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: 
         novo_conteudo = conteudo_nfc.replace(texto_antigo_nfc, texto_novo_nfc, 1)
         aviso = gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, f"Modificado: {caminho_relativo}")
         return f"SUCESSO: Trecho substituído em '{caminho_relativo}'.{aviso}"
+    except Exception as e: return f"ERRO: {str(e)}"
+
+
+_MARCA_ANTIGO = "<<<<<<< ANTIGO"
+_MARCA_SEPARADOR = "======="
+_MARCA_NOVO = ">>>>>>> NOVO"
+
+
+def _dividir_lote(texto):
+    """Corta o texto em pares (antigo, novo) pelas marcas de bloco, sem tocar no codigo la dentro."""
+    itens = []
+    antigo = novo = None
+    for linha in normalizar_unicode(texto).split("\n"):
+        marca = linha.strip()
+        if marca == _MARCA_ANTIGO:
+            if antigo is not None:
+                return None, "ERRO: o bloco anterior nao foi fechado com '>>>>>>> NOVO'."
+            antigo = []
+        elif antigo is None:
+            if marca:
+                return None, f"ERRO: texto fora de um bloco: '{marca[:60]}'. Cada alteracao comeca com uma linha '{_MARCA_ANTIGO}'."
+        elif marca == _MARCA_SEPARADOR:
+            if novo is not None:
+                return None, "ERRO: dois separadores '=======' no mesmo bloco."
+            novo = []
+        elif marca == _MARCA_NOVO:
+            if novo is None:
+                return None, "ERRO: o bloco fechou sem o separador '======='."
+            itens.append(("\n".join(antigo), "\n".join(novo)))
+            antigo = novo = None
+        else:
+            (antigo if novo is None else novo).append(linha)
+    if antigo is not None:
+        return None, "ERRO: o ultimo bloco nao foi fechado com '>>>>>>> NOVO'."
+    if not itens:
+        return None, "ERRO: nenhum bloco encontrado."
+    return itens, None
+
+
+def _aplicar_lote(conteudo_nfc, itens):
+    """Aplica os pares por ordem no conteudo ja normalizado; se um falhar, nada e gravado."""
+    atual = conteudo_nfc
+    for indice, (antigo, novo) in enumerate(itens, 1):
+        antigo = normalizar_unicode(antigo)
+        novo = normalizar_unicode(novo)
+        if not antigo:
+            return None, f"ERRO: o bloco {indice} tem o trecho antigo vazio."
+        ocorrencias = atual.count(antigo)
+        if ocorrencias == 0:
+            return None, f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado). DICA: releia o ficheiro com 'tool_ler_trecho_arquivo' e copie as linhas exatas."
+        if ocorrencias > 1:
+            return None, f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro (ancora ambigua) - nada foi gravado."
+        atual = atual.replace(antigo, novo, 1)
+    if atual == conteudo_nfc:
+        return None, "ERRO: as substituicoes deixariam o ficheiro igual - nada foi gravado."
+    return atual, None
+
+
+_PARAMS_LOTE = {
+    'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
+    'substituicoes': {"tipo": "STRING", "obrig": True, "padrao": ""},
+}
+
+
+@register(
+    "tool_substituir_lote",
+    'Aplica VARIAS substituicoes no mesmo ficheiro numa so gravacao (um unico diff e um unico passo de desfazer) - use quando as alteracoes ja foram decididas em conjunto. Cada alteracao vai num bloco, com quebras de linha REAIS: uma linha "<<<<<<< ANTIGO", o trecho exato como esta agora, uma linha "=======", o trecho novo (vazio para apagar) e uma linha ">>>>>>> NOVO"; repita o bloco quantas vezes precisar. Cada trecho antigo tem de ser UNICO no ficheiro e os blocos sao aplicados por ordem; se UM bloco falhar, NADA e gravado. Para APAGAR uma linha inteira, inclua a quebra de linha no fim do trecho antigo (senao fica uma linha vazia no lugar).',
+    _PARAMS_LOTE,
+    disponivel="edicao",
+)
+def tool_substituir_lote(caminho_relativo: str, substituicoes: str):
+    itens, erro = _dividir_lote(substituicoes)
+    if erro:
+        return erro
+    dados, erro = _ler_para_edicao(caminho_relativo, "Substituindo em lote")
+    if erro:
+        return erro
+    caminho_absoluto, conteudo, conteudo_nfc = dados
+    novo_conteudo, erro = _aplicar_lote(conteudo_nfc, itens)
+    if erro:
+        return erro
+    try:
+        aviso = gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, f"Modificado em lote: {caminho_relativo}")
+        return f"SUCESSO: {len(itens)} substituicoes em '{caminho_relativo}'.{aviso}"
     except Exception as e: return f"ERRO: {str(e)}"
 
 
