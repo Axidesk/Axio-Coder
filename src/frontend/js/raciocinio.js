@@ -13,6 +13,7 @@ const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
 
 const MARGEM_DO_FIM_PX = 4;
+const VIGIA_DA_ENTRADA_MS = 1000;
 
 let recolhido = false;
 let passos = 0;
@@ -20,6 +21,7 @@ let seguirFim = true;
 let ultimoTopo = 0;
 let pendentes = [];
 let agendado = 0;
+let entradaResolvida = false;
 
 function limpar() {
     if (agendado) {
@@ -132,6 +134,7 @@ function alternarRecolha() {
 }
 
 function animarEntrada() {
+    entradaResolvida = true;
     document.body.classList.remove('rc-saindo');
     document.body.classList.remove('rc-trocando');
 }
@@ -162,6 +165,9 @@ new ResizeObserver(() => {
 }).observe(registo);
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
+setTimeout(() => {
+    if (!entradaResolvida) animarEntrada();
+}, VIGIA_DA_ENTRADA_MS);
 api.aoTrocar(marcarTroca);
 api.aoEscala(aplicarEscala);
 api.aoSair(sair);

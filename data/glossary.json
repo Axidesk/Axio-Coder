@@ -4209,7 +4209,11 @@
       "descricao": "Le o instante de ARRANQUE real de cada processo do Axio (interface Electron e servidor Python, por ctypes/kernel32) e compara-o com a data dos ficheiros, dizendo o que falta em cada um e a acao: fechar e reabrir o Axio (Electron), Ctrl+Shift+B (Python) ou so recarregar (frontend, servido do disco a cada pedido).",
       "localizacao": {
         "arquivo": "src/backend/tools/execucao.py",
-        "linha": 324
+        "linha": 324,
+        "conferido": [
+          1789916027.821,
+          14065
+        ]
       }
     }
   ]

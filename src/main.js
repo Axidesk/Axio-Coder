@@ -50,6 +50,7 @@ let raciocinioPronto = false;
 let raciocinioSaindo = false;
 let raciocinioQuerido = false;
 let raciocinioEmTurno = false;
+let raciocinioRevelado = false;
 const ALTURA_DA_BARRA_DE_TITULO = 32;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
@@ -566,6 +567,7 @@ function descartarJanelaRaciocinio() {
   raciocinioPronto = false;
   raciocinioSaindo = false;
   raciocinioQuerido = false;
+  raciocinioRevelado = false;
   if (janela && !janela.isDestroyed()) janela.destroy();
 }
 
@@ -604,6 +606,9 @@ function criarJanelaRaciocinio() {
   });
   janelaRaciocinio.webContents.on('did-fail-load', (evento, codigo, descricao, url, quadroPrincipal) => {
     if (quadroPrincipal && codigo !== -3) descartarJanelaRaciocinio();
+  });
+  janelaRaciocinio.webContents.on('did-start-loading', () => {
+    raciocinioRevelado = false;
   });
   janelaRaciocinio.webContents.on('did-finish-load', () => {
     if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
@@ -647,6 +652,7 @@ function esconderJanelaRaciocinio() {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed() || !janelaRaciocinio.isVisible()) return;
   if (raciocinioSaindo) return;
   raciocinioSaindo = true;
+  raciocinioRevelado = false;
   janelaRaciocinio.webContents.send('raciocinio:sair');
   raciocinioSaidaEm = setTimeout(() => {
     raciocinioSaidaEm = null;
@@ -676,10 +682,14 @@ function mostrarJanelaRaciocinio() {
   }
   const apareceu = !janela.isVisible() || voltouDaSaida;
   aplicarLimitesDoRaciocinio();
-  if (!apareceu) return;
-  janela.showInactive();
-  avisarEscalaDoRaciocinio();
-  if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:abrir');
+  if (!apareceu && raciocinioRevelado) return;
+  if (apareceu) {
+    janela.showInactive();
+    avisarEscalaDoRaciocinio();
+  }
+  if (janela.webContents.isLoading()) return;
+  raciocinioRevelado = true;
+  janela.webContents.send('raciocinio:abrir');
 }
 
 function alimentarRaciocinio(evento) {
