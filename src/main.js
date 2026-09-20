@@ -52,6 +52,7 @@ let raciocinioSaindo = false;
 let raciocinioQuerido = false;
 let raciocinioEmTurno = false;
 let raciocinioRevelado = false;
+let raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
 const ALTURA_DA_BARRA_DE_TITULO = 32;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
@@ -132,6 +133,10 @@ function createWindow() {
   });
 
   mainWindow.on('resize', () => acompanharLayoutDoRaciocinio(true));
+  mainWindow.on('will-move', (_evento, novo) => {
+    const atual = mainWindow.getBounds();
+    acompanharLayoutDoRaciocinio(true, { x: novo.x - atual.x, y: novo.y - atual.y });
+  });
   mainWindow.on('move', () => acompanharLayoutDoRaciocinio(true));
   mainWindow.on('resized', () => acompanharLayoutDoRaciocinio(true));
   mainWindow.on('maximize', () => acompanharLayoutDoRaciocinio(true));
@@ -523,13 +528,18 @@ function mesmoRect(a, b) {
   return !!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
-function aplicarLimitesDoRaciocinio() {
+function aplicarLimitesDoRaciocinio(salto) {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
   if (raciocinioSaindo) return;
   const destino = limitesDoRaciocinio();
+  if (salto) {
+    destino.x += salto.x;
+    destino.y += salto.y;
+  }
   if (mesmoRect(janelaRaciocinio.getBounds(), destino)) return;
   janelaRaciocinio.setBounds(destino);
+  avisarCaixaDoRaciocinio(null, false);
 }
 
 function pararAcompanhamentoDoRaciocinio() {
@@ -539,25 +549,20 @@ function pararAcompanhamentoDoRaciocinio() {
   }
 }
 
-function acompanharLayoutDoRaciocinio(impulso) {
+function acompanharLayoutDoRaciocinio(impulso, salto) {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
   if (!janelaRaciocinio.isVisible()) return;
   if (raciocinioSaindo) return;
   raciocinioParadoEm = Date.now() + (impulso ? RACIOCINIO_BURST_MS : 0);
-  if (raciocinioDeSeguir) clearTimeout(raciocinioDeSeguir);
-  raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, RACIOCINIO_SEGUIR_MS);
+  aplicarLimitesDoRaciocinio(salto);
+  if (!raciocinioDeSeguir) raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, RACIOCINIO_SEGUIR_MS);
 }
 
 function passoDeAcompanhamento() {
   raciocinioDeSeguir = null;
   const janela = janelaRaciocinio;
   if (!janela || janela.isDestroyed() || !janela.isVisible() || raciocinioSaindo) return;
-  const antes = janela.getBounds();
   aplicarLimitesDoRaciocinio();
-  if (!mesmoRect(antes, janela.getBounds())) {
-    raciocinioParadoEm = Date.now();
-    avisarCaixaDoRaciocinio(null, false);
-  }
   const aAndar = (Date.now() - raciocinioParadoEm) < RACIOCINIO_PARADO_MS;
   raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, aAndar ? RACIOCINIO_SEGUIR_MS : RACIOCINIO_VIGIA_MS);
 }
@@ -577,6 +582,7 @@ function descartarJanelaRaciocinio() {
   raciocinioSaindo = false;
   raciocinioQuerido = false;
   raciocinioRevelado = false;
+  raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
   if (janela && !janela.isDestroyed()) janela.destroy();
 }
 
@@ -618,6 +624,7 @@ function criarJanelaRaciocinio() {
   });
   janelaRaciocinio.webContents.on('did-start-loading', () => {
     raciocinioRevelado = false;
+    raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
   });
   janelaRaciocinio.webContents.on('did-finish-load', () => {
     if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
@@ -724,11 +731,11 @@ function avisarCaixaDoRaciocinio(caixa, animar) {
   const janela = janelaRaciocinio;
   if (!janela || janela.isDestroyed() || janela.webContents.isLoading()) return;
   const base = caixa || janela.getBounds();
-  janela.webContents.send('raciocinio:caixa', {
-    largura: Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_LARGURA_RECOLHIDA, base.width) : base.width),
-    altura: Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_ALTURA_RECOLHIDA, base.height) : base.height),
-    animar: !!animar
-  });
+  const largura = Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_LARGURA_RECOLHIDA, base.width) : base.width);
+  const altura = Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_ALTURA_RECOLHIDA, base.height) : base.height);
+  if (!animar && largura === raciocinioTamanhoAvisado.largura && altura === raciocinioTamanhoAvisado.altura) return;
+  raciocinioTamanhoAvisado = { largura, altura };
+  janela.webContents.send('raciocinio:caixa', { largura, altura, animar: !!animar });
 }
 
 function definirRecolhaDoRaciocinio(recolhido) {
