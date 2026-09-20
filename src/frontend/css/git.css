@@ -209,6 +209,11 @@
 
 .git-tag-nome {
     flex-shrink: 0;
+    color: var(--text-mutado);
+    font-weight: 500;
+}
+
+.git-tag-acesa .git-tag-nome {
     color: var(--oliva);
     font-weight: 600;
 }
