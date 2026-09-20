@@ -18,6 +18,7 @@ from src.backend.tools.registry import register
 
 _TAGS_POR_OMISSAO = 6
 _MAX_ITENS_LISTADOS = 40
+_MAX_LINHAS_DIFF = 80
 _SEGREDOS = (
     ".env",
     ".axio/",
@@ -111,7 +112,55 @@ def _veredito_do_estado(em_stage, fora):
     return "nada por commitar"
 
 
-def _linhas_do_repositorio(raiz, tags):
+def _nome_do_diff(linha):
+    partes = linha.split(" b/", 1)
+    return (partes[1] if len(partes) > 1 else "").strip().strip('"')
+
+
+def _blocos_do_diff(texto):
+    blocos, nome, linhas = [], "", []
+    for linha in texto.splitlines():
+        if linha.startswith("diff --git "):
+            if nome:
+                blocos.append((nome, linhas))
+            nome, linhas = _nome_do_diff(linha), []
+        elif nome:
+            linhas.append(linha)
+    if nome:
+        blocos.append((nome, linhas))
+    return blocos
+
+
+def _linha_de_diff(linha):
+    if not linha or linha.startswith(("index ", "--- ", "+++ ", "new file", "deleted file", "old mode", "new mode")):
+        return False
+    return linha.startswith(("@@", "+", "-")) or linha.startswith("Binary files")
+
+
+def _linhas_da_alteracao(raiz):
+    texto, erro = git_saida(raiz, "diff", "HEAD", "--unified=0", "--no-color")
+    if erro:
+        return [f"DIFERENCA: git recusou o pedido: {erro}"]
+    blocos = [(n, l) for n, l in _blocos_do_diff(texto or "") if n and not _e_segredo(n)]
+    if not blocos:
+        return []
+    nomes = " | ".join(n for n, _ in blocos[:_MAX_ITENS_LISTADOS])
+    saida = [f"DIFERENCA vs ULTIMO COMMIT ({len(blocos)}): {nomes}"]
+    restante, escondidas = _MAX_LINHAS_DIFF, 0
+    for nome, linhas in blocos:
+        corpo = [l for l in linhas if _linha_de_diff(l)][:160]
+        mostradas = corpo[:max(restante, 0)]
+        if mostradas:
+            saida.append(f"  {nome}:")
+            saida += [f"    {l[:160]}" for l in mostradas]
+        restante -= len(mostradas)
+        escondidas += len(corpo) - len(mostradas)
+    if escondidas:
+        saida.append(f"  ... e mais {escondidas} linha(s) de diff nao mostradas")
+    return saida
+
+
+def _linhas_do_repositorio(raiz, tags, diff=True):
     texto, erro = git_saida(raiz, "status", "--short", "--branch")
     if erro:
         return [f"ERRO: git recusou o pedido em '{raiz}': {erro}"]
@@ -128,6 +177,8 @@ def _linhas_do_repositorio(raiz, tags):
     partes += _linhas_do_estado("EM STAGE", em_stage)
     partes += _linhas_do_estado("FORA DO STAGE", fora)
     partes.append(f"VEREDITO: {_veredito_do_estado(em_stage, fora)}")
+    if diff:
+        partes += _linhas_da_alteracao(raiz)
     return partes
 
 
@@ -264,7 +315,9 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
     "tool_estado_git",
     "Retrato do repositorio git numa so chamada: raiz, branch e relacao com o remoto, ultimo commit, "
     "as tags com o commit que apontam e quantos commits ficaram por cima, o que esta em stage e o que "
-    "mudou fora dele. Use ANTES de commitar (ver o que entra) e ao escolher o nome de uma tag: o "
+    "mudou fora dele, e - com diff=True - as proprias linhas que mudaram desde o ultimo commit, "
+    "que e o que permite escrever a mensagem do commit sem ir ler os ficheiros um a um (ficheiros "
+    "de credencial ficam de fora do diff). Use ANTES de commitar (ver o que entra) e ao escolher o nome de uma tag: o "
     "'git tag --list' local nao diz se o nome ja foi publicado, para isso use 'git ls-remote --tags "
     "origin' pelo tool_executar_processo. Le tambem a VITRINE do remoto pela API do GitHub quando o "
     "origin e um repositorio publico: descricao, topics, licenca, estrelas, discussions e quantos "
@@ -275,15 +328,16 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
         'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
         'tags': {"tipo": "INTEGER", "desc": "Quantas tags mostrar, das mais recentes", "padrao": _TAGS_POR_OMISSAO},
         'vitrine': {"tipo": "BOOLEAN", "desc": "Ler tambem a vitrine do repositorio remoto pela API do GitHub (descricao, topics, licenca, Releases)", "padrao": True},
+        'diff': {"tipo": "BOOLEAN", "desc": "Mostrar tambem as linhas que mudaram desde o ultimo commit (o que vai entrar no commit)", "padrao": True},
     },
 )
-def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True):
+def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True):
     base = caminho or estado.get("pasta_raiz") or APP_ROOT
     raiz = raiz_repositorio(base)
     if not raiz:
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
                 "(nenhuma pasta .git a subir a partir dai).")
-    linhas = _linhas_do_repositorio(raiz, tags)
+    linhas = _linhas_do_repositorio(raiz, tags, diff)
     if vitrine:
         linhas = linhas + _linhas_da_vitrine(raiz)
     return "\n".join(linhas)

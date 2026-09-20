@@ -3849,10 +3849,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 309,
+        "linha": 363,
         "conferido": [
-          1789855643.782,
-          24870
+          1789935678.39,
+          27133
         ]
       }
     },
@@ -3869,10 +3869,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 280,
+        "linha": 334,
         "conferido": [
-          1789855643.782,
-          24870
+          1789935678.39,
+          27133
         ]
       }
     },
@@ -3949,10 +3949,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 563,
+        "linha": 617,
         "conferido": [
-          1789855643.782,
-          24870
+          1789935678.39,
+          27133
         ]
       }
     },
@@ -3969,10 +3969,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 414,
+        "linha": 468,
         "conferido": [
-          1789855643.782,
-          24870
+          1789935678.39,
+          27133
         ]
       }
     },
@@ -3989,10 +3989,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 334,
+        "linha": 388,
         "conferido": [
-          1789855643.782,
-          24870
+          1789935678.39,
+          27133
         ]
       }
     },
