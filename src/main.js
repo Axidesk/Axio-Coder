@@ -433,7 +433,7 @@ function definirVisibilidadeDoPreview(visivel) {
   if (previewVisivel) {
     criarJanelaRaciocinio();
     if (raciocinioQuerido) mostrarJanelaRaciocinio();
-  } else if (!raciocinioEmTurno) {
+  } else if (!raciocinioEmTurno && !raciocinioDepoisDoTurno) {
     esconderJanelaRaciocinio();
   }
   for (const chave of TIPOS_DE_VIEW) {
