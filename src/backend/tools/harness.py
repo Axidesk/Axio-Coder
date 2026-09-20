@@ -1393,9 +1393,12 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "o seu proprio escopo, mesmo para var, logo uma constante ou funcao avaliada num eval NAO fica "
     "visivel para o eval seguinte - a funcao extraida rebenta com ReferenceError ao ser chamada. Use "
     "new Function('DEP1', 'DEP2', 'return (' + corpo + ')')(dep1, dep2), passando as dependencias "
-    "como argumentos; foi assim que se descobriu que lerZoomPersistido depende de normalizarZoom.",
+    "como argumentos; foi assim que se descobriu que lerZoomPersistido depende de normalizarZoom. "
+    "O ficheiro corre na pasta TEMPORARIA do sistema: um import RELATIVO ('./x.js') nao resolve de la e "
+    "rebenta com ERR_MODULE_NOT_FOUND. O cwd, esse, e a raiz do projeto - monte o caminho absoluto com "
+    "path.join(process.cwd(), 'src/frontend/js/x.js') e importe pathToFileURL(esse).href.",
     {
-        "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo JavaScript (ESM) a executar (imports e asserts sao bem-vindos)"},
+        "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo JavaScript (ESM) a executar (imports e asserts sao bem-vindos). Imports de modulos do projeto tem de ser por caminho ABSOLUTO: use pathToFileURL(path.join(process.cwd(), 'src/...')).href"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Provar o arredondamento das abas'). Sem ele o card fica com a primeira linha do codigo, que quase sempre e um import - igual ao de todos os outros.", "padrao": ""},
     },
