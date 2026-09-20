@@ -91,6 +91,25 @@ try {
 }
 
 const importarProjeto = (rel) => import(__paraUrl(__juntar(process.cwd(), rel)));
+
+// Extrai do disco o corpo EXATO de uma funcao nomeada, pronto para new Function.
+// Inclui o 'async' quando existe (esquece-lo da um SyntaxError que nao aponta para
+// a causa) e equilibra chaves - nao distingue chaves dentro de strings.
+const funcaoDoDisco = (rel, nome) => {
+    const texto = fs.readFileSync(path.join(process.cwd(), rel), "utf8");
+    let inicio = texto.indexOf("function " + nome + "(");
+    if (inicio < 0) throw new Error("funcao nao encontrada no disco: " + nome);
+    if (texto.slice(inicio - 6, inicio) === "async ") inicio -= 6;
+    const abre = texto.indexOf("{", inicio);
+    let nivel = 0;
+    for (let i = abre; i < texto.length; i++) {
+        if (texto[i] === "{") nivel++;
+        else if (texto[i] === "}" && --nivel === 0) return texto.slice(inicio, i + 1);
+    }
+    throw new Error("fim da funcao nao encontrado: " + nome);
+};
+
+const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join("\n");
 '''
 
 _DOM_FALSO_JS = r'''
@@ -1430,11 +1449,16 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "e navegue-a com dom.sel/dom.selTodos. "
     "Antes de importar um modulo grande do frontend so para testar uma funcao, saiba que o state.js "
     "le o DOM ao importar: se rebentar, extraia o texto da funcao do disco e avalie-a isolada. "
-    "ATENCAO AO EXTRAIR FUNCOES DO DISCO: no harness (ESM, modo estrito) o eval direto cria SEMPRE "
+    "PARA EXTRAIR UMA FUNCAO REAL DO DISCO o cabecalho ja traz o auxiliar: funcaoDoDisco('src/x.js', "
+    "'nome') devolve o corpo EXATO (com o async a frente quando existir) e funcoesDoDisco('src/x.js', "
+    "'a', 'b') junta varias na ordem pedida - nao reescreva o balanceamento de chaves a mao, que "
+    "esquecer o async de uma funcao assincrona da um SyntaxError que nao aponta para a causa. "
+    "ATENCAO: no harness (ESM, modo estrito) o eval direto cria SEMPRE "
     "o seu proprio escopo, mesmo para var, logo uma constante ou funcao avaliada num eval NAO fica "
     "visivel para o eval seguinte - a funcao extraida rebenta com ReferenceError ao ser chamada. Use "
-    "new Function('DEP1', 'DEP2', 'return (' + corpo + ')')(dep1, dep2), passando as dependencias "
-    "como argumentos; foi assim que se descobriu que lerZoomPersistido depende de normalizarZoom. "
+    "new Function('DEP1', 'DEP2', funcoesDoDisco(...) + 'return {a, b};')(dep1, dep2), passando as "
+    "dependencias como argumentos; foi assim que se descobriu que lerZoomPersistido depende de "
+    "normalizarZoom. "
     "O ficheiro corre na pasta TEMPORARIA do sistema: um import RELATIVO ('./x.js') nao resolve de la e "
     "rebenta com ERR_MODULE_NOT_FOUND. O cwd, esse, e a raiz do projeto - monte o caminho absoluto com "
     "path.join(process.cwd(), 'src/frontend/js/x.js') e importe pathToFileURL(esse).href.",
