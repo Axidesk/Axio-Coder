@@ -68,7 +68,7 @@ const { historyLogsWrapper } = dom;
     }
     function roundMetaHtml(group) {
         const fileCount = (group.files || []).length;
-        const toolCount = (group.tools || []).length;
+        const toolCount = (group.tools || []).length || group.nFerramentas || 0;
         const duracao = formatRoundDuration(group.duration);
         const textoArquivos = fileCount === 1 ? '1 arquivo' : `${fileCount} arquivos`;
         const textoFerramentas = toolCount === 1 ? '1 ferramenta' : `${toolCount} ferramentas`;
@@ -107,12 +107,12 @@ const { historyLogsWrapper } = dom;
         group.nameEl = sub.querySelector('.history-round-name');
         sub._group = group;
         marcarCheckpoint(sub, group.id);
-        sub.addEventListener('click', () => {
+        sub.addEventListener('click', async () => {
             const vista = vistaDe('historico');
             const isSelected = state.currentSelectedHistoryGroup === group;
             if (!isSelected) {
                 selectHistoryTask(group, sub);
-                openFilesPanel(group, vista);
+                openFilesPanel(await carregarRodadaCompleta(group), vista);
                 return;
             }
             if (vista.col3Aberta()) {
@@ -290,18 +290,51 @@ const { historyLogsWrapper } = dom;
         mountCollapsibleCard(card, header, loadSavedRoundCards);
     }
     async function ensureSessionDetailsLoaded() {
-        for (const sessao of state.sessionHistoryList) {
-            if (state.sessionDetailCache[sessao.filename] !== undefined) continue;
-            try {
-                const resp = await fetch(`/api/session_detail?file=${encodeURIComponent(sessao.filename)}`);
-                const data = await resp.json();
-                if (!data.error) {
-                    state.sessionDetailCache[sessao.filename] = (data.logs || []).map(l => ({ ...l, __session: sessao.filename }));
-                }
-            } catch (e) {
-                console.error('Erro ao carregar detalhes da sessão:', e);
-            }
+        if (!state.sessionHistoryList.some(s => state.sessionDetailCache[s.filename] === undefined)) return;
+        if (!state.sessionIndiceEmCurso) state.sessionIndiceEmCurso = carregarIndiceDeSessoes();
+        try {
+            await state.sessionIndiceEmCurso;
+        } finally {
+            state.sessionIndiceEmCurso = null;
         }
+    }
+    async function carregarIndiceDeSessoes() {
+        try {
+            const resp = await fetch('/api/sessions_index');
+            const data = await resp.json();
+            (data.sessions || []).forEach(s => {
+                state.sessionDetailCache[s.filename] = (s.rounds || []).map(r => ({ ...r, __session: s.filename, __leve: true }));
+            });
+        } catch (e) {
+            console.error('Erro ao carregar o índice de sessões:', e);
+        }
+    }
+    async function carregarRodadaCompleta(saved) {
+        if (!saved || !saved.__leve || !saved.__session) return saved;
+        if (!saved.__pesadaEmCurso) saved.__pesadaEmCurso = _buscarRodadaCompleta(saved);
+        try {
+            return await saved.__pesadaEmCurso;
+        } finally {
+            delete saved.__pesadaEmCurso;
+        }
+    }
+    async function _buscarRodadaCompleta(saved) {
+        try {
+            const resp = await fetch(`/api/session_round?file=${encodeURIComponent(saved.__session)}&id=${encodeURIComponent(saved.id)}`);
+            const data = await resp.json();
+            if (data && !data.error) {
+                saved.files = data.files || [];
+                saved.snapshot = data.snapshot || {};
+                saved.tools = data.tools || [];
+                saved.thoughts = data.thoughts || [];
+                saved.questions = data.questions || saved.questions || [];
+                saved.aiResponse = data.aiResponse || saved.aiResponse || '';
+                delete saved.__leve;
+            }
+        } catch (e) {
+            console.error('Erro ao carregar a tarefa completa:', e);
+        }
+        return saved;
     }
     async function loadSavedRoundCards(body) {
         await ensureSessionDetailsLoaded();
@@ -366,36 +399,11 @@ const { historyLogsWrapper } = dom;
         groups.forEach(group => body.appendChild(createHistoryRoundCard(group)));
     }
     async function loadDayRoundCards(sessoes, body) {
+        await ensureSessionDetailsLoaded();
         const savedLogs = [];
-        let precisaBuscar = false;
         sessoes.forEach(sessao => {
-            const cached = state.sessionDetailCache[sessao.filename];
-            if (cached !== undefined) {
-                savedLogs.push(...cached);
-            } else {
-                precisaBuscar = true;
-            }
+            savedLogs.push(...(state.sessionDetailCache[sessao.filename] || []));
         });
-        if (!precisaBuscar) {
-            renderDayRoundCards(savedLogs, body);
-            return;
-        }
-        body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Carregando rodadas...</div>';
-        try {
-            for (const sessao of sessoes) {
-                if (state.sessionDetailCache[sessao.filename] !== undefined) continue;
-                const resp = await fetch(`/api/session_detail?file=${encodeURIComponent(sessao.filename)}`);
-                const data = await resp.json();
-                if (data.error) continue;
-                const logs = (data.logs || []).map(l => ({ ...l, __session: sessao.filename }));
-                state.sessionDetailCache[sessao.filename] = logs;
-                savedLogs.push(...logs);
-            }
-        } catch (e) {
-            console.error('Erro ao carregar rodadas do dia:', e);
-            body.innerHTML = '<div class="p-3 text-xs text-red-400 font-mono">Erro ao carregar rodadas.</div>';
-            return;
-        }
         renderDayRoundCards(savedLogs, body);
     }
 
@@ -408,6 +416,7 @@ export {
     renderSalvoCardIfNeeded,
     assignDisplayNamesByDay,
     ensureSessionDetailsLoaded,
+    carregarRodadaCompleta,
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
     updateRoundCardNameByTurnId,

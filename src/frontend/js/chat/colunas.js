@@ -55,7 +55,8 @@ function criarVista(opcoes) {
         },
         abrirArquivo: opcoes.abrirArquivo || (() => {}),
         abrirDiff: opcoes.abrirDiff || (() => {}),
-        aoAbrirGrupo: opcoes.aoAbrirGrupo || (() => {})
+        aoAbrirGrupo: opcoes.aoAbrirGrupo || (() => {}),
+        aoSelecionarArquivo: null
     };
     vistas.set(vista.id, vista);
     return vista;

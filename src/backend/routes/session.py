@@ -32,6 +32,11 @@ from src.backend.services.file_service import (
     mover_para_lixeira,
 )
 from src.backend.memory.vector import limpar_drawers_de_sources
+from src.backend.services.session_index import (
+    atualizar_indice_de_payload,
+    indice_de_log,
+    rodada_completa_de_log,
+)
 from src.backend.tools.js_contrato import quebras_introduzidas
 
 session_bp = Blueprint("session", __name__)
@@ -234,41 +239,46 @@ def session_history():
 
     return jsonify({"sessions": sessoes})
 
-@session_bp.route('/api/session_detail', methods=['GET'])
-def session_detail():
-    filename = request.args.get("file", "")
+@session_bp.route('/api/sessions_index', methods=['GET'])
+def sessions_index():
+    """Indice leve de todas as sessoes: alimenta a pilha do historico e a busca."""
     pasta_logs = pasta_session_logs()
-    if not pasta_logs or not filename:
+    if not pasta_logs or not os.path.exists(pasta_logs):
+        return jsonify({"sessions": []})
+
+    try:
+        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
+    except OSError:
+        return jsonify({"sessions": []})
+
+    arquivos.sort(key=ts_de_arquivo_log, reverse=True)
+    sessoes = []
+    for arq in arquivos:
+        indice = indice_de_log(os.path.join(pasta_logs, arq))
+        sessoes.append({"filename": arq, "rounds": (indice or {}).get("rounds", [])})
+    return jsonify({"sessions": sessoes})
+
+@session_bp.route('/api/session_round', methods=['GET'])
+def session_round():
+    """Traz arquivos, diff e snapshot de UMA rodada, pedida ao abrir a tarefa na pilha."""
+    filename = os.path.basename(request.args.get("file", ""))
+    turn_id = request.args.get("id", "")
+    pasta_logs = pasta_session_logs()
+    if not pasta_logs or not filename or not turn_id:
         return jsonify({"error": "parâmetro inválido"}), 400
 
-    filename = os.path.basename(filename)
     caminho = os.path.join(pasta_logs, filename)
     if not os.path.exists(caminho):
         return jsonify({"error": "sessão não encontrada"}), 404
 
     try:
-        dados = ler_log_sessao(caminho)
+        rodada = rodada_completa_de_log(pasta_logs, filename, turn_id)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    snapshot = dados.get("snapshot") or {}
-    snapshot_files = []
-    for rel, info in snapshot.items():
-        removido = isinstance(info, dict) and info.get("conteudo") is None
-        snapshot_files.append({"caminho": rel, "removido": removido})
-
-    logs = dados.get("logs", [])
-    for grupo in logs:
-        if "snapshot" not in grupo or not grupo.get("snapshot"):
-            grupo["snapshot"] = snapshot
-
-    return jsonify({
-        "filename": filename,
-        "datetime": dados.get("datetime", ""),
-        "summary": dados.get("summary", ""),
-        "logs": logs,
-        "snapshot_files": snapshot_files
-    })
+    if rodada is None:
+        return jsonify({"error": "tarefa não encontrada"}), 404
+    return jsonify(rodada)
 
 def _gravar_payload(caminho, payload):
     """Grava o payload JSON de um log de sessao.
@@ -279,6 +289,7 @@ def _gravar_payload(caminho, payload):
         gravar_log_sessao(caminho, payload)
     except OSError as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    atualizar_indice_de_payload(caminho, payload)
     return None
 
 @session_bp.route('/api/session_log/toggle_save', methods=['POST'])

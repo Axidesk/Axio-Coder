@@ -125,9 +125,9 @@ _DOM_FALSO_JS = r'''
 // classList.toggle respeita o 2o argumento (forca); getBoundingClientRect e
 // CALCULADO a cada pedido a partir de offset*/medir(); dispatchEvent propaga
 // (captura -> alvo -> bolha) e um erro dentro do listener NAO e engolido.
-// Duas armadilhas de leitura que ja custaram chamadas: dom.disparar e
-// (tipo, alvo) - `dom.disparar(el,"input")` procura um elemento chamado
-// "input" e rebenta com "elemento nao encontrado"; e um elemento SEM classe
+// dom.disparar aceita as duas ordens - (tipo, alvo) ou (alvo, tipo) - porque
+// trocar os argumentos era um erro silencioso que so aparecia como "elemento
+// nao encontrado: click". Outra armadilha de leitura: um elemento SEM classe
 // devolve el.className === tagName ("SPAN"), nao string vazia (normalizar nos
 // asserts com `el.className || el.tagName`).
 // Modulo que le o DOM TODO ao importar (o state.js e o caso) rebenta com
@@ -1110,6 +1110,11 @@ const criarDomFalso = (opcoes) => {
         return ev;
     };
     const disparar = (tipo, alvo, props) => {
+        if (typeof tipo !== "string" && typeof alvo === "string") {
+            const troca = tipo;
+            tipo = alvo;
+            alvo = troca;
+        }
         const no = resolver(alvo);
         const ev = evento(tipo, no, props);
         no.dispatchEvent(ev);

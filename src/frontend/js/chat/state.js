@@ -27,6 +27,7 @@ export const state = {
     vistaDocAtual: 'chat',
     sessionHistoryList: [],
     sessionDetailCache: {},
+    sessionIndiceEmCurso: null,
     sessionHistoryLoaded: false,
     currentTurnLogs: [],
     currentTurnSummary: '',

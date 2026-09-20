@@ -515,6 +515,7 @@ const NL = String.fromCharCode(10);
                 expandir();
             }
             marcarFileSelecionado(fileHeader);
+            if (vista.aoSelecionarArquivo) vista.aoSelecionarArquivo();
             selecionarArquivo(fileData, vista);
         });
         if (toggleIcon) {

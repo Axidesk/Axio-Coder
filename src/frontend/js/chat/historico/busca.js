@@ -3,7 +3,7 @@ import * as dom from '../dom.js';
 import { vistaDe } from '../colunas.js';
 import { escapeHtml } from '../messages.js';
 import { openFilesPanel } from './acoes.js';
-import { assignDisplayNamesByDay, ensureSessionDetailsLoaded, rebuildGroupFromSaved, selectHistoryTaskInPile } from './cards.js';
+import { assignDisplayNamesByDay, carregarRodadaCompleta, ensureSessionDetailsLoaded, rebuildGroupFromSaved, selectHistoryTaskInPile } from './cards.js';
 
 const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
@@ -129,12 +129,13 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         nome.className = 'text-[13px] font-bold text-[var(--text-code-dark)] leading-tight cursor-pointer hover:text-[var(--oliva)] hover:underline transition-colors';
         nome.textContent = r.nome;
         nome.title = 'Abrir tarefa correspondente';
-        nome.addEventListener('click', (e) => {
+        nome.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (!r.saved) return;
+            collapseHistorySearchInline();
+            await carregarRodadaCompleta(r.saved);
             const group = rebuildGroupFromSaved(r.saved);
             group.displayName = r.nome;
-            collapseHistorySearchInline();
             selectHistoryTaskInPile(r.dia, r.saved.id);
             openFilesPanel(group, vistaDe('historico'));
         });
@@ -166,6 +167,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         const vista = vistaDe('historico');
         if (!vista) return;
         vista.aoAbrirCol3 = encolherBuscaInline;
+        vista.aoSelecionarArquivo = collapseHistorySearchInline;
         vista.abrirCol2();
         vista.lista.innerHTML = '<div class="panel-empty">Selecione uma tarefa no histórico para ver os arquivos editados.</div>';
     }

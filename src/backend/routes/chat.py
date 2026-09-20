@@ -9,6 +9,7 @@ from src.backend.state import estado, emit_event, caminho_estado_projeto, regist
 from src.backend.services.process_manager import pty_lock, pty_kill_locked
 from src.backend.tools.process import matar_arvore
 from src.backend.services.session import criar_sessao_vazia, migrar_session_logs_antigos
+from src.backend.services.session_index import preaquecer_indices_de_sessao
 from src.backend.ai.context import medir_contexto, truncar_mensagem_historico
 from src.backend.ai.loop import loop_raciocinio_ia
 from src.backend.services.file_watcher import iniciar_watcher
@@ -95,6 +96,7 @@ def set_folder():
 
         limpar_eventos()
         preaquecer_info_projeto(pasta)
+        preaquecer_indices_de_sessao()
         return jsonify({"folder": pasta, "status": "ready"})
     return jsonify({"error": "Nenhuma pasta fornecida"}), 400
 
