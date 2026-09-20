@@ -443,6 +443,16 @@ function definirVisibilidadeDoPreview(visivel) {
   }
 }
 
+function trazerParaFrente() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { ok: false, erro: 'A janela principal nao esta disponivel.' };
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (!mainWindow.isVisible()) mainWindow.show();
+  mainWindow.focus();
+  return { ok: true };
+}
+
 function aplicarLimitesDoPreview(limites) {
   const caixa = escalarLimites(limites, zoomDaJanela());
   if (!caixa) return;
@@ -1079,7 +1089,7 @@ app.on('ready', () => {
         }
         return resultado;
       },
-      mostrar: () => ({ ok: true })
+      mostrar: () => trazerParaFrente()
     }
   }, (porta, token) => {
     pontePorta = porta;
