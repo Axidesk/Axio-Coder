@@ -9,7 +9,7 @@ body {
 }
 
 :root {
-    --rc-recolha: 0.13s;
+    --rc-fade: 0.11s;
 }
 
 #rc-janela {
@@ -28,7 +28,7 @@ body {
 
 body.rc-saindo #rc-janela {
     opacity: 0;
-    transform: translateY(12px) scale(0.985);
+    transform: translateY(26px) scale(0.97);
 }
 
 #rc-barra {
@@ -64,6 +64,18 @@ body.rc-saindo #rc-janela {
 #rc-contador {
     font-size: 11px;
     color: var(--text-mutado);
+}
+
+#rc-titulo,
+#rc-contador {
+    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear 0s;
+}
+
+body.rc-recolhido #rc-titulo,
+body.rc-recolhido #rc-contador {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear var(--rc-fade);
 }
 
 #rc-recolher {
@@ -114,27 +126,27 @@ body.rc-recolhido .rc-traco-v {
 #rc-clip {
     flex: 1;
     min-height: 0;
-    display: grid;
-    grid-template-rows: 1fr;
-    transition: grid-template-rows var(--rc-recolha) var(--ease-fluid);
-}
-
-body.rc-recolhido #rc-clip {
-    grid-template-rows: 0fr;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 #rc-conteudo {
+    flex: 1;
     min-height: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     padding: 0 14px 12px;
     opacity: 1;
-    transition: opacity var(--rc-recolha) var(--ease-fluid);
+    visibility: visible;
+    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear 0s;
 }
 
 body.rc-recolhido #rc-conteudo {
     opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear var(--rc-fade);
 }
 
 #rc-estado {

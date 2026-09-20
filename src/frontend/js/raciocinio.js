@@ -19,18 +19,26 @@ const ENTRADA = [
 ];
 
 const DURACAO_DA_ENTRADA_MS = 180;
+const MARGEM_DO_FIM_PX = 24;
 
 let recolhido = false;
 let passos = 0;
+let seguirFim = true;
 
 function limpar() {
     while (registo.firstChild) registo.removeChild(registo.firstChild);
     estado.textContent = '';
     passos = 0;
     contador.textContent = '';
+    seguirFim = true;
+}
+
+function noFimDoRegisto() {
+    return registo.scrollHeight - registo.scrollTop - registo.clientHeight <= MARGEM_DO_FIM_PX;
 }
 
 function aoFundo() {
+    if (!seguirFim) return;
     registo.scrollTop = registo.scrollHeight;
 }
 
@@ -102,6 +110,9 @@ function sair() {
 }
 
 botao.addEventListener('click', alternarRecolha);
+registo.addEventListener('scroll', () => {
+    seguirFim = noFimDoRegisto();
+}, { passive: true });
 api.aoAbrir(animarEntrada);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);
