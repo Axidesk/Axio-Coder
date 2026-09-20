@@ -19,6 +19,7 @@ const CAMADAS_SEM_TAPAO = new Set(['sliding-panel-container', 'preview-float']);
 
 const PAI_DO_ICONE = state.btnPreview ? state.btnPreview.parentElement : null;
 let entradaEm = 0;
+let limitesEnviados = '';
 let iconeNaBarra = false;
 
 let ipcRenderer = null;
@@ -206,10 +207,18 @@ function sincronizar() {
         entradaEm = 0;
     }
     const mostrar = quer && (!estreia || performance.now() - entradaEm >= ESPERA_ENTRADA_MS);
-    if (mostrar) enviar('preview:limites', limites);
+    enviarLimites(limites);
     if (mostrar === state.previewVisivelEnviado) return;
     state.previewVisivelEnviado = mostrar;
     enviar('preview:visivel', mostrar);
+}
+
+function enviarLimites(limites) {
+    if (!limites) return;
+    const chave = [limites.x, limites.y, limites.width, limites.height].join(',');
+    if (chave === limitesEnviados) return;
+    limitesEnviados = chave;
+    enviar('preview:limites', limites);
 }
 
 function passoDeSincronia() {

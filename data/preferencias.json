@@ -59,6 +59,11 @@
       "area": "separadores",
       "texto": "Separador entre itens e UM tracinho fino (1px var(--border-suave)), nunca uma caixa a contornar: a linha vai de ponta a ponta dentro da indentacao da zona. Onde nao houver separador, separa o respiro/cor.",
       "atualizado": "2026-09-19 17:23:35"
+    },
+    {
+      "area": "autonomia",
+      "texto": "Pedido pequeno = resposta pequena. Se nao entendi o pedido, ou se fiquei confuso, ou se ele nao fez sentido, PARO NA PRIMEIRA DUVIDA e digo em uma linha o que nao entendi - nunca saio a cacar erro nem a adivinhar. Se o pedido esta claro mas na minha leitura exigiria outro trabalho (construir ferramenta, mexer em varios ficheiros, refatorar), NAO substituo o pedido por esse trabalho: ou faco o possivel com o que existe e reporto o limite, ou pergunto antes. Proibido gastar a rodada a construir coisa que ele nao pediu (foi o caso do 'interage com o canvas pra gente testar' -> passei a rodada a construir arrastar/roda em vez de testar).",
+      "atualizado": "2026-09-20 04:37:31"
     }
   ]
 }

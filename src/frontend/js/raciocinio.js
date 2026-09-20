@@ -2,7 +2,9 @@ const api = window.raciocinio || {
     aoAbrir: () => {},
     aoEvento: () => {},
     aoHistorico: () => {},
-    recolher: () => {}
+    aoRecolha: () => {},
+    aoSair: () => {},
+    alternar: () => {}
 };
 
 const janela = document.getElementById('rc-janela');
@@ -12,11 +14,11 @@ const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
 
 const ENTRADA = [
-    { opacity: 0, transform: 'translateY(-14px) scale(0.98)' },
+    { opacity: 0, transform: 'translateY(12px) scale(0.985)' },
     { opacity: 1, transform: 'translateY(0) scale(1)' }
 ];
 
-const ESPERA_DA_RECOLHA_MS = 130;
+const DURACAO_DA_ENTRADA_MS = 180;
 
 let recolhido = false;
 let passos = 0;
@@ -71,7 +73,7 @@ function aplicar(evento) {
         return;
     }
     limpar();
-    if (evento.tipo === 'inicio' && definirRecolha(false)) api.recolher(false);
+    if (evento.tipo === 'inicio') definirRecolha(false);
 }
 
 function rotuloDaRecolha() {
@@ -79,28 +81,30 @@ function rotuloDaRecolha() {
 }
 
 function definirRecolha(valor) {
-    const mudou = recolhido !== !!valor;
     recolhido = !!valor;
     document.body.classList.toggle('rc-recolhido', recolhido);
     botao.title = rotuloDaRecolha();
     botao.setAttribute('aria-label', rotuloDaRecolha());
-    return mudou;
 }
 
 function alternarRecolha() {
-    const proximo = !recolhido;
-    definirRecolha(proximo);
-    if (proximo) window.setTimeout(() => api.recolher(true), ESPERA_DA_RECOLHA_MS);
-    else api.recolher(false);
+    api.alternar();
 }
 
 function animarEntrada() {
+    document.body.classList.remove('rc-saindo');
     if (typeof janela.animate !== 'function') return;
-    janela.animate(ENTRADA, { duration: 280, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
+    janela.animate(ENTRADA, { duration: DURACAO_DA_ENTRADA_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
+}
+
+function sair() {
+    document.body.classList.add('rc-saindo');
 }
 
 botao.addEventListener('click', alternarRecolha);
 api.aoAbrir(animarEntrada);
+api.aoSair(sair);
+api.aoRecolha(definirRecolha);
 api.aoEvento(aplicar);
 api.aoHistorico((lista) => {
     limpar();

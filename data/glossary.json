@@ -4118,15 +4118,11 @@
         "recolher o raciocinio",
         "botao de menos e mais da janela flutuante"
       ],
-      "identificador": "mostrarJanelaRaciocinio",
-      "descricao": "Janela propria do Electron (transparente, sem moldura, always-on-parent) que mostra o raciocinio do agente ENQUANTO ele opera o preview - existe porque a coluna 3 do Monaco fica tapada quando a vista ativa e o preview. Surge sozinha na primeira acao do agente no preview (gancho aoUsar da ponte), centrada um pouco abaixo do topo da janela-mae, e some quando o turno acaba (evento SSE done/cancel/error -> tipo 'fim'). O rectangulo da janela e SEMPRE do tamanho exacto do painel: recolhida encolhe para a barra, senao a area transparente engolia cliques no preview por baixo. O '-' vira '+' na barra e o corpo recolhe com grid-template-rows 0fr->1fr.",
+      "identificador": "criarJanelaRaciocinio / limitesDoRaciocinio / mostrarJanelaRaciocinio",
+      "descricao": "Segunda BrowserWindow do Electron (transparente, sem moldura, always-on-parent, nao focavel) que mostra o raciocinio do agente ENQUANTO ele opera o preview - existe porque a vista do preview e uma WebContentsView, que fica SEMPRE por cima do DOM. A pagina e servida em /raciocinio (nao por loadFile: o CORS do file:// bloqueia type=module). ANCORADA A AREA DO PREVIEW, nao a janela-mae: centro horizontal sobre a area e base a 16px do fundo dela (limitesDoRaciocinio, com Math.max(0,...) a impedir transbordo quando a area e estreita). So vive enquanto o preview estiver visivel: definirVisibilidadeDoPreview(false) esconde-a e (true) pre-cria-a. Surge na primeira acao do agente no preview e reabre a cada turno. O rectangulo e SEMPRE do tamanho exacto do painel (aberta 380x200, recolhida 200x38): uma area transparente maior engolia cliques no preview por baixo. O '-' vira '+' e a recolha anima 130ms (10 quadros x 13ms) com o CSS a acompanhar em --rc-recolha. O estado de recolhido tem DONO UNICO no main: o renderer pede raciocinio:alternar e recebe raciocinio:recolhido de volta. Ao fechar o preview desliza e desvanece em 200ms (--dur-3, o mesmo fade-out do preview).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 584,
-        "conferido": [
-          1789875354.998,
-          35872
-        ]
+        "linha": 550
       }
     },
     {
