@@ -28,6 +28,7 @@ from src.backend.tools import (
     edit,
     environment,
     espera,
+    execucao,
     git,
     graph,
     harness,
