@@ -225,10 +225,10 @@ def alteracoes_para_disco(pasta, revisao):
     """O que muda entre a revisao indicada e o disco, sem tocar em nada."""
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:
-        return {"repo": False, "motivo": erro, "restaurar": [], "remover": [], "iguais": 0}
+        return {"repo": False, "motivo": erro, "restaurar": [], "remover": []}
     saida, erro_diff = git_saida(raiz, "diff", "--name-status", revisao, "--")
     if erro_diff:
-        return {"repo": True, "erro": erro_diff, "restaurar": [], "remover": [], "iguais": 0}
+        return {"repo": True, "erro": erro_diff, "restaurar": [], "remover": []}
     restaurar, remover = [], []
     for linha in (saida or "").splitlines():
         codigo, nome = _nome_do_status(linha)
@@ -244,7 +244,7 @@ def alteracoes_para_disco(pasta, revisao):
     for rel in novos:
         if rel not in remover:
             remover.append(rel)
-    return {"repo": True, "raiz": raiz, "restaurar": restaurar, "remover": remover, "iguais": 0}
+    return {"repo": True, "raiz": raiz, "restaurar": restaurar, "remover": remover}
 
 
 def conteudo_na_revisao(pasta, revisao, caminhos):

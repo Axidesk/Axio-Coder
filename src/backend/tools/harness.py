@@ -49,6 +49,12 @@ for _fluxo in (sys.stdout, sys.stderr):
 # ("nenhuma pasta aberta") sem dizer por que. Para exercitar uma rota que le
 # ficheiros do projeto, defina-o ANTES de a chamar:
 #   from src.backend.state import estado; estado['pasta_raiz'] = os.getcwd()
+#
+# Para PROVAR UMA ROTA com a app a serio, sem subir servidor, importe o modulo do
+# app.py e NAO o extensions: quem regista os blueprints e o app.py, logo
+#   import app as axio_app; c = axio_app.app.test_client()
+# Importar so 'src.backend.extensions' responde 404 em TODAS as rotas (o objeto
+# app existe, mas sem blueprint nenhum registado).
 
 '''
 
