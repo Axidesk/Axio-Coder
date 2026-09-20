@@ -49,6 +49,7 @@ let raciocinioSaidaEm = null;
 let raciocinioPronto = false;
 let raciocinioSaindo = false;
 let raciocinioQuerido = false;
+let raciocinioEmTurno = false;
 const ALTURA_DA_BARRA_DE_TITULO = 32;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
@@ -428,8 +429,12 @@ function definirVisibilidadeDoPreview(visivel) {
   const alguma = viewDoTipo('node') || viewDoTipo('web');
   if (!visivel && !alguma) return;
   previewVisivel = !!visivel;
-  if (previewVisivel) criarJanelaRaciocinio();
-  else esconderJanelaRaciocinio();
+  if (previewVisivel) {
+    criarJanelaRaciocinio();
+    if (raciocinioQuerido) mostrarJanelaRaciocinio();
+  } else if (!raciocinioEmTurno) {
+    esconderJanelaRaciocinio();
+  }
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
     if (!view) continue;
@@ -653,9 +658,9 @@ function esconderJanelaRaciocinio() {
 }
 
 function mostrarJanelaRaciocinio() {
+  raciocinioQuerido = true;
   if (!previewVisivel) return;
   if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return;
-  raciocinioQuerido = true;
   const voltouDaSaida = !!raciocinioSaidaEm;
   if (raciocinioSaidaEm) {
     clearTimeout(raciocinioSaidaEm);
@@ -681,6 +686,7 @@ function alimentarRaciocinio(evento) {
   if (!evento || typeof evento !== 'object' || !evento.tipo) return;
   if (evento.tipo === 'inicio' || evento.tipo === 'fim') {
     raciocinioBuffer = [];
+    raciocinioEmTurno = evento.tipo === 'inicio';
     cancelarSaidaDepoisDoTurno();
     if (evento.tipo === 'inicio') definirRecolhaDoRaciocinio(false);
     if (evento.tipo === 'fim') agendarSaidaDepoisDoTurno();
