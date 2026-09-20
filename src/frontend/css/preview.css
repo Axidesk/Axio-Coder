@@ -146,6 +146,21 @@
     cursor: grabbing;
 }
 
+.preview-tab-pino {
+    display: none;
+    align-items: center;
+    color: var(--text-mutado-escuro);
+}
+
+.preview-tab-pino svg {
+    width: 0.6875rem;
+    height: 0.6875rem;
+}
+
+.preview-tab-fixada .preview-tab-pino { display: flex; }
+.preview-tab-fixada .preview-tab-x { display: none; }
+.preview-tab-fixada + .preview-tab:not(.preview-tab-fixada) { margin-left: 0.5rem; }
+
 .abas-arrastando .preview-tab { cursor: grabbing; }
 
 .preview-tab-nome {

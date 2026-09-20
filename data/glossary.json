@@ -4056,7 +4056,46 @@
       "descricao": "Logos da Axidesk para cabecalhos, capas, citacoes e avatar. O ORIGINAL vive FORA do repositorio, em D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos, e a tabela do que cada ficheiro e - com as copias ja tratadas e publicaveis - esta no fim de docs/material-institucional.md (seccao \"As logos da marca\"). Dentro do repositorio: docs/interface/axidesk-logo.jpg (1408x640, monograma AD + AXIDESK, sem a marca de agua do gerador, para cabecalhos e capas) e docs/interface/axidesk-avatar.png (512x512, sem a moldura, e o avatar do perfil). O cartaz.png NAO se usa: e o cartaz da marca Axidesk (limpeza de desktop, cloud e IA) e fala de outro produto. Toda imagem so se publica depois de OLHADA com tool_ver_imagem.",
       "localizacao": {
         "arquivo": "docs/material-institucional.md",
-        "linha": 51
+        "linha": 51,
+        "conferido": [
+          1789872302.398,
+          5865
+        ]
+      }
+    },
+    {
+      "termo": "menu da aba do preview",
+      "aliases": [
+        "fixar aba",
+        "aba fixada",
+        "pin da aba",
+        "desafixar a aba",
+        "reabrir aba fechada",
+        "voltar a abrir a aba",
+        "aba que fica sempre"
+      ],
+      "identificador": "#preview-tab-menu / alternarFixada / restaurarAbasFixadas",
+      "descricao": "Balao que abre no CLIQUE DIREITO de uma aba do preview (#preview-tabs), com Reabrir a aba fechada / Fixar (ou Desafixar) a aba / Fechar aba. Mesmo desenho e mecanismo do #notes-context-menu (classe .balao + .menu-open). Uma aba fixada fica SEMPRE a frente das outras, deixa de mostrar o X (por isso o item \"Fechar aba\") e e gravada em settings.json em preview.abas_fixadas por POST /api/settings/parcial - a rota do merge LEVE (atualizar_settings), que nao derruba os clientes de IA como o POST /api/settings normal faz. No arranque, restaurarAbasFixadas() recria as abas sem as ativar (a pagina so carrega quando se clica). O pin segue a aba quando ela navega.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/preview_abas.js",
+        "linha": 293
+      }
+    },
+    {
+      "termo": "colocar um ficheiro na pagina",
+      "aliases": [
+        "escolher a imagem",
+        "enviar a imagem",
+        "upload da foto",
+        "anexar o ficheiro",
+        "janela do windows de escolher ficheiro",
+        "por a foto la"
+      ],
+      "identificador": "acaoFicheiro / tool_operar_preview(acao='ficheiro')",
+      "descricao": "tool_operar_preview(acao='ficheiro', alvo='<caminho>') poe um ficheiro do disco num campo de ficheiro da pagina SEM abrir a janela nativa do Windows (DOM.setFileInputFiles, por backendNodeId se a propria pagina ja abriu o escolhedor, ou pelo objectId do campo). O campo recebe o ficheiro e o evento de mudanca, logo React/Vue reagem. O caminho resolve-se por resolver_caminho_arquivo (relativo a raiz do projeto ou absoluto). A alternativa para dialogos nativos de OUTROS programas e tool_operar_janela (UI Automation: escrever no campo \"Nome do ficheiro\" e invocar \"Abrir\"). Os dialogos da propria pagina (alert/confirm/beforeunload) fecham-se sozinhos e ficam registados na consola do preview.",
+      "localizacao": {
+        "arquivo": "src/preview-cdp.js",
+        "linha": 1446
       }
     }
   ]

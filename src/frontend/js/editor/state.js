@@ -34,6 +34,12 @@ state.previewTabs = document.getElementById('preview-tabs');
 state.previewNova = document.getElementById('preview-nova');
 state.previewExternal = document.getElementById('preview-external');
 
+state.previewTabMenu = document.getElementById('preview-tab-menu');
+state.previewCtxReabrir = document.getElementById('preview-ctx-reabrir');
+state.previewCtxFixar = document.getElementById('preview-ctx-fixar');
+state.previewCtxFixarRotulo = document.getElementById('preview-ctx-fixar-rotulo');
+state.previewCtxFechar = document.getElementById('preview-ctx-fechar');
+state.previewAbasFechadas = [];
 state.previewFloat = document.getElementById('preview-float');
 state.previewVazio = document.getElementById('preview-vazio');
 state.previewErro = document.getElementById('preview-erro');

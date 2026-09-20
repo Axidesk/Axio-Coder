@@ -10,15 +10,17 @@ falharem em silencio.
 
 import base64
 import json
+import os
 import time
 
 from src.backend.services import cofre, ponte_preview
+from src.backend.services.file_service import resolver_caminho_arquivo
 from src.backend.services.imagem import codificar_para_envio, dimensoes_da_imagem
 from src.backend.state import emit_event
 from src.backend.tools.registry import register
 
 ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "print")
-ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "escrever", "teclar", "roteiro", "recarregar")
+ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
 LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
 
@@ -674,8 +676,11 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
     "dos gestos que ja sabe de antemao, numa so chamada - e a via rapida: dez gestos seguidos "
     "custam uma chamada em vez de dez, e para no primeiro que falhar), 'carregar' (abre um "
     "endereco ou um ficheiro no preview), 'recarregar' (recarrega a pagina IGNORANDO a cache, para ver codigo "
-    "recem-editado sem testar uma versao velha) e 'mostrar' (traz a janela do preview para a "
-    "frente, para o utilizador ver o que esta a ser feito). 'clicar', 'escrever' e 'teclar' "
+    "recem-editado sem testar uma versao velha), 'mostrar' (traz a janela do preview para a "
+    "frente, para o utilizador ver o que esta a ser feito) e 'ficheiro' (poe um ficheiro do disco "
+    "num campo de ficheiro da pagina - envio de imagem, anexo - SEM abrir a janela do Windows: o "
+    "campo recebe o ficheiro e o evento de mudanca, e a pagina reage como se o utilizador o tivesse escolhido). "
+    "'clicar', 'escrever' e 'teclar' "
     "devolvem ja o EFEITO do gesto - se a pagina mudou, se o campo guardou mesmo o texto e os "
     "erros ou pedidos falhados que ele causou - por isso nao precisa de uma segunda chamada "
     "so para saber o que aconteceu.",
@@ -683,7 +688,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         "acao": {
             "tipo": "STRING", "obrig": True, "padrao": "",
             "enum": list(ACOES_DE_OPERACAO),
-            "desc": "'clicar', 'escrever', 'teclar', 'roteiro' (varios gestos numa so chamada), 'carregar' (abrir endereco ou ficheiro), 'recarregar' (recarregar ignorando a cache) ou 'mostrar' (trazer o preview para a frente).",
+            "desc": "'clicar', 'escrever', 'teclar', 'roteiro' (varios gestos numa so chamada), 'carregar' (abrir endereco ou ficheiro), 'recarregar' (recarregar ignorando a cache), 'mostrar' (trazer o preview para a frente) ou 'ficheiro' (colocar um ficheiro do disco num campo de ficheiro da pagina, sem abrir a janela do Windows).",
         },
         "seletor": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -695,7 +700,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         },
         "alvo": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Em 'carregar': o endereco (localhost:5000, http://..., uma letra de unidade ou um caminho a partir da raiz do projeto).",
+            "desc": "Em 'carregar': o endereco (localhost:5000, http://..., uma letra de unidade ou um caminho a partir da raiz do projeto). Em 'ficheiro': o caminho do ficheiro a colocar no campo de ficheiro da pagina (relativo a raiz do projeto, ou absoluto).",
         },
         "texto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -793,6 +798,25 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
             return f"ERRO: {falha}."
         emit_event("executing", function=f"Correndo roteiro de {len(lista)} gesto(s)")
         return _correr_roteiro(lista)
+
+    if pedido == "ficheiro":
+        caminho = (alvo or texto).strip()
+        if not caminho:
+            return ("ERRO: indique em 'alvo' o ficheiro a colocar no campo de ficheiro da pagina "
+                    "(por exemplo uma imagem de perfil).")
+        destino, falha = resolver_caminho_arquivo(caminho)
+        if falha:
+            return f"ERRO: {falha}."
+        if not os.path.isfile(destino):
+            return f"ERRO: nao existe nenhum ficheiro em {destino}."
+        dados, erro = ponte_preview.pedir("ficheiro", caminho=destino, seletor=seletor)
+        if erro:
+            return f"ERRO: {erro}."
+        if not dados.get("ok"):
+            return f"ERRO: {dados.get('erro') or 'o campo recusou o ficheiro'}."
+        via = " (pelo escolhedor que a propria pagina tinha aberto)" if dados.get("do_escolhedor") else ""
+        return (f"Ficheiro colocado no campo da pagina: {destino}{via}. "
+                "O campo ja recebeu o evento de mudanca; confirme pelo efeito no ecra.")
 
     dados, erro = ponte_preview.pedir("teclar", tecla=tecla)
     if erro:

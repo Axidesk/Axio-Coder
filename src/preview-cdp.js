@@ -1,5 +1,6 @@
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const ROTA = '/preview';
 const TETO_CORPO_BYTES = 2 * 1024 * 1024;
@@ -31,9 +32,10 @@ let redeDescartada = 0;
 let geracaoRegistos = 0;
 const pedidos = new Map();
 const vigiados = new WeakSet();
+const escolhedores = new Map();
 
 const SEM_PAGINA = new Set(['estado', 'consola', 'rede', 'carregar', 'mostrar']);
-const ACOES_QUE_AGEM = new Set(['carregar', 'mostrar', 'clicar', 'escrever', 'teclar', 'recarregar']);
+const ACOES_QUE_AGEM = new Set(['carregar', 'mostrar', 'clicar', 'escrever', 'teclar', 'recarregar', 'ficheiro']);
 
 const TECLAS = {
   Enter: { key: 'Enter', code: 'Enter', vk: 13, texto: '\r' },
@@ -753,7 +755,31 @@ function novosRegistos(marca) {
   };
 }
 
-function aoMensagemDoDepurador(metodo, params) {
+function aoMensagemDoDepurador(depurador, metodo, params, wc) {
+  if (metodo === 'Page.javascriptDialogOpening') {
+    registarEntrada({
+      nivel: 'aviso',
+      origem: 'dialogo',
+      texto: 'A pagina abriu um dialogo (' + String(params.type || '') + '): "' + String(params.message || '').slice(0, 300) + '". Fechei-o - ficava a bloquear tudo ate alguem responder.',
+      ficheiro: '',
+      linha: 0,
+      quando: Date.now()
+    });
+    enviarComando(depurador, 'Page.handleJavaScriptDialog', { accept: true }).catch(() => {});
+    return;
+  }
+  if (metodo === 'Page.fileChooserOpened') {
+    if (wc && params.backendNodeId) escolhedores.set(wc, params.backendNodeId);
+    registarEntrada({
+      nivel: 'aviso',
+      origem: 'ficheiro',
+      texto: 'A pagina abriu o escolhedor de ficheiros. Nao deixei sair a janela do Windows: use tool_operar_preview com acao="ficheiro" e o caminho, que o ficheiro entra no campo diretamente.',
+      ficheiro: '',
+      linha: 0,
+      quando: Date.now()
+    });
+    return;
+  }
   if (metodo === 'Runtime.consoleAPICalled') {
     const partes = (params.args || []).map(textoDoArgumento).filter((p) => p !== '');
     const junto = partes.join(' ');
@@ -865,7 +891,7 @@ function prepararDepurador(view) {
   const wc = view.webContents;
   if (!vigiados.has(wc)) {
     vigiados.add(wc);
-    depurador.on('message', (evento, metodo, params) => aoMensagemDoDepurador(metodo, params));
+    depurador.on('message', (evento, metodo, params) => aoMensagemDoDepurador(depurador, metodo, params, wc));
     depurador.on('detach', () => registarEntrada({
       nivel: 'aviso',
       origem: 'depurador',
@@ -877,9 +903,10 @@ function prepararDepurador(view) {
     wc.on('did-navigate', () => { limparRegistos(); reinjetarInspecaoAposNavegar(view); });
     wc.on('did-navigate-in-page', () => { limparRegistos(); reinjetarInspecaoAposNavegar(view); });
   }
-  for (const dominio of ['Runtime.enable', 'Log.enable', 'Page.enable', 'Network.enable']) {
+  for (const dominio of ['Runtime.enable', 'Log.enable', 'Page.enable', 'Network.enable', 'DOM.enable']) {
     enviarComando(depurador, dominio).catch(() => {});
   }
+  enviarComando(depurador, 'Page.setInterceptFileChooserDialog', { enabled: true }).catch(() => {});
   return true;
 }
 
@@ -1416,6 +1443,36 @@ async function acaoRecarregar(view) {
   return { ok: true, url: url, pronto: pronto };
 }
 
+async function acaoFicheiro(view, params) {
+  const caminho = String(params.caminho || '').trim();
+  if (!caminho) return { ok: false, erro: 'Indique o caminho do ficheiro a colocar no campo.' };
+  if (!fs.existsSync(caminho)) return { ok: false, erro: 'Nao existe nenhum ficheiro em ' + caminho };
+  const depurador = depuradorDe(view);
+  if (!depurador) return { ok: false, erro: 'A pagina do preview nao esta a falar com o depurador.' };
+  const seletor = String(params.seletor || 'input[type=file]').trim();
+  const wc = view.webContents;
+  const pendente = escolhedores.get(wc);
+  escolhedores.delete(wc);
+  try {
+    if (pendente) {
+      await enviarComando(depurador, 'DOM.setFileInputFiles', { files: [caminho], backendNodeId: pendente });
+    } else {
+      const alvo = await enviarComando(depurador, 'Runtime.evaluate', {
+        expression: 'document.querySelector(' + JSON.stringify(seletor) + ')',
+        returnByValue: false
+      });
+      const objectId = alvo && alvo.result && alvo.result.objectId;
+      if (!objectId) {
+        return { ok: false, erro: 'Nao ha nenhum campo de ficheiro na pagina com o seletor ' + seletor + '.' };
+      }
+      await enviarComando(depurador, 'DOM.setFileInputFiles', { files: [caminho], objectId: objectId });
+    }
+  } catch (e) {
+    return { ok: false, erro: 'O campo recusou o ficheiro: ' + String(e && e.message ? e.message : e) };
+  }
+  return { ok: true, ficheiro: caminho, seletor: seletor, do_escolhedor: !!pendente };
+}
+
 const ACOES = {
   estado: (view) => acaoEstado(view),
   consola: (view, params) => acaoConsola(view, params),
@@ -1428,7 +1485,8 @@ const ACOES = {
   clicar: (view, params) => acaoClicar(view, params),
   escrever: (view, params) => acaoEscrever(view, params),
   teclar: (view, params) => acaoTeclar(view, params),
-  recarregar: (view) => acaoRecarregar(view)
+  recarregar: (view) => acaoRecarregar(view),
+  ficheiro: (view, params) => acaoFicheiro(view, params)
 };
 
 function responder(res, status, dados) {
