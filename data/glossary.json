@@ -19,8 +19,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 417,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -39,8 +39,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 464,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -58,8 +58,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 452,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -76,8 +76,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 451,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -93,10 +93,10 @@
       "descricao": "Segunda coluna do dock, mostra os arquivos editados da sessao",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 182,
+        "linha": 191,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -114,10 +114,10 @@
       "descricao": "Code view da DOC (ficheiros, diffs, ferramentas, raciocinio, pergunta). Deixou de ser uma terceira coluna do #log-dock em 2026-09-13: e a CAMADA que abre por cima da area do Monaco (position absolute, inset 0, opacity), ao lado da gemea #panel-col-3-history. Ambas nascem no HTML no #sliding-panel-container e sao montadas em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace. Abrir a camada nao encolhe a arvore nem faz o dock crescer (o antigo has-code foi eliminado). O TITULO da coluna 3 e o CORPO sao o MESMO GESTO desde 2026-09-13: ambos chamam files.js:entregarAoMonaco (a funcao abrirTituloNoEditor foi eliminada) - o titulo entregava por openFileFromLog sem linha nenhuma e por isso o Monaco nao acompanhava o trecho.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 219,
+        "linha": 228,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -133,10 +133,10 @@
       "descricao": "Overlay deslizante do historico de sessoes",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 79,
+        "linha": 88,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -154,8 +154,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 385,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -174,8 +174,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 367,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -193,8 +193,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 506,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -220,8 +220,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 496,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -237,10 +237,10 @@
       "descricao": "Icone/botao da sidebar que abre o editor de codigo (Monaco)",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 245,
+        "linha": 254,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -281,8 +281,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 438,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -300,10 +300,10 @@
       "descricao": "Botao do header de #panel-col-1 (Historico) que abre a busca nas conversas",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 84,
+        "linha": 93,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -322,8 +322,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 377,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -345,8 +345,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 368,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -365,8 +365,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 679,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -385,8 +385,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 290,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -421,10 +421,10 @@
       "descricao": "Botão que expande a coluna 3 para mostrar o raciocínio (Chain of Thought) da IA",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 188,
+        "linha": 197,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -483,10 +483,10 @@
       "descricao": "Lado esquerdo do workspace que mostra as mensagens do usuario e o input da IA (alterna com #terminal-mode)",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 272,
+        "linha": 281,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -506,8 +506,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 406,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -626,8 +626,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 449,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -663,10 +663,10 @@
       "descricao": "Botao de olho no header da janela de arquivos (#panel-col-2) que alterna o modo foco (exibir apenas os trechos alterados do diff). Só aparece quando o conteudo mostrado é um diff. NAO confundir com o \"olhinho\" das Configuracoes (#btn-reveal-keys).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 194,
+        "linha": 203,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -681,10 +681,10 @@
       "descricao": "Botao X do header de #panel-col-2. So aparece dentro do #log-dock e fica oculto em DUAS situacoes equivalentes: (a) ha card de ficheiro selecionado (.file-card-selected, posto por marcarFileSelecionado em files.js:156); (b) a vista de ficheiro esta ativa (#btn-undo sem .hidden). Como undo/redo so aparecem com a vista de ficheiro ativa, o X nunca coexiste com eles. O X e o grupo undo/label/redo/label vivem no MESMO container direito (flex shrink-0) -> undo/redo ficam sempre justificados a direita e nao se deslocam quando o olhinho (#btn-eye-diff) aparece/some.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 208,
+        "linha": 217,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -722,8 +722,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 300,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -740,10 +740,10 @@
       "descricao": "Circulo SVG (stroke-dasharray 100) que mostra o uso do contexto no botao do card. Cor definida no handler context_usage (src/frontend/js/chat/messages.js) via corDeUsoContexto",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 260,
+        "linha": 269,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -759,10 +759,10 @@
       "descricao": "Botao do header de #panel-col-2 que mostra o painel da pergunta/resposta na coluna 3. Estado ativo e hover usam a cor verde --oliva (igual a #btn-show-tools e #btn-eye-diff); a cor antiga --ambar-pergunta foi removida do projeto.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 185,
+        "linha": 194,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -976,10 +976,10 @@
       "descricao": "Icone da sidebar (entre o inspecionar e o anel de contexto) que abre a janela de informacoes do projeto: stack, linguagens, dependencias, arvore com linhas e totais.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 254,
+        "linha": 263,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -999,8 +999,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 628,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1370,8 +1370,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 435,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1388,10 +1388,10 @@
       "descricao": "Icone da barra lateral (title 'Terminal') que alterna a vista do terminal: toggleWorkspaceView (js/chat/ui.js:347), que troca #chat-mode/#terminal-mode com 220ms de transicao. Ao ABRIR o terminal, o handler (js/chat/renderer.js:~182) chama recolherPaineisLaterais() (~535) antes da troca: historico e painel de informacoes do projeto recolhem para nao ficarem a frente do terminal, mas isso NAO acontece quando o terminal ja esta aberto e o clique o fecha. Nao confundir com #term-input (campo do prompt) nem com #term-log (a janela com o output).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 248,
+        "linha": 257,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1410,8 +1410,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 288,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1428,10 +1428,10 @@
       "descricao": "Colunas 2 e 3 PROPRIAS do historico, dentro do #sliding-panel-container: nao sao as mesmas da doc. A coluna 2 desliza ao lado da lista quando se clica numa tarefa do #history-logs-wrapper. A vista e registada/criada em src/frontend/js/chat/colunas.js + files.js (vistaDe('dock') / vistaDe('historico'))",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 141,
+        "linha": 150,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1450,10 +1450,10 @@
       "descricao": "Camada do HISTORICO que abre POR CIMA da area do editor (o lugar do Monaco), com o code view, as ferramentas e o raciocinio da tarefa selecionada no historico. Nao e uma coluna do painel que desliza: nasce no HTML dentro do #sliding-panel-container e e montada em #editor-host-wrap no arranque por mountLogDockIntoWorkspace (js/editor/workspace.js), no MESMO ponto que monta a gemea #panel-col-3 (docs). Abre/fecha por opacity (position absolute, inset 0, z-index 6 - fica por cima da camada da doc, que e 5), e a vista do historico chama WorkspaceView.showEditor() antes de a mostrar. Os botoes que a abrem sao #btn-show-question-history/#btn-show-thoughts-history/#btn-show-tools-history no header da #panel-col-2-history, ligados em js/chat/renderer.js por ligarBotoesCol3.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 163,
+        "linha": 172,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1470,10 +1470,10 @@
       "descricao": "Painel (campo + resultados) da busca do historico. E um BLOCO PROPRIO no FUNDO da coluna 1, IRMAO do #col1-stack - a lista de cards nunca e escondida nem substituida - e fica logo abaixo do ultimo card da lista (o card \"Salvo\", que e o ultimo a ser montado). Fechado: height 0 + opacity 0 + translateY(12px). Aberto, com a classe .history-search-open no #panel-col-1: height 50% FIXA (e o que mantem o campo na mesma posicao quando chegam resultados), com o campo em cima e #history-search-results-inline abaixo. A outra classe, .history-search-expanded, e so a LARGURA da janela (17.5vw -> calc(100vw - 3.5rem)); encolherBuscaInline tira so essa (a coluna 3 do historico abre). Abrir recolhe as pilhas expandidas (recolherPilhasExpandidas) porque o painel ocupa a metade de baixo. CSS em src/frontend/css/dock.css.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 110,
+        "linha": 119,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1762,8 +1762,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 633,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1783,8 +1783,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 663,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1804,8 +1804,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 651,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1826,8 +1826,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 661,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1846,8 +1846,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 657,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1908,8 +1908,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 647,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1928,8 +1928,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 583,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -1998,8 +1998,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 398,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -2041,8 +2041,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 394,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -2214,8 +2214,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 389,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -2473,8 +2473,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 528,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -2685,8 +2685,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 517,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -2855,8 +2855,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 514,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -3140,8 +3140,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 490,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -3241,8 +3241,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 26,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -3260,8 +3260,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 612,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -3500,8 +3500,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 530,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -3582,8 +3582,8 @@
         "arquivo": "src/frontend/css/titulo.css",
         "linha": 17,
         "conferido": [
-          1789868199.122,
-          3140
+          1789929471.856,
+          4949
         ]
       }
     },
@@ -3911,8 +3911,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 668,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -3930,8 +3930,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 605,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
@@ -4035,7 +4035,11 @@
       "descricao": "A lupa vive na BARRA DE TITULO (#btn-chat-search, dentro de #chat-search-wrap, ao lado dos botoes da janela) e o campo abre ALI MESMO, na propria barra - nao na conversa. O efeito e o da lupa do explorer: o botao encolhe e some (.hide, scale 0.4) enquanto #chat-search-box cresce em largura da direita para a esquerda (width 0 -> 340px, ancorada a right:0, com a transicao width var(--dur-7) + opacity var(--dur-3)). FILTRA as duas colunas - as mensagens de #chat-inner-left (utilizador) e de #chat-inner-right (agente) -, escondendo as que nao contem o termo com .conversa-busca-fora (display:none) e mostrando a contagem no proprio campo. E `alternarBuscaChat` que abre e fecha (botao ou clique na lupa do campo); `reavaliarBuscaChat` volta a aplicar o filtro quando chega mensagem nova (chamado por messages.js:822); `fecharBuscaChat` limpa o campo e repoe tudo. O CSS vive em src/frontend/css/titulo.css (#chat-search-wrap, #chat-search-box, .chat-search-field). ARMADILHA: a barra tem -webkit-app-region: drag, logo o wrap e a caixa precisam de no-drag, senao o campo nao recebe o clique nem o foco. O #chat-search-panel antigo (painel dentro do #chat-mode, com grid-template-rows 0fr/1fr) foi APAGADO.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/busca_chat.js",
-        "linha": 70
+        "linha": 70,
+        "conferido": [
+          1789929484.256,
+          2848
+        ]
       }
     },
     {
@@ -4146,10 +4150,10 @@
       "descricao": "A busca do historico tem DUAS colunas: a esquerda (#history-search-results-inline) as PERGUNTAS do utilizador por tarefa, a direita (#history-search-respostas) as MINHAS respostas (saved.aiResponse de cada tarefa), com o mesmo desenho de cartao nos dois lados. O traco vertical entre elas e .busca-coluna (border-right 1px var(--border-suave)) e o numero de achados vai em #busca-conta-perguntas / #busca-conta-respostas. A regra vive em src/frontend/js/chat/historico/busca.js:performHistorySearch, que varre state.sessionDetailCache e alimenta as duas por pintarColuna.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 133,
+        "linha": 142,
         "conferido": [
-          1789874289.331,
-          82614
+          1789929462.356,
+          82583
         ]
       }
     },
