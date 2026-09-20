@@ -45,12 +45,6 @@ import {
     lblUndoCount,
     lblRedoCount,
     btnEyeDiff,
-    btnRestoreTask,
-    btnSaveTask,
-    btnDeleteTask,
-    confirmDeletePopup,
-    btnCancelDelete,
-    btnConfirmDeleteYes,
     restoreConfirmPopup,
     btnCancelRestore,
     btnConfirmRestoreYes,
@@ -94,9 +88,8 @@ import { state } from './state.js';
 import { atualizarBotoesUndoRedo, atualizarIconeOlho, executarUndoRedo, marcarLinhasAlteradas, normalizeFsPath, restaurarPastaSelecionada, rolarParaDestaque, selectFolder } from './files.js';
 import { preloadSessionHistory, toggleSessionHistory } from './historico/painel.js';
 import { toggleHistorySearchInline } from './historico/busca.js';
-import { toggleSaveSelectedTask } from './historico/cards.js';
-import { closeConfirmDeletePopup, performDeleteSelectedTask, requestDeleteSelectedTask } from './historico/eliminar.js';
-import { closeRestoreConfirmPopup, performSessionRestore, requestRestoreTask } from './historico/restauro.js';
+import { registrarRepinturaCol3 } from './historico/acoes.js';
+import { closeRestoreConfirmPopup, performSessionRestore } from './historico/restauro.js';
 import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderInspectTooltip, executarItemInspect, ligarInspectAoMenu, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
 import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
 import { renderThoughts, renderTools, sendMessage, showQuestionPanel, sortToolArgsKeys, startSSE } from './messages.js';
@@ -296,6 +289,14 @@ import './busca_chat.js';
 
     ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory, git: btnShowGitHistory }, 'historico');
 
+    function repintarPainelCol3(vista, grupo) {
+        if (state.isShowingGit) return renderGitPanel(vista);
+        if (state.isShowingThoughts) return renderThoughts(vista);
+        if (state.isShowingQuestions) return showQuestionPanel(grupo || {}, vista);
+        if (state.isShowingTools) return renderTools(vista);
+    }
+    registrarRepinturaCol3(repintarPainelCol3);
+
     if (btnEyeDiff) {
         btnEyeDiff.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -431,46 +432,6 @@ import './busca_chat.js';
     }
     if (btnCancelClearContext) btnCancelClearContext.addEventListener('click', closeClearContextPopup);
     if (btnConfirmClearContext) btnConfirmClearContext.addEventListener('click', clearContextMemory);
-
-    btnCancelDelete.addEventListener('click', (e) => {
-        e.stopPropagation();
-        closeConfirmDeletePopup();
-    });
-
-    btnConfirmDeleteYes.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        closeConfirmDeletePopup();
-        await performDeleteSelectedTask();
-    });
-
-    btnDeleteTask.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!state.currentSelectedHistoryGroup) {
-            showAlert('Selecione uma tarefa no histórico para excluir.');
-            return;
-        }
-        requestDeleteSelectedTask(state.currentSelectedHistoryGroup);
-    });
-
-    btnRestoreTask.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!state.currentSelectedHistoryGroup) {
-            showAlert('Selecione uma tarefa no histórico para restaurar.');
-            return;
-        }
-        requestRestoreTask(state.currentSelectedHistoryGroup);
-    });
-
-    btnSaveTask.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!state.currentSelectedHistoryGroup) {
-            showAlert('Selecione uma tarefa no histórico para salvar.');
-            return;
-        }
-        toggleSaveSelectedTask(state.currentSelectedHistoryGroup);
-    });
-
-    confirmDeletePopup.addEventListener('click', (e) => e.stopPropagation());
 
     btnCancelRestore.addEventListener('click', (e) => {
         e.stopPropagation();

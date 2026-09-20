@@ -40,7 +40,6 @@ export const state = {
     col3OverlayCloseTimer: null,
     pendingRestore: null,
     restoreAbortController: null,
-    pendingDelete: null,
     currentCheckpointId: null,
     checkpointRestoredAt: 0,
     currentSelectedHistoryGroup: null,

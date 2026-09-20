@@ -280,15 +280,23 @@ def gravar_log_sessao(caminho, dados):
     """
     return gravar_json_atomico(caminho, dados, fsync=True)
 
-def _log_tem_salvos(caminho):
-    """Deteta '"salvo": true' lendo o ficheiro em blocos, sem parsear o JSON.
+_MARCADORES_DE_PONTO = (
+    (b'"salvo"', rb"\s*:\s*true"),
+    (b'"commit"', rb'\s*:\s*"[0-9a-f]{7,}'),
+)
 
-    Parsear logs de dezenas de MB so para saber se ha um card salvo custava
-    minutos e muita memoria. A procura por blocos e ordens de magnitude mais
-    barata. Em caso de duvida (leitura falhada) devolve True: preservar a mais
-    e seguro; apagar uma sessao salva nao e.
+def _log_tem_ponto(caminho):
+    """Deteta, lendo o ficheiro em blocos, se o log tem um ponto de retorno.
+
+    Ponto de retorno e uma tarefa salva (campo dos logs antigos) ou uma tarefa
+    commitada no git: o commit passou a ser o ponto pelo qual uma tarefa se
+    repoe, e um card com ponto nunca pode sair pela rotacao dos 3 dias.
+
+    Parsear logs de dezenas de MB so para isto custava minutos e muita memoria.
+    A procura por blocos e ordens de magnitude mais barata. Em caso de duvida
+    (leitura falhada) devolve True: preservar a mais e seguro; apagar uma sessao
+    com ponto nao e.
     """
-    alvo = b'"salvo"'
     try:
         with open(caminho, "rb") as f:
             resto = b""
@@ -297,14 +305,16 @@ def _log_tem_salvos(caminho):
                 if not bloco:
                     return False
                 texto = resto + bloco
-                inicio = 0
-                while True:
-                    pos = texto.find(alvo, inicio)
-                    if pos == -1:
-                        break
-                    if re.match(rb"\s*:\s*true", texto[pos + len(alvo):pos + len(alvo) + 24]):
-                        return True
-                    inicio = pos + len(alvo)
+                for alvo, padrao in _MARCADORES_DE_PONTO:
+                    inicio = 0
+                    while True:
+                        pos = texto.find(alvo, inicio)
+                        if pos == -1:
+                            break
+                        depois = texto[pos + len(alvo):pos + len(alvo) + 24]
+                        if re.match(padrao, depois):
+                            return True
+                        inicio = pos + len(alvo)
                 resto = texto[len(texto) - 32:]
     except OSError:
         return True
@@ -312,8 +322,9 @@ def _log_tem_salvos(caminho):
 def prune_session_logs(pasta_logs, manter_dias=3):
     """Mantém apenas as sessões de log dos últimos N dias distintos (por data).
 
-    Sessões que contêm tarefas salvas (salvo=True) são preservadas mesmo fora
-    da janela de dias, para que um card salvo nunca seja sobrescrito/removido.
+    Sessões que contêm um ponto de retorno (tarefa salva ou tarefa commitada no
+    git) são preservadas mesmo fora da janela de dias, para que um card com
+    ponto nunca seja sobrescrito/removido.
 
     Devolve a lista dos nomes de arquivo removidos, para quem chamou poder
     limpar do vetor as drawers mineradas desses logs (senao ficariam orfas).
@@ -347,7 +358,7 @@ def prune_session_logs(pasta_logs, manter_dias=3):
         if dia and dia in dias_recentes:
             continue
         caminho = os.path.join(pasta_logs, arq)
-        if _log_tem_salvos(caminho):
+        if _log_tem_ponto(caminho):
             continue
         try:
             os.remove(caminho)

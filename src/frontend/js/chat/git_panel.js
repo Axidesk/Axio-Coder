@@ -2,7 +2,8 @@ import { state } from './state.js';
 import { vistaDe } from './colunas.js';
 import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
-import { requestGitRestore } from './historico/restauro.js';
+import { btnGitRestoreHistory } from './dom.js';
+import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId } from './historico/cards.js';
 
 const LIMITE_COMMITS = 12;
@@ -17,6 +18,7 @@ const COMANDO_DE_DEPENDENCIA = {
 
 const SVG_VARINHA = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>';
 const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg>';
+const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>';
 
     function grupoAtivo() {
         return state.currentSelectedHistoryGroup || window.currentActiveLogGroup || null;
@@ -60,6 +62,12 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
     function varinha(acao, titulo) {
         return `<button class="projeto-notas-acao" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}">`
             + `<span class="projeto-icone-wand">${SVG_VARINHA}</span>`
+            + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
+            + '</button>';
+    }
+    function aviao(acao, titulo, desativado) {
+        return `<button class="projeto-notas-acao git-aviao" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}"${desativado ? ' disabled' : ''}>`
+            + `<span class="projeto-icone-wand">${SVG_AVIAO}</span>`
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
             + '</button>';
     }
@@ -134,14 +142,9 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
             + (hash ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(hash.slice(0, 7))}</div>` : ''));
         html += '<div class="git-campo-linha">'
             + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(valorDoCampo(grupo))}" placeholder="Mensagem do commit">`
+            + aviao('commit', podeCommitar ? 'Commitar esta tarefa no git' : 'Nada por commitar nesta tarefa', !podeCommitar)
             + varinha('sugerir', 'Escrever a mensagem com a IA')
             + '</div>';
-        if (podeCommitar || hash) {
-            html += '<div class="git-acoes">';
-            if (podeCommitar) html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
-            if (hash) html += pill('restaurar', 'Restaurar esta tarefa');
-            html += '</div>';
-        }
         html += '</div>';
         return html;
     }
@@ -261,6 +264,7 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
         }
         const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: (dados && dados.message) || 'Nao consegui ler o repositorio.' };
         setCodeViewContent(montarPainel(estado, grupo, pendentes), false, alvo);
+        sincronizarBotaoRestauro(alvo, grupo);
         ligarAcoes(alvo);
     }
     function ligarAcoes(vista) {
@@ -282,13 +286,19 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
             if (acao === 'commit') return commitarTarefa(vista);
-            if (acao === 'restaurar') return restaurarTarefa();
         });
     }
     async function commitarTarefa(vista) {
         const grupo = grupoAtivo();
         if (!grupo) return;
-        const campo = vista && vista.codigo ? vista.codigo.querySelector('#git-mensagem') : null;
+        const painel = vista && vista.codigo ? vista.codigo : null;
+        const campo = painel ? painel.querySelector('#git-mensagem') : null;
+        const botao = painel ? painel.querySelector('[data-git-acao="commit"]') : null;
+        if (botao && botao.disabled) return;
+        if (botao) {
+            botao.classList.add('a-trabalhar');
+            botao.disabled = true;
+        }
         const mensagem = campo ? campo.value.trim() : '';
         const ficheiros = ficheirosDaTarefa(grupo);
         try {
@@ -310,6 +320,11 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
         } catch (e) {
             console.error('Erro ao commitar a tarefa:', e);
             avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
+        } finally {
+            if (botao) {
+                botao.classList.remove('a-trabalhar');
+                botao.disabled = false;
+            }
         }
     }
     async function sugerirMensagem(vista) {
@@ -347,9 +362,26 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
     }
     async function restaurarTarefa() {
         const grupo = grupoAtivo();
+        if (!grupo) return;
         const hash = hashDaTarefa(grupo);
-        if (!hash) return;
-        await requestGitRestore(hash, nomeDaTarefa(grupo) || 'esta tarefa', grupo.id || '');
+        if (hash) {
+            await requestGitRestore(hash, nomeDaTarefa(grupo) || 'esta tarefa', grupo.id || '');
+            return;
+        }
+        if (grupo.__session) await requestRestoreTask(grupo);
+    }
+    function podeRestaurar(grupo) {
+        return !!(grupo && (hashDaTarefa(grupo) || grupo.__session));
+    }
+    function sincronizarBotaoRestauro(vista, grupo) {
+        const btn = vista && vista.id === 'historico' ? btnGitRestoreHistory : null;
+        if (!btn) return;
+        const pode = podeRestaurar(grupo);
+        btn.classList.toggle('hidden', !pode);
+        btn.onclick = pode ? (e) => {
+            e.stopPropagation();
+            restaurarTarefa();
+        } : null;
     }
     function avisarNoPainel(vista, texto) {
         const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;

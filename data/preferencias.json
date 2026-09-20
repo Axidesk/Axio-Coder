@@ -64,6 +64,11 @@
       "area": "autonomia",
       "texto": "NUNCA ignorar um erro: sempre que encontrar UM ERRO, seja na rodada de teste ou em qualquer outra, CORRIJA-O imediatamente - na mesma rodada, sem pedir autorizacao e sem parar o trabalho. Isto vale para qualquer defeito que eu proprio meta no caminho: um bug que quebre uma interface, um teste falhado, uma linha de aviso no log, um simbolo morto ou um erro de consola. Se nao puder corrigir por depender de algo externo (processo principal que precisa de reiniciar, credencial, decisao dele), digo-o numa linha e sigo com o resto. Pedido pequeno = resposta pequena. Se nao entendi o pedido, ou se fiquei confuso, ou se ele nao fez sentido, PARO NA PRIMEIRA DUVIDA e digo em uma linha o que nao entendi - nunca saio a cacar erro nem a adivinhar. Se o pedido esta claro mas na minha leitura exigiria outro trabalho (construir ferramenta, mexer em varios ficheiros, refatorar), NAO substituo o pedido por esse trabalho: ou faco o possivel com o que existe e reporto o limite, ou pergunto antes. Proibido gastar a rodada a construir coisa que ele nao pediu (foi o caso do 'interage com o canvas pra gente testar' -> passei a rodada a construir arrastar/roda em vez de testar).",
       "atualizado": "2026-09-20 14:57:33"
+    },
+    {
+      "area": "seccoes",
+      "texto": "Secao longa de painel = cabecalho curto (TITULO | contagem) com um + a direita no fim da linha, que expande com animacao e comeca RECOLHIDA (mesmo desenho do painel de informacoes do projeto: grid-template-rows 0fr->1fr). O sinal e + que vira - e volta. Texto explicativo NUNCA fica solto na pagina: vive DENTRO da expansao, e muitas vezes basta o estado (\"Nada por commitar: ...\"). Listas longas (etiquetas, versoes) ficam em COLUNA, uma por linha - nunca em pills a enrolar. Campo de texto com acao por icone: o icone (ex: varinha) fica ENCOSTADO ao campo, que fica mais estreito, e o proprio icone mostra o spinner (a-trabalhar) enquanto processa - nunca um botao com label ao lado do campo. Informacao que ja existe noutro sitio (a lista de ficheiros da tarefa, que vive na pilha dos cards) NAO se repete no painel.",
+      "atualizado": "2026-09-20 23:56:49"
     }
   ]
 }

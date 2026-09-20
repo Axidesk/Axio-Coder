@@ -4,7 +4,9 @@ import { adicionarFileNaLista } from '../files.js';
 import { vistaDe } from '../colunas.js';
 import { isHistoryOpen } from '../layout.js';
 
-const { btnDeleteTask, btnHistorySearch, btnRestoreTask, btnSaveTask, btnSaveTaskIcon, btnShowQuestion, btnShowThoughts, btnShowTools } = dom;
+const { btnHistorySearch, btnShowQuestion, btnShowThoughts, btnShowTools } = dom;
+
+let repinturaCol3 = null;
 
     function openFilesPanel(group, vista) {
         const alvo = vista || vistaDe('dock');
@@ -15,34 +17,21 @@ const { btnDeleteTask, btnHistorySearch, btnRestoreTask, btnSaveTask, btnSaveTas
         state.currentViewingQuestions = group.questions || [];
         state.thoughtsExpanded = false;
         state.currentViewingAiResponse = group.aiResponse || '';
-        updateShowButtonsState();
-        alvo.fecharCol3();
+        updateActionButtons();
+        const repintar = alvo.col3Aberta() && !!repinturaCol3;
+        if (!repintar) alvo.fecharCol3();
         alvo.lista.innerHTML = '';
         if ((group.files || []).length === 0) {
             alvo.lista.innerHTML = '<div class="panel-empty">Nenhum arquivo modificado neste turno.</div>';
         }
         (group.files || []).forEach(fileData => adicionarFileNaLista(fileData, alvo));
         alvo.aoAbrirGrupo(group);
+        if (repintar) repinturaCol3(alvo, group);
+    }
+    function registrarRepinturaCol3(fn) {
+        repinturaCol3 = fn;
     }
     function updateActionButtons() {
-        const enabled = !!state.currentSelectedHistoryGroup;
-        [btnRestoreTask, btnSaveTask, btnDeleteTask].forEach(btn => {
-            if (!btn) return;
-            btn.disabled = !enabled;
-            btn.classList.toggle('opacity-40', !enabled);
-            btn.classList.toggle('cursor-default', !enabled);
-        });
-        if (btnSaveTask) {
-            const isSaved = enabled && !!state.currentSelectedHistoryGroup.salvo;
-            btnSaveTask.classList.toggle('text-[var(--oliva)]', isSaved);
-            btnSaveTask.classList.toggle('text-[var(--text-mutado)]', !isSaved);
-            if (btnSaveTaskIcon) {
-                btnSaveTaskIcon.setAttribute('fill', isSaved ? 'currentColor' : 'none');
-            }
-        }
-        updateShowButtonsState();
-    }
-    function updateShowButtonsState() {
         const enabled = isHistoryOpen()
             ? !!state.currentSelectedHistoryGroup
             : !!window.currentActiveLogGroup;
@@ -59,9 +48,6 @@ const { btnDeleteTask, btnHistorySearch, btnRestoreTask, btnSaveTask, btnSaveTas
     }
     function setHistoryActionButtonsVisible(show) {
         if (btnHistorySearch) btnHistorySearch.classList.toggle('hidden', !show);
-        if (btnRestoreTask) btnRestoreTask.classList.toggle('hidden', !show);
-        if (btnSaveTask) btnSaveTask.classList.toggle('hidden', !show);
-        if (btnDeleteTask) btnDeleteTask.classList.toggle('hidden', !show);
     }
     function selectHistoryTask(group, el) {
         document.querySelectorAll('.history-round-card').forEach(c => c.classList.remove('history-round-selected'));
@@ -74,6 +60,7 @@ const { btnDeleteTask, btnHistorySearch, btnRestoreTask, btnSaveTask, btnSaveTas
 
 export {
     openFilesPanel,
+    registrarRepinturaCol3,
     updateActionButtons,
     setHistoryActionButtonsVisible,
     selectHistoryTask

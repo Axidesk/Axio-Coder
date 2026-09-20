@@ -1166,10 +1166,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1428,
+        "linha": 1449,
         "conferido": [
-          1789939758.109,
-          66860
+          1789941547.392,
+          67768
         ]
       }
     },
@@ -1467,14 +1467,10 @@
         "painel de busca do historico"
       ],
       "identificador": "#history-search-input-inline",
-      "descricao": "REESCRITO A 2026-10 (o campo mudou de casa). O campo da busca do historico vive NO CABECALHO da coluna 1 - dentro de #history-search-box, IRMAO do botao #btn-history-search (index.html, o mesmo cabecalho de 60px que tem \"Historico\" e os botoes restaurar/salvar/excluir). NAO esta mais embaixo: o painel #history-search-panel passou a ter SO as duas colunas de resultados. O efeito e o do chat: o botao encolhe e some (.hide: width 20px -> 0, opacity 0, scale 0.4) enquanto #history-search-box cresce em largura (.aberta: flex 0 1 0 -> 1 1 0) e, ao contrario da lupa do chat (absoluta), EMPURRA os icones ao lado ate ao limite - o grupo do cabecalho precisa de flex: 1 1 auto (dock.css) senao nada cresce. O campo e a pilula PARTILHADA .busca-campo / .busca-campo-lupa / .busca-campo-input de src/frontend/css/busca.css (a mesma do chat). Fecha pelo clique na lupa de dentro do campo (historySearchLupa -> collapseHistorySearchInline) ou pelo botao. Componente de busca: busca.css; posicao e animacao: dock.css; abrir/fechar: src/frontend/js/chat/historico/busca.js:abrirBuscaInline. ACRESCENTADO A 2026-10: as colunas ja nao tem texto de espera nenhum (os MSG_BUSCA_INICIAL/MSG_BUSCA_RESPOSTAS foram apagados) - sem termo ficam so os rotulos Perguntas/Respostas; com termo e sem resultado fica a mensagem \"Nenhuma pergunta/resposta encontrada com esse termo.\". CLICAR NUM RESULTADO FECHA A BUSCA primeiro (collapseHistorySearchInline) e SO DEPOIS seleciona o card da tarefa na pilha (selectHistoryTaskInPile(r.dia, r.saved.id)) e abre os ficheiros - a ordem importa, porque a pilha esta com opacity 0 enquanto a busca esta aberta. LIMITE CONHECIDO: selectHistoryTaskInPile so encontra o card de um dia que esteja na pilha (renderHistoryCards faz dias.slice(0, 3)), logo um resultado de um dia mais antigo fecha a busca mas nao seleciona card nenhum.",
+      "descricao": "REESCRITO A 2026-10 (o campo mudou de casa). O campo da busca do historico vive NO CABECALHO da coluna 1 - dentro de #history-search-box, IRMAO do botao #btn-history-search (index.html, o mesmo cabecalho que tem \"Historico\"). NAO esta mais embaixo: o painel #history-search-panel passou a ter SO as duas colunas de resultados. O efeito e o do chat: o botao encolhe e some (.hide: width 20px -> 0, opacity 0, scale 0.4) enquanto #history-search-box cresce em largura (.aberta: flex 0 1 0 -> 1 1 0) e, ao contrario da lupa do chat (absoluta), EMPURRA os icones ao lado ate ao limite - o grupo do cabecalho precisa de flex: 1 1 auto (dock.css) senao nada cresce. O campo e a pilula PARTILHADA .busca-campo / .busca-campo-lupa / .busca-campo-input de src/frontend/css/busca.css (a mesma do chat). Fecha pelo clique na lupa de dentro do campo (historySearchLupa -> collapseHistorySearchInline) ou pelo botao. Componente de busca: busca.css; posicao e animacao: dock.css; abrir/fechar: src/frontend/js/chat/historico/busca.js:abrirBuscaInline. ACRESCENTADO A 2026-10: as colunas ja nao tem texto de espera nenhum (os MSG_BUSCA_INICIAL/MSG_BUSCA_RESPOSTAS foram apagados) - sem termo ficam so os rotulos Perguntas/Respostas; com termo e sem resultado fica a mensagem \"Nenhuma pergunta/resposta encontrada com esse termo.\". CLICAR NUM RESULTADO FECHA A BUSCA primeiro (collapseHistorySearchInline) e SO DEPOIS seleciona o card da tarefa na pilha (selectHistoryTaskInPile(r.dia, r.saved.id)) e abre os ficheiros - a ordem importa, porque a pilha esta com opacity 0 enquanto a busca esta aberta. LIMITE CONHECIDO: selectHistoryTaskInPile so encontra o card de um dia que esteja na pilha (renderHistoryCards faz dias.slice(0, 3)), logo um resultado de um dia mais antigo fecha a busca mas nao seleciona card nenhum. CORRIGIDO A 2026-10: este cabecalho deixou de ter os botoes restaurar/salvar/excluir (a lixeira e o salvar morreram e o restaurar subiu para o cabecalho da coluna 3) - dos icones so ficou a lupa, portanto #btn-history-search e o campo sao os unicos vizinhos e o grupo do cabecalho ficou mais largo.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 103,
-        "conferido": [
-          1789939326.754,
-          83711
-        ]
+        "linha": 93
       }
     },
     {
@@ -1609,8 +1605,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 374,
         "conferido": [
-          1789932563.678,
-          39489
+          1789941451.983,
+          39511
         ]
       }
     },
@@ -1631,8 +1627,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 160,
         "conferido": [
-          1789932563.678,
-          39489
+          1789941451.983,
+          39511
         ]
       }
     },
@@ -1677,8 +1673,8 @@
         "arquivo": "src/frontend/style.css",
         "linha": 220,
         "conferido": [
-          1789933057.065,
-          9212
+          1789940533.806,
+          9450
         ]
       }
     },
@@ -1741,8 +1737,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 178,
         "conferido": [
-          1789932563.678,
-          39489
+          1789941451.983,
+          39511
         ]
       }
     },
@@ -2235,10 +2231,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1027,
+        "linha": 1029,
         "conferido": [
-          1789939758.109,
-          66860
+          1789941547.392,
+          67768
         ]
       }
     },
@@ -3221,8 +3217,8 @@
         "arquivo": "src/frontend/js/chat/messages.js",
         "linha": 651,
         "conferido": [
-          1789874090.03,
-          41633
+          1789942923.59,
+          41954
         ]
       }
     },
@@ -4320,10 +4316,10 @@
       "descricao": "Grava um commit LOCAL (sem push) com os ficheiros daquela tarefa e devolve o hash; com filename+round_id grava o hash no turno do log (services/session.py:marcar_commit_no_log), o que faz o card ganhar o pino com o hash no tooltip. Lista de ficheiros VAZIA e recusada - um commit do painel nunca leva tudo o que estiver sujo.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 68,
+        "linha": 74,
         "conferido": [
-          1789939592.936,
-          6142
+          1789942829.491,
+          6770
         ]
       }
     },
@@ -4341,7 +4337,11 @@
       "descricao": "Cards das etiquetas e do ramo no fim do historico (substituiu a pilha dos salvos); cada etiqueta abre as tarefas do seu intervalo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 366
+        "linha": 366,
+        "conferido": [
+          1789940672.008,
+          26461
+        ]
       }
     },
     {
@@ -4357,7 +4357,104 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 412
+        "linha": 412,
+        "conferido": [
+          1789940672.008,
+          26461
+        ]
+      }
+    },
+    {
+      "termo": "nada por commitar",
+      "aliases": [
+        "o que falta commitar",
+        "ficheiros por commitar",
+        "botao de commit sumiu",
+        "nao consigo commitar a tarefa",
+        "esta tarefa ainda nao foi commitada"
+      ],
+      "identificador": "/api/git/pendentes (git_pendentes) + htmlDaTarefa (pendentes)",
+      "descricao": "Estado do que falta commitar numa tarefa. A rota POST /api/git/pendentes recebe os ficheiros da tarefa e devolve o subconjunto com alteracoes no disco (git status --porcelain -- <paths>); o painel cruza-o com group.files e, com count==0, TIRA o botao Commit desta tarefa e explica \"Nada por commitar\". Leitura falhada (null) mantem o botao: a falta de dado nunca tira a capacidade.",
+      "localizacao": {
+        "arquivo": "src/backend/routes/git_panel.py",
+        "linha": 90,
+        "conferido": [
+          1789942829.491,
+          6770
+        ]
+      }
+    },
+    {
+      "termo": "coluna 3 recolhe quando clico",
+      "aliases": [
+        "clicar na pagina 3 fecha o painel",
+        "a coluna 3 recolhe",
+        "clico no git e fecha",
+        "painel de git fecha sozinho",
+        "clique no painel fecha a camada"
+      ],
+      "identificador": "painelAberto (entregarAoMonaco)",
+      "descricao": "A camada da coluna 3 fecha porque o clique e interpretado como entrega de codigo ao Monaco. entregarAoMonaco so considerava os paineis ferramentas/raciocinio/pergunta; com o painel GIT aberto o painelAberto era falso, o alvo ficava null e a camada era fechada. A lista inclui agora state.isShowingGit e vale para qualquer painel novo que se acrescente a coluna 3.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/files.js",
+        "linha": 379,
+        "conferido": [
+          1789941451.983,
+          39511
+        ]
+      }
+    },
+    {
+      "termo": "commit automatico da tarefa",
+      "aliases": [
+        "commit sem clique",
+        "tarefa commitada sozinha",
+        "salvar sozinho no git",
+        "pino sem clique",
+        "commit automatico por tarefa"
+      ],
+      "identificador": "_commit_automatico",
+      "descricao": "Commit LOCAL dos ficheiros da tarefa no fim da rodada, sem clique: grava o hash no turno do log (o card ganha o pino sozinho). Nunca interrompe a gravacao do log - sem repositorio ou sem alteracoes, segue sem hash.",
+      "localizacao": {
+        "arquivo": "src/backend/routes/session.py",
+        "linha": 119,
+        "conferido": [
+          1789944974.514,
+          35759
+        ]
+      }
+    },
+    {
+      "termo": "aviaozinho do commit",
+      "aliases": [
+        "aviao do commit",
+        "icone de enviar o commit",
+        "botao de commitar",
+        "aviaozinho ao lado da varinha",
+        "mandar o commit pro git"
+      ],
+      "identificador": "data-git-acao=\"commit\" (.git-aviao)",
+      "descricao": "Icone de enviar do painel de git: vive na .git-campo-linha, ANTES da varinha da mensagem, e commita os ficheiros da tarefa (ligaAcoes -> commitarTarefa, que le o campo #git-mensagem e chama POST /api/git/commit). Construido por aviao() e recolhido pelo handler generico [data-git-acao]. Fica DESATIVADO (disabled, com title a explicar) quando nada ha por commitar, e ao clicar entra em a-trabalhar (spinner) + disabled - e a guarda contra o duplo commit. Substituiu a pill \"Commit desta tarefa\".",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/git_panel.js",
+        "linha": 296
+      }
+    },
+    {
+      "termo": "icone de restaurar do git",
+      "aliases": [
+        "restaurar esta tarefa",
+        "icone de restaurar do historico",
+        "botao de restaurar a tarefa",
+        "voltar a tarefa",
+        "restaurar pelo commit",
+        "voltar ao ponto da tarefa"
+      ],
+      "identificador": "#btn-git-restore-history",
+      "descricao": "Icone de restaurar do painel de git (o unico restauro do historico desde 2026-10): vive no cabecalho da coluna 3, encostado ao titulo do painel, e NAO tem id nos botoes do painel - e independente do html do painel. Quem o mostra/esconde e git_panel.js:sincronizarBotaoRestauro(vista, grupo), chamado no fim de renderGitPanel e so quando vista.id === 'historico' (o painel de git do dock nao tem este botao); o onclick e reatribuido a cada render, para nao acumular listeners. layout.js:syncCopyButtons esconde-o sempre que o painel ativo nao e 'git'. restaurarTarefa escolhe o MOTOR: com commit -> requestGitRestore(hash) (previa + modal do historico, state.pendingRestore.tipo==='git'); sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca das tarefas sem ponto no git). Substituiu o icone que vivia na coluna 1 do historico e a pill \"Restaurar esta tarefa\".",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 156
       }
     }
   ]

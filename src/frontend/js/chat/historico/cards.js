@@ -3,7 +3,6 @@ import * as dom from '../dom.js';
 import { createChildBalloon } from '../files.js';
 import { vistaDe } from '../colunas.js';
 import { escapeHtml, showQuestionPanel } from '../messages.js';
-import { showAlert } from '../ui.js';
 import { openFilesPanel, selectHistoryTask, updateActionButtons } from './acoes.js';
 import { epochDeId, marcarCheckpoint } from './checkpoint.js';
 
@@ -209,16 +208,6 @@ const { historyLogsWrapper } = dom;
         savedIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--oliva)]" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12a2 2 0 0 1 2 2v18l-8-4-8 4V4a2 2 0 0 1 2-2z"/></svg>`;
         row.appendChild(savedIcon);
     }
-    function updateRoundCardSavedIconByTurnId(turnId, salvo) {
-        document.querySelectorAll('.history-round-card').forEach(el => {
-            if (String(el.dataset.turnId) !== String(turnId)) return;
-            const g = el._group;
-            if (g) g.salvo = !!salvo;
-            const existing = el.querySelector('.history-round-saved-icon');
-            if (existing) existing.remove();
-            if (salvo) _injectSavedIcon(el);
-        });
-    }
     function updateRoundCardNameByTurnId(turnId, novoNome) {
         document.querySelectorAll('.history-round-card').forEach(el => {
             if (String(el.dataset.turnId) !== String(turnId)) return;
@@ -238,36 +227,6 @@ const { historyLogsWrapper } = dom;
             if (g) g.commit = hash || '';
             if (hash) _injectSavedIcon(el, 'Guardada no commit ' + String(hash).slice(0, 7), tagDoCommit(hash));
         });
-    }
-    async function toggleSaveSelectedTask(group) {
-        if (!group || !group.__session) {
-            showAlert('Não foi possível identificar a sessão desta tarefa para salvar.');
-            return;
-        }
-        try {
-            const resp = await fetch('/api/session_log/toggle_save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: group.__session, round_id: group.id || '' })
-            });
-            const data = await resp.json();
-            if (data && data.status === 'ok') {
-                group.salvo = !!data.salvo;
-                Object.keys(state.sessionDetailCache).forEach(key => {
-                    (state.sessionDetailCache[key] || []).forEach(saved => {
-                        if (String(saved.id) === String(group.id)) {
-                            saved.salvo = !!data.salvo;
-                        }
-                    });
-                });
-                updateActionButtons();
-                updateRoundCardSavedIconByTurnId(group.id, !!data.salvo);
-            } else {
-                showAlert(data && data.message ? data.message : 'Erro ao salvar tarefa.');
-            }
-        } catch (e) {
-            console.error('Erro ao salvar tarefa:', e);
-        }
     }
     function turnosComCommit() {
         const turnos = [];
@@ -557,6 +516,5 @@ export {
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
     updateRoundCardCommitByTurnId,
-    updateRoundCardNameByTurnId,
-    toggleSaveSelectedTask
+    updateRoundCardNameByTurnId
 };
