@@ -10,7 +10,7 @@ from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, entradas_diretorio, resumo_entradas, normalizar_unicode, buscar_em_revisao, PASTAS_FORA_DA_BUSCA, EXT_FORA_DA_BUSCA
 
-LIMITE_BYTES_POR_FICHEIRO = 512000
+LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
 
 
 def _formato_tamanho(num):
@@ -178,7 +178,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
             caminho_absoluto = os.path.join(root, name)
             
             try:
-                if os.path.getsize(caminho_absoluto) > LIMITE_BYTES_POR_FICHEIRO:
+                if os.path.getsize(caminho_absoluto) > LIMITE_BYTES_LIDOS:
                     ignorados_por_tamanho += 1
                     continue
                 caminho_relativo = os.path.relpath(caminho_absoluto, estado["pasta_raiz"])
@@ -191,7 +191,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
             
     aviso = ""
     if ignorados_por_tamanho:
-        aviso = (f" [{ignorados_por_tamanho} ficheiro(s) com mais de {LIMITE_BYTES_POR_FICHEIRO // 1000} KB"
+        aviso = (f" [{ignorados_por_tamanho} ficheiro(s) com mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB"
                  f" nao foram lidos nesta busca; os bundles em dist/ ficam sempre de fora.]")
     if not resultados: return f"Nenhuma ocorrência encontrada para o termo '{termo}'." + aviso
     saida = "\\n".join(resultados)
