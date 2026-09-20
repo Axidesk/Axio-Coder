@@ -42,6 +42,7 @@ let janelaRaciocinio = null;
 let raciocinioRecolhido = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
+let raciocinioDepoisDoTurno = null;
 let raciocinioLayoutEm = null;
 let raciocinioTrocaEm = null;
 let raciocinioSaidaEm = null;
@@ -63,6 +64,7 @@ const RACIOCINIO_ESTABILIZAR_MS = 60;
 const RACIOCINIO_SAIDA_MS = 200;
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
+const RACIOCINIO_APOS_TURNO_MS = 30000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -615,10 +617,25 @@ function esperarOciosidadeDoRaciocinio() {
   raciocinioOcioso = setTimeout(esconderJanelaRaciocinio, RACIOCINIO_OCIOSO_MS);
 }
 
+function agendarSaidaDepoisDoTurno() {
+  cancelarSaidaDepoisDoTurno();
+  raciocinioDepoisDoTurno = setTimeout(esconderJanelaRaciocinio, RACIOCINIO_APOS_TURNO_MS);
+}
+
+function cancelarSaidaDepoisDoTurno() {
+  if (!raciocinioDepoisDoTurno) return;
+  clearTimeout(raciocinioDepoisDoTurno);
+  raciocinioDepoisDoTurno = null;
+}
+
 function esconderJanelaRaciocinio() {
   if (raciocinioOcioso) {
     clearTimeout(raciocinioOcioso);
     raciocinioOcioso = null;
+  }
+  if (raciocinioDepoisDoTurno) {
+    clearTimeout(raciocinioDepoisDoTurno);
+    raciocinioDepoisDoTurno = null;
   }
   pararAcompanhamentoDoRaciocinio();
   raciocinioQuerido = false;
@@ -645,6 +662,7 @@ function mostrarJanelaRaciocinio() {
     raciocinioSaidaEm = null;
   }
   raciocinioSaindo = false;
+  cancelarSaidaDepoisDoTurno();
   esperarOciosidadeDoRaciocinio();
   const janela = criarJanelaRaciocinio();
   if (!raciocinioPronto) {
@@ -663,11 +681,13 @@ function alimentarRaciocinio(evento) {
   if (!evento || typeof evento !== 'object' || !evento.tipo) return;
   if (evento.tipo === 'inicio' || evento.tipo === 'fim') {
     raciocinioBuffer = [];
+    cancelarSaidaDepoisDoTurno();
     if (evento.tipo === 'inicio') definirRecolhaDoRaciocinio(false);
-    if (evento.tipo === 'fim') esconderJanelaRaciocinio();
+    if (evento.tipo === 'fim') agendarSaidaDepoisDoTurno();
   } else {
     raciocinioBuffer.push(evento);
     if (raciocinioBuffer.length > RACIOCINIO_MEMORIA) raciocinioBuffer.shift();
+    cancelarSaidaDepoisDoTurno();
     esperarOciosidadeDoRaciocinio();
   }
   if (janelaRaciocinio && !janelaRaciocinio.isDestroyed() && !janelaRaciocinio.webContents.isLoading()) {
