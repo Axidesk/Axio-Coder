@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
@@ -27,6 +28,7 @@ from src.backend.tools.process import id_processo, run_com_timeout
 from src.backend.tools.registry import register
 
 _TIMEOUT_TRECHO_MAX = 300
+_ARRANQUE = time.time()
 _PREFIXO_TEMP_PYTHON = "axio_python_"
 _PREFIXO_TEMP_JS = "axio_js_"
 
@@ -1308,11 +1310,30 @@ def _snippet_js(codigo, raiz_projeto):
     cabecalho = _CABECALHO_JS.replace("{RAIZ_JS}", json.dumps(raiz_projeto or ""))
     return cabecalho + _DOM_FALSO_JS + _sem_imports_repetidos(codigo) + "\n"
 
+def _aviso_harness_velho():
+    """O processo importou este modulo no arranque: se o ficheiro no disco for mais novo, o cabecalho
+    injetado e o antigo e o trecho mente sobre o codigo de agora - o sintoma tipico e um auxiliar que
+    existe no disco e da ReferenceError a correr.
+    """
+    try:
+        editado = os.path.getmtime(os.path.abspath(__file__))
+    except OSError:
+        return ""
+    if editado <= _ARRANQUE:
+        return ""
+    minutos = max(1, int((editado - _ARRANQUE) / 60))
+    return ("AVISO: este harness foi editado ha ~" + str(minutos) + "min e o processo em curso ainda corre "
+            "a versao de antes - Ctrl+Shift+B para entrar em vigor (o resultado abaixo pode nao refletir "
+            "o ficheiro atual).")
+
 def _relatorio_execucao(proc, limite, linguagem):
     veredito = "OK" if proc.returncode == 0 else f"FALHOU (codigo de saida {proc.returncode})"
     partes = [f"TRECHO {linguagem}: {veredito} | limite {limite}s | ficheiro temporario apagado",
               "--- stdout ---",
               recortar_texto(proc.stdout) or "(vazio)"]
+    aviso = _aviso_harness_velho()
+    if aviso:
+        partes.insert(0, aviso)
     erro = recortar_texto(proc.stderr)
     if erro:
         partes.append("--- stderr ---")
