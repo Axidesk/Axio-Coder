@@ -164,13 +164,14 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
     ignorados_por_tamanho = 0
 
     for root, dirs, files in os.walk(raiz_busca):
+        dirs[:] = [d for d in dirs if d != '.axio']
         if not incluir_ignoradas:
             dirs[:] = [d for d in dirs if d not in pastas_ignoradas and not d.startswith('.')]
 
         
         for name in files:
             if time.time() - tempo_inicio > 10:
-                resultados.append("[AVISO] Timeout de 10s atingido. Resultados parciais.")
+                resultados.append(f"[AVISO] Timeout de 10s atingido em '{root}'. Resultados parciais - restrinja com 'pasta' para varrer uma subpasta de cada vez.")
                 saida = "\\n".join(resultados)
                 return saida[:10000] + "\\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
 
