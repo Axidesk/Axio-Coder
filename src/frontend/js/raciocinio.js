@@ -12,11 +12,12 @@ const contador = document.getElementById('rc-contador');
 const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
 
-const MARGEM_DO_FIM_PX = 24;
+const MARGEM_DO_FIM_PX = 4;
 
 let recolhido = false;
 let passos = 0;
 let seguirFim = true;
+let ultimoTopo = 0;
 let pendentes = [];
 let agendado = 0;
 
@@ -27,19 +28,36 @@ function limpar() {
     }
     pendentes = [];
     while (registo.firstChild) registo.removeChild(registo.firstChild);
+    registo.classList.remove('rc-por-cima');
     estado.textContent = '';
     passos = 0;
     contador.textContent = '';
     seguirFim = true;
+    ultimoTopo = 0;
 }
 
 function noFimDoRegisto() {
     return registo.scrollHeight - registo.scrollTop - registo.clientHeight <= MARGEM_DO_FIM_PX;
 }
 
+function marcarCorteNoTopo() {
+    registo.classList.toggle('rc-por-cima', registo.scrollTop > 2);
+}
+
 function aoFundo() {
     if (!seguirFim) return;
     registo.scrollTop = registo.scrollHeight;
+    marcarCorteNoTopo();
+}
+
+function acompanharRolagem() {
+    const topo = registo.scrollTop;
+    const subiu = topo < ultimoTopo - 1;
+    const desceu = topo > ultimoTopo + 1;
+    ultimoTopo = topo;
+    if (subiu) seguirFim = false;
+    else if (desceu && noFimDoRegisto()) seguirFim = true;
+    marcarCorteNoTopo();
 }
 
 function linhaDaFerramenta(evento) {
@@ -131,15 +149,17 @@ function sair() {
 }
 
 botao.addEventListener('click', alternarRecolha);
-registo.addEventListener('scroll', () => {
-    seguirFim = noFimDoRegisto();
-}, { passive: true });
-registo.addEventListener('wheel', () => {
-    seguirFim = false;
+registo.addEventListener('scroll', acompanharRolagem, { passive: true });
+registo.addEventListener('wheel', (evento) => {
+    if (evento.deltaY < 0) seguirFim = false;
 }, { passive: true });
 registo.addEventListener('pointerdown', () => {
     seguirFim = false;
 }, { passive: true });
+new ResizeObserver(() => {
+    if (seguirFim) registo.scrollTop = registo.scrollHeight;
+    marcarCorteNoTopo();
+}).observe(registo);
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
 api.aoTrocar(marcarTroca);

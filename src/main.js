@@ -58,8 +58,8 @@ const RACIOCINIO_ALTURA = 200;
 const RACIOCINIO_LARGURA_RECOLHIDA = 200;
 const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
-const RACIOCINIO_TROCA_MS = 110;
-const RACIOCINIO_ESTABILIZAR_MS = 90;
+const RACIOCINIO_TROCA_MS = 70;
+const RACIOCINIO_ESTABILIZAR_MS = 60;
 const RACIOCINIO_SAIDA_MS = 200;
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
@@ -540,11 +540,8 @@ function trocarCaixaDoRaciocinio(destino) {
   if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:trocar', true);
   raciocinioTrocaEm = setTimeout(() => {
     raciocinioTrocaEm = null;
-    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-    if (!raciocinioQuerido || raciocinioSaindo) return;
-    janela.hide();
-    janela.setBounds(limitesDoRaciocinio());
-    janela.showInactive();
+    if (janela.isDestroyed()) return;
+    if (raciocinioQuerido && !raciocinioSaindo && janela.isVisible()) janela.setBounds(limitesDoRaciocinio());
     if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:trocar', false);
   }, RACIOCINIO_TROCA_MS);
 }
