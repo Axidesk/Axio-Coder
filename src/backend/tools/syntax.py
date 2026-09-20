@@ -6,6 +6,7 @@ import json
 import subprocess
 
 from src.backend.state import emit_event
+from src.backend.tools.js_lexico import contar_simbolo, limpar
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho
 
@@ -348,6 +349,64 @@ def _aviso_de_posicao(criadas, antes, depois):
         return ""
     return "POSICAO DA FUNCAO NOVA: " + " | ".join(partes)
 
+_RE_IMPORT_JS = re.compile(r"import\s*\{([^}]*)\}", re.MULTILINE)
+_RE_IMPORT_JS_NOME = re.compile(r"^\s*import\s+([A-Za-z_$][\w$]*)\s*(?:,|from\s)", re.MULTILINE)
+_RE_IMPORT_JS_NAMESPACE = re.compile(r"import\s*\*\s*as\s+([A-Za-z_$][\w$]*)")
+_RE_IMPORT_PY = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(?:\(([^)]*)\)|([^\n#]+))", re.MULTILINE)
+
+def _nomes_importados(texto, caminho_relativo):
+    """Nomes que o modulo trouxe para dentro de si por import (JS/TS e Python)."""
+    ext = os.path.splitext(caminho_relativo or "")[1].lower()
+    if ext in (".js", ".mjs", ".cjs", ".ts", ".tsx"):
+        blocos = [m.group(1) for m in _RE_IMPORT_JS.finditer(texto or "")]
+    elif ext in (".py", ".pyw"):
+        blocos = [(m.group(1) if m.group(1) is not None else m.group(2))
+                  for m in _RE_IMPORT_PY.finditer(texto or "")]
+    else:
+        return set()
+    nomes = set()
+    for bloco in blocos:
+        for item in bloco.replace("\\", " ").split(","):
+            item = item.split("#")[0].strip()
+            if not item or item.startswith("*"):
+                continue
+            nomes.add(item.split(" as ")[-1].strip())
+    if ext in (".js", ".mjs", ".cjs", ".ts", ".tsx"):
+        nomes.update(m.group(1) for m in _RE_IMPORT_JS_NOME.finditer(texto or ""))
+        nomes.update(m.group(1) for m in _RE_IMPORT_JS_NAMESPACE.finditer(texto or ""))
+    return {n for n in nomes if n}
+
+def _aviso_referencias_orfas(caminho_relativo, texto_antigo, texto_novo):
+    """Nome que saiu do import nesta edicao e continua a ser usado: quebra em execucao.
+
+    O caso real (renderer.js, lixeira do historico): a edicao tirou
+    'confirmDeletePopup' do import e deixou o uso na linha seguinte. A auditoria de
+    imports nao ve (js_auditoria.py:_faltantes so olha para 'nome(' e so acusa quando o
+    simbolo ainda e exportado por alguem) e o lint so acusa quem o correr depois. Aqui
+    os dois textos da edicao ja estao em maos: o caso e apanhado quando nasce.
+    """
+    if not texto_novo:
+        return ""
+    saiu = _nomes_importados(texto_antigo, caminho_relativo) - _nomes_importados(texto_novo, caminho_relativo)
+    if not saiu:
+        return ""
+    ext = os.path.splitext(caminho_relativo or "")[1].lower()
+    limpo = limpar(texto_novo) if ext in (".js", ".mjs", ".cjs", ".ts", ".tsx") else texto_novo
+    orfaos = []
+    for nome in sorted(saiu):
+        if not re.fullmatch(r"[A-Za-z_$][\w$]*", nome):
+            continue
+        if re.search(r"\b(?:function|class|const|let|var)\s+" + re.escape(nome) + r"\b", limpo):
+            continue
+        usos = contar_simbolo(nome, limpo)
+        if usos:
+            orfaos.append(f"{nome} ({usos}x)")
+    if not orfaos:
+        return ""
+    return ("REFERENCIA ORFA: " + ", ".join(orfaos)
+            + " saiu do import nesta edicao e continua a ser usado -> quebra em execucao;"
+              " corrige o uso ou repoe o import antes de finalizar.")
+
 def aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, texto_novo):
     """Checklist automatico anexado ao retorno das ferramentas de edicao.
 
@@ -377,6 +436,9 @@ def aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, texto_novo):
             "FUNCAO(OES) REMOVIDA(S): " + ", ".join(removidas)
             + " -> ANTES de finalizar: tool_pesquisar_no_projeto por cada nome (garantir que nada as chama) e tool_auditar_imports_py/js no arquivo (imports, variaveis e dead code orfaos)."
         )
+    orfas = _aviso_referencias_orfas(caminho_relativo, texto_antigo, texto_novo)
+    if orfas:
+        partes.append(orfas)
     if not partes:
         return ""
     return " | CHECKLIST ESTRUTURAL: " + " | ".join(partes)

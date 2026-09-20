@@ -484,8 +484,8 @@ import './busca_chat.js';
 
         const path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
         const hit = (el) => !!el && path.includes(el);
-        const clickedOnModal = hit(confirmDeletePopup) || hit(restoreConfirmPopup) ||
-                               hit(confirmClearContextPopup) || hit(alertPopup) || hit(settingsModal);
+        const clickedOnModal = hit(restoreConfirmPopup) || hit(confirmClearContextPopup) ||
+                               hit(alertPopup) || hit(settingsModal);
         if (clickedOnModal) return;
         const clickedLeftColumn = hit(chatMode) || hit(terminalMode);
         const clickedDocContent = hit(wrap) || hit(chatContainerRight);
