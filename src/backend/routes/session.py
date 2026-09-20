@@ -31,6 +31,7 @@ from src.backend.services.file_service import (
     registrar_edicao,
     mover_para_lixeira,
 )
+from src.backend.services import git_repo
 from src.backend.memory.vector import limpar_drawers_de_sources
 from src.backend.services.session_index import (
     atualizar_indice_de_payload,
@@ -92,6 +93,56 @@ def _preservar_segredos_no_checkpoint_atual(pasta_logs, pasta_raiz):
         if isinstance(do_grupo, dict):
             do_grupo.update(vivos)
     _gravar_payload(caminho, payload)
+
+
+def _mensagem_da_tarefa(grupo):
+    """Titulo do commit automatico: a pergunta do utilizador, ou o nome que a tarefa ja tem."""
+    perguntas = (grupo or {}).get("questions") or []
+    pergunta = " ".join(str(perguntas[0] or "").split()).strip() if perguntas else ""
+    if pergunta:
+        return pergunta[:72]
+    nome = (grupo or {}).get("name") or (grupo or {}).get("title") or ""
+    return " ".join(str(nome).split()).strip()[:72] or "Tarefa sem titulo"
+
+
+def _commits_ja_gravados(pay_dia):
+    """Hash que o log ja tem por turno, para uma regravacao nao criar um segundo commit da mesma tarefa."""
+    mapa = {}
+    for grupo in (pay_dia or {}).get("logs") or []:
+        chave = str((grupo or {}).get("id") or "")
+        if chave and grupo.get("commit"):
+            mapa[chave] = grupo["commit"]
+    return mapa
+
+
+def _commit_automatico(grupo, pasta_raiz, ja_gravados):
+    """Commit local dos ficheiros da tarefa, sem clique. Devolve o hash, ou "" quando nao ha o que commitar.
+
+    A gravacao do log NUNCA depende do git: sem repositorio, sem alteracoes ou com o git a falhar,
+    a tarefa segue sem hash e o painel continua a permitir o commit a mao.
+    """
+    if (grupo or {}).get("commit"):
+        return ""
+    anterior = ja_gravados.get(str((grupo or {}).get("id") or ""))
+    if anterior:
+        grupo["commit"] = anterior
+        return ""
+    ficheiros = []
+    for f in (grupo or {}).get("files") or []:
+        nome = f.get("name") if isinstance(f, dict) else f
+        if nome:
+            ficheiros.append(str(nome))
+    if not ficheiros:
+        return ""
+    try:
+        caminhos = git_repo.caminhos_do_repo(pasta_raiz, ficheiros)
+        resultado = git_repo.commitar(pasta_raiz, _mensagem_da_tarefa(grupo), caminhos)
+    except Exception:
+        return ""
+    if resultado.get("status") != "ok":
+        return ""
+    return resultado.get("hash") or ""
+
 
 @session_bp.route('/api/session_log/save', methods=['POST'])
 def session_log_save():
@@ -156,6 +207,7 @@ def session_log_save():
     _registrar_segredos(snapshot_cumulativo, pasta_raiz)
 
     filenames = []
+    commits_novos = {}
     for dia, grupos_dia in grupos_por_dia.items():
         sid = estado.get("session_id_atual") or ""
         caminho_dia = os.path.join(pasta_logs, f"sessionlog_{sid}.json") if sid else ""
@@ -184,7 +236,12 @@ def session_log_save():
                 "logs": [],
             }
 
+        ja_gravados = _commits_ja_gravados(pay_dia)
         for grupo in grupos_dia:
+            hash_do_commit = _commit_automatico(grupo, pasta_raiz, ja_gravados)
+            if hash_do_commit:
+                grupo["commit"] = hash_do_commit
+                commits_novos[str(grupo.get("id") or "")] = hash_do_commit
             grupo["snapshot"] = snapshot_cumulativo
         pay_dia["logs"].extend(grupos_dia)
         pay_dia["summary"] = summary_de_logs(pay_dia["logs"]) or (data.get("summary") or "").strip()[:160]
@@ -199,7 +256,11 @@ def session_log_save():
     descartados = prune_session_logs(pasta_logs, manter_dias=3)
     if descartados:
         threading.Thread(target=limpar_drawers_de_sources, args=(descartados,), daemon=True).start()
-    return jsonify({"status": "ok", "filename": filenames[-1] if filenames else ""})
+    return jsonify({
+        "status": "ok",
+        "filename": filenames[-1] if filenames else "",
+        "commits": commits_novos,
+    })
 
 @session_bp.route('/api/session_history', methods=['GET'])
 def session_history():

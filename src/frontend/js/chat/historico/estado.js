@@ -41,6 +41,7 @@ import { state } from '../state.js';
             name: g.name || '',
             aiResponse: g.aiResponse || '',
             salvo: !!g.salvo,
+            commit: g.commit || '',
             duration: g.duration || 0,
             tools: g.tools || [],
             thoughts: g.thoughts || [],
@@ -53,19 +54,22 @@ import { state } from '../state.js';
         };
     }
     async function saveCurrentTurnSession() {
-        if (!state.currentTurnLogs.length) return;
+        if (!state.currentTurnLogs.length) return {};
         const payload = {
             summary: state.currentTurnSummary || '',
             logs: state.currentTurnLogs.map(serializeGroup)
         };
         try {
-            await fetch('/api/session_log/save', {
+            const resp = await fetch('/api/session_log/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            const data = await resp.json();
+            return (data && data.commits) || {};
         } catch (e) {
             console.error('Erro ao salvar log da sessão:', e);
+            return {};
         }
     }
 

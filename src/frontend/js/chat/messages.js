@@ -2,7 +2,7 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { renderImagePreviews } from './attach.js';
 import { atualizarBotoesUndoRedo, createChildBalloon, gerarSnippetHtml, restaurarPastaSelecionada, sincronizarArquivosEmTempoReal } from './files.js';
-import { createLogGroupCard, roundMetaHtml } from './historico/cards.js';
+import { createLogGroupCard, roundMetaHtml, updateRoundCardCommitByTurnId } from './historico/cards.js';
 import { epochDeId } from './historico/checkpoint.js';
 import { fetchSessionHistoryData, saveCurrentTurnSession } from './historico/estado.js';
 import { prefetchSessionDetails, preloadSessionHistory } from './historico/painel.js';
@@ -684,7 +684,12 @@ async function tratar_done() {
         currentGroupBalloon.titleSpan.className = 'text-[11px] text-[var(--text-mutado)] truncate leading-tight pr-6';
         if (currentGroupBalloon.spinner) currentGroupBalloon.spinner.classList.add('hidden');
     }
-    await saveCurrentTurnSession();
+    const commitsDaRodada = await saveCurrentTurnSession();
+    Object.entries(commitsDaRodada || {}).forEach(([turnId, hash]) => {
+        updateRoundCardCommitByTurnId(turnId, hash);
+        const grupo = state.currentTurnLogs.find(g => String(g.id) === String(turnId));
+        if (grupo) grupo.commit = hash;
+    });
     if (window.pendingContextClear) {
         window.pendingContextClear = false;
         try {

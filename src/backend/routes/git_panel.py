@@ -27,18 +27,6 @@ def _revisao_pedida(dados):
     return revisao, None
 
 
-def _caminhos_do_repo(pasta, bruto):
-    """Converte caminhos relativos a pasta do projeto em relativos a raiz do repositorio."""
-    raiz = git_repo.pasta_do_repositorio(pasta)[0]
-    if not raiz:
-        return list(bruto or [])
-    convertidos = []
-    for rel in bruto or []:
-        alvo = os.path.abspath(os.path.join(pasta, str(rel).replace("/", os.sep)))
-        convertidos.append(os.path.relpath(alvo, raiz).replace(os.sep, "/"))
-    return convertidos
-
-
 def _quebras_do_restauro(raiz, revisao, restaurar, remover):
     caminhos = [r.get("caminho") for r in restaurar if isinstance(r, dict) and r.get("caminho")]
     caminhos.extend([r for r in restaurar if isinstance(r, str)])
@@ -86,7 +74,7 @@ def git_versoes():
 @git_bp.route("/api/git/commit", methods=["POST"])
 def git_commit():
     dados = request.json or {}
-    ficheiros = _caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
+    ficheiros = git_repo.caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
     resultado = git_repo.commitar(_pasta(), dados.get("mensagem") or "", ficheiros)
     if resultado.get("status") == "error":
         return jsonify(resultado), 400
@@ -102,7 +90,7 @@ def git_commit():
 @git_bp.route("/api/git/pendentes", methods=["POST"])
 def git_pendentes():
     dados = request.json or {}
-    ficheiros = _caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
+    ficheiros = git_repo.caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
     info = git_repo.pendentes(_pasta(), ficheiros)
     if not info.get("repo"):
         return jsonify({

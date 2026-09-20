@@ -309,6 +309,18 @@ def _caminhos_conhecidos(raiz, caminhos):
     return escolhidos
 
 
+def caminhos_do_repo(pasta, caminhos):
+    """Converte caminhos relativos a pasta do projeto em relativos a raiz do repositorio."""
+    raiz, _ = pasta_do_repositorio(pasta)
+    if not raiz:
+        return list(caminhos or [])
+    convertidos = []
+    for rel in caminhos or []:
+        alvo = os.path.abspath(os.path.join(pasta, str(rel).replace("/", os.sep)))
+        convertidos.append(os.path.relpath(alvo, raiz).replace(os.sep, "/"))
+    return convertidos
+
+
 def pendentes(pasta, caminhos):
     """Subconjunto destes caminhos (relativos a raiz do repositorio) com alteracoes por commitar."""
     raiz, erro = pasta_do_repositorio(pasta)
