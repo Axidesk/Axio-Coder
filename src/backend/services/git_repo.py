@@ -190,6 +190,35 @@ def tags_com_ponto(pasta):
     return _tags_com_ponto(raiz)[0]
 
 
+def _tags_que_contem(raiz, revisao):
+    saida, erro = git_saida(raiz, "tag", "--contains", revisao)
+    if erro:
+        return [], erro
+    return [l.strip() for l in (saida or "").splitlines() if l.strip()], ""
+
+
+def versao_da_revisao(pasta, revisao):
+    """A etiqueta mais antiga que leva esta revisao dentro: a versao onde ela entrou.
+
+    Uma tarefa e commitada ANTES de a versao ser publicada, logo a etiqueta da
+    versao dela raramente aponta para o commit da tarefa - aponta para um commit
+    POSTERIOR que ja a leva dentro. Marcar so a etiqueta com o mesmo ponto deixava
+    a lista toda apagada para praticamente qualquer tarefa. Havendo varias, vale a
+    mais ANTIGA: e a versao em que a tarefa apareceu pela primeira vez.
+    """
+    if not revisao:
+        return ""
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return ""
+    contem, erro = _tags_que_contem(raiz, revisao)
+    if erro or not contem:
+        return ""
+    tags, _ = _tags_com_ponto(raiz)
+    da_versao = [t["nome"] for t in tags if t["nome"] in contem]
+    return da_versao[-1] if da_versao else ""
+
+
 def _commits_do_intervalo(raiz, ponta, base):
     argumentos = ["rev-list", f"--max-count={_LIMITE_INTERVALO}", ponta]
     if base:

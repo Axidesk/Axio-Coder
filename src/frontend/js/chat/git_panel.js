@@ -189,7 +189,7 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         }
         return seccaoRecolhivel('Historico do repositorio', String(todos.length), corpo);
     }
-    function htmlEtiquetas(estado, grupo) {
+    function htmlEtiquetas(estado, grupo, versaoDaTarefa) {
         const tags = estado.tags || [];
         if (!tags.length) return '';
         const pontoDaTarefa = hashDaTarefa(grupo);
@@ -197,7 +197,8 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             const nome = typeof t === 'string' ? t : t.nome;
             const ponto = typeof t === 'string' ? '' : t.ponto;
             const curto = typeof t === 'string' ? '' : t.curto;
-            const acesa = !!pontoDaTarefa && ponto === pontoDaTarefa;
+            const acesa = (!!pontoDaTarefa && ponto === pontoDaTarefa)
+                || (!!versaoDaTarefa && nome === versaoDaTarefa);
             const dono = ponto ? nomeDaTarefaDoCommit(ponto) : '';
             return `<div class="git-tag-linha${acesa ? ' git-tag-acesa' : ''}">`
                 + `<span class="git-tag-nome">${escapeHtml(nome)}</span>`
@@ -234,13 +235,13 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         caixa.innerHTML = comandos.map(c => `<div class="git-comando">${escapeHtml(c)}</div>`).join('')
             + '<div class="git-nota">Corre este comando no terminal do Axio: a instalacao e longa e queres ver a saida. O ambiente virtual desta pasta fica pronto para a versao antiga do codigo.</div>';
     }
-    function montarPainel(estado, grupo, pendentes) {
+    function montarPainel(estado, grupo, pendentes, versaoDaTarefa) {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado);
         html += htmlDaTarefa(grupo, pendentes);
         html += htmlHistorico(estado, grupo);
-        html += htmlEtiquetas(estado, grupo);
+        html += htmlEtiquetas(estado, grupo, versaoDaTarefa);
         html += htmlDependencias(estado);
         html += '</div>';
         return html;
@@ -250,20 +251,27 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         setCodeViewContent('<div class="git-painel"><div class="git-vazio">A ler o repositorio…</div></div>', false, alvo);
         const grupo = grupoAtivo();
         const ficheiros = ficheirosDaTarefa(grupo);
+        const hash = hashDaTarefa(grupo);
         let dados = null;
         let pendentes = null;
+        let versaoDaTarefa = '';
         try {
-            const pedidos = [pedirGit('/api/git/estado')];
-            if (ficheiros.length) pedidos.push(pedirGit('/api/git/pendentes', { ficheiros }));
-            const respostas = await Promise.all(pedidos);
-            dados = respostas[0];
-            pendentes = respostas[1] || null;
+            const pedidos = { estado: pedirGit('/api/git/estado') };
+            if (ficheiros.length) pedidos.pendentes = pedirGit('/api/git/pendentes', { ficheiros });
+            if (hash) pedidos.versao = pedirGit('/api/git/versao', { revisao: hash });
+            const nomes = Object.keys(pedidos);
+            const respostas = await Promise.all(nomes.map(nome => pedidos[nome]));
+            const porNome = {};
+            nomes.forEach((nome, i) => { porNome[nome] = respostas[i]; });
+            dados = porNome.estado;
+            pendentes = porNome.pendentes || null;
+            versaoDaTarefa = (porNome.versao && porNome.versao.versao) || '';
         } catch (e) {
             console.error('Erro ao ler o repositorio:', e);
             dados = { status: 'error', message: `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}` };
         }
         const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: (dados && dados.message) || 'Nao consegui ler o repositorio.' };
-        setCodeViewContent(montarPainel(estado, grupo, pendentes), false, alvo);
+        setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
         sincronizarBotaoRestauro(alvo, grupo);
         ligarAcoes(alvo);
     }

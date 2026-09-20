@@ -106,6 +106,13 @@ def git_pendentes():
     })
 
 
+@git_bp.route("/api/git/versao", methods=["POST"])
+def git_versao():
+    dados = request.json or {}
+    revisao = str(dados.get("revisao") or "").strip()
+    return jsonify({"status": "ok", "versao": git_repo.versao_da_revisao(_pasta(), revisao)})
+
+
 @git_bp.route("/api/git/restauro_preview", methods=["POST"])
 def git_restauro_preview():
     revisao, erro = _revisao_pedida(request.json or {})
