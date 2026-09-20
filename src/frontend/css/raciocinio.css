@@ -10,6 +10,7 @@ body {
 
 :root {
     --rc-fade: 0.07s;
+    --rc-cruzar: 0.16s;
     --rc-zoom: 1;
 }
 
@@ -32,8 +33,9 @@ body {
         transform var(--dur-3) var(--ease-fluid);
 }
 
-body.rc-trocando #rc-janela {
-    opacity: 0;
+body.rc-trocando #rc-barra,
+body.rc-trocando #rc-conteudo {
+    opacity: 0.35;
 }
 
 body.rc-saindo #rc-janela {
@@ -48,6 +50,7 @@ body.rc-saindo #rc-janela {
     align-items: center;
     gap: 8px;
     padding: 0 8px 0 14px;
+    transition: opacity var(--rc-cruzar) var(--ease-fluid);
 }
 
 #rc-sinal {
@@ -150,7 +153,7 @@ body.rc-recolhido .rc-traco-v {
     padding: 0 14px 12px;
     opacity: 1;
     visibility: visible;
-    transition: opacity var(--rc-fade) var(--ease-fluid), visibility 0s linear 0s;
+    transition: opacity var(--rc-cruzar) var(--ease-fluid), visibility 0s linear 0s;
 }
 
 body.rc-recolhido #rc-conteudo {

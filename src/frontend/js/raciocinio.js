@@ -14,11 +14,12 @@ const registo = document.getElementById('rc-registo');
 
 const MARGEM_DO_FIM_PX = 4;
 const VIGIA_DA_ENTRADA_MS = 1000;
+const GRACA_DE_GESTO_MS = 180;
 
 let recolhido = false;
 let passos = 0;
 let seguirFim = true;
-let ultimoTopo = 0;
+let gestoEm = -Infinity;
 let pendentes = [];
 let agendado = 0;
 let entradaResolvida = false;
@@ -35,7 +36,7 @@ function limpar() {
     passos = 0;
     contador.textContent = '';
     seguirFim = true;
-    ultimoTopo = 0;
+    gestoEm = -Infinity;
 }
 
 function noFimDoRegisto() {
@@ -47,19 +48,20 @@ function marcarCorteNoTopo() {
 }
 
 function aoFundo() {
-    if (!seguirFim) return;
+    if (!seguirFim && !noFimDoRegisto()) return;
+    if (performance.now() - gestoEm < GRACA_DE_GESTO_MS) return;
     registo.scrollTop = registo.scrollHeight;
     marcarCorteNoTopo();
 }
 
 function acompanharRolagem() {
-    const topo = registo.scrollTop;
-    const subiu = topo < ultimoTopo - 1;
-    const desceu = topo > ultimoTopo + 1;
-    ultimoTopo = topo;
-    if (subiu) seguirFim = false;
-    else if (desceu && noFimDoRegisto()) seguirFim = true;
+    seguirFim = noFimDoRegisto();
     marcarCorteNoTopo();
+}
+
+function marcarGesto() {
+    gestoEm = performance.now();
+    acompanharRolagem();
 }
 
 function linhaDaFerramenta(evento) {
@@ -153,14 +155,10 @@ function sair() {
 
 botao.addEventListener('click', alternarRecolha);
 registo.addEventListener('scroll', acompanharRolagem, { passive: true });
-registo.addEventListener('wheel', (evento) => {
-    if (evento.deltaY < 0) seguirFim = false;
-}, { passive: true });
-registo.addEventListener('pointerdown', () => {
-    seguirFim = false;
-}, { passive: true });
+registo.addEventListener('wheel', marcarGesto, { passive: true });
+registo.addEventListener('pointerdown', marcarGesto, { passive: true });
 new ResizeObserver(() => {
-    if (seguirFim) registo.scrollTop = registo.scrollHeight;
+    aoFundo();
     marcarCorteNoTopo();
 }).observe(registo);
 document.body.classList.add('rc-saindo');
