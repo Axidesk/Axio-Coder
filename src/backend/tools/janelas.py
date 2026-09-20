@@ -636,10 +636,13 @@ def _novos_no_clique(antes, depois):
     Sem isto, abrir um submenu custa sempre uma leitura extra da arvore so para o mapear.
     """
     conhecidos = {_chave(elemento) for elemento in antes}
-    indice_por_chave = {_chave(elemento): numero for numero, elemento in enumerate(depois)}
+    chaves = [_chave(elemento) for elemento in depois]
+    indice_por_chave = {}
+    for numero, chave in enumerate(chaves):
+        indice_por_chave.setdefault(chave, numero)
     linhas = []
-    for elemento in depois:
-        chave = _chave(elemento)
+    for numero, elemento in enumerate(depois):
+        chave = chaves[numero]
         if chave in conhecidos:
             continue
         rotulo = _texto(elemento)[:44] or "(sem nome)"

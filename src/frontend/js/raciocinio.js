@@ -4,23 +4,17 @@ const api = window.raciocinio || {
     aoHistorico: () => {},
     aoRecolha: () => {},
     aoSair: () => {},
-    aoCaixa: () => {},
     aoEscala: () => {},
-    alternar: () => {},
-    assentar: () => {}
+    alternar: () => {}
 };
 
 const botao = document.getElementById('rc-recolher');
 const contador = document.getElementById('rc-contador');
 const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
-const janela = document.getElementById('rc-janela');
-const recorte = document.getElementById('rc-clip');
 
 const MARGEM_DO_FIM_PX = 4;
 const VIGIA_DA_ENTRADA_MS = 1000;
-const DURACAO_DA_CAIXA_MS = 250;
-const CURVA_DA_CAIXA = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 let recolhido = false;
 let passos = 0;
@@ -29,8 +23,6 @@ let pendentes = [];
 let agendado = 0;
 let entradaResolvida = false;
 let escala = 1;
-let caixaDaJanela = null;
-let movimentoDaCaixa = null;
 
 function limpar() {
     if (agendado) {
@@ -148,53 +140,10 @@ function animarEntrada() {
 function aplicarEscala(zoom) {
     escala = zoom > 0 ? zoom : 1;
     document.documentElement.style.setProperty('--rc-zoom', String(escala));
-    if (caixaDaJanela) aplicarCaixa({ largura: caixaDaJanela.largura, altura: caixaDaJanela.altura, animar: false });
-}
-
-function aplicarCaixa(caixa) {
-    if (!caixa) return;
-    const largura = Number(caixa.largura);
-    const altura = Number(caixa.altura);
-    if (!Number.isFinite(largura) || !Number.isFinite(altura) || largura < 1 || altura < 1) return;
-    caixaDaJanela = { largura: largura, altura: altura };
-    const alvoL = largura / escala;
-    const alvoA = altura / escala;
-    const anterior = janela.getBoundingClientRect();
-    if (movimentoDaCaixa) {
-        movimentoDaCaixa.cancel();
-        movimentoDaCaixa = null;
-    }
-    janela.style.width = alvoL + 'px';
-    janela.style.height = alvoA + 'px';
-    if (caixa.animar && anterior.width > 1) {
-        recorte.style.width = Math.max(anterior.width, alvoL) + 'px';
-        movimentoDaCaixa = janela.animate(
-            [
-                { width: anterior.width + 'px', height: anterior.height + 'px' },
-                { width: alvoL + 'px', height: alvoA + 'px' }
-            ],
-            { duration: DURACAO_DA_CAIXA_MS, easing: CURVA_DA_CAIXA }
-        );
-        movimentoDaCaixa.finished.then(assentarCaixa, () => {});
-        return;
-    }
-    recorte.style.width = alvoL + 'px';
-}
-
-function assentarCaixa() {
-    movimentoDaCaixa = null;
-    if (caixaDaJanela) recorte.style.width = (caixaDaJanela.largura / escala) + 'px';
-    api.assentar();
 }
 
 function sair() {
     document.body.classList.add('rc-saindo');
-}
-
-function avisarFimDoMovimento(evento) {
-    if (evento.target !== janela || evento.propertyName !== 'transform') return;
-    if (movimentoDaCaixa) return;
-    api.assentar();
 }
 
 botao.addEventListener('click', alternarRecolha);
@@ -202,13 +151,11 @@ registo.addEventListener('scroll', acompanharRolagem, { passive: true });
 registo.addEventListener('wheel', marcarGesto, { passive: true });
 registo.addEventListener('pointerdown', marcarGesto, { passive: true });
 new ResizeObserver(marcarCorteNoTopo).observe(registo);
-janela.addEventListener('transitionend', avisarFimDoMovimento);
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
 setTimeout(() => {
     if (!entradaResolvida) animarEntrada();
 }, VIGIA_DA_ENTRADA_MS);
-api.aoCaixa(aplicarCaixa);
 api.aoEscala(aplicarEscala);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);

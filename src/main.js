@@ -44,14 +44,12 @@ let raciocinioRecolhido = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
 let raciocinioSaidaEm = null;
-let raciocinioAssentando = null;
-let raciocinioFundo = '';
+let raciocinioAnimando = null;
 let raciocinioPronto = false;
 let raciocinioSaindo = false;
 let raciocinioQuerido = false;
 let raciocinioEmTurno = false;
 let raciocinioRevelado = false;
-let raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
 const ALTURA_DA_BARRA_DE_TITULO = 32;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
@@ -64,8 +62,10 @@ const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
 const RACIOCINIO_RAIO_JANELA = 12;
 const RACIOCINIO_SAIDA_MS = 200;
-const RACIOCINIO_ASSENTO_TETO_MS = 1200;
-const RACIOCINIO_FUNDO = '#1e1e1e';
+const RACIOCINIO_CAIXA_MS = 250;
+const RACIOCINIO_MOVIMENTO_MS = 160;
+const RACIOCINIO_SALTO_PX = 40;
+const RACIOCINIO_QUADRO_MS = 8;
 const RACIOCINIO_FUNDO_VAZIO = '#00000000';
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
@@ -540,7 +540,7 @@ function limitesDoRaciocinio() {
 
 function caixaDeToqueDoRaciocinio() {
   const cheia = limitesDoRaciocinio();
-  if (!raciocinioRecolhido || raciocinioAssentando) return cheia;
+  if (!raciocinioRecolhido) return cheia;
   const largura = Math.round(Math.min(RACIOCINIO_LARGURA_RECOLHIDA, cheia.width));
   const altura = Math.round(Math.min(RACIOCINIO_ALTURA_RECOLHIDA, cheia.height));
   return {
@@ -563,12 +563,26 @@ function garantirRaciocinioNoTopo() {
   mainWindow.contentView.addChildView(raciocinioView);
 }
 
-function aplicarLimitesDoRaciocinio(avisarCaixa) {
+function aplicarLimitesDoRaciocinio() {
   if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (avisarCaixa !== false) avisarCaixaDoRaciocinio(limitesDoRaciocinio(), false);
   const destino = caixaDeToqueDoRaciocinio();
-  if (mesmoRect(raciocinioView.getBounds(), destino)) return;
+  const atual = raciocinioView.getBounds();
+  if (mesmoRect(atual, destino)) return;
+  const salto = Math.max(
+    Math.abs(destino.x - atual.x),
+    Math.abs(destino.y - atual.y),
+    Math.abs(destino.width - atual.width),
+    Math.abs(destino.height - atual.height)
+  );
+  if (salto > RACIOCINIO_SALTO_PX) {
+    definirCaixaDoRaciocinio(destino, RACIOCINIO_MOVIMENTO_MS);
+    return;
+  }
+  if (raciocinioAnimando) {
+    clearInterval(raciocinioAnimando);
+    raciocinioAnimando = null;
+  }
   raciocinioView.setBounds(destino);
 }
 
@@ -578,9 +592,9 @@ function descartarRaciocinioView() {
     clearTimeout(raciocinioSaidaEm);
     raciocinioSaidaEm = null;
   }
-  if (raciocinioAssentando) {
-    clearTimeout(raciocinioAssentando);
-    raciocinioAssentando = null;
+  if (raciocinioAnimando) {
+    clearInterval(raciocinioAnimando);
+    raciocinioAnimando = null;
   }
   raciocinioView = null;
   raciocinioRecolhido = false;
@@ -589,7 +603,6 @@ function descartarRaciocinioView() {
   raciocinioSaindo = false;
   raciocinioQuerido = false;
   raciocinioRevelado = false;
-  raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
   if (!view) return;
   if (mainWindow && !mainWindow.isDestroyed()) {
     try {
@@ -611,8 +624,7 @@ function criarRaciocinioView() {
       spellcheck: false
     }
   });
-  raciocinioFundo = RACIOCINIO_FUNDO_VAZIO;
-  raciocinioView.setBackgroundColor(raciocinioFundo);
+  raciocinioView.setBackgroundColor(RACIOCINIO_FUNDO_VAZIO);
   raciocinioView.setBorderRadius(Math.round(RACIOCINIO_RAIO_JANELA * zoomDaInterface));
   raciocinioView.setBounds(caixaDeToqueDoRaciocinio());
   raciocinioView.setVisible(false);
@@ -622,7 +634,6 @@ function criarRaciocinioView() {
   });
   raciocinioView.webContents.on('did-start-loading', () => {
     raciocinioRevelado = false;
-    raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
   });
   raciocinioView.webContents.on('did-finish-load', () => {
     if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
@@ -630,7 +641,6 @@ function criarRaciocinioView() {
     raciocinioView.webContents.send('raciocinio:historico', raciocinioBuffer);
     raciocinioView.webContents.send('raciocinio:recolhido', raciocinioRecolhido);
     avisarEscalaDoRaciocinio();
-    avisarCaixaDoRaciocinio(null, false);
     if (raciocinioQuerido && previewVisivel) mostrarRaciocinioView();
   });
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.contentView.addChildView(raciocinioView);
@@ -653,7 +663,6 @@ function esconderRaciocinioView(manterPedido) {
   if (raciocinioSaindo) return;
   raciocinioSaindo = true;
   raciocinioRevelado = false;
-  definirFundoDoRaciocinio(false);
   raciocinioView.webContents.send('raciocinio:sair');
   raciocinioSaidaEm = setTimeout(() => {
     raciocinioSaidaEm = null;
@@ -684,13 +693,9 @@ function mostrarRaciocinioView() {
   aplicarLimitesDoRaciocinio();
   view.setVisible(true);
   if (!apareceu && raciocinioRevelado) return;
-  if (apareceu) {
-    avisarEscalaDoRaciocinio();
-    avisarCaixaDoRaciocinio(null, false);
-  }
+  if (apareceu) avisarEscalaDoRaciocinio();
   if (view.webContents.isLoading()) return;
   raciocinioRevelado = true;
-  definirFundoDoRaciocinio(false);
   view.webContents.send('raciocinio:abrir');
 }
 
@@ -724,25 +729,6 @@ function avisarEscalaDoRaciocinio() {
   raciocinioView.webContents.send('raciocinio:escala', zoom);
 }
 
-function avisarCaixaDoRaciocinio(caixa, animar) {
-  const view = raciocinioView;
-  if (!view || view.webContents.isDestroyed() || view.webContents.isLoading()) return;
-  const base = caixa || view.getBounds();
-  const largura = Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_LARGURA_RECOLHIDA, base.width) : base.width);
-  const altura = Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_ALTURA_RECOLHIDA, base.height) : base.height);
-  if (!animar && largura === raciocinioTamanhoAvisado.largura && altura === raciocinioTamanhoAvisado.altura) return;
-  raciocinioTamanhoAvisado = { largura, altura };
-  view.webContents.send('raciocinio:caixa', { largura, altura, animar: !!animar });
-}
-
-function definirFundoDoRaciocinio(opaco) {
-  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
-  const cor = opaco ? RACIOCINIO_FUNDO : RACIOCINIO_FUNDO_VAZIO;
-  if (cor === raciocinioFundo) return;
-  raciocinioFundo = cor;
-  raciocinioView.setBackgroundColor(cor);
-}
-
 function definirRecolhaDoRaciocinio(recolhido) {
   const alvo = !!recolhido;
   const mudou = alvo !== raciocinioRecolhido;
@@ -754,19 +740,62 @@ function definirRecolhaDoRaciocinio(recolhido) {
   }
   if (!mudou) return;
   avisarRecolhaDoRaciocinio(alvo);
-  if (raciocinioAssentando) {
-    clearTimeout(raciocinioAssentando);
-    raciocinioAssentando = null;
+  definirCaixaDoRaciocinio(caixaDeToqueDoRaciocinio(), RACIOCINIO_CAIXA_MS);
+}
+
+function definirCaixaDoRaciocinio(destino, duracao) {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  if (raciocinioAnimando) {
+    clearInterval(raciocinioAnimando);
+    raciocinioAnimando = null;
   }
-  if (alvo) {
-    raciocinioAssentando = setTimeout(() => {
-      raciocinioAssentando = null;
-      aplicarLimitesDoRaciocinio();
-    }, RACIOCINIO_ASSENTO_TETO_MS);
+  const inicio = raciocinioView.getBounds();
+  if (mesmoRect(inicio, destino) || !(duracao > 0)) {
+    if (!mesmoRect(inicio, destino)) raciocinioView.setBounds(destino);
+    return;
   }
-  aplicarLimitesDoRaciocinio(false);
-  definirFundoDoRaciocinio(false);
-  avisarCaixaDoRaciocinio(limitesDoRaciocinio(), true);
+  const partida = Date.now();
+  raciocinioAnimando = setInterval(() => {
+    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) {
+      clearInterval(raciocinioAnimando);
+      raciocinioAnimando = null;
+      return;
+    }
+    const avanco = curvaDaCaixa(Math.min(1, (Date.now() - partida) / duracao));
+    if (avanco >= 1) {
+      clearInterval(raciocinioAnimando);
+      raciocinioAnimando = null;
+      if (!mesmoRect(raciocinioView.getBounds(), destino)) raciocinioView.setBounds(destino);
+      return;
+    }
+    const quadro = {
+      x: Math.round(inicio.x + (destino.x - inicio.x) * avanco),
+      y: Math.round(inicio.y + (destino.y - inicio.y) * avanco),
+      width: Math.round(inicio.width + (destino.width - inicio.width) * avanco),
+      height: Math.round(inicio.height + (destino.height - inicio.height) * avanco)
+    };
+    if (!mesmoRect(raciocinioView.getBounds(), quadro)) raciocinioView.setBounds(quadro);
+  }, RACIOCINIO_QUADRO_MS);
+}
+
+function curvaDaCaixa(tempo) {
+  const acharT = (x) => {
+    let baixo = 0;
+    let alto = 1;
+    let meio = x;
+    for (let passo = 0; passo < 12; passo++) {
+      const atual = 3 * (1 - meio) * (1 - meio) * meio * 0.4 + 3 * (1 - meio) * meio * meio * 0.2 + meio * meio * meio;
+      if (atual < x) baixo = meio;
+      else alto = meio;
+      meio = (baixo + alto) / 2;
+    }
+    return meio;
+  };
+  const t = Math.max(0, Math.min(1, Number(tempo) || 0));
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  const s = acharT(t);
+  return 3 * (1 - s) * s * s + s * s * s;
 }
 
 function urlDoAlvo(texto) {
@@ -1038,17 +1067,6 @@ app.on('ready', () => {
     if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
     if (e.sender !== raciocinioView.webContents) return;
     definirRecolhaDoRaciocinio(!raciocinioRecolhido);
-  });
-  ipcMain.on('raciocinio:assentou', (e) => {
-    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
-    if (e.sender !== raciocinioView.webContents) return;
-    if (raciocinioAssentando) {
-      clearTimeout(raciocinioAssentando);
-      raciocinioAssentando = null;
-    }
-    if (raciocinioSaindo) return;
-    definirFundoDoRaciocinio(true);
-    aplicarLimitesDoRaciocinio();
   });
   function montarMenu() {
     const menu = Menu.buildFromTemplate([

@@ -8,61 +8,81 @@ A janela é escura e sem ruído — sem molduras nem caixas a contornar, só o t
 
 ![A janela de trabalho do Axio Coder](docs/interface/interface.jpg)
 
-**A atualização que o VS Code nunca teve.** Imagine criar software completo com um único comando — o Axio Coder foi construído por um arquiteto exatamente para isso, e pensado também para quem nunca escreveu um `hello world`. Descreva o que quer, sem escrever código. **Imagine. E o Axio executa.**
+## A atualização que o VS Code nunca teve
 
-**Vê cada edição antes e depois.** Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o que saiu a vermelho, o que entrou a verde, as linhas evidenciadas e a linha exata onde a mudança aconteceu. Chega-se lá com **um clique** — pelo cartão do **log da sessão**, que lista cada ficheiro tocado naquela rodada, ou pela tarefa no **histórico** das sessões, que guarda o rastro completo do que foi feito. Olhar para o que mudou é a operação mais frequente de quem trabalha com um agente, e é por isso que ela está a um clique de distância em vez de escondida num menu.
+Imagine criar software completo com um único comando — o Axio Coder foi construído por um arquiteto exatamente para isso, e pensado também para quem nunca escreveu um `hello world`. Descreva o que quer, sem escrever código. **Imagine. E o Axio executa.**
+
+## Vê cada edição antes e depois.
+
+Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o que saiu a vermelho, o que entrou a verde, as linhas evidenciadas e a linha exata onde a mudança aconteceu. Chega-se lá com **um clique** — pelo cartão do **log da sessão**, que lista cada ficheiro tocado naquela rodada, ou pela tarefa no **histórico** das sessões, que guarda o rastro completo do que foi feito. Olhar para o que mudou é a operação mais frequente de quem trabalha com um agente, e é por isso que ela está a um clique de distância em vez de escondida num menu.
 
 ![Histórico das sessões, com o ficheiro editado aberto no diff lado a lado](docs/interface/historico.jpg)
 
-## O que ele faz
+## Escreve e refatora código.
 
-**Escreve e refatora código.** Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio.
+Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio.
 
-**Refatorações grandes com margem de erro praticamente nula.** Para partir um ficheiro que cresceu demais, o código não é redigitado: é movido **verbatim**, copiando os bytes exatos do disco, com o alcance da função medido por AST no Python e por balanceamento de chaves no JavaScript. Um `preview` mostra as linhas e o **SHA-256** antes de tocar em nada; no fim sai o hash do corpo movido, e há uma ferramenta dedicada a reconfirmar a integridade, comparando hash e byte a byte. Como o corpo nunca passa pelas mãos do modelo, não há margem para lhe trocar uma vírgula — e o que não encaixa é recusado em vez de gravado: funções aninhadas (a indentação herdada invalidaria o destino), funções que já existem no ficheiro de destino, e corpos com chaves desbalanceadas.
+## Refatorações grandes com margem de erro praticamente nula.
+
+Para partir um ficheiro que cresceu demais, o código não é redigitado: é movido **verbatim**, copiando os bytes exatos do disco, com o alcance da função medido por AST no Python e por balanceamento de chaves no JavaScript. Um `preview` mostra as linhas e o **SHA-256** antes de tocar em nada; no fim sai o hash do corpo movido, e há uma ferramenta dedicada a reconfirmar a integridade, comparando hash e byte a byte. Como o corpo nunca passa pelas mãos do modelo, não há margem para lhe trocar uma vírgula — e o que não encaixa é recusado em vez de gravado: funções aninhadas (a indentação herdada invalidaria o destino), funções que já existem no ficheiro de destino, e corpos com chaves desbalanceadas.
 
 Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e são riscadas à medida que fecham.
 
 ![Plano da tarefa em curso](docs/interface/plano-visual.jpg)
 
-**Vê o que constrói.** O preview é um Chromium embutido que o agente opera de verdade: carrega a página, clica, escreve nos campos, lê a consola e os pedidos falhados, extrai o desenho (medidas, cores, fontes) e devolve o mapa de tudo o que lá está. Serve os ficheiros do projeto e a internet, com abas e barra de endereço — e se algo não responde, ele vê o erro em vez de adivinhar.
+## Vê o que constrói.
+
+O preview é um Chromium embutido que o agente opera de verdade: carrega a página, clica, escreve nos campos, lê a consola e os pedidos falhados, extrai o desenho (medidas, cores, fontes) e devolve o mapa de tudo o que lá está. Serve os ficheiros do projeto e a internet, com abas e barra de endereço — e se algo não responde, ele vê o erro em vez de adivinhar.
 
 O mesmo olho serve para ti. Com o **modo inspecionar** ligado, passar o rato por qualquer elemento — na página do preview ou na própria interface do Axio — abre o cartão do que ele é: o seletor, a fonte, a cor, as classes e a localização no código (`src/frontend/index.html:487`, com ligação que abre o ficheiro naquela linha). A **descrição** por baixo do nome não é rótulo genérico: sai do glossário do projeto, logo explica aquele elemento naquele projeto. `Tab` anda pelos campos, `Enter` copia o valor (ou abre o ficheiro), `Shift+clique` deixa o clique passar para o elemento e `Esc` sai.
 
 ![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/interface/navegador-no-preview-inspecionar.jpg)
 
-**Lê formatos de engenharia.** IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
+## Lê formatos de engenharia.
+
+IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
 
 ![Modelo IFC gerado pelo agente, aberto no visualizador](docs/interface/visualizador-ifc.jpg)
 
-**Corre processos e terminais.** Servidores, instalações e comandos longos correm em segundo plano, cada um no seu cartão, com a saída acompanhada em tempo real — e um terminal PTY interativo com suporte a ConPTY.
+## Corre processos e terminais.
+
+Servidores, instalações e comandos longos correm em segundo plano, cada um no seu cartão, com a saída acompanhada em tempo real — e um terminal PTY interativo com suporte a ConPTY.
 
 ![Terminal em modo cards](docs/interface/terminal-cards.jpg)
 
-**Opera programas nativos.** Pela camada de acessibilidade do Windows, o agente abre qualquer programa, encontra os controlos por nome (não por pixel), clica, escreve e arrasta. Também desenha: foi assim que fez um foguete no Paint, traço a traço — escolhe a ferramenta, arrasta daqui até ali e volta a olhar para o ecrã antes de continuar.
+## Opera programas nativos
+
+Pela camada de acessibilidade do Windows, o agente abre qualquer programa, encontra os controlos por nome (não por pixel), clica, escreve e arrasta. Também desenha: foi assim que fez um foguete no Paint, traço a traço — escolhe a ferramenta, arrasta daqui até ali e volta a olhar para o ecrã antes de continuar.
 
 Num programa de desenho complexo, o mesmo mecanismo trabalha pelo lado certo — a cena abaixo foi montada no GIMP por script, com o agente a ler a imagem de volta para conferir o resultado:
 
 ![Agente a compor no GIMP](docs/interface/gimp.jpg)
 
-**Conhece o que está instalado.** Um painel lê o projeto por dentro: as linguagens, as dependências com a versão que está no disco, quantas linhas tem cada pasta e a árvore inteira. Cada pacote é comparado com o registo oficial e ganha um sinal quando está atrás do último publicado — ou quando outro pacote o prende.
+## Conhece o que está instalado
+
+Um painel lê o projeto por dentro: as linguagens, as dependências com a versão que está no disco, quantas linhas tem cada pasta e a árvore inteira. Cada pacote é comparado com o registo oficial e ganha um sinal quando está atrás do último publicado — ou quando outro pacote o prende.
 
 E cada pasta e ficheiro da árvore ganha uma **etiqueta** com o papel que cumpre no projeto — `src/backend/routes` vira *endpoints http*, `src/main.js` vira *processo electron*. Quem as escreve é a IA, mas só depois de o motor determinístico medir a árvore, as linguagens e as dependências: ao modelo sobra dar um nome curto ao que já foi medido, a partir do docstring e dos imports. Etiqueta-se apenas o que falta ou mudou — a assinatura de cada nó (data do ficheiro, nomes dos filhos) diz se a etiqueta ainda serve —, a primeira etiquetagem de um projeto é automática e acontece uma só vez, e um olho ao lado do título recolhe a coluna quando não a queres à vista.
 
 ![Informações do projeto: stack, dependências e a árvore com os totais](docs/interface/informacoes-do-projeto.jpg)
 
-**Guarda memória do projeto.** Notas, glossário de termos do utilizador e transcrições de sessões ficam num banco vetorial e são recuperadas por similaridade a cada rodada, com a idade e a origem de cada memória à vista. O glossário é remedido contra o código: aponta para o sítio errado, ele avisa.
+## Guarda memória do projeto
 
-**Escreve como falas — o agente traduz.** O caderno do projeto são várias notas em abas, gravadas por projeto, para apontar o que se quer sem saber o nome de nada. Ao lado do título está a varinha: ela pega no texto selecionado (ou na nota inteira) e o agente **vai consultar o código** — árvore, assinaturas, pesquisa, índice semântico — para devolver o mesmo pedido reescrito no vocabulário do projeto, com os nomes reais de funções, ficheiros e ids no lugar das descrições leigas. O glossário e o retrato do projeto vão à frente, para ele ter de procurar cada vez menos; e o texto volta marcado como reescrito pelo agente, para não haver dúvida sobre quem o escreveu.
+Notas, glossário de termos do utilizador e transcrições de sessões ficam num banco vetorial e são recuperadas por similaridade a cada rodada, com a idade e a origem de cada memória à vista. O glossário é remedido contra o código: aponta para o sítio errado, ele avisa.
+
+## Escreve como falas — o agente traduz
+
+O caderno do projeto são várias notas em abas, gravadas por projeto, para apontar o que se quer sem saber o nome de nada. Ao lado do título está a varinha: ela pega no texto selecionado (ou na nota inteira) e o agente **vai consultar o código** — árvore, assinaturas, pesquisa, índice semântico — para devolver o mesmo pedido reescrito no vocabulário do projeto, com os nomes reais de funções, ficheiros e ids no lugar das descrições leigas. O glossário e o retrato do projeto vão à frente, para ele ter de procurar cada vez menos; e o texto volta marcado como reescrito pelo agente, para não haver dúvida sobre quem o escreveu.
 
 ![Notas do projeto em abas, com a varinha ao lado do título](docs/interface/notas.jpg)
 
-**Configura-se num sítio só.** A janela de Configurações tem duas abas. Em **APIs** colam-se as chaves e liga-se o interruptor de cada uma: **Google Gemini** (a chave do AI Studio, ou o JSON da conta de serviço do **Vertex AI**) e **DeepSeek**. Ao lado de cada campo está o "i" com o passo a passo de como obter a chave — a mesma caixa onde se troca, no campo do DeepSeek, para a chave do **Tavily**, que liga a busca na web.
+## Configura-se num sítio só
+
+A janela de Configurações tem duas abas. Em **APIs** colam-se as chaves e liga-se o interruptor de cada uma: **Google Gemini** (a chave do AI Studio, ou o JSON da conta de serviço do **Vertex AI**) e **DeepSeek**. Ao lado de cada campo está o "i" com o passo a passo de como obter a chave — a mesma caixa onde se troca, no campo do DeepSeek, para a chave do **Tavily**, que liga a busca na web.
 
 Em **Cofre** fica tudo o que eu uso por ti: a identidade, o email — para eu abrir a caixa de entrada e ler os códigos de confirmação — e as contas dos sites que usarmos, **cada uma com a chave de API dela no mesmo cartão**. Um cartão só entra em cena quando é preciso, e o que lhe falta está à vista na própria lista. É **um cofre só, partilhado por todos os projetos**, e vive em `data/cofre.json`, fora do repositório. Os valores são guardados em claro: não há palavra-passe mestra, logo não há cifra que valha. A proteção está no uso — eu recebo sempre a versão tapada e, para escrever uma senha num campo, refiro-a pelo nome: `{{cofre:id.campo}}` é trocado pelo valor no instante do gesto, sem passar pelo meu contexto nem pelo histórico da conversa.
 
 ![A janela de Configurações, na aba do Cofre](docs/interface/config.jpg)
-
-**Lê o que lhe dás.** Documentos com texto, tabelas e imagens são lidos de facto, e cruzados entre si — não resumidos por alto.
 
 ## O que um computer use faz, por outro caminho
 
