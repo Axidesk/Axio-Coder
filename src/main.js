@@ -1,5 +1,5 @@
 process.env.ELECTRON_NO_ATTACH_CONSOLE = 'true';
-const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell, Menu, screen } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -38,15 +38,12 @@ let previewLimites = null;
 let pontePorta = 0;
 let ponteToken = '';
 let zoomDaInterface = 1;
-let janelaRaciocinio = null;
+let raciocinioView = null;
 let raciocinioRecolhido = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
-let raciocinioDeSeguir = null;
-let raciocinioParadoEm = 0;
-let raciocinioVigiandoClique = null;
-let raciocinioIgnorandoClique = null;
 let raciocinioSaidaEm = null;
+let raciocinioAssentando = null;
 let raciocinioPronto = false;
 let raciocinioSaindo = false;
 let raciocinioQuerido = false;
@@ -63,12 +60,9 @@ const RACIOCINIO_ALTURA = 200;
 const RACIOCINIO_LARGURA_RECOLHIDA = 200;
 const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
-const RACIOCINIO_VIGIA_CLIQUE_MS = 20;
-const RACIOCINIO_SEGUIR_MS = 16;
-const RACIOCINIO_PARADO_MS = 140;
-const RACIOCINIO_BURST_MS = 400;
-const RACIOCINIO_VIGIA_MS = 200;
+const RACIOCINIO_RAIO_JANELA = 12;
 const RACIOCINIO_SAIDA_MS = 200;
+const RACIOCINIO_ASSENTO_MS = 260;
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
 
@@ -97,7 +91,7 @@ function createWindow() {
   mainWindow.webContents.setZoomFactor(zoomDaInterface);
   mainWindow.webContents.on('did-finish-load', () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoomDaInterface);
-    descartarJanelaRaciocinio();
+    descartarRaciocinioView();
   });
   mainWindow.loadURL('http://127.0.0.1:5000/');
 
@@ -132,20 +126,14 @@ function createWindow() {
     }
   });
 
-  mainWindow.on('resize', () => acompanharLayoutDoRaciocinio(true));
-  mainWindow.on('will-move', (_evento, novo) => {
-    const atual = mainWindow.getBounds();
-    acompanharLayoutDoRaciocinio(true, { x: novo.x - atual.x, y: novo.y - atual.y });
-  });
-  mainWindow.on('move', () => acompanharLayoutDoRaciocinio(true));
-  mainWindow.on('resized', () => acompanharLayoutDoRaciocinio(true));
-  mainWindow.on('maximize', () => acompanharLayoutDoRaciocinio(true));
-  mainWindow.on('unmaximize', () => acompanharLayoutDoRaciocinio(true));
-  mainWindow.on('minimize', () => esconderJanelaRaciocinio());
+  mainWindow.on('resize', () => aplicarLimitesDoRaciocinio());
+  mainWindow.on('resized', () => aplicarLimitesDoRaciocinio());
+  mainWindow.on('maximize', () => aplicarLimitesDoRaciocinio());
+  mainWindow.on('unmaximize', () => aplicarLimitesDoRaciocinio());
 
   mainWindow.on('closed', function () {
     descartarPreviewView();
-    descartarJanelaRaciocinio();
+    descartarRaciocinioView();
     previewLimites = null;
     previewVisivel = false;
     mainWindow = null;
@@ -420,6 +408,7 @@ function criarViewDoTipo(tipo) {
   prepararDepurador(view);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.contentView.addChildView(view);
+    garantirRaciocinioNoTopo();
   }
   avisarPreview('preview:novo', {});
   return view;
@@ -439,10 +428,10 @@ function definirVisibilidadeDoPreview(visivel) {
   if (!visivel && !alguma) return;
   previewVisivel = !!visivel;
   if (previewVisivel) {
-    criarJanelaRaciocinio();
-    if (raciocinioQuerido) mostrarJanelaRaciocinio();
+    criarRaciocinioView();
+    if (raciocinioQuerido) mostrarRaciocinioView();
   } else {
-    esconderJanelaRaciocinio(raciocinioEmTurno);
+    esconderRaciocinioView(raciocinioEmTurno);
   }
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
@@ -454,6 +443,7 @@ function definirVisibilidadeDoPreview(visivel) {
       }
     }
   }
+  garantirRaciocinioNoTopo();
 }
 
 function trazerParaFrente() {
@@ -474,7 +464,7 @@ function aplicarLimitesDoPreview(limites) {
     const view = viewDoTipo(chave);
     if (view) view.setBounds(previewLimites);
   }
-  acompanharLayoutDoRaciocinio(true);
+  aplicarLimitesDoRaciocinio();
 }
 
 function escalarLimites(limites, fator) {
@@ -499,28 +489,27 @@ function limitesDeArranque() {
 }
 
 function limitesDoRaciocinio() {
-  const caixa = (mainWindow && !mainWindow.isDestroyed())
-    ? mainWindow.getContentBounds()
-    : { x: 0, y: 0, width: RACIOCINIO_LARGURA, height: RACIOCINIO_ALTURA };
-  const area = previewLimites || { x: 0, y: 0, width: caixa.width, height: caixa.height };
+  const area = previewLimites || limitesDeArranque();
   const largura = area.width > 0 ? Math.round(Math.min(RACIOCINIO_LARGURA, area.width)) : RACIOCINIO_LARGURA;
   const altura = area.height > 0 ? Math.round(Math.min(RACIOCINIO_ALTURA, area.height)) : RACIOCINIO_ALTURA;
   return {
-    x: Math.round(caixa.x + area.x + Math.max(0, (area.width - largura) / 2)),
-    y: Math.round(caixa.y + area.y + Math.max(0, area.height - altura - RACIOCINIO_MARGEM_FUNDO)),
+    x: Math.round(area.x + Math.max(0, (area.width - largura) / 2)),
+    y: Math.round(area.y + Math.max(0, area.height - altura - RACIOCINIO_MARGEM_FUNDO)),
     width: largura,
     height: altura
   };
 }
 
-function caixaDoRaciocinio() {
-  const janela = limitesDoRaciocinio();
-  if (!raciocinioRecolhido) return janela;
+function caixaDeToqueDoRaciocinio() {
+  const cheia = limitesDoRaciocinio();
+  if (!raciocinioRecolhido || raciocinioAssentando) return cheia;
+  const largura = Math.round(Math.min(RACIOCINIO_LARGURA_RECOLHIDA, cheia.width));
+  const altura = Math.round(Math.min(RACIOCINIO_ALTURA_RECOLHIDA, cheia.height));
   return {
-    x: janela.x,
-    y: janela.y,
-    width: Math.round(Math.min(RACIOCINIO_LARGURA_RECOLHIDA, janela.width)),
-    height: Math.round(Math.min(RACIOCINIO_ALTURA_RECOLHIDA, janela.height))
+    x: cheia.x + Math.round((cheia.width - largura) / 2),
+    y: cheia.y + cheia.height - altura,
+    width: largura,
+    height: altura
   };
 }
 
@@ -528,54 +517,34 @@ function mesmoRect(a, b) {
   return !!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
-function aplicarLimitesDoRaciocinio(salto) {
-  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
+function garantirRaciocinioNoTopo() {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (raciocinioSaindo) return;
-  const destino = limitesDoRaciocinio();
-  if (salto) {
-    destino.x += salto.x;
-    destino.y += salto.y;
-  }
-  if (mesmoRect(janelaRaciocinio.getBounds(), destino)) return;
-  janelaRaciocinio.setBounds(destino);
-  avisarCaixaDoRaciocinio(null, false);
+  const filhos = mainWindow.contentView.children;
+  if (filhos[filhos.length - 1] === raciocinioView) return;
+  mainWindow.contentView.addChildView(raciocinioView);
 }
 
-function pararAcompanhamentoDoRaciocinio() {
-  if (raciocinioDeSeguir) {
-    clearTimeout(raciocinioDeSeguir);
-    raciocinioDeSeguir = null;
-  }
+function aplicarLimitesDoRaciocinio() {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  avisarCaixaDoRaciocinio(limitesDoRaciocinio(), false);
+  const destino = caixaDeToqueDoRaciocinio();
+  if (mesmoRect(raciocinioView.getBounds(), destino)) return;
+  raciocinioView.setBounds(destino);
 }
 
-function acompanharLayoutDoRaciocinio(impulso, salto) {
-  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-  if (!janelaRaciocinio.isVisible()) return;
-  if (raciocinioSaindo) return;
-  raciocinioParadoEm = Date.now() + (impulso ? RACIOCINIO_BURST_MS : 0);
-  aplicarLimitesDoRaciocinio(salto);
-  if (!raciocinioDeSeguir) raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, RACIOCINIO_SEGUIR_MS);
-}
-
-function passoDeAcompanhamento() {
-  raciocinioDeSeguir = null;
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed() || !janela.isVisible() || raciocinioSaindo) return;
-  aplicarLimitesDoRaciocinio();
-  const aAndar = (Date.now() - raciocinioParadoEm) < RACIOCINIO_PARADO_MS;
-  raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, aAndar ? RACIOCINIO_SEGUIR_MS : RACIOCINIO_VIGIA_MS);
-}
-
-function descartarJanelaRaciocinio() {
-  const janela = janelaRaciocinio;
-  pararAcompanhamentoDoRaciocinio();
-  vigiarCliqueDoRaciocinio(false);
+function descartarRaciocinioView() {
+  const view = raciocinioView;
   if (raciocinioSaidaEm) {
     clearTimeout(raciocinioSaidaEm);
     raciocinioSaidaEm = null;
   }
-  janelaRaciocinio = null;
+  if (raciocinioAssentando) {
+    clearTimeout(raciocinioAssentando);
+    raciocinioAssentando = null;
+  }
+  raciocinioView = null;
   raciocinioRecolhido = false;
   raciocinioBuffer = [];
   raciocinioPronto = false;
@@ -583,31 +552,19 @@ function descartarJanelaRaciocinio() {
   raciocinioQuerido = false;
   raciocinioRevelado = false;
   raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
-  if (janela && !janela.isDestroyed()) janela.destroy();
+  if (!view) return;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      mainWindow.contentView.removeChildView(view);
+    } catch (erro) {}
+  }
+  if (!view.webContents.isDestroyed()) view.webContents.close();
 }
 
-function criarJanelaRaciocinio() {
-  if (janelaRaciocinio && !janelaRaciocinio.isDestroyed()) return janelaRaciocinio;
+function criarRaciocinioView() {
+  if (raciocinioView && !raciocinioView.webContents.isDestroyed()) return raciocinioView;
   raciocinioPronto = false;
-  const caixa = limitesDoRaciocinio();
-  janelaRaciocinio = new BrowserWindow({
-    x: caixa.x,
-    y: caixa.y,
-    width: caixa.width,
-    height: caixa.height,
-    show: false,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    focusable: false,
-    hasShadow: false,
-    parent: mainWindow,
-    backgroundColor: '#00000000',
+  raciocinioView = new WebContentsView({
     webPreferences: {
       preload: path.join(__dirname, 'frontend', 'js', 'raciocinio_preload.js'),
       contextIsolation: true,
@@ -616,57 +573,57 @@ function criarJanelaRaciocinio() {
       spellcheck: false
     }
   });
-  janelaRaciocinio.on('closed', () => {
-    janelaRaciocinio = null;
+  raciocinioView.setBackgroundColor('#00000000');
+  raciocinioView.setBorderRadius(Math.round(RACIOCINIO_RAIO_JANELA * zoomDaInterface));
+  raciocinioView.setBounds(caixaDeToqueDoRaciocinio());
+  raciocinioView.setVisible(false);
+  raciocinioView.webContents.setZoomFactor(zoomDaInterface);
+  raciocinioView.webContents.on('did-fail-load', (evento, codigo, descricao, url, quadroPrincipal) => {
+    if (quadroPrincipal && codigo !== -3) descartarRaciocinioView();
   });
-  janelaRaciocinio.webContents.on('did-fail-load', (evento, codigo, descricao, url, quadroPrincipal) => {
-    if (quadroPrincipal && codigo !== -3) descartarJanelaRaciocinio();
-  });
-  janelaRaciocinio.webContents.on('did-start-loading', () => {
+  raciocinioView.webContents.on('did-start-loading', () => {
     raciocinioRevelado = false;
     raciocinioTamanhoAvisado = { largura: 0, altura: 0 };
   });
-  janelaRaciocinio.webContents.on('did-finish-load', () => {
-    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
+  raciocinioView.webContents.on('did-finish-load', () => {
+    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
     raciocinioPronto = true;
-    janelaRaciocinio.webContents.send('raciocinio:historico', raciocinioBuffer);
-    janelaRaciocinio.webContents.send('raciocinio:recolhido', raciocinioRecolhido);
+    raciocinioView.webContents.send('raciocinio:historico', raciocinioBuffer);
+    raciocinioView.webContents.send('raciocinio:recolhido', raciocinioRecolhido);
     avisarEscalaDoRaciocinio();
     avisarCaixaDoRaciocinio(null, false);
-    if (raciocinioQuerido && previewVisivel) mostrarJanelaRaciocinio();
+    if (raciocinioQuerido && previewVisivel) mostrarRaciocinioView();
   });
-  janelaRaciocinio.loadURL('http://127.0.0.1:5000/raciocinio');
-  return janelaRaciocinio;
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.contentView.addChildView(raciocinioView);
+  raciocinioView.webContents.loadURL('http://127.0.0.1:5000/raciocinio');
+  return raciocinioView;
 }
 
 function esperarOciosidadeDoRaciocinio() {
   if (raciocinioOcioso) clearTimeout(raciocinioOcioso);
-  raciocinioOcioso = setTimeout(esconderJanelaRaciocinio, RACIOCINIO_OCIOSO_MS);
+  raciocinioOcioso = setTimeout(esconderRaciocinioView, RACIOCINIO_OCIOSO_MS);
 }
 
-function esconderJanelaRaciocinio(manterPedido) {
+function esconderRaciocinioView(manterPedido) {
   if (raciocinioOcioso) {
     clearTimeout(raciocinioOcioso);
     raciocinioOcioso = null;
   }
-  pararAcompanhamentoDoRaciocinio();
-  vigiarCliqueDoRaciocinio(false);
   if (!manterPedido) raciocinioQuerido = false;
-  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed() || !janelaRaciocinio.isVisible()) return;
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed() || !raciocinioView.getVisible()) return;
   if (raciocinioSaindo) return;
   raciocinioSaindo = true;
   raciocinioRevelado = false;
-  janelaRaciocinio.webContents.send('raciocinio:sair');
+  raciocinioView.webContents.send('raciocinio:sair');
   raciocinioSaidaEm = setTimeout(() => {
     raciocinioSaidaEm = null;
     raciocinioSaindo = false;
-    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-    janelaRaciocinio.hide();
-    janelaRaciocinio.setBounds(limitesDoRaciocinio());
+    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+    raciocinioView.setVisible(false);
   }, RACIOCINIO_SAIDA_MS);
 }
 
-function mostrarJanelaRaciocinio() {
+function mostrarRaciocinioView() {
   raciocinioQuerido = true;
   if (!previewVisivel) return;
   if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return;
@@ -677,24 +634,23 @@ function mostrarJanelaRaciocinio() {
   }
   raciocinioSaindo = false;
   esperarOciosidadeDoRaciocinio();
-  const janela = criarJanelaRaciocinio();
+  const view = criarRaciocinioView();
+  garantirRaciocinioNoTopo();
   if (!raciocinioPronto) {
-    if (!janela.webContents.isLoading()) janela.webContents.reload();
+    if (!view.webContents.isLoading()) view.webContents.reload();
     return;
   }
-  const apareceu = !janela.isVisible() || voltouDaSaida;
+  const apareceu = !view.getVisible() || voltouDaSaida;
   aplicarLimitesDoRaciocinio();
+  view.setVisible(true);
   if (!apareceu && raciocinioRevelado) return;
   if (apareceu) {
-    janela.showInactive();
     avisarEscalaDoRaciocinio();
     avisarCaixaDoRaciocinio(null, false);
-    vigiarCliqueDoRaciocinio(raciocinioRecolhido);
-    acompanharLayoutDoRaciocinio(true);
   }
-  if (janela.webContents.isLoading()) return;
+  if (view.webContents.isLoading()) return;
   raciocinioRevelado = true;
-  janela.webContents.send('raciocinio:abrir');
+  view.webContents.send('raciocinio:abrir');
 }
 
 function alimentarRaciocinio(evento) {
@@ -703,99 +659,64 @@ function alimentarRaciocinio(evento) {
     raciocinioBuffer = [];
     raciocinioEmTurno = evento.tipo === 'inicio';
     if (evento.tipo === 'inicio') definirRecolhaDoRaciocinio(false);
-    else esconderJanelaRaciocinio();
+    else esconderRaciocinioView();
   } else {
     raciocinioBuffer.push(evento);
     if (raciocinioBuffer.length > RACIOCINIO_MEMORIA) raciocinioBuffer.shift();
     esperarOciosidadeDoRaciocinio();
   }
-  if (janelaRaciocinio && !janelaRaciocinio.isDestroyed() && !janelaRaciocinio.webContents.isLoading()) {
-    janelaRaciocinio.webContents.send('raciocinio:evento', evento);
+  if (raciocinioView && !raciocinioView.webContents.isDestroyed() && !raciocinioView.webContents.isLoading()) {
+    raciocinioView.webContents.send('raciocinio:evento', evento);
   }
 }
 
 function avisarRecolhaDoRaciocinio(recolhido) {
-  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-  if (janelaRaciocinio.webContents.isLoading()) return;
-  janelaRaciocinio.webContents.send('raciocinio:recolhido', !!recolhido);
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  if (raciocinioView.webContents.isLoading()) return;
+  raciocinioView.webContents.send('raciocinio:recolhido', !!recolhido);
 }
 
 function avisarEscalaDoRaciocinio() {
-  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-  if (janelaRaciocinio.webContents.isLoading()) return;
-  const zoom = janelaRaciocinio.webContents.getZoomFactor() || 1;
-  janelaRaciocinio.webContents.send('raciocinio:escala', zoom);
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  if (raciocinioView.webContents.isLoading()) return;
+  const zoom = raciocinioView.webContents.getZoomFactor() || 1;
+  raciocinioView.webContents.send('raciocinio:escala', zoom);
 }
 
 function avisarCaixaDoRaciocinio(caixa, animar) {
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed() || janela.webContents.isLoading()) return;
-  const base = caixa || janela.getBounds();
+  const view = raciocinioView;
+  if (!view || view.webContents.isDestroyed() || view.webContents.isLoading()) return;
+  const base = caixa || view.getBounds();
   const largura = Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_LARGURA_RECOLHIDA, base.width) : base.width);
   const altura = Math.round(raciocinioRecolhido ? Math.min(RACIOCINIO_ALTURA_RECOLHIDA, base.height) : base.height);
   if (!animar && largura === raciocinioTamanhoAvisado.largura && altura === raciocinioTamanhoAvisado.altura) return;
   raciocinioTamanhoAvisado = { largura, altura };
-  janela.webContents.send('raciocinio:caixa', { largura, altura, animar: !!animar });
+  view.webContents.send('raciocinio:caixa', { largura, altura, animar: !!animar });
 }
 
 function definirRecolhaDoRaciocinio(recolhido) {
   const alvo = !!recolhido;
   const mudou = alvo !== raciocinioRecolhido;
   raciocinioRecolhido = alvo;
-  if (!janelaRaciocinio || janelaRaciocinio.isDestroyed() || raciocinioSaindo) return;
-  if (!janelaRaciocinio.isVisible()) {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed() || raciocinioSaindo) return;
+  if (!raciocinioView.getVisible()) {
     avisarRecolhaDoRaciocinio(alvo);
     return;
   }
   if (!mudou) return;
   avisarRecolhaDoRaciocinio(alvo);
-  avisarCaixaDoRaciocinio(caixaDoRaciocinio(), true);
-  vigiarCliqueDoRaciocinio(alvo);
-}
-
-function barraDoRaciocinio() {
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed()) return null;
-  const caixa = janela.getBounds();
-  const largura = Math.round(Math.min(RACIOCINIO_LARGURA_RECOLHIDA, caixa.width));
-  const altura = Math.round(Math.min(RACIOCINIO_ALTURA_RECOLHIDA, caixa.height));
-  return {
-    x: caixa.x + Math.round((caixa.width - largura) / 2),
-    y: caixa.y + caixa.height - altura,
-    width: largura,
-    height: altura
-  };
-}
-
-function aplicarCliqueDoRaciocinio() {
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed()) return;
-  let ignorar = false;
-  if (raciocinioRecolhido && janela.isVisible() && !raciocinioSaindo) {
-    const barra = barraDoRaciocinio();
-    const ponto = screen.getCursorScreenPoint();
-    const dentro = !!barra &&
-      ponto.x >= barra.x && ponto.x < barra.x + barra.width &&
-      ponto.y >= barra.y && ponto.y < barra.y + barra.height;
-    ignorar = !dentro;
+  if (raciocinioAssentando) {
+    clearTimeout(raciocinioAssentando);
+    raciocinioAssentando = null;
   }
-  if (ignorar === raciocinioIgnorandoClique) return;
-  raciocinioIgnorandoClique = ignorar;
-  janela.setIgnoreMouseEvents(ignorar, { forward: true });
-}
-
-function vigiarCliqueDoRaciocinio(ligado) {
-  if (raciocinioVigiandoClique) {
-    clearInterval(raciocinioVigiandoClique);
-    raciocinioVigiandoClique = null;
+  if (alvo) {
+    raciocinioAssentando = setTimeout(() => {
+      raciocinioAssentando = null;
+      aplicarLimitesDoRaciocinio();
+    }, RACIOCINIO_ASSENTO_MS);
   }
-  if (ligado) {
-    raciocinioVigiandoClique = setInterval(aplicarCliqueDoRaciocinio, RACIOCINIO_VIGIA_CLIQUE_MS);
-    aplicarCliqueDoRaciocinio();
-    return;
-  }
-  raciocinioIgnorandoClique = false;
-  if (janelaRaciocinio && !janelaRaciocinio.isDestroyed()) janelaRaciocinio.setIgnoreMouseEvents(false);
+  aplicarLimitesDoRaciocinio();
+  avisarCaixaDoRaciocinio(limitesDoRaciocinio(), true);
 }
 
 function urlDoAlvo(texto) {
@@ -943,12 +864,23 @@ function aplicarZoomAoPreview() {
   }
 }
 
+function aplicarZoomAoRaciocinio() {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  try {
+    raciocinioView.webContents.setZoomFactor(zoomDaInterface);
+    raciocinioView.setBorderRadius(Math.round(RACIOCINIO_RAIO_JANELA * zoomDaInterface));
+  } catch (erro) {}
+  avisarEscalaDoRaciocinio();
+  aplicarLimitesDoRaciocinio();
+}
+
 function definirZoomDaInterface(valor, avisar) {
   const zoom = normalizarZoom(valor);
   if (zoom === null) return { ok: false, erro: 'Zoom fora do intervalo: ' + valor };
   zoomDaInterface = zoom;
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoom);
   aplicarZoomAoPreview();
+  aplicarZoomAoRaciocinio();
   gravarZoom(zoom);
   if (avisar !== false && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu:set-zoom', zoom);
@@ -1053,8 +985,8 @@ app.on('ready', () => {
     if (veioDaJanelaPrincipal(e)) alimentarRaciocinio(evento);
   });
   ipcMain.on('raciocinio:alternar', (e) => {
-    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-    if (e.sender !== janelaRaciocinio.webContents) return;
+    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+    if (e.sender !== raciocinioView.webContents) return;
     definirRecolhaDoRaciocinio(!raciocinioRecolhido);
   });
   function montarMenu() {
@@ -1149,7 +1081,7 @@ app.on('ready', () => {
     obterPreview: () => previewVivo(),
     aoUsar: (acao, interage) => {
       avisarPreview('preview:uso', { acao: acao, interage: !!interage });
-      mostrarJanelaRaciocinio();
+      mostrarRaciocinioView();
     },
     aoInspecionar: (info) => {
       if (info && info.sair) {
@@ -1162,7 +1094,7 @@ app.on('ready', () => {
     },
     acoesDeFora: {
       carregar: (view, params) => {
-        mostrarJanelaRaciocinio();
+        mostrarRaciocinioView();
         const resultado = carregarNoPreview(params.alvo);
         if (resultado && resultado.ok && resultado.alvo) {
           avisarPreview('preview:alvo', { alvo: resultado.alvo });
