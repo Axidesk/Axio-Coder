@@ -1,0 +1,42 @@
+.busca-campo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    padding: 0 12px;
+    background: var(--bg-input);
+    border: none;
+    border-radius: 9999px;
+    box-sizing: border-box;
+}
+
+.busca-campo-lupa {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--text-mutado);
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity var(--dur-3) ease;
+}
+
+.busca-caixa.aberta .busca-campo-lupa {
+    opacity: 1;
+}
+
+.busca-campo-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text-claro);
+    font: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.busca-campo-input::placeholder {
+    color: var(--text-mutado);
+}

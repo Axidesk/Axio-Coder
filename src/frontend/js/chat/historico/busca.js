@@ -5,7 +5,7 @@ import { escapeHtml } from '../messages.js';
 import { openFilesPanel } from './acoes.js';
 import { assignDisplayNamesByDay, ensureSessionDetailsLoaded, rebuildGroupFromSaved, selectHistoryTaskInPile } from './cards.js';
 
-const { btnHistorySearch, historySearchInputInline, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
+const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
 const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas suas perguntas.</div>';
 const MSG_BUSCA_RESPOSTAS = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas minhas respostas.</div>';
@@ -16,10 +16,8 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         state.historySearchInlineActive = false;
         if (panelCol1) panelCol1.classList.remove('history-search-open', 'history-search-expanded');
         if (slidingPanelContainer) slidingPanelContainer.classList.remove('history-search-expanded');
-        if (btnHistorySearch) {
-            btnHistorySearch.classList.remove('text-[var(--oliva)]');
-            btnHistorySearch.classList.add('text-[var(--text-mutado)]');
-        }
+        if (btnHistorySearch) btnHistorySearch.classList.remove('hide');
+        if (historySearchBox) historySearchBox.classList.remove('aberta');
     }
     function encolherBuscaInline() {
         if (!state.historySearchInlineActive) return;
@@ -33,11 +31,11 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         state.historySearchInlineActive = true;
         if (panelCol1) panelCol1.classList.add('history-search-open', 'history-search-expanded');
         if (slidingPanelContainer) slidingPanelContainer.classList.add('history-search-expanded');
-        if (btnHistorySearch) {
-            btnHistorySearch.classList.add('text-[var(--oliva)]');
-            btnHistorySearch.classList.remove('text-[var(--text-mutado)]');
-        }
-        if (!jaAberta) limparColunas(MSG_BUSCA_INICIAL, MSG_BUSCA_RESPOSTAS);
+        if (btnHistorySearch) btnHistorySearch.classList.add('hide');
+        if (historySearchBox) historySearchBox.classList.add('aberta');
+        const termoAberto = historySearchInputInline ? historySearchInputInline.value.trim() : '';
+        if (termoAberto) performHistorySearch(termoAberto);
+        else if (!jaAberta) limparColunas(MSG_BUSCA_INICIAL, MSG_BUSCA_RESPOSTAS);
         ligarBuscaInline();
         if (historySearchInputInline) historySearchInputInline.focus();
     }
@@ -53,6 +51,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         if (!historySearchInputInline || !historySearchResultsInline) return;
         if (historySearchInputInline.dataset.buscaLigada === '1') return;
         historySearchInputInline.dataset.buscaLigada = '1';
+        if (historySearchLupa) historySearchLupa.addEventListener('click', () => collapseHistorySearchInline());
         let searchTimer = null;
         historySearchInputInline.addEventListener('input', () => {
             clearTimeout(searchTimer);

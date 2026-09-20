@@ -582,6 +582,21 @@ def _texto_do_estilo(dados):
     return "\n".join(linhas)
 
 
+def _aviso_de_vista_escondida():
+    """Avisa que a serie esta a correr numa vista escondida, onde o Chromium congela animacoes."""
+    dados, erro = ponte_preview.pedir("estado")
+    if erro or not isinstance(dados, dict) or not dados.get("tem_pagina"):
+        return ""
+    if dados.get("visivel", True):
+        return ""
+    return (
+        "AVISO: a vista do preview esta escondida (outra vista do editor esta a frente) - o "
+        "Chromium congela animacoes e transicoes numa vista escondida, logo esta serie pode "
+        "mostrar patamares que no ecra nao existem. Traga a vista a frente com acao='mostrar' "
+        "antes de medir."
+    )
+
+
 def _texto_das_amostras(js, total, amostras):
     """A serie em linhas 'ms: valor'.
 
@@ -756,7 +771,9 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             return f"ERRO: {dados.get('erro') or 'a expressao falhou'}."
         resultado = dados.get("resultado")
         if total and isinstance(resultado, list):
-            return _texto_das_amostras(js, total, resultado)
+            texto = _texto_das_amostras(js, total, resultado)
+            aviso = _aviso_de_vista_escondida()
+            return f"{aviso}\n{texto}" if aviso else texto
         if resultado is None:
             return f"A expressao '{js[:120]}' nao devolveu valor (undefined ou null)."
         texto_resultado = json.dumps(resultado, ensure_ascii=False, indent=2, default=str)

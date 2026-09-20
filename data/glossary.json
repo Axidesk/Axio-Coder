@@ -1466,15 +1466,11 @@
         "pesquisa do historico",
         "painel de busca do historico"
       ],
-      "identificador": "#history-search-panel",
-      "descricao": "Painel (campo + resultados) da busca do historico. E um BLOCO PROPRIO no FUNDO da coluna 1, IRMAO do #col1-stack - a lista de cards nunca e escondida nem substituida - e fica logo abaixo do ultimo card da lista (o card \"Salvo\", que e o ultimo a ser montado). Fechado: height 0 + opacity 0 + translateY(12px). Aberto, com a classe .history-search-open no #panel-col-1: height 50% FIXA (e o que mantem o campo na mesma posicao quando chegam resultados), com o campo em cima e #history-search-results-inline abaixo. A outra classe, .history-search-expanded, e so a LARGURA da janela (17.5vw -> calc(100vw - 3.5rem)); encolherBuscaInline tira so essa (a coluna 3 do historico abre). Abrir recolhe as pilhas expandidas (recolherPilhasExpandidas) porque o painel ocupa a metade de baixo. CSS em src/frontend/css/dock.css.",
+      "identificador": "#history-search-input-inline",
+      "descricao": "REESCRITO A 2026-10 (o campo mudou de casa). O campo da busca do historico vive AGORA NO CABECALHO da coluna 1 - dentro de #history-search-box, IRMAO do botao #btn-history-search (index.html, o mesmo cabecalho de 60px que tem \"Historico\" e os botoes restaurar/salvar/excluir). NAO esta mais embaixo: o painel #history-search-panel (irmao do #col1-stack, na grelha #col1-stack) passou a ter SO as duas colunas de resultados, e o wrapper do input com o seu border-b foi APAGADO. O efeito e o do chat: o botao encolhe e some (.hide: width 20px -> 0, opacity 0, scale 0.4) enquanto #history-search-box cresce em largura (.aberta: flex 0 1 0 -> 1 1 0) e, ao contrario da lupa do chat (absoluta), esta EMPURRA os icones ao lado ate ao limite - o grupo do cabecalho precisa de flex: 1 1 auto (dock.css) senao nada cresce. O campo e a pilula PARTILHADA .busca-campo / .busca-campo-lupa / .busca-campo-input de src/frontend/css/busca.css (a mesma do chat). Fecha pelo clique na lupa de dentro do campo (historySearchLupa -> collapseHistorySearchInline) ou pelo botao. Componente de busca: busca.css; posicao e animacao: dock.css; abrir/fechar: src/frontend/js/chat/historico/busca.js:abrirBuscaInline.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 119,
-        "conferido": [
-          1789929462.356,
-          82583
-        ]
+        "linha": 102
       }
     },
     {
@@ -4147,14 +4143,10 @@
         "buscar nas respostas do agente"
       ],
       "identificador": "#history-search-respostas",
-      "descricao": "A busca do historico tem DUAS colunas: a esquerda (#history-search-results-inline) as PERGUNTAS do utilizador por tarefa, a direita (#history-search-respostas) as MINHAS respostas (saved.aiResponse de cada tarefa), com o mesmo desenho de cartao nos dois lados. O traco vertical entre elas e .busca-coluna (border-right 1px var(--border-suave)) e o numero de achados vai em #busca-conta-perguntas / #busca-conta-respostas. A regra vive em src/frontend/js/chat/historico/busca.js:performHistorySearch, que varre state.sessionDetailCache e alimenta as duas por pintarColuna.",
+      "descricao": "REESCRITO A 2026-10: os DOIS separadores foram REMOVIDOS a pedido do utilizador. (1) O traco vertical entre as colunas era .busca-coluna (border-right 1px var(--border-suave)) - a regra e a classe foram apagadas; (2) o traco horizontal por baixo dos rotulos era o border-bottom de .busca-coluna-topo - apagado, e os rotulos \"Perguntas\"/\"Respostas\" (com as contagens #busca-conta-perguntas / #busca-conta-respostas) ficam so alinhados pelo espaco. O wrapper do input, que trazia o border-[var(--border)] ACIMA dos rotulos, tambem desapareceu quando o campo subiu para o cabecalho. Se ele pedir os tracos de volta, e nestes dois sitios que eles viviam. A coluna da direita continua a ser #history-search-respostas; a da esquerda #history-search-results-inline.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 142,
-        "conferido": [
-          1789929462.356,
-          82583
-        ]
+        "linha": 140
       }
     },
     {
