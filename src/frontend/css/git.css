@@ -1,7 +1,7 @@
 .git-painel {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 12px;
     font-family: inherit;
 }
 
@@ -12,7 +12,7 @@
 }
 
 .git-seccao + .git-seccao {
-    padding-top: 16px;
+    padding-top: 10px;
     border-top: 1px solid var(--border-suave);
 }
 
@@ -23,6 +23,23 @@
     text-transform: uppercase;
     color: var(--text-mutado);
     margin-bottom: 3px;
+}
+
+.git-seccao .projeto-cabecalho {
+    margin: 0 0 5px;
+}
+
+.git-cabecalho-clicavel {
+    cursor: pointer;
+}
+
+.git-painel .projeto-mais {
+    margin-left: auto;
+}
+
+.git-cabecalho-clicavel:hover .projeto-mais,
+.git-recolhivel .projeto-linha-clicavel:hover .projeto-mais {
+    color: var(--oliva);
 }
 
 .git-linha {
@@ -111,27 +128,18 @@
     outline: none;
 }
 
-.git-origem {
-    margin-top: 6px;
-    color: var(--text-mutado);
-    font-size: 11.5px;
-    line-height: 1.5;
+.git-campo-linha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.git-detalhes {
-    margin-top: 4px;
-}
-
-.git-detalhes summary {
-    color: var(--text-suave);
-    font-size: 11.5px;
-    cursor: pointer;
-    list-style: none;
-    transition: color var(--dur-2) var(--ease-fluid);
-}
-
-.git-detalhes summary:hover {
-    color: var(--text-branco);
+.git-campo-linha .git-campo {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-top: 0;
 }
 
 .git-lista {
@@ -181,10 +189,24 @@
     word-break: break-all;
 }
 
-.git-tags {
+.git-tags-vertical {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-direction: column;
+}
+
+.git-tag-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.git-tag-nome {
+    flex-shrink: 0;
+    color: var(--oliva);
+    font-weight: 600;
 }
 
 .git-tag {
@@ -213,13 +235,14 @@
 }
 
 .git-tag-dono {
-    color: var(--text-mutado);
-    font-weight: 400;
-    font-size: 10.5px;
-    max-width: 130px;
+    min-width: 0;
+    max-width: 45%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--text-mutado);
+    font-weight: 400;
+    font-size: 10.5px;
 }
 
 .git-commit-da-tarefa {

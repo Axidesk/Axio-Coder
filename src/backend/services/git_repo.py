@@ -361,12 +361,13 @@ def commitar(pasta, mensagem, ficheiros=None):
         _, erro_add = git_saida(raiz, "add", "-A")
     if erro_add:
         return {"status": "error", "message": erro_add}
-    prontos, _ = git_saida(raiz, "diff", "--cached", "--name-only")
+    so_os_da_tarefa = ["--", *caminhos] if caminhos else []
+    prontos, _ = git_saida(raiz, "diff", "--cached", "--name-only", *so_os_da_tarefa)
     entrando = [l.strip() for l in (prontos or "").splitlines() if l.strip()]
     if not entrando:
         return {"status": "vazio", "message": "Nada por commitar nesta tarefa."}
     texto = (mensagem or "").strip() or "Tarefa sem titulo"
-    _, erro_commit = git_saida(raiz, "commit", "-m", texto)
+    _, erro_commit = git_saida(raiz, "commit", "-m", texto, *so_os_da_tarefa)
     if erro_commit:
         return {"status": "error", "message": erro_commit}
     hash_completo, erro_hash = git_saida(raiz, "rev-parse", "HEAD")

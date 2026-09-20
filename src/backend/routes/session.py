@@ -30,6 +30,7 @@ from src.backend.services.file_service import (
     capturar_snapshot,
     registrar_edicao,
     mover_para_lixeira,
+    git_saida,
 )
 from src.backend.services import git_repo
 from src.backend.memory.vector import limpar_drawers_de_sources
@@ -140,8 +141,43 @@ def _commit_automatico(grupo, pasta_raiz, ja_gravados):
     except Exception:
         return ""
     if resultado.get("status") != "ok":
-        return ""
+        return _commit_recente_dos_ficheiros(pasta_raiz, caminhos, grupo)
     return resultado.get("hash") or ""
+
+
+_FOLGA_DO_TURNO = 1800
+
+
+def _inicio_do_turno(grupo):
+    """Quando a tarefa comecou, em segundos: o id do turno ja traz o instante em milissegundos."""
+    achado = re.search(r"(\d{10,})", str((grupo or {}).get("id") or ""))
+    if achado:
+        return float(achado.group(1)) / 1000.0
+    try:
+        return float((grupo or {}).get("timestamp")) / 1000.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _commit_recente_dos_ficheiros(pasta_raiz, caminhos, grupo):
+    """Sem nada por commitar, o ponto da tarefa e o commit que ja levou estes ficheiros dentro do tempo dela."""
+    inicio = _inicio_do_turno(grupo)
+    if not inicio or not caminhos:
+        return ""
+    raiz, erro = git_repo.pasta_do_repositorio(pasta_raiz)
+    if erro:
+        return ""
+    try:
+        duracao = float((grupo or {}).get("duration") or 0) * 60.0
+    except (TypeError, ValueError):
+        duracao = 0.0
+    desde = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(inicio))
+    ate = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(inicio + duracao + _FOLGA_DO_TURNO))
+    saida, erro_git = git_saida(raiz, "log", "-1", "--format=%H", "--since=" + desde, "--until=" + ate, "--", *caminhos)
+    if erro_git:
+        return ""
+    linhas = [l.strip() for l in (saida or "").splitlines() if l.strip()]
+    return linhas[0] if linhas else ""
 
 
 @session_bp.route('/api/session_log/save', methods=['POST'])

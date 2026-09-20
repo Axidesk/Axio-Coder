@@ -41,7 +41,7 @@ import { state } from '../state.js';
             name: g.name || '',
             aiResponse: g.aiResponse || '',
             salvo: !!g.salvo,
-            commit: g.commit || '',
+            commit: g.commit || (state.commitsDosTurnos || {})[g.id] || '',
             duration: g.duration || 0,
             tools: g.tools || [],
             thoughts: g.thoughts || [],

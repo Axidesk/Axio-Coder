@@ -32,6 +32,7 @@ export const state = {
     versoesGit: null,
     versoesEmCurso: null,
     sessionHistoryLoaded: false,
+    commitsDosTurnos: {},
     currentTurnLogs: [],
     currentTurnSummary: '',
     currentViewingAiResponse: '',

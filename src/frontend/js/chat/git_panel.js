@@ -6,14 +6,17 @@ import { requestGitRestore } from './historico/restauro.js';
 import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId } from './historico/cards.js';
 
 const LIMITE_COMMITS = 12;
+const LIMITE_FICHEIROS = 12;
 
 const RASCUNHOS = new Map();
-const SUGERIDAS = new Set();
 
 const COMANDO_DE_DEPENDENCIA = {
     'requirements.txt': 'python -m pip install -r requirements.txt',
     'package.json': 'npm install'
 };
+
+const SVG_VARINHA = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>';
+const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg>';
 
     function grupoAtivo() {
         return state.currentSelectedHistoryGroup || window.currentActiveLogGroup || null;
@@ -22,48 +25,18 @@ const COMANDO_DE_DEPENDENCIA = {
         if (!grupo) return '';
         return grupo.displayName || grupo.title || grupo.name || '';
     }
-    function nomeRealDaTarefa(grupo) {
-        const nome = grupo ? String(grupo.name || '').replace(/\s+/g, ' ').trim() : '';
-        return /^Tarefa \d+$/.test(nome) ? '' : nome;
-    }
-    function mensagemProposta(grupo) {
-        const nome = nomeRealDaTarefa(grupo);
-        if (nome) return nome.slice(0, 72);
-        const perguntas = (grupo && grupo.questions) || [];
-        const pergunta = String(perguntas[0] || '').replace(/\s+/g, ' ').trim();
-        return pergunta.slice(0, 72);
-    }
     function valorDoCampo(grupo) {
         if (!grupo) return '';
-        const guardado = RASCUNHOS.get(String(grupo.id));
-        return guardado === undefined ? mensagemProposta(grupo) : guardado;
-    }
-    function textoDaOrigem(grupo) {
-        if (!grupo) return '';
-        const chave = String(grupo.id);
-        const guardado = RASCUNHOS.get(chave);
-        if (guardado !== undefined && SUGERIDAS.has(chave)) {
-            return 'Sugestao da IA para esta tarefa. Confere antes de commitar.';
-        }
-        if (guardado !== undefined && guardado !== mensagemProposta(grupo)) {
-            return 'Mensagem escrita por ti para esta tarefa.';
-        }
-        if (nomeRealDaTarefa(grupo)) {
-            return 'Proposta a partir do nome desta tarefa. Podes mudar a mensagem antes de commitar.';
-        }
-        if (mensagemProposta(grupo)) {
-            return 'Esta tarefa ainda nao tem nome: a proposta e o inicio da tua pergunta nesta tarefa. Podes mudar a mensagem antes de commitar.';
-        }
-        return 'Escreve a mensagem do commit, ou pede uma sugestao a IA.';
-    }
-    function atualizarOrigem(painel, grupo) {
-        const alvo = painel ? painel.querySelector('#git-origem') : null;
-        if (alvo) alvo.textContent = textoDaOrigem(grupo);
+        return RASCUNHOS.get(String(grupo.id)) || '';
     }
     function ficheirosDaTarefa(grupo) {
         return (grupo && grupo.files ? grupo.files : [])
             .map(f => (typeof f === 'string' ? f : f && f.name))
             .filter(Boolean);
+    }
+    function hashDaTarefa(grupo) {
+        if (!grupo) return '';
+        return grupo.commit || (state.commitsDosTurnos || {})[String(grupo.id)] || '';
     }
     async function pedirGit(url, corpo) {
         const opcoes = corpo
@@ -83,6 +56,36 @@ const COMANDO_DE_DEPENDENCIA = {
     }
     function pill(acao, texto, extra) {
         return `<button class="git-pill ${extra || ''}" data-git-acao="${acao}">${escapeHtml(texto)}</button>`;
+    }
+    function varinha(acao, titulo) {
+        return `<button class="projeto-notas-acao" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}">`
+            + `<span class="projeto-icone-wand">${SVG_VARINHA}</span>`
+            + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
+            + '</button>';
+    }
+    function recolhivel(cabecalho, corpo, aberta) {
+        return `<div class="projeto-grupo git-recolhivel${aberta ? ' projeto-aberto' : ''}">`
+            + `<div class="projeto-linha projeto-linha-clicavel" data-git-acao="recolher">${cabecalho}<span class="projeto-mais">${aberta ? '−' : '+'}</span></div>`
+            + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
+            + '</div>';
+    }
+    function seccaoRecolhivel(titulo, resumo, corpo) {
+        let cabecalho = `<span class="projeto-secao-titulo">${escapeHtml(titulo)}</span>`;
+        if (resumo) {
+            cabecalho += '<span class="projeto-secao-sep">|</span>'
+                + `<span class="projeto-secao-resumo">${escapeHtml(resumo)}</span>`;
+        }
+        return `<div class="projeto-grupo git-recolhivel">`
+            + `<div class="projeto-cabecalho git-cabecalho-clicavel" data-git-acao="recolher">${cabecalho}<span class="projeto-mais">+</span></div>`
+            + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
+            + '</div>';
+    }
+    function alternarRecolhido(cabecalho) {
+        const bloco = cabecalho.closest('.projeto-grupo');
+        if (!bloco) return;
+        const aberto = bloco.classList.toggle('projeto-aberto');
+        const mais = cabecalho.querySelector('.projeto-mais');
+        if (mais) mais.textContent = aberto ? '−' : '+';
     }
     function htmlSemRepo(motivo) {
         return `<div class="git-painel">
@@ -109,93 +112,97 @@ const COMANDO_DE_DEPENDENCIA = {
         html += '</div>';
         return html;
     }
-    function htmlDaTarefa(grupo, estado, pendentes) {
-        const ficheiros = ficheirosDaTarefa(grupo);
-        const hash = (grupo && grupo.commit) || '';
+    function htmlDaTarefa(grupo, pendentes) {
         let html = '<div class="git-seccao"><div class="git-seccao-titulo">Esta tarefa</div>';
         if (!grupo) {
             html += '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
             return html;
         }
-        const nome = nomeDaTarefa(grupo);
-        if (nome) html += linhaRotulo(nome, 'tarefa');
-        html += linhaRotulo(String(ficheiros.length), 'ficheiro(s) tocado(s)');
-        if (hash) {
-            html += linhaRotulo(hash.slice(0, 7), 'commit desta tarefa');
-        } else {
-            html += '<div class="git-vazio">Esta tarefa ainda nao foi commitada.</div>';
-        }
-        if (ficheiros.length) {
-            const lista = ficheiros.slice(0, 12).map(f => `• ${escapeHtml(f)}`).join('<br>');
-            const restantes = ficheiros.length - Math.min(ficheiros.length, 12);
-            html += `<details class="git-detalhes"><summary><span>Ver os ficheiros</span></summary><div class="git-lista">${lista}${restantes > 0 ? `<br>• e mais ${restantes}…` : ''}</div></details>`;
-        } else {
-            html += '<div class="git-vazio">Esta tarefa nao tem ficheiros registados.</div>';
-        }
+        const ficheiros = ficheirosDaTarefa(grupo);
+        const hash = hashDaTarefa(grupo);
         const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
         const podeCommitar = ficheiros.length > 0 && porCommitar !== 0;
-        if (ficheiros.length && porCommitar !== null) {
-            html += linhaRotulo(String(porCommitar), 'por commitar');
+        const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
+        let cabecalho = `<span class="projeto-nome">${escapeHtml(nomeDaTarefa(grupo) || 'Tarefa sem nome')}</span>`
+            + '<span class="projeto-secao-sep">|</span>'
+            + `<span class="projeto-contagem">${rotulo}</span>`;
+        if (porCommitar !== null) {
+            cabecalho += '<span class="projeto-secao-sep">|</span>'
+                + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
         }
-        html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(valorDoCampo(grupo))}" placeholder="Mensagem do commit">`;
-        html += `<div id="git-origem" class="git-origem">${escapeHtml(textoDaOrigem(grupo))}</div>`;
-        html += '<div class="git-acoes">';
-        html += pill('sugerir', 'Sugerir com IA');
-        if (podeCommitar) html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
-        if (hash) html += pill('restaurar', 'Restaurar esta tarefa');
-        html += '</div>';
-        let nota = 'O commit e local: nada sobe para o remoto sem tu mandares. Entram so os ficheiros desta tarefa.';
-        if (!ficheiros.length) nota = 'Sem ficheiros registados nesta tarefa, nao ha um commit dela para fazer.';
-        else if (porCommitar === 0) nota = 'Nada por commitar: nenhum ficheiro desta tarefa mudou desde o ultimo commit.';
-        html += `<div class="git-nota">${nota}</div>`;
+        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes)
+            + (hash ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(hash.slice(0, 7))}</div>` : ''));
+        html += '<div class="git-campo-linha">'
+            + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(valorDoCampo(grupo))}" placeholder="Mensagem do commit">`
+            + varinha('sugerir', 'Escrever a mensagem com a IA')
+            + '</div>';
+        if (podeCommitar || hash) {
+            html += '<div class="git-acoes">';
+            if (podeCommitar) html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
+            if (hash) html += pill('restaurar', 'Restaurar esta tarefa');
+            html += '</div>';
+        }
         html += '</div>';
         return html;
     }
-    function htmlHistorico(estado, grupo) {
-        const pontoDaTarefa = (grupo && grupo.commit) || '';
-        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Historico do repositorio</div>';
-        const commits = (estado.commits || []).slice(0, LIMITE_COMMITS);
-        if (!commits.length) {
-            html += '<div class="git-vazio">Nenhum commit neste repositorio.</div></div>';
-            return html;
-        }
-        const visiveis = commits.slice(0, LIMITE_COMMITS);
-        const daTarefa = pontoDaTarefa ? commits.find(c => c.hash === pontoDaTarefa) : null;
-        const extra = daTarefa && !visiveis.includes(daTarefa) ? daTarefa : null;
-        const linhaCommit = (c, daTarefa) => {
-            const marcas = (c.tags || []).map(t => `<span class="git-tag${daTarefa ? ' git-tag-acesa' : ''}">${escapeHtml(t)}</span>`).join('');
-            return `<div class="git-commit${c.head ? ' git-commit-head' : ''}${daTarefa ? ' git-commit-da-tarefa' : ''}">
-                <span class="git-hash">${escapeHtml(c.curto)}</span>
-                <span class="git-commit-msg">${escapeHtml(c.mensagem)}</span>
-                ${marcas}
-            </div>`;
+    function corpoDaTarefa(grupo, pendentes) {
+        const ficheiros = ficheirosDaTarefa(grupo);
+        if (!ficheiros.length) return '<div class="git-vazio">Esta tarefa nao tem ficheiros registados.</div>';
+        const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
+        const emFalta = (pendentes && pendentes.pendentes) || [];
+        const lista = (nomes) => {
+            const visiveis = nomes.slice(0, LIMITE_FICHEIROS).map(f => `• ${escapeHtml(f)}`).join('<br>');
+            const restantes = nomes.length - Math.min(nomes.length, LIMITE_FICHEIROS);
+            return `<div class="git-lista">${visiveis}${restantes > 0 ? `<br>• e mais ${restantes}…` : ''}</div>`;
         };
-        visiveis.forEach(c => { html += linhaCommit(c, !!pontoDaTarefa && c.hash === pontoDaTarefa); });
-        if (extra) {
-            html += `<div class="git-nota">e mais ${commits.indexOf(extra) - visiveis.length} commit(s) ate ao desta tarefa</div>`;
-            html += linhaCommit(extra, true);
+        if (emFalta.length) return lista(emFalta);
+        if (porCommitar === null) {
+            return '<div class="git-nota">Nao consegui confirmar o que falta commitar nesta tarefa. O botao de commit continua disponivel.</div>';
         }
-        html += '</div>';
+        if (porCommitar === 0) {
+            return '<div class="git-nota">Nada por commitar: nenhum ficheiro desta tarefa mudou desde o ultimo commit.</div>';
+        }
+        return lista(ficheiros);
+    }
+    function linhaCommit(commit, acesa) {
+        const marcas = (commit.tags || []).map(t => `<span class="git-tag${acesa ? ' git-tag-acesa' : ''}">${escapeHtml(t)}</span>`).join('');
+        return `<div class="git-commit${commit.head ? ' git-commit-head' : ''}${acesa ? ' git-commit-da-tarefa' : ''}">`
+            + `<span class="git-hash">${escapeHtml(commit.curto)}</span>`
+            + `<span class="git-commit-msg">${escapeHtml(commit.mensagem)}</span>`
+            + marcas
+            + '</div>';
+    }
+    function htmlHistorico(estado, grupo) {
+        const todos = estado.commits || [];
+        if (!todos.length) return '';
+        const pontoDaTarefa = hashDaTarefa(grupo);
+        const visiveis = todos.slice(0, LIMITE_COMMITS);
+        const daTarefa = pontoDaTarefa ? todos.find(c => c.hash === pontoDaTarefa) : null;
+        let corpo = '';
+        visiveis.forEach(c => { corpo += linhaCommit(c, !!daTarefa && c.hash === pontoDaTarefa); });
+        if (daTarefa && !visiveis.includes(daTarefa)) {
+            corpo += `<div class="git-nota">e mais ${todos.indexOf(daTarefa) - visiveis.length} commit(s) ate ao desta tarefa</div>`;
+            corpo += linhaCommit(daTarefa, true);
+        }
+        return seccaoRecolhivel('Historico do repositorio', String(todos.length), corpo);
+    }
+    function htmlEtiquetas(estado, grupo) {
         const tags = estado.tags || [];
-        if (tags.length) {
-            html += '<div class="git-seccao"><div class="git-seccao-titulo">Etiquetas</div><div class="git-tags">';
-            tags.slice(0, 20).forEach(t => {
-                const nome = typeof t === 'string' ? t : t.nome;
-                const ponto = typeof t === 'string' ? '' : t.ponto;
-                const curto = typeof t === 'string' ? '' : t.curto;
-                const acesa = !!pontoDaTarefa && ponto === pontoDaTarefa;
-                const dono = ponto ? nomeDaTarefaDoCommit(ponto) : '';
-                const titulo = curto ? `aponta para ${curto}${dono ? ` · ${dono}` : ''}` : '';
-                html += `<span class="git-tag${acesa ? ' git-tag-acesa' : ''}" title="${escapeHtml(titulo)}">${escapeHtml(nome)}`
-                    + (curto ? `<span class="git-tag-ponto">${escapeHtml(curto)}</span>` : '')
-                    + (dono ? `<span class="git-tag-dono">${escapeHtml(dono)}</span>` : '')
-                    + '</span>';
-            });
-            html += '</div>';
-            html += '<div class="git-nota">Cada etiqueta mostra o ponto a que aponta. Acende quando esse ponto e o commit da tarefa selecionada.</div>';
-            html += '</div>';
-        }
-        return html;
+        if (!tags.length) return '';
+        const pontoDaTarefa = hashDaTarefa(grupo);
+        const linhas = tags.map(t => {
+            const nome = typeof t === 'string' ? t : t.nome;
+            const ponto = typeof t === 'string' ? '' : t.ponto;
+            const curto = typeof t === 'string' ? '' : t.curto;
+            const acesa = !!pontoDaTarefa && ponto === pontoDaTarefa;
+            const dono = ponto ? nomeDaTarefaDoCommit(ponto) : '';
+            return `<div class="git-tag-linha${acesa ? ' git-tag-acesa' : ''}">`
+                + `<span class="git-tag-nome">${escapeHtml(nome)}</span>`
+                + (curto ? `<span class="git-tag-ponto">${escapeHtml(curto)}</span>` : '')
+                + (dono ? `<span class="git-tag-dono">${escapeHtml(dono)}</span>` : '')
+                + '</div>';
+        }).join('');
+        return seccaoRecolhivel('Etiquetas', String(tags.length), `<div class="git-tags-vertical">${linhas}</div>`);
     }
     function htmlDependencias(estado) {
         const manifestos = estado.manifestos || [];
@@ -228,8 +235,9 @@ const COMANDO_DE_DEPENDENCIA = {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado);
-        html += htmlDaTarefa(grupo, estado, pendentes);
+        html += htmlDaTarefa(grupo, pendentes);
         html += htmlHistorico(estado, grupo);
+        html += htmlEtiquetas(estado, grupo);
         html += htmlDependencias(estado);
         html += '</div>';
         return html;
@@ -263,14 +271,13 @@ const COMANDO_DE_DEPENDENCIA = {
             const grupo = grupoAtivo();
             if (!grupo) return;
             RASCUNHOS.set(String(grupo.id), e.target.value);
-            SUGERIDAS.delete(String(grupo.id));
-            atualizarOrigem(painel, grupo);
         });
         painel.addEventListener('click', async (e) => {
             const botao = e.target.closest('[data-git-acao]');
             if (!botao) return;
             e.stopPropagation();
             const acao = botao.dataset.gitAcao;
+            if (acao === 'recolher') return alternarRecolhido(botao);
             if (acao === 'atualizar') return renderGitPanel(vista);
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
@@ -293,8 +300,8 @@ const COMANDO_DE_DEPENDENCIA = {
             });
             if (dados && dados.status === 'ok') {
                 grupo.commit = dados.hash || '';
+                state.commitsDosTurnos[String(grupo.id)] = dados.hash || '';
                 RASCUNHOS.delete(String(grupo.id));
-                SUGERIDAS.delete(String(grupo.id));
                 updateRoundCardCommitByTurnId(grupo.id, dados.hash || '');
                 await renderGitPanel(vista);
                 return;
@@ -312,7 +319,7 @@ const COMANDO_DE_DEPENDENCIA = {
         const campo = painel ? painel.querySelector('#git-mensagem') : null;
         const botao = painel ? painel.querySelector('[data-git-acao="sugerir"]') : null;
         if (botao) {
-            botao.textContent = 'A pensar…';
+            botao.classList.add('a-trabalhar');
             botao.disabled = true;
         }
         const perguntas = (grupo.questions || []).join(' ');
@@ -325,8 +332,6 @@ const COMANDO_DE_DEPENDENCIA = {
             if (dados && dados.status === 'ok' && campo) {
                 campo.value = dados.mensagem;
                 RASCUNHOS.set(String(grupo.id), campo.value);
-                SUGERIDAS.add(String(grupo.id));
-                atualizarOrigem(painel, grupo);
             } else {
                 avisarNoPainel(vista, (dados && dados.message) || 'Nao foi possivel sugerir uma mensagem.');
             }
@@ -335,15 +340,16 @@ const COMANDO_DE_DEPENDENCIA = {
             avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
         } finally {
             if (botao) {
-                botao.textContent = 'Sugerir com IA';
+                botao.classList.remove('a-trabalhar');
                 botao.disabled = false;
             }
         }
     }
     async function restaurarTarefa() {
         const grupo = grupoAtivo();
-        if (!grupo || !grupo.commit) return;
-        await requestGitRestore(grupo.commit, nomeDaTarefa(grupo) || 'esta tarefa', grupo.id || '');
+        const hash = hashDaTarefa(grupo);
+        if (!hash) return;
+        await requestGitRestore(hash, nomeDaTarefa(grupo) || 'esta tarefa', grupo.id || '');
     }
     function avisarNoPainel(vista, texto) {
         const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;
