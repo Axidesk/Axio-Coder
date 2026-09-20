@@ -100,6 +100,12 @@ O agente pensa em voz alta: o painel mostra o que ele está a considerar, o que 
 
 ![Raciocínio e ferramentas usadas](docs/interface/raciocinio.jpg)
 
+## Procura no que já foi dito
+
+Uma lupa procura dentro da conversa: o termo fica aceso a verde e o resto da mensagem em cinza, com o contador de quantas casaram. A mesma lupa, na janela do histórico, procura nas sessões antigas e devolve cada tarefa com a pergunta, a resposta, os ficheiros e as ferramentas — o termo destacado, e um clique abre a tarefa na pilha com os ficheiros dela ao lado.
+
+Buscar no acervo inteiro era o gesto mais lento da casa, e o custo não estava na procura: estava na leitura. Cada sessão carrega o diff já renderizado, e há logs de 266 MB. Agora fica de cada uma um **índice leve** em disco — pergunta, resposta, nomes dos ficheiros, contagem de ferramentas — **2852 vezes menor** que o log; o diff só desce quando aquela tarefa se abre. A primeira busca deixou de custar um minuto.
+
 ## Stack
 
 | Camada | O que usa |
