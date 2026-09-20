@@ -4124,6 +4124,24 @@
         "arquivo": "src/main.js",
         "linha": 544
       }
+    },
+    {
+      "termo": "separador das perguntas e respostas",
+      "aliases": [
+        "separador das perguntas e respostas",
+        "coluna das respostas",
+        "busca nas respostas",
+        "lado direito da busca do historico",
+        "duas colunas da busca",
+        "separador da busca do historico",
+        "buscar nas respostas do agente"
+      ],
+      "identificador": "#history-search-respostas",
+      "descricao": "A busca do historico tem DUAS colunas: a esquerda (#history-search-results-inline) as PERGUNTAS do utilizador por tarefa, a direita (#history-search-respostas) as MINHAS respostas (saved.aiResponse de cada tarefa), com o mesmo desenho de cartao nos dois lados. O traco vertical entre elas e .busca-coluna (border-right 1px var(--border-suave)) e o numero de achados vai em #busca-conta-perguntas / #busca-conta-respostas. A regra vive em src/frontend/js/chat/historico/busca.js:performHistorySearch, que varre state.sessionDetailCache e alimenta as duas por pintarColuna.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 133
+      }
     }
   ]
 }

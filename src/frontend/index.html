@@ -117,7 +117,22 @@
                                 class="w-full bg-[var(--bg)] rounded-2xl pl-9 pr-3 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text-mutado)] focus:outline-none transition-colors">
                         </div>
                     </div>
-                    <div id="history-search-results-inline" class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2"></div>
+                    <div id="history-search-cols" class="flex-1 min-h-0 flex">
+                        <div class="busca-coluna flex-1 min-w-0 min-h-0 flex flex-col">
+                            <div class="busca-coluna-topo">
+                                <span class="busca-coluna-titulo">Perguntas</span>
+                                <span id="busca-conta-perguntas" class="busca-coluna-conta"></span>
+                            </div>
+                            <div id="history-search-results-inline" class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2"></div>
+                        </div>
+                        <div class="flex-1 min-w-0 min-h-0 flex flex-col">
+                            <div class="busca-coluna-topo">
+                                <span class="busca-coluna-titulo">Respostas</span>
+                                <span id="busca-conta-respostas" class="busca-coluna-conta"></span>
+                            </div>
+                            <div id="history-search-respostas" class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

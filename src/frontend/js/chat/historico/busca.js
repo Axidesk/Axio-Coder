@@ -5,9 +5,12 @@ import { escapeHtml } from '../messages.js';
 import { openFilesPanel } from './acoes.js';
 import { assignDisplayNamesByDay, ensureSessionDetailsLoaded, rebuildGroupFromSaved, selectHistoryTaskInPile } from './cards.js';
 
-const { btnHistorySearch, historySearchInputInline, historySearchResultsInline, panelCol1, slidingPanelContainer } = dom;
+const { btnHistorySearch, historySearchInputInline, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
-const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas mensagens enviadas.</div>';
+const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas suas perguntas.</div>';
+const MSG_BUSCA_RESPOSTAS = '<div class="text-xs text-[var(--text-mutado)] italic">Digite para buscar nas minhas respostas.</div>';
+const MSG_VAZIO_PERGUNTAS = 'Nenhuma pergunta encontrada com esse termo.';
+const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
 
     function collapseHistorySearchInline() {
         state.historySearchInlineActive = false;
@@ -34,7 +37,7 @@ const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic"
             btnHistorySearch.classList.add('text-[var(--oliva)]');
             btnHistorySearch.classList.remove('text-[var(--text-mutado)]');
         }
-        if (!jaAberta && historySearchResultsInline) historySearchResultsInline.innerHTML = MSG_BUSCA_INICIAL;
+        if (!jaAberta) limparColunas(MSG_BUSCA_INICIAL, MSG_BUSCA_RESPOSTAS);
         ligarBuscaInline();
         if (historySearchInputInline) historySearchInputInline.focus();
     }
@@ -55,52 +58,71 @@ const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic"
             clearTimeout(searchTimer);
             const termo = historySearchInputInline.value.trim();
             if (!termo) {
-                historySearchResultsInline.innerHTML = MSG_BUSCA_INICIAL;
+                limparColunas(MSG_BUSCA_INICIAL, MSG_BUSCA_RESPOSTAS);
                 return;
             }
-            searchTimer = setTimeout(() => performHistorySearch(termo, historySearchResultsInline), 200);
+            searchTimer = setTimeout(() => performHistorySearch(termo), 200);
         });
         historySearchInputInline.addEventListener('focus', () => {
             if (!panelCol1 || !panelCol1.classList.contains('history-search-expanded')) abrirBuscaInline();
         });
     }
-    async function performHistorySearch(termo, resultsContainer) {
-        resultsContainer.innerHTML = '<div class="text-xs text-[var(--text-mutado)] italic">Buscando...</div>';
+    async function performHistorySearch(termo) {
+        const buscando = '<div class="text-xs text-[var(--text-mutado)] italic">Buscando...</div>';
+        if (historySearchResultsInline) historySearchResultsInline.innerHTML = buscando;
+        if (historySearchRespostas) historySearchRespostas.innerHTML = buscando;
         const termoLower = termo.toLowerCase();
         await ensureSessionDetailsLoaded();
         assignDisplayNamesByDay();
-        const resultados = [];
+        const perguntas = [];
+        const respostas = [];
         for (const sessao of state.sessionHistoryList) {
             const logs = state.sessionDetailCache[sessao.filename] || [];
             const dia = (sessao.datetime || '').split(' ')[0] || 'Data desconhecida';
             logs.forEach(saved => {
-                const questoes = saved.questions || [];
-                for (const q of questoes) {
-                    if (String(q).toLowerCase().includes(termoLower)) {
-                        resultados.push({
-                            nome: saved.displayName || saved.name || 'Tarefa',
-                            dia,
-                            hora: saved.timestamp || '',
-                            pergunta: q,
-                            saved
-                        });
-                        break;
-                    }
-                }
+                const comum = {
+                    nome: saved.displayName || saved.name || 'Tarefa',
+                    dia,
+                    hora: saved.timestamp || '',
+                    saved
+                };
+                const pergunta = primeiroComTermo(saved.questions || [], termoLower);
+                if (pergunta) perguntas.push(Object.assign({ texto: pergunta }, comum));
+                const resposta = primeiroComTermo([saved.aiResponse || ''], termoLower);
+                if (resposta) respostas.push(Object.assign({ texto: resposta }, comum));
             });
         }
+        pintarColuna(historySearchResultsInline, buscaContaPerguntas, perguntas, termoLower, MSG_VAZIO_PERGUNTAS);
+        pintarColuna(historySearchRespostas, buscaContaRespostas, respostas, termoLower, MSG_VAZIO_RESPOSTAS);
+    }
+    function limparColunas(esquerda, direita) {
+        if (historySearchResultsInline) historySearchResultsInline.innerHTML = esquerda;
+        if (historySearchRespostas) historySearchRespostas.innerHTML = direita;
+        if (buscaContaPerguntas) buscaContaPerguntas.textContent = '';
+        if (buscaContaRespostas) buscaContaRespostas.textContent = '';
+    }
+    function primeiroComTermo(textos, termoLower) {
+        for (const texto of textos) {
+            const bruto = String(texto == null ? '' : texto);
+            if (bruto.toLowerCase().includes(termoLower)) return bruto;
+        }
+        return '';
+    }
+    function pintarColuna(container, conta, resultados, termoLower, vazio) {
+        if (!container) return;
+        if (conta) conta.textContent = resultados.length ? String(resultados.length) : '';
         if (resultados.length === 0) {
-            resultsContainer.innerHTML = '<div class="text-xs text-[var(--text-mutado)] italic">Nenhuma mensagem encontrada com esse termo.</div>';
+            container.innerHTML = '<div class="text-xs text-[var(--text-mutado)] italic">' + vazio + '</div>';
             return;
         }
-        resultsContainer.innerHTML = '';
+        container.innerHTML = '';
         resultados.forEach((r, i) => {
             if (i > 0) {
                 const sep = document.createElement('div');
-                sep.className = 'border-t border-[var(--border)] my-1';
-                resultsContainer.appendChild(sep);
+                sep.className = 'busca-separador';
+                container.appendChild(sep);
             }
-            resultsContainer.appendChild(createHistorySearchResultCard(r, termoLower));
+            container.appendChild(createHistorySearchResultCard(r, termoLower));
         });
     }
     function createHistorySearchResultCard(r, termoLower) {
@@ -123,7 +145,7 @@ const MSG_BUSCA_INICIAL = '<div class="text-xs text-[var(--text-mutado)] italic"
         meta.textContent = [r.dia, r.hora].filter(Boolean).join(' | ');
         const trecho = document.createElement('div');
         trecho.className = 'text-[12px] text-[var(--text-usuario)] leading-relaxed';
-        trecho.innerHTML = buildSearchSnippet(r.pergunta, termoLower);
+        trecho.innerHTML = buildSearchSnippet(r.texto, termoLower);
         card.appendChild(nome);
         if (meta.textContent) card.appendChild(meta);
         card.appendChild(trecho);
