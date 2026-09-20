@@ -341,6 +341,8 @@ def _janelas_abertas():
     for janela in _desktop().windows():
         if _texto(janela) or (_visivel(janela) and _area(janela) >= AREA_MINIMA_DE_JANELA):
             abertas.append(janela)
+    vistas = {int(getattr(janela, "handle", 0) or 0) for janela in abertas}
+    abertas.extend(_janelas_avulsas(vistas)[0])
     return abertas
 
 
