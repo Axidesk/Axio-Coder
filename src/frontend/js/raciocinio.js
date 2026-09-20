@@ -3,12 +3,15 @@ const api = window.raciocinio || {
     aoEvento: () => {},
     aoHistorico: () => {},
     aoRecolha: () => {},
+    aoLargo: () => {},
     aoSair: () => {},
     aoEscala: () => {},
-    alternar: () => {}
+    alternar: () => {},
+    largo: () => {}
 };
 
 const botao = document.getElementById('rc-recolher');
+const botaoLargo = document.getElementById('rc-largo');
 const contador = document.getElementById('rc-contador');
 const registo = document.getElementById('rc-registo');
 
@@ -126,6 +129,18 @@ function alternarRecolha() {
     api.alternar();
 }
 
+function alternarLargo() {
+    api.largo();
+}
+
+function definirLargo(valor) {
+    const alvo = !!valor;
+    document.body.classList.toggle('rc-largo', alvo);
+    const rotulo = alvo ? 'Restaurar' : 'Maximizar';
+    botaoLargo.title = rotulo;
+    botaoLargo.setAttribute('aria-label', rotulo);
+}
+
 function animarEntrada() {
     entradaResolvida = true;
     document.body.classList.remove('rc-saindo');
@@ -141,6 +156,7 @@ function sair() {
 }
 
 botao.addEventListener('click', alternarRecolha);
+botaoLargo.addEventListener('click', alternarLargo);
 registo.addEventListener('scroll', acompanharRolagem, { passive: true });
 registo.addEventListener('wheel', marcarGesto, { passive: true });
 registo.addEventListener('pointerdown', marcarGesto, { passive: true });
@@ -153,6 +169,7 @@ setTimeout(() => {
 api.aoEscala(aplicarEscala);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);
+api.aoLargo(definirLargo);
 api.aoEvento(aplicar);
 api.aoHistorico((lista) => {
     limpar();

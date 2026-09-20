@@ -41,6 +41,7 @@ let ponteToken = '';
 let zoomDaInterface = 1;
 let raciocinioView = null;
 let raciocinioRecolhido = false;
+let raciocinioLargo = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
 let raciocinioSaidaEm = null;
@@ -57,9 +58,15 @@ const ZOOM_MAXIMO = 2;
 const PASSOS_DE_ZOOM = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 const RACIOCINIO_LARGURA = 380;
 const RACIOCINIO_ALTURA = 200;
+const RACIOCINIO_LARGURA_MAX = 760;
+const RACIOCINIO_ALTURA_MAX = 420;
+const RACIOCINIO_JANELA_REF_LARGURA = 1400;
+const RACIOCINIO_JANELA_REF_ALTURA = 900;
+const RACIOCINIO_FRACAO_MAX = 0.72;
 const RACIOCINIO_LARGURA_RECOLHIDA = 200;
 const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
+const RACIOCINIO_PAD_LATERAL = 16;
 const RACIOCINIO_RAIO_JANELA = 12;
 const RACIOCINIO_SAIDA_MS = 200;
 const RACIOCINIO_CAIXA_MS = 250;
@@ -544,8 +551,11 @@ function limitesDeArranque() {
 
 function limitesDoRaciocinio() {
   const area = limitesDoPreview() || limitesDeArranque();
-  const largura = area.width > 0 ? Math.round(Math.min(RACIOCINIO_LARGURA, area.width)) : RACIOCINIO_LARGURA;
-  const altura = area.height > 0 ? Math.round(Math.min(RACIOCINIO_ALTURA, area.height)) : RACIOCINIO_ALTURA;
+  const medida = medidaDoRaciocinio();
+  const tetoX = area.width > 0 ? Math.round(area.width * RACIOCINIO_FRACAO_MAX) : medida.largura;
+  const tetoY = area.height > 0 ? Math.round(area.height * RACIOCINIO_FRACAO_MAX) : medida.altura;
+  const largura = Math.max(RACIOCINIO_LARGURA_RECOLHIDA, Math.min(medida.largura, tetoX));
+  const altura = Math.max(RACIOCINIO_ALTURA_RECOLHIDA, Math.min(medida.altura, tetoY));
   return {
     x: Math.round(area.x + Math.max(0, (area.width - largura) / 2)),
     y: Math.round(area.y + Math.max(0, area.height - altura - RACIOCINIO_MARGEM_FUNDO)),
@@ -554,16 +564,40 @@ function limitesDoRaciocinio() {
   };
 }
 
+function medidaDoRaciocinio() {
+  const base = { largura: RACIOCINIO_LARGURA, altura: RACIOCINIO_ALTURA };
+  if (!mainWindow || mainWindow.isDestroyed()) return base;
+  const cliente = mainWindow.getContentBounds();
+  const cresceLargura = Math.max(1, cliente.width / RACIOCINIO_JANELA_REF_LARGURA);
+  const cresceAltura = Math.max(1, cliente.height / RACIOCINIO_JANELA_REF_ALTURA);
+  return {
+    largura: Math.min(RACIOCINIO_LARGURA_MAX, Math.round(RACIOCINIO_LARGURA * cresceLargura)),
+    altura: Math.min(RACIOCINIO_ALTURA_MAX, Math.round(RACIOCINIO_ALTURA * cresceAltura))
+  };
+}
+
 function caixaDeToqueDoRaciocinio() {
   const cheia = limitesDoRaciocinio();
-  if (!raciocinioRecolhido) return cheia;
-  const largura = Math.round(Math.min(RACIOCINIO_LARGURA_RECOLHIDA, cheia.width));
-  const altura = Math.round(Math.min(RACIOCINIO_ALTURA_RECOLHIDA, cheia.height));
+  const alvo = raciocinioLargo ? caixaLargaDoRaciocinio(cheia) : cheia;
+  if (!raciocinioRecolhido) return alvo;
+  const largura = Math.round(Math.min(RACIOCINIO_LARGURA_RECOLHIDA, alvo.width));
+  const altura = Math.round(Math.min(RACIOCINIO_ALTURA_RECOLHIDA, alvo.height));
   return {
-    x: cheia.x + Math.round((cheia.width - largura) / 2),
-    y: cheia.y + cheia.height - altura,
+    x: alvo.x + Math.round((alvo.width - largura) / 2),
+    y: alvo.y + alvo.height - altura,
     width: largura,
     height: altura
+  };
+}
+
+function caixaLargaDoRaciocinio(cheia) {
+  const area = limitesDoPreview() || limitesDeArranque();
+  const largura = Math.max(cheia.width, Math.round(area.width - RACIOCINIO_PAD_LATERAL * 2));
+  return {
+    x: Math.round(area.x + Math.max(0, (area.width - largura) / 2)),
+    y: cheia.y,
+    width: largura,
+    height: cheia.height
   };
 }
 
@@ -614,6 +648,7 @@ function descartarRaciocinioView() {
   }
   raciocinioView = null;
   raciocinioRecolhido = false;
+  raciocinioLargo = false;
   raciocinioBuffer = [];
   raciocinioPronto = false;
   raciocinioSaindo = false;
@@ -656,6 +691,7 @@ function criarRaciocinioView() {
     raciocinioPronto = true;
     raciocinioView.webContents.send('raciocinio:historico', raciocinioBuffer);
     raciocinioView.webContents.send('raciocinio:recolhido', raciocinioRecolhido);
+    raciocinioView.webContents.send('raciocinio:largo', raciocinioLargo);
     avisarEscalaDoRaciocinio();
     if (raciocinioQuerido && previewVisivel) mostrarRaciocinioView();
   });
@@ -738,6 +774,12 @@ function avisarRecolhaDoRaciocinio(recolhido) {
   raciocinioView.webContents.send('raciocinio:recolhido', !!recolhido);
 }
 
+function avisarLargoDoRaciocinio(largo) {
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+  if (raciocinioView.webContents.isLoading()) return;
+  raciocinioView.webContents.send('raciocinio:largo', !!largo);
+}
+
 function avisarEscalaDoRaciocinio() {
   if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
   if (raciocinioView.webContents.isLoading()) return;
@@ -760,6 +802,17 @@ function definirRecolhaDoRaciocinio(recolhido) {
     definirCaixaDoRaciocinio(caixaDeToqueDoRaciocinio(), RACIOCINIO_CAIXA_MS);
     return;
   }
+  definirCaixaDoRaciocinio(caixaDeToqueDoRaciocinio(), RACIOCINIO_CAIXA_MS);
+}
+
+function definirLargoDoRaciocinio(largo) {
+  const alvo = !!largo;
+  const mudou = alvo !== raciocinioLargo;
+  raciocinioLargo = alvo;
+  avisarLargoDoRaciocinio(alvo);
+  if (!mudou) return;
+  if (!raciocinioView || raciocinioView.webContents.isDestroyed() || raciocinioSaindo) return;
+  if (!raciocinioView.getVisible()) return;
   definirCaixaDoRaciocinio(caixaDeToqueDoRaciocinio(), RACIOCINIO_CAIXA_MS);
 }
 
@@ -1089,6 +1142,11 @@ app.on('ready', () => {
     if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
     if (e.sender !== raciocinioView.webContents) return;
     definirRecolhaDoRaciocinio(!raciocinioRecolhido);
+  });
+  ipcMain.on('raciocinio:largo', (e) => {
+    if (!raciocinioView || raciocinioView.webContents.isDestroyed()) return;
+    if (e.sender !== raciocinioView.webContents) return;
+    definirLargoDoRaciocinio(!raciocinioLargo);
   });
   function montarMenu() {
     const menu = Menu.buildFromTemplate([

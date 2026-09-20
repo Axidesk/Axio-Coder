@@ -51,6 +51,7 @@ PASTAS_IGNORADAS = frozenset({
 })
 PROFUNDIDADE_BUSCA = 3
 ORCAMENTO_BUSCA = 8.0
+ORCAMENTO_MAPA = 10.0
 PAUSA_ESTAVEL = 1.5
 ESPERA_JANELA = 30.0
 ESPERA_DELEGADA = 6.0
@@ -111,6 +112,10 @@ def _caixa(elemento):
 def _chave(elemento):
     """Identidade estavel entre duas leituras da mesma janela: tipo, nome, automacao e caixa."""
     return (_tipo(elemento), _texto(elemento), _auto_id(elemento), _caixa(elemento))
+
+
+def _prazo_esgotado(prazo):
+    return prazo is not None and time.monotonic() >= prazo
 
 
 def _visivel(elemento):
@@ -492,14 +497,14 @@ def _focar(janela):
     return ""
 
 
-def _arvore(janela):
+def _arvore(janela, prazo=None):
     """Descendentes da janela, com a segunda leitura que o Chromium exige.
 
     Uma janela Electron devolve primeiro uma arvore truncada: o Chromium so a constroi
     quando percebe que ha um cliente de acessibilidade a ler.
     """
     elementos = janela.descendants()[:LIMITE_VARREDURA]
-    if len(elementos) < 20:
+    if len(elementos) < 20 and not _prazo_esgotado(prazo):
         time.sleep(0.6)
         outra = janela.descendants()[:LIMITE_VARREDURA]
         if len(outra) > len(elementos):
@@ -507,10 +512,12 @@ def _arvore(janela):
     return elementos
 
 
-def _alvos(elementos):
+def _alvos(elementos, prazo=None):
     """Elementos que respondem a um gesto: tipo interativo, a vista e com nome ou automacao."""
     escolhidos = []
     for elemento in elementos:
+        if _prazo_esgotado(prazo):
+            break
         tipo = _tipo(elemento)
         if tipo not in TIPOS_INTERATIVOS:
             continue
@@ -522,7 +529,7 @@ def _alvos(elementos):
     return escolhidos
 
 
-def _superficies(elementos, janela):
+def _superficies(elementos, janela, prazo=None):
     """Areas grandes que nao respondem a gesto: onde se desenha ou se le (canvas, folha, documento).
 
     O canvas fica fora dos alvos justamente por nao responder a gesto, e e dele que saem as
@@ -533,6 +540,8 @@ def _superficies(elementos, janela):
         return []
     vistas = {}
     for elemento in elementos:
+        if _prazo_esgotado(prazo):
+            break
         if not _visivel(elemento):
             continue
         try:
@@ -601,8 +610,8 @@ def _resolver(janela, alvo, elementos):
     return escolhido, "", f"por nome ({_tipo(escolhido)}){desempate}"
 
 
-def _tabela_alvos(elementos):
-    citados = _alvos(elementos)
+def _tabela_alvos(elementos, prazo=None):
+    citados = _alvos(elementos, prazo)
     linhas = []
     for indice, elemento in enumerate(citados[:LIMITE_MAPA]):
         padroes = ",".join(_padroes(elemento)) or "so gesto"
@@ -614,11 +623,11 @@ def _tabela_alvos(elementos):
     return citados, linhas
 
 
-def _tabela_superficies(elementos, janela):
+def _tabela_superficies(elementos, janela, prazo=None):
     """Linhas do mapa para as superficies de trabalho, marcadas [sup]: nao sao clicaveis por nome."""
-    caixas_dos_alvos = {_caixa(elemento) for elemento in _alvos(elementos)}
+    caixas_dos_alvos = {_caixa(elemento) for elemento in _alvos(elementos, prazo)}
     linhas = []
-    for parte, elemento in _superficies(elementos, janela):
+    for parte, elemento in _superficies(elementos, janela, prazo):
         if _caixa(elemento) in caixas_dos_alvos:
             continue
         rotulo = _texto(elemento)[:44] or "(sem nome)"
@@ -664,15 +673,24 @@ def _excesso(citados):
     return "" if len(citados) <= LIMITE_MAPA else f" (mostro os primeiros {LIMITE_MAPA})"
 
 
-def _acao_mapa(janela):
-    elementos = _arvore(janela)
-    citados, linhas = _tabela_alvos(elementos)
-    superficies = _tabela_superficies(elementos, janela)
+def _acao_mapa(janela, elementos=None, prazo=None):
+    if prazo is None:
+        prazo = time.monotonic() + ORCAMENTO_MAPA
+    if elementos is None:
+        elementos = _arvore(janela, prazo)
+    citados, linhas = _tabela_alvos(elementos, prazo)
+    superficies = _tabela_superficies(elementos, janela, prazo)
     parte = f", {len(superficies)} superficie(s) de trabalho" if superficies else ""
+    cortado = (
+        " A janela tem mais elementos do que o orcamento de leitura permite varrer: a lista"
+        f" abaixo parou aos {ORCAMENTO_MAPA:.0f}s de leitura e pode estar incompleta - va direto"
+        " com 'ponto' ou com uma sub-janela ('janelas' lista as que existem)."
+        if _prazo_esgotado(prazo) else ""
+    )
     cabecalho = (
         f'Janela "{_texto(janela)}" (hwnd {janela.handle}, {_tipo(janela)}): '
         f"{len(elementos)} elementos na arvore, {len(citados)} respondem a um gesto"
-        f"{_excesso(citados)}{parte}."
+        f"{_excesso(citados)}{parte}.{cortado}"
     )
     if not linhas:
         return cabecalho + _aviso_sem_alvos(janela)
@@ -796,9 +814,10 @@ def _acao_abrir(alvo):
     if erro:
         return f"ERRO: {os.path.basename(caminho)} foi lancado (pid {processo.pid}), mas {erro}."
     resumo = "nao consegui ler a arvore dela"
+    prazo = time.monotonic() + ORCAMENTO_MAPA
     try:
-        elementos = _arvore(janela)
-        resumo = f"{len(elementos)} elementos na arvore, {len(_alvos(elementos))} respondem a um gesto"
+        elementos = _arvore(janela, prazo)
+        resumo = f"{len(elementos)} elementos na arvore, {len(_alvos(elementos, prazo))} respondem a um gesto"
     except Exception:
         pass
     outras = [j for j in _janelas_do_pid(processo.pid) if j.handle != janela.handle]
@@ -1044,9 +1063,12 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
         return _acao_clique_ponto(janela_escolhida, ponto)
     if acao == "fechar":
         return _acao_fechar(janela_escolhida)
+    if acao == "print":
+        return _acao_print(janela_escolhida, regiao)
 
+    prazo = time.monotonic() + ORCAMENTO_MAPA
     try:
-        elementos = _arvore(janela_escolhida)
+        elementos = _arvore(janela_escolhida, prazo)
     except Exception as exc:
         return (
             f"ERRO: nao consegui ler a arvore da janela \"{_texto(janela_escolhida)}\""
@@ -1054,11 +1076,9 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
         )
 
     if acao == "mapa":
-        return _acao_mapa(janela_escolhida)
+        return _acao_mapa(janela_escolhida, elementos, prazo)
     if acao == "elemento":
         return _acao_elemento(janela_escolhida, alvo, elementos)
-    if acao == "print":
-        return _acao_print(janela_escolhida, regiao)
 
     elemento, erro, nota = _resolver(janela_escolhida, alvo, elementos)
     if erro:
