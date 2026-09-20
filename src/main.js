@@ -510,16 +510,13 @@ function aproximar(valor, alvo) {
 
 function deslizarRaciocinio() {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-  if (raciocinioAnimacao || raciocinioSaindo) return;
+  if (raciocinioSaindo || raciocinioRecolhaEm) return;
   const destino = limitesDoRaciocinio();
   const atual = janelaRaciocinio.getBounds();
-  if (mesmoRect(atual, destino)) return;
-  janelaRaciocinio.setBounds({
-    x: aproximar(atual.x, destino.x),
-    y: aproximar(atual.y, destino.y),
-    width: aproximar(atual.width, destino.width),
-    height: aproximar(atual.height, destino.height)
-  });
+  const x = aproximar(atual.x, destino.x);
+  const y = aproximar(atual.y, destino.y);
+  if (x === atual.x && y === atual.y) return;
+  janelaRaciocinio.setBounds({ x, y, width: atual.width, height: atual.height });
 }
 
 function pararSeguirRaciocinio() {
@@ -652,7 +649,10 @@ function mostrarJanelaRaciocinio() {
   raciocinioSaindo = false;
   esperarOciosidadeDoRaciocinio();
   const janela = criarJanelaRaciocinio();
-  if (!raciocinioPronto) return;
+  if (!raciocinioPronto) {
+    if (!janela.webContents.isLoading()) janela.webContents.reload();
+    return;
+  }
   const apareceu = !janela.isVisible() || voltouDaSaida;
   aplicarLimitesDoRaciocinio();
   if (!apareceu) return;
