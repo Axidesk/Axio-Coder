@@ -42,10 +42,9 @@ let janelaRaciocinio = null;
 let raciocinioRecolhido = false;
 let raciocinioBuffer = [];
 let raciocinioOcioso = null;
-let raciocinioDepoisDoTurno = null;
 let raciocinioDeSeguir = null;
 let raciocinioParadoEm = 0;
-let raciocinioTrocaEm = null;
+let raciocinioAnimando = null;
 let raciocinioSaidaEm = null;
 let raciocinioPronto = false;
 let raciocinioSaindo = false;
@@ -62,7 +61,8 @@ const RACIOCINIO_ALTURA = 200;
 const RACIOCINIO_LARGURA_RECOLHIDA = 200;
 const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
-const RACIOCINIO_TROCA_MS = 170;
+const RACIOCINIO_ANIMACAO_MS = 250;
+const RACIOCINIO_QUADRO_MS = 16;
 const RACIOCINIO_SEGUIR_MS = 16;
 const RACIOCINIO_PARADO_MS = 140;
 const RACIOCINIO_BURST_MS = 400;
@@ -70,7 +70,6 @@ const RACIOCINIO_VIGIA_MS = 200;
 const RACIOCINIO_SAIDA_MS = 200;
 const RACIOCINIO_MEMORIA = 80;
 const RACIOCINIO_OCIOSO_MS = 300000;
-const RACIOCINIO_APOS_TURNO_MS = 30000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -137,7 +136,7 @@ function createWindow() {
   mainWindow.on('resized', () => acompanharLayoutDoRaciocinio(true));
   mainWindow.on('maximize', () => acompanharLayoutDoRaciocinio(true));
   mainWindow.on('unmaximize', () => acompanharLayoutDoRaciocinio(true));
-  mainWindow.on('minimize', esconderJanelaRaciocinio);
+  mainWindow.on('minimize', () => esconderJanelaRaciocinio());
 
   mainWindow.on('closed', function () {
     descartarPreviewView();
@@ -437,8 +436,8 @@ function definirVisibilidadeDoPreview(visivel) {
   if (previewVisivel) {
     criarJanelaRaciocinio();
     if (raciocinioQuerido) mostrarJanelaRaciocinio();
-  } else if (!raciocinioEmTurno && !raciocinioDepoisDoTurno) {
-    esconderJanelaRaciocinio();
+  } else {
+    esconderJanelaRaciocinio(raciocinioEmTurno);
   }
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
@@ -495,12 +494,15 @@ function limitesDeArranque() {
 }
 
 function limitesDoRaciocinio() {
-  const largura = raciocinioRecolhido ? RACIOCINIO_LARGURA_RECOLHIDA : RACIOCINIO_LARGURA;
-  const altura = raciocinioRecolhido ? RACIOCINIO_ALTURA_RECOLHIDA : RACIOCINIO_ALTURA;
+  const base = raciocinioRecolhido
+    ? { largura: RACIOCINIO_LARGURA_RECOLHIDA, altura: RACIOCINIO_ALTURA_RECOLHIDA }
+    : { largura: RACIOCINIO_LARGURA, altura: RACIOCINIO_ALTURA };
   const caixa = (mainWindow && !mainWindow.isDestroyed())
     ? mainWindow.getContentBounds()
-    : { x: 0, y: 0, width: largura, height: altura };
+    : { x: 0, y: 0, width: base.largura, height: base.altura };
   const area = previewLimites || { x: 0, y: 0, width: caixa.width, height: caixa.height };
+  const largura = area.width > 0 ? Math.round(Math.min(base.largura, area.width)) : base.largura;
+  const altura = area.height > 0 ? Math.round(Math.min(base.altura, area.height)) : base.altura;
   return {
     x: Math.round(caixa.x + area.x + Math.max(0, (area.width - largura) / 2)),
     y: Math.round(caixa.y + area.y + Math.max(0, area.height - altura - RACIOCINIO_MARGEM_FUNDO)),
@@ -516,7 +518,7 @@ function mesmoRect(a, b) {
 function aplicarLimitesDoRaciocinio() {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (raciocinioTrocaEm || raciocinioSaindo) return;
+  if (raciocinioAnimando || raciocinioSaindo) return;
   const destino = limitesDoRaciocinio();
   if (mesmoRect(janelaRaciocinio.getBounds(), destino)) return;
   janelaRaciocinio.setBounds(destino);
@@ -527,10 +529,7 @@ function pararAcompanhamentoDoRaciocinio() {
     clearTimeout(raciocinioDeSeguir);
     raciocinioDeSeguir = null;
   }
-  if (raciocinioTrocaEm) {
-    clearTimeout(raciocinioTrocaEm);
-    raciocinioTrocaEm = null;
-  }
+  cancelarAnimacaoDoRaciocinio();
 }
 
 function acompanharLayoutDoRaciocinio(impulso) {
@@ -553,18 +552,65 @@ function passoDeAcompanhamento() {
   raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, aAndar ? RACIOCINIO_SEGUIR_MS : RACIOCINIO_VIGIA_MS);
 }
 
-function trocarCaixaDoRaciocinio(destino) {
+function curvaDaFluidez(t) {
+  const x1 = 0.4;
+  const y1 = 0;
+  const x2 = 0.2;
+  const y2 = 1;
+  const ponto = (a, b, u) => ((1 - 3 * b + 3 * a) * u + (3 * b - 6 * a)) * u * u + 3 * a * u;
+  let baixo = 0;
+  let alto = 1;
+  let u = t;
+  for (let i = 0; i < 24; i += 1) {
+    const x = ponto(x1, x2, u);
+    if (Math.abs(x - t) < 0.0005) break;
+    if (x < t) baixo = u;
+    else alto = u;
+    u = (baixo + alto) / 2;
+  }
+  return ponto(y1, y2, u);
+}
+
+function misturarRect(de, para, t) {
+  return {
+    x: Math.round(de.x + (para.x - de.x) * t),
+    y: Math.round(de.y + (para.y - de.y) * t),
+    width: Math.round(de.width + (para.width - de.width) * t),
+    height: Math.round(de.height + (para.height - de.height) * t)
+  };
+}
+
+function cancelarAnimacaoDoRaciocinio() {
+  if (!raciocinioAnimando) return;
+  clearTimeout(raciocinioAnimando);
+  raciocinioAnimando = null;
   const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed()) return;
-  if (!janela.isVisible() || raciocinioSaindo || raciocinioTrocaEm) return;
-  if (mesmoRect(janela.getBounds(), destino)) return;
+  if (janela && !janela.isDestroyed() && !janela.webContents.isLoading()) {
+    janela.webContents.send('raciocinio:trocar', false);
+  }
+}
+
+function animarCaixaDoRaciocinio(destino) {
+  const janela = janelaRaciocinio;
+  if (!janela || janela.isDestroyed() || !janela.isVisible() || raciocinioSaindo) return;
+  const inicio = janela.getBounds();
+  if (mesmoRect(inicio, destino)) return;
+  cancelarAnimacaoDoRaciocinio();
   if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:trocar', true);
-  janela.setBounds(destino);
-  raciocinioTrocaEm = setTimeout(() => {
-    raciocinioTrocaEm = null;
-    if (janela.isDestroyed()) return;
-    if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:trocar', false);
-  }, RACIOCINIO_TROCA_MS);
+  const comecou = Date.now();
+  const passo = () => {
+    raciocinioAnimando = null;
+    const alvo = janelaRaciocinio;
+    if (!alvo || alvo.isDestroyed()) return;
+    const t = Math.min(1, (Date.now() - comecou) / RACIOCINIO_ANIMACAO_MS);
+    alvo.setBounds(misturarRect(inicio, destino, curvaDaFluidez(t)));
+    if (t < 1) {
+      raciocinioAnimando = setTimeout(passo, RACIOCINIO_QUADRO_MS);
+      return;
+    }
+    if (!alvo.webContents.isLoading()) alvo.webContents.send('raciocinio:trocar', false);
+  };
+  passo();
 }
 
 function descartarJanelaRaciocinio() {
@@ -640,28 +686,13 @@ function esperarOciosidadeDoRaciocinio() {
   raciocinioOcioso = setTimeout(esconderJanelaRaciocinio, RACIOCINIO_OCIOSO_MS);
 }
 
-function agendarSaidaDepoisDoTurno() {
-  cancelarSaidaDepoisDoTurno();
-  raciocinioDepoisDoTurno = setTimeout(esconderJanelaRaciocinio, RACIOCINIO_APOS_TURNO_MS);
-}
-
-function cancelarSaidaDepoisDoTurno() {
-  if (!raciocinioDepoisDoTurno) return;
-  clearTimeout(raciocinioDepoisDoTurno);
-  raciocinioDepoisDoTurno = null;
-}
-
-function esconderJanelaRaciocinio() {
+function esconderJanelaRaciocinio(manterPedido) {
   if (raciocinioOcioso) {
     clearTimeout(raciocinioOcioso);
     raciocinioOcioso = null;
   }
-  if (raciocinioDepoisDoTurno) {
-    clearTimeout(raciocinioDepoisDoTurno);
-    raciocinioDepoisDoTurno = null;
-  }
   pararAcompanhamentoDoRaciocinio();
-  raciocinioQuerido = false;
+  if (!manterPedido) raciocinioQuerido = false;
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed() || !janelaRaciocinio.isVisible()) return;
   if (raciocinioSaindo) return;
   raciocinioSaindo = true;
@@ -686,7 +717,6 @@ function mostrarJanelaRaciocinio() {
     raciocinioSaidaEm = null;
   }
   raciocinioSaindo = false;
-  cancelarSaidaDepoisDoTurno();
   esperarOciosidadeDoRaciocinio();
   const janela = criarJanelaRaciocinio();
   if (!raciocinioPronto) {
@@ -711,13 +741,11 @@ function alimentarRaciocinio(evento) {
   if (evento.tipo === 'inicio' || evento.tipo === 'fim') {
     raciocinioBuffer = [];
     raciocinioEmTurno = evento.tipo === 'inicio';
-    cancelarSaidaDepoisDoTurno();
     if (evento.tipo === 'inicio') definirRecolhaDoRaciocinio(false);
-    if (evento.tipo === 'fim') agendarSaidaDepoisDoTurno();
+    else esconderJanelaRaciocinio();
   } else {
     raciocinioBuffer.push(evento);
     if (raciocinioBuffer.length > RACIOCINIO_MEMORIA) raciocinioBuffer.shift();
-    cancelarSaidaDepoisDoTurno();
     esperarOciosidadeDoRaciocinio();
   }
   if (janelaRaciocinio && !janelaRaciocinio.isDestroyed() && !janelaRaciocinio.webContents.isLoading()) {
@@ -749,7 +777,7 @@ function definirRecolhaDoRaciocinio(recolhido) {
   }
   if (!mudou) return;
   avisarRecolhaDoRaciocinio(alvo);
-  trocarCaixaDoRaciocinio(limitesDoRaciocinio());
+  animarCaixaDoRaciocinio(limitesDoRaciocinio());
 }
 
 function urlDoAlvo(texto) {
