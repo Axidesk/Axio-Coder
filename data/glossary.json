@@ -1083,10 +1083,10 @@
       "descricao": "Rota que fixa a pasta de projeto na sessao e a grava para o arranque seguinte: chama `atualizar_settings({\"projeto\": {\"ultima_pasta\": pasta}})` (settings.json, sem reset dos clientes de IA). No frontend, `restaurarPastaSelecionada` (js/chat/files.js) le \"ultima_pasta\" de GET /api/env_info e reabre sozinha no arranque; o dialogo nativo recebe a pasta em uso como `defaultPath` (ipcMain 'select-folder', src/main.js). A rota NAO escreve na barra de estado (nao emite \"Diretorio carregado\"): quem escreve e o frontend, em `abrirPasta(folderPath, recarregando)`, que mostra \"Carregando diretorio...\" e depois \"Diretorio carregado.\" ou \"Diretorio recarregado.\" conforme venha da escolha do utilizador ou do restauro do arranque. `restaurarPastaSelecionada` deduplica a dupla chamada do arranque (renderer ao ligar + onopen do SSE) com a promise em `restauracaoEmCurso`, para nao sairem dois POST /api/set_folder nem dois avisos seguidos.",
       "localizacao": {
         "arquivo": "src/backend/routes/chat.py",
-        "linha": 36,
+        "linha": 37,
         "conferido": [
-          1789764201.711,
-          7048
+          1789932541.37,
+          7165
         ]
       }
     },
@@ -1166,10 +1166,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1369,
+        "linha": 1374,
         "conferido": [
-          1789931800.812,
-          63672
+          1789932714.768,
+          63851
         ]
       }
     },
@@ -1609,8 +1609,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 374,
         "conferido": [
-          1789850160.519,
-          39416
+          1789932563.678,
+          39489
         ]
       }
     },
@@ -1631,8 +1631,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 160,
         "conferido": [
-          1789850160.519,
-          39416
+          1789932563.678,
+          39489
         ]
       }
     },
@@ -1741,8 +1741,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 178,
         "conferido": [
-          1789850160.519,
-          39416
+          1789932563.678,
+          39489
         ]
       }
     },
@@ -2237,8 +2237,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 973,
         "conferido": [
-          1789931800.812,
-          63672
+          1789932714.768,
+          63851
         ]
       }
     },
@@ -4263,6 +4263,24 @@
           1789928501.815,
           1080
         ]
+      }
+    },
+    {
+      "termo": "esmaecer durante a animação",
+      "aliases": [
+        "texto esmaece",
+        "texto some enquanto anima",
+        "efeito de esmaecer",
+        "texto desaparece e volta",
+        "fade durante o resize",
+        "esmaecer o conteudo",
+        "texto limpo durante a expansao"
+      ],
+      "identificador": "esmaecerEmGesto",
+      "descricao": "Mecanismo generico que tira de cena conteudo PESADO (muito texto) enquanto um gesto de layout esta a correr, para o browser nao repintar glifos a cada frame - a estrategia do painel do raciocinio, aplicada dentro do frontend. esmaecerEmGesto({conteudo, observar, janela, folga}) marca os elementos de 'conteudo' com a classe .a-esmaecer (css/geral.css: opacity 0 + visibility hidden com fade --dur-fade 0.08s do style.css) enquanto: (a) algum dos elementos de 'observar' tiver uma transicao CSS de LAYOUT a correr (escutado por transitionrun/transitionend/transitioncancel no proprio elemento, com um conjunto de propriedades de layout - width, height, flex, padding, margin, left/right/top/bottom, gap, font-size... - e contagem por propriedade, porque a mesma propriedade pode animar em DOIS elementos ao mesmo tempo, como #sliding-panel-container e #panel-col-1); (b) a janela estiver a ser redimensionada (resize, com folga de 140ms depois do ultimo evento). Rede de seguranca: um teto de 1500ms limpa o estado se um transitionend nunca chegar (transicao interrompida). Devolve uma funcao que remove ouvintes e classe. PRIMEIRO USO: a busca do historico (src/frontend/js/chat/historico/busca.js), que esmaece #history-search-cols (dom.js:historySearchCols) observando #sliding-panel-container e #panel-col-1 - MEDIDO ao vivo no preview, com 80 cards de texto injetados: ao clicar na lupa o texto fica op=0 durante TODA a expansao (coluna 366->648px) e volta 0.10->1 depois de a coluna parar; ao fechar e num resize, o mesmo (op=0.93 -> 0 -> volta a 1). Esconder NAO colapsa o layout: a caixa do elemento mantem a geometria (medido na pintura). ARMADILHAS DE TESTE: (1) SVGElement NAO tem .click() - para clicar programaticamente numa lupa SVG (history-search-lupa) use lupa.dispatchEvent(new MouseEvent('click', {bubbles:true})), senao o clique nao acontece e o teste acusa um defeito que nao existe; (2) o criarDomFalso NAO copiava propertyName para o evento de transicao (corrigido em 2026-10-01 no harness.py: __DomEvento agora le propertyName, elapsedTime, pseudoElement e animationName) - sem isso qualquer teste de transitionrun lia undefined.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/esmaecer.js",
+        "linha": 15
       }
     }
   ]

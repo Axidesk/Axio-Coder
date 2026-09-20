@@ -86,6 +86,7 @@
 }
 #history-search-cols {
     display: flex;
+    transition: opacity var(--dur-3) var(--ease-fluid);
 }
 .busca-coluna {
     border-right: 1px solid var(--border-suave);

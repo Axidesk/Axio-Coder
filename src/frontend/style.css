@@ -62,6 +62,7 @@
     --sombra-input: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
     --sombra-card: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
+    --dur-fade: 0.08s;
     --dur-1: 0.15s;
     --dur-3: 0.2s;
     --dur-5: 0.25s;

@@ -760,6 +760,10 @@ class __DomEvento {
         this.target = null;
         this.currentTarget = null;
         this.detail = o.detail;
+        this.propertyName = o.propertyName;
+        this.elapsedTime = o.elapsedTime || 0;
+        this.pseudoElement = o.pseudoElement || "";
+        this.animationName = o.animationName;
         this.key = o.key;
         this.code = o.code;
         this.ctrlKey = !!o.ctrlKey;

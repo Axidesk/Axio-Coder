@@ -4,8 +4,9 @@ import { vistaDe } from '../colunas.js';
 import { escapeHtml } from '../messages.js';
 import { openFilesPanel } from './acoes.js';
 import { assignDisplayNamesByDay, carregarRodadaCompleta, ensureSessionDetailsLoaded, rebuildGroupFromSaved, selectHistoryTaskInPile } from './cards.js';
+import { esmaecerEmGesto } from '../../js/esmaecer.js';
 
-const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
+const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchCols, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
 const MSG_VAZIO_PERGUNTAS = 'Nenhuma pergunta encontrada com esse termo.';
 const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
@@ -172,6 +173,11 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         vista.lista.innerHTML = '<div class="panel-empty">Selecione uma tarefa no histórico para ver os arquivos editados.</div>';
     }
 
+
+esmaecerEmGesto({
+    conteudo: [historySearchCols],
+    observar: [slidingPanelContainer, panelCol1]
+});
 
 export {
     collapseHistorySearchInline,
