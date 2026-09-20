@@ -40,3 +40,8 @@
 .busca-campo-input::placeholder {
     color: var(--text-mutado);
 }
+
+.busca-termo {
+    color: var(--oliva);
+    font-weight: 600;
+}

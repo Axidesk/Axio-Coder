@@ -1,10 +1,13 @@
 import * as dom from './dom.js';
+import { limparMarcas, marcarTermo } from './marcar_termo.js';
 
 const CLASSE_FORA = 'conversa-busca-fora';
+const CLASSE_CASA = 'conversa-busca-casa';
 const ESPERA_MS = 180;
 
 let aberta = false;
 let termo = '';
+const marcadas = new Set();
 
 function _mensagens() {
     return [dom.chatInnerLeft, dom.chatInnerRight]
@@ -26,12 +29,18 @@ function _contagem(achadas, total) {
     alvo.textContent = achadas ? `${achadas} de ${total}` : 'nenhuma';
 }
 
+function _limparMarcas() {
+    marcadas.forEach(no => limparMarcas(no));
+    marcadas.clear();
+}
+
 function aplicarFiltro(novoTermo) {
     termo = novoTermo || '';
     const alvo = termo.trim().toLowerCase();
     const mensagens = _mensagens();
+    _limparMarcas();
     if (!alvo) {
-        mensagens.forEach(no => no.classList.remove(CLASSE_FORA));
+        mensagens.forEach(no => no.classList.remove(CLASSE_FORA, CLASSE_CASA));
         _contagem(0, mensagens.length);
         return;
     }
@@ -39,7 +48,11 @@ function aplicarFiltro(novoTermo) {
     mensagens.forEach(no => {
         const casa = (no.textContent || '').toLowerCase().includes(alvo);
         no.classList.toggle(CLASSE_FORA, !casa);
-        if (casa) achadas += 1;
+        no.classList.toggle(CLASSE_CASA, casa);
+        if (!casa) return;
+        achadas += 1;
+        marcarTermo(no, alvo);
+        marcadas.add(no);
     });
     _contagem(achadas, mensagens.length);
 }

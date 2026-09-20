@@ -287,6 +287,31 @@ class __DomNo {
         return velho;
     }
     remove() { if (this.parentNode) this.parentNode.removeChild(this); }
+    replaceWith(...nos) {
+        const pai = this.parentNode;
+        if (!pai) return;
+        for (const no of nos) {
+            const novo = typeof no === "string" ? new __DomTexto(no) : no;
+            if (novo !== this) pai.insertBefore(novo, this);
+        }
+        pai.removeChild(this);
+    }
+    before(...nos) {
+        const pai = this.parentNode;
+        if (!pai) return;
+        for (const no of nos) {
+            const novo = typeof no === "string" ? new __DomTexto(no) : no;
+            if (novo !== this) pai.insertBefore(novo, this);
+        }
+    }
+    after(...nos) {
+        const pai = this.parentNode;
+        if (!pai) return;
+        for (const no of [...nos].reverse()) {
+            const novo = typeof no === "string" ? new __DomTexto(no) : no;
+            if (novo !== this) pai.insertBefore(novo, this.nextSibling);
+        }
+    }
     contains(no) {
         if (no === this) return true;
         for (const filho of this.childNodes) if (filho.contains(no)) return true;
@@ -1392,8 +1417,10 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
     "appendChild soltam o no do pai, className e classList sao a mesma fonte, toggle respeita a "
-    "forca, getBoundingClientRect e calculado no pedido a partir de offset*/dom.medir, e "
-    "dispatchEvent propaga em captura->alvo->bolha). Para ler o que foi pintado use dom.serializar"
+    "forca, getBoundingClientRect e calculado no pedido a partir de offset*/dom.medir, "
+    "replaceWith/before/after existem nos dois tipos de no, e dispatchEvent propaga em "
+    "captura->alvo->bolha; o que ele NAO tem e TreeWalker/NodeFilter, por isso para percorrer os "
+    "nos de texto de um elemento use childNodes a mao). Para ler o que foi pintado use dom.serializar"
     "(el) ou el.outerHTML - dom.html e o INVERSO (monta nos a partir de markup, nao serializa) e "
     "DEVOLVE UM ARRAY DE NOS SOLTOS, que so aparecem ao querySelector depois de anexados ao body. "
     "A propria chamada de criarDomFalso() INSTALA os globais document/window (usar 'document' sem a "

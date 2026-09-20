@@ -402,10 +402,10 @@
       "descricao": "Cards de texto informativo (icone \"i\") das chaves de API que expandem suavemente no modal de configuracoes. O toggle e setupInfoToggles em src/frontend/js/chat/renderer.js:652. Ficou em css/geral.css depois da divisao do antigo style.css.",
       "localizacao": {
         "arquivo": "src/frontend/css/geral.css",
-        "linha": 312,
+        "linha": 317,
         "conferido": [
-          1789848483.21,
-          13623
+          1789933057.07,
+          13781
         ]
       }
     },
@@ -1166,10 +1166,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1374,
+        "linha": 1378,
         "conferido": [
-          1789932714.768,
-          63851
+          1789933093.528,
+          64044
         ]
       }
     },
@@ -1675,10 +1675,10 @@
       "descricao": "Diff de duas colunas do retrato (Codigo Substituido): cada lado tem a sua rolagem horizontal e o scrollLeft das duas anda junto por files.js:sincronizarColunasDiff (listener em CAPTURE no contentor, porque o evento scroll nao borbulha; instalado nos contentores da doc e do historico). Sem a rolagem, a linha longa (ja sem quebra, como no Monaco) pintava 328px por cima da coluna vizinha. Medido: coluna de 279 com scrollWidth 608 e barra de 8px.",
       "localizacao": {
         "arquivo": "src/frontend/style.css",
-        "linha": 219,
+        "linha": 220,
         "conferido": [
-          1789774233.012,
-          9188
+          1789933057.065,
+          9212
         ]
       }
     },
@@ -1719,10 +1719,10 @@
       "descricao": "Scrollbar das DUAS vistas de codigo do code view E das COLUNAS do diff (.diff-col, as duas metades do Codigo Substituido - cada uma tem a sua rolagem horizontal e por isso tinha a barra do desenho global). Em css/dock.css, com um seletor :is(#code-view-container, #code-view-container-history) que cobre o contentor e as colunas de uma so vez (as regras das colunas sao as mesmas, com ' .diff-col' no meio). Desenhada igual a que o Monaco pinta no #editor-host: vertical 14px e horizontal 12px, slider a ocupar a barra TODA (sem inset) e QUADRADO (border-radius 0), track transparente e slider que so aparece com o rato por cima. CORES das predefinicoes do tema dark do proprio Monaco (miscColors.js): slider #797979 a 40% (#79797966), hover #646464 a 70% (#646464b3); o track do Monaco e null, logo transparente - era aqui que estava o fundo preto. E O RECUO: o padding esquerdo do contentor e uma BORDER (padding-left 0 + border-left 16 transparente) para a barra horizontal comecar a 16 e nao a 0 - a barra e pintada dentro da padding-box, logo a border empurra-a e o padding nao. MEDIDO no contentor real com o CSS do projeto: barra horizontal x 16..385, vertical 14px em x 386..399, texto a x=16 (400 exatos). LIMITE: a barra horizontal de cada .diff-col vive na base da COLUNA (fim do conteudo), nao no fundo da janela. As restantes barras da interface continuam com o desenho global (style.css: 8px, thumb arredondado a 4px).",
       "localizacao": {
         "arquivo": "src/frontend/css/dock.css",
-        "linha": 406,
+        "linha": 407,
         "conferido": [
-          1789931650.555,
-          12748
+          1789933059.252,
+          12805
         ]
       }
     },
@@ -2235,10 +2235,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 973,
+        "linha": 977,
         "conferido": [
-          1789932714.768,
-          63851
+          1789933093.528,
+          64044
         ]
       }
     },
@@ -3748,10 +3748,10 @@
       "descricao": "O sinal de abrir e fechar um cartao do cofre: um + desenhado com duas barras (.cofre-sinal::before horizontal e ::after vertical); aberto, a vertical desaparece com scaleY(0). Substituiu a setinha (transform rotate).",
       "localizacao": {
         "arquivo": "src/frontend/css/geral.css",
-        "linha": 241,
+        "linha": 246,
         "conferido": [
-          1789848483.21,
-          13623
+          1789933057.07,
+          13781
         ]
       }
     },
@@ -4032,14 +4032,10 @@
         "campo de busca do chat"
       ],
       "identificador": "alternarBuscaChat",
-      "descricao": "A lupa vive na BARRA DE TITULO (#btn-chat-search, dentro de #chat-search-wrap, ao lado dos botoes da janela) e o campo abre ALI MESMO, na propria barra - nao na conversa. O efeito e o da lupa do explorer: o botao encolhe e some (.hide, scale 0.4) enquanto #chat-search-box cresce em largura da direita para a esquerda (width 0 -> 340px, ancorada a right:0, com a transicao width var(--dur-7) + opacity var(--dur-3)). FILTRA as duas colunas - as mensagens de #chat-inner-left (utilizador) e de #chat-inner-right (agente) -, escondendo as que nao contem o termo com .conversa-busca-fora (display:none) e mostrando a contagem no proprio campo. E `alternarBuscaChat` que abre e fecha (botao ou clique na lupa do campo); `reavaliarBuscaChat` volta a aplicar o filtro quando chega mensagem nova (chamado por messages.js:822); `fecharBuscaChat` limpa o campo e repoe tudo. O CSS vive em src/frontend/css/titulo.css (#chat-search-wrap, #chat-search-box, .chat-search-field). ARMADILHA: a barra tem -webkit-app-region: drag, logo o wrap e a caixa precisam de no-drag, senao o campo nao recebe o clique nem o foco. O #chat-search-panel antigo (painel dentro do #chat-mode, com grid-template-rows 0fr/1fr) foi APAGADO.",
+      "descricao": "A lupa vive na BARRA DE TITULO (#btn-chat-search, dentro de #chat-search-wrap) e o campo abre ALI MESMO, na propria barra - nao na conversa. O efeito e o da lupa do explorer: o botao encolhe e some (.hide, scale 0.4) enquanto #chat-search-box cresce em largura da direita para a esquerda (width 0 -> 340px, ancorada a right:0). FILTRA as duas colunas - as mensagens de #chat-inner-left (utilizador) e de #chat-inner-right (agente): as que nao contem o termo levam .conversa-busca-fora (display none) e a contagem aparece no proprio campo. ACRESCENTADO A 2026-10-01: as mensagens que casam levam tambem .conversa-busca-casa (color --text-usuario, cinza no texto corrido) e cada ocorrencia do termo fica VERDE, envolvida por um span .busca-termo - a mesma classe que a busca do historico usa, definida em src/frontend/css/busca.css. Quem faz o destaque e marcarTermo/limparMarcas (src/frontend/js/chat/marcar_termo.js), a primitiva que percorre os nos de texto da mensagem; o cinza so apanha o texto que herda cor, logo o codigo, os links e o nome do agente mantem a cor deles. O botao ou a lupa de dentro do campo abrem e fecham (alternarBuscaChat); reavaliarBuscaChat volta a aplicar o filtro quando chega mensagem nova (chamado por messages.js); fecharBuscaChat limpa o campo, as marcas e repoe tudo. ARMADILHA: a barra tem -webkit-app-region: drag, logo o wrap e a caixa precisam de no-drag, senao o campo nao recebe o clique nem o foco.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/busca_chat.js",
-        "linha": 70,
-        "conferido": [
-          1789929484.256,
-          2848
-        ]
+        "linha": 83
       }
     },
     {
@@ -4277,9 +4273,9 @@
         "texto limpo durante a expansao"
       ],
       "identificador": "esmaecerEmGesto",
-      "descricao": "Mecanismo generico que tira de cena conteudo PESADO (muito texto) enquanto um gesto de layout esta a correr, para o browser nao repintar glifos a cada frame - a estrategia do painel do raciocinio, aplicada dentro do frontend. esmaecerEmGesto({conteudo, observar, janela, folga}) marca os elementos de 'conteudo' com a classe .a-esmaecer (css/geral.css: opacity 0 + visibility hidden com fade --dur-fade 0.08s do style.css) enquanto: (a) algum dos elementos de 'observar' tiver uma transicao CSS de LAYOUT a correr (escutado por transitionrun/transitionend/transitioncancel no proprio elemento, com um conjunto de propriedades de layout - width, height, flex, padding, margin, left/right/top/bottom, gap, font-size... - e contagem por propriedade, porque a mesma propriedade pode animar em DOIS elementos ao mesmo tempo, como #sliding-panel-container e #panel-col-1); (b) a janela estiver a ser redimensionada (resize, com folga de 140ms depois do ultimo evento). Rede de seguranca: um teto de 1500ms limpa o estado se um transitionend nunca chegar (transicao interrompida). Devolve uma funcao que remove ouvintes e classe. PRIMEIRO USO: a busca do historico (src/frontend/js/chat/historico/busca.js), que esmaece #history-search-cols (dom.js:historySearchCols) observando #sliding-panel-container e #panel-col-1 - MEDIDO ao vivo no preview, com 80 cards de texto injetados: ao clicar na lupa o texto fica op=0 durante TODA a expansao (coluna 366->648px) e volta 0.10->1 depois de a coluna parar; ao fechar e num resize, o mesmo (op=0.93 -> 0 -> volta a 1). Esconder NAO colapsa o layout: a caixa do elemento mantem a geometria (medido na pintura). ARMADILHAS DE TESTE: (1) SVGElement NAO tem .click() - para clicar programaticamente numa lupa SVG (history-search-lupa) use lupa.dispatchEvent(new MouseEvent('click', {bubbles:true})), senao o clique nao acontece e o teste acusa um defeito que nao existe; (2) o criarDomFalso NAO copiava propertyName para o evento de transicao (corrigido em 2026-10-01 no harness.py: __DomEvento agora le propertyName, elapsedTime, pseudoElement e animationName) - sem isso qualquer teste de transitionrun lia undefined.",
+      "descricao": "Primitiva generica do frontend que tira de cena conteudo PESADO (muito texto) enquanto um gesto de LAYOUT corre, para o browser nao repintar glifos a cada frame - a estrategia do painel do raciocinio aplicada dentro da janela. esmaecerEmGesto({conteudo, observar, janela, folga}) marca os elementos de 'conteudo' com a classe .a-esmaecer (css/geral.css: opacity 0 + visibility hidden, fade --dur-fade) enquanto algum dos elementos de 'observar' tiver uma transicao CSS de LAYOUT a correr (transitionrun/transitionend/transitioncancel, contadas por propriedade, com a lista de propriedades de layout) ou a janela estiver a ser redimensionada (folga de 140ms apos o ultimo evento). Teto de 1500ms como rede de seguranca se um transitionend nunca chegar. Devolve a funcao de limpeza. USO: a busca do historico (src/frontend/js/chat/historico/busca.js) esmaece #history-search-cols observando #sliding-panel-container e #panel-col-1. MEDIDO ao vivo no preview com 80 cards: o texto fica op=0 durante TODA a expansao e volta depois de a coluna parar; esconder NAO colapsa o layout (a caixa mantem a geometria). O FICHEIRO VIVE EM js/chat/ DE PROPOSITO: um modulo em /chat/historico/ nao consegue referir a raiz /js/ com um caminho relativo que funcione ao mesmo tempo na URL e no disco - ver a nota de memoria sobre os caminhos relativos do frontend.",
       "localizacao": {
-        "arquivo": "src/frontend/js/esmaecer.js",
+        "arquivo": "src/frontend/js/chat/esmaecer.js",
         "linha": 15
       }
     }

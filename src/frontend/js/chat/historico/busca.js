@@ -1,10 +1,10 @@
 import { state } from '../state.js';
 import * as dom from '../dom.js';
 import { vistaDe } from '../colunas.js';
-import { escapeHtml } from '../messages.js';
 import { openFilesPanel } from './acoes.js';
 import { assignDisplayNamesByDay, carregarRodadaCompleta, ensureSessionDetailsLoaded, rebuildGroupFromSaved, selectHistoryTaskInPile } from './cards.js';
-import { esmaecerEmGesto } from '../../js/esmaecer.js';
+import { esmaecerEmGesto } from '../esmaecer.js';
+import { marcarTermo } from '../marcar_termo.js';
 
 const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchCols, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
@@ -145,7 +145,8 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         meta.textContent = [r.dia, r.hora].filter(Boolean).join(' | ');
         const trecho = document.createElement('div');
         trecho.className = 'text-[12px] text-[var(--text-usuario)] leading-relaxed';
-        trecho.innerHTML = buildSearchSnippet(r.texto, termoLower);
+        trecho.textContent = buildSearchSnippet(r.texto, termoLower);
+        marcarTermo(trecho, termoLower);
         card.appendChild(nome);
         if (meta.textContent) card.appendChild(meta);
         card.appendChild(trecho);
@@ -159,10 +160,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         let fim = source.length;
         if (idx > radius) inicio = idx - radius;
         if (idx + termoLower.length + radius < source.length) fim = idx + termoLower.length + radius;
-        let snippet = (inicio > 0 ? '…' : '') + source.slice(inicio, fim) + (fim < source.length ? '…' : '');
-        const escaped = escapeHtml(snippet);
-        const termoEscaped = escapeHtml(termoLower).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return escaped.replace(new RegExp(termoEscaped, 'gi'), (m) => `<span class="text-[var(--oliva)] font-semibold">${m}</span>`);
+        return (inicio > 0 ? '…' : '') + source.slice(inicio, fim) + (fim < source.length ? '…' : '');
     }
     function abrirColunasDoHistorico() {
         const vista = vistaDe('historico');
