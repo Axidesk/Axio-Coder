@@ -35,7 +35,13 @@ const COMANDO_DE_DEPENDENCIA = {
             ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }
             : {};
         const resp = await fetch(url, opcoes);
-        return resp.json();
+        const texto = await resp.text();
+        try {
+            return JSON.parse(texto);
+        } catch (e) {
+            const amostra = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+            return { status: 'error', message: `O servidor respondeu ${resp.status}${amostra ? ': ' + amostra : ''}` };
+        }
     }
     function linhaRotulo(valor, rotulo) {
         return `<div class="git-linha"><span class="git-valor">${escapeHtml(valor)}</span><span class="git-rotulo">${escapeHtml(rotulo)}</span></div>`;
@@ -68,7 +74,7 @@ const COMANDO_DE_DEPENDENCIA = {
         html += '</div>';
         return html;
     }
-    function htmlDaTarefa(grupo, estado) {
+    function htmlDaTarefa(grupo, estado, pendentes) {
         const ficheiros = ficheirosDaTarefa(grupo);
         const hash = (grupo && grupo.commit) || '';
         let html = '<div class="git-seccao"><div class="git-seccao-titulo">Esta tarefa</div>';
@@ -88,15 +94,25 @@ const COMANDO_DE_DEPENDENCIA = {
             const lista = ficheiros.slice(0, 12).map(f => `• ${escapeHtml(f)}`).join('<br>');
             const restantes = ficheiros.length - Math.min(ficheiros.length, 12);
             html += `<details class="git-detalhes"><summary><span>Ver os ficheiros</span></summary><div class="git-lista">${lista}${restantes > 0 ? `<br>• e mais ${restantes}…` : ''}</div></details>`;
+        } else {
+            html += '<div class="git-vazio">Esta tarefa nao tem ficheiros registados.</div>';
+        }
+        const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
+        const podeCommitar = ficheiros.length > 0 && porCommitar !== 0;
+        if (ficheiros.length && porCommitar !== null) {
+            html += linhaRotulo(String(porCommitar), 'por commitar');
         }
         const proposta = mensagemProposta(grupo);
         html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(proposta)}" placeholder="Mensagem do commit">`;
         html += '<div class="git-acoes">';
         html += pill('sugerir', 'Sugerir com IA');
-        html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
+        if (podeCommitar) html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
         if (hash) html += pill('restaurar', 'Restaurar esta tarefa');
         html += '</div>';
-        html += '<div class="git-nota">O commit e local: nada sobe para o remoto sem tu mandares. Entram so os ficheiros desta tarefa.</div>';
+        let nota = 'O commit e local: nada sobe para o remoto sem tu mandares. Entram so os ficheiros desta tarefa.';
+        if (!ficheiros.length) nota = 'Sem ficheiros registados nesta tarefa, nao ha um commit dela para fazer.';
+        else if (porCommitar === 0) nota = 'Nada por commitar: nenhum ficheiro desta tarefa mudou desde o ultimo commit.';
+        html += `<div class="git-nota">${nota}</div>`;
         html += '</div>';
         return html;
     }
@@ -173,11 +189,11 @@ const COMANDO_DE_DEPENDENCIA = {
         caixa.innerHTML = comandos.map(c => `<div class="git-comando">${escapeHtml(c)}</div>`).join('')
             + '<div class="git-nota">Corre este comando no terminal do Axio: a instalacao e longa e queres ver a saida. O ambiente virtual desta pasta fica pronto para a versao antiga do codigo.</div>';
     }
-    function montarPainel(estado, grupo) {
+    function montarPainel(estado, grupo, pendentes) {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado);
-        html += htmlDaTarefa(grupo, estado);
+        html += htmlDaTarefa(grupo, estado, pendentes);
         html += htmlHistorico(estado, grupo);
         html += htmlDependencias(estado);
         html += '</div>';
@@ -186,15 +202,22 @@ const COMANDO_DE_DEPENDENCIA = {
     async function renderGitPanel(vista = vistaDe('historico')) {
         const alvo = vista || vistaDe('historico');
         setCodeViewContent('<div class="git-painel"><div class="git-vazio">A ler o repositorio…</div></div>', false, alvo);
+        const grupo = grupoAtivo();
+        const ficheiros = ficheirosDaTarefa(grupo);
         let dados = null;
+        let pendentes = null;
         try {
-            dados = await pedirGit('/api/git/estado');
+            const pedidos = [pedirGit('/api/git/estado')];
+            if (ficheiros.length) pedidos.push(pedirGit('/api/git/pendentes', { ficheiros }));
+            const respostas = await Promise.all(pedidos);
+            dados = respostas[0];
+            pendentes = respostas[1] || null;
         } catch (e) {
             console.error('Erro ao ler o repositorio:', e);
+            dados = { status: 'error', message: `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}` };
         }
-        const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: 'A ligacao ao servidor falhou.' };
-        const grupo = grupoAtivo();
-        setCodeViewContent(montarPainel(estado, grupo), false, alvo);
+        const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: (dados && dados.message) || 'Nao consegui ler o repositorio.' };
+        setCodeViewContent(montarPainel(estado, grupo, pendentes), false, alvo);
         ligarAcoes(alvo);
     }
     function ligarAcoes(vista) {
@@ -234,7 +257,7 @@ const COMANDO_DE_DEPENDENCIA = {
             avisarNoPainel(vista, (dados && datos.message) || 'Nao foi possivel commitar.');
         } catch (e) {
             console.error('Erro ao commitar a tarefa:', e);
-            avisarNoPainel(vista, 'A ligacao ao servidor falhou ao commitar.');
+            avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
         }
     }
     async function sugerirMensagem(vista) {
@@ -261,7 +284,7 @@ const COMANDO_DE_DEPENDENCIA = {
             }
         } catch (e) {
             console.error('Erro ao pedir a sugestao:', e);
-            avisarNoPainel(vista, 'A ligacao ao servidor falhou ao pedir a sugestao.');
+            avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
         } finally {
             if (botao) {
                 botao.textContent = 'Sugerir com IA';

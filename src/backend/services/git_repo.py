@@ -309,6 +309,28 @@ def _caminhos_conhecidos(raiz, caminhos):
     return escolhidos
 
 
+def pendentes(pasta, caminhos):
+    """Subconjunto destes caminhos (relativos a raiz do repositorio) com alteracoes por commitar."""
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return {"repo": False, "motivo": erro}
+    if not caminhos:
+        return {"repo": True, "pendentes": [], "count": 0}
+    texto, erro_status = git_saida(raiz, "status", "--porcelain", "--", *caminhos)
+    if erro_status:
+        return {"repo": True, "pendentes": [], "count": 0, "erro": erro_status}
+    nomes = []
+    for linha in (texto or "").splitlines():
+        if len(linha) < 4:
+            continue
+        nome = linha[3:].strip().strip('"')
+        if " -> " in nome:
+            nome = nome.split(" -> ")[-1]
+        if nome and nome not in nomes:
+            nomes.append(nome)
+    return {"repo": True, "pendentes": nomes, "count": len(nomes)}
+
+
 def commitar(pasta, mensagem, ficheiros=None):
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:

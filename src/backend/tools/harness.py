@@ -117,7 +117,7 @@ const funcaoDoDisco = (rel, nome) => {
     throw new Error("fim da funcao nao encontrado: " + nome);
 };
 
-const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join("\n");
+const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join(String.fromCharCode(10));
 '''
 
 _DOM_FALSO_JS = r'''

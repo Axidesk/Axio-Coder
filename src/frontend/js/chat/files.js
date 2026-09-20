@@ -376,7 +376,7 @@ const NL = String.fromCharCode(10);
         if (!container) return false;
 
         const doHistorico = vista.id === 'historico';
-        const painelAberto = state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions;
+        const painelAberto = state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions || state.isShowingGit;
         const manterCamada = painelAberto && doHistorico;
         if (painelAberto && !manterCamada) return false;
 

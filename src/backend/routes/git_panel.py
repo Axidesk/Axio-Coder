@@ -99,6 +99,25 @@ def git_commit():
     return jsonify(resultado)
 
 
+@git_bp.route("/api/git/pendentes", methods=["POST"])
+def git_pendentes():
+    dados = request.json or {}
+    ficheiros = _caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
+    info = git_repo.pendentes(_pasta(), ficheiros)
+    if not info.get("repo"):
+        return jsonify({
+            "status": "sem_repo",
+            "message": info.get("motivo", ""),
+            "pendentes": [],
+            "count": 0,
+        })
+    return jsonify({
+        "status": "ok",
+        "pendentes": info.get("pendentes", []),
+        "count": info.get("count", 0),
+    })
+
+
 @git_bp.route("/api/git/restauro_preview", methods=["POST"])
 def git_restauro_preview():
     revisao, erro = _revisao_pedida(request.json or {})
