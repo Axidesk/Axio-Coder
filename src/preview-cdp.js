@@ -353,6 +353,26 @@ const SNIPPET_FOCAR = `(function (parametros) {
   };
 })`;
 
+const SNIPPET_CONFERIR_ESCRITA = `(function (parametros) {
+  var el = null;
+  try { el = document.querySelector(parametros.seletor); } catch (e) { return { ok: false, erro: 'seletor invalido' }; }
+  if (!el) return { ok: false, erro: 'o elemento desapareceu depois da escrita' };
+  var texto = String(parametros.texto == null ? '' : parametros.texto);
+  var rico = el.isContentEditable === true;
+  var valor = rico ? (el.textContent || '') : (el.value == null ? '' : String(el.value));
+  var entregue = texto === '' || valor.indexOf(texto) >= 0;
+  if (entregue || rico || el.value == null || valor !== '') {
+    return { ok: true, entregue: entregue, via: 'teclado', valor: valor.slice(0, 120) };
+  }
+  var prototipo = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+  var definir = Object.getOwnPropertyDescriptor(prototipo, 'value').set;
+  definir.call(el, texto);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  var depois = el.value == null ? '' : String(el.value);
+  return { ok: true, entregue: depois.indexOf(texto) >= 0, via: 'valor-do-campo', valor: depois.slice(0, 120) };
+})`;
+
 const SNIPPET_CURSOR = `(function (p) {
   var ID = '__axio_cursor';
   var el = document.getElementById(ID);
@@ -1318,10 +1338,16 @@ async function acaoEscrever(view, params) {
   } else if (seletor && params.limpar) {
     await premirTecla(depurador, 'Delete');
   }
+  let conferencia = null;
+  if (texto && seletor) {
+    const expressaoConferir = SNIPPET_CONFERIR_ESCRITA + '(' + JSON.stringify({ seletor: seletor, texto: texto }) + ')';
+    const lido = await avaliarNaPagina(depurador, expressaoConferir);
+    if (!lido.erro && lido.valor) conferencia = lido.valor;
+  }
   if (pontoDoCursor) {
     setTimeout(() => { desenharCursor(depurador, pontoDoCursor.x, pontoDoCursor.y, 0, 1); }, 240);
   }
-  return { ok: true, escrito: texto.length, onde: seletor, cursor: aVista, efeito: await efeitoDoGesto(depurador, marca, seletor) };
+  return { ok: true, escrito: texto.length, onde: seletor, cursor: aVista, conferencia: conferencia, efeito: await efeitoDoGesto(depurador, marca, seletor) };
 }
 
 async function premirTecla(depurador, nome) {

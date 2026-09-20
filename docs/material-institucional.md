@@ -41,3 +41,15 @@ O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a i
 | `Captura de tela 2026-09-01 024505.jpg`, `terminal dinamico.jpg` | Interface antiga, de setembro | substituídas pelas novas |
 
 As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos) e reduzidas a 1920 px de largura, **sem recorte** — todas a janela inteira. O `navegador no preview` foi a exceção: chegou a ser recortado para o cartão do inspetor se ler, e depois reposto inteiro. Ao repor, a imagem pareceu continuar recortada no GitHub mesmo com o ficheiro certo — medido, o que estava publicado era a janela inteira, byte a byte. A explicação é a cache: aquele endereço já tinha sido servido com a versão antiga. O remédio fiável é mudar o nome do ficheiro, porque um endereço novo não tem versão antiga para devolver: foi `preview-navegador.jpg`, depois `preview-navegador-inspecionar.jpg`, agora `navegador-no-preview-inspecionar.jpg`. O texto do cartão do modo inspecionar fica pequeno a essa largura, e é por isso que o original também existe aqui, para quem precisar de o ler. Um recorte apertado chega a cortar listas a meio, e a leitura passa a ser a de um fragmento em vez da de um ecrã. Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.
+
+## As logos da marca
+
+Vivem **fora** do repositório, em `D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos`:
+
+| Ficheiro | O que é | A versão que se usa |
+|---|---|---|
+| `axidesk.jpg` | O monograma AD com a palavra AXIDESK, verde com brilho | `docs/interface/axidesk-logo.jpg` — 1408x640, com a marca de água do gerador (canto inferior direito) já cortada; serve de cabeçalho e de capa |
+| `300x300 logo.png` | O ícone quadrado da aplicação | `docs/interface/axidesk-avatar.png` — 512x512, sem a moldura; é o avatar do perfil |
+| `cartaz.png` | O cartaz da **marca** Axidesk: limpeza de desktop, cloud e IA | Não se usa: fala de outro produto e confundiria quem chega ao Axio Coder |
+
+Cada uma só se publica depois de ser olhada (`tool_ver_imagem`) — como todas as imagens que saem daqui.

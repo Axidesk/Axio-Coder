@@ -1260,14 +1260,20 @@ def _relatorio_execucao(proc, limite, linguagem):
         partes.append(erro)
     return "\n".join(partes)
 
+_PREFIXOS_DE_PREPARO = ("import ", "from ", "#")
+
 def _rotulo_teste(trecho, padrao):
-    """Primeira linha com conteudo do trecho, curta, para o terminal identificar o
-    que esta a correr (o relatorio completo continua a voltar ao modelo)."""
+    """Primeira linha que diz o que o trecho FAZ - os imports ficam de fora - para o
+    terminal identificar o que esta a correr (o relatorio continua a voltar inteiro)."""
+    primeira = ""
     for linha in trecho.splitlines():
         limpa = linha.strip()
-        if limpa:
+        if not limpa:
+            continue
+        primeira = primeira or limpa
+        if not limpa.startswith(_PREFIXOS_DE_PREPARO):
             return limpa[:100]
-    return padrao
+    return primeira[:100] or padrao
 
 def _espelhar_teste_no_terminal(pid, proc):
     """Publica no terminal da doc a saida do trecho, para o utilizador acompanhar o
@@ -1308,7 +1314,7 @@ _TRECHOS = {
     },
 }
 
-def _correr_trecho(chave, trecho, timeout):
+def _correr_trecho(chave, trecho, timeout, rotulo=""):
     """Escreve o trecho num ficheiro temporario do sistema, corre-o num processo novo
     com timeout que mata a arvore, apaga o ficheiro e devolve o relatorio."""
     cfg = _TRECHOS[chave]
@@ -1324,7 +1330,7 @@ def _correr_trecho(chave, trecho, timeout):
     pid = id_processo()
     emit_event("executing", function=f"Executando {cfg['rotulo']} em processo novo")
     emit_event("process_started", pid=pid,
-               comando=f"{cfg['executavel']} {_rotulo_teste(trecho, cfg['rotulo'])}",
+               comando=f"{cfg['executavel']} {(rotulo or '').strip() or _rotulo_teste(trecho, cfg['rotulo'])}",
                modo="aguardar")
     fd, caminho = tempfile.mkstemp(prefix=cfg["prefixo"], suffix=cfg["sufixo"])
     try:
@@ -1357,13 +1363,14 @@ def _correr_trecho(chave, trecho, timeout):
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo Python a executar (varios imports e asserts sao bem-vindos)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
+        "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Bluesky: criar a app password'). Sem ele o card mostra a primeira linha com conteudo - e como quase todos os trechos comecam por imports iguais, probes distintos ficam com o mesmo nome e parecem o mesmo a repetir-se.", "padrao": ""},
     },
 )
-def tool_executar_python(codigo, timeout=60):
+def tool_executar_python(codigo, timeout=60, rotulo=""):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho Python a executar."
-    return _correr_trecho("python", trecho, timeout)
+    return _correr_trecho("python", trecho, timeout, rotulo)
 
 @register(
     "tool_executar_js",
@@ -1390,10 +1397,11 @@ def tool_executar_python(codigo, timeout=60):
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo JavaScript (ESM) a executar (imports e asserts sao bem-vindos)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
+        "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Provar o arredondamento das abas'). Sem ele o card fica com a primeira linha do codigo, que quase sempre e um import - igual ao de todos os outros.", "padrao": ""},
     },
 )
-def tool_executar_js(codigo, timeout=60):
+def tool_executar_js(codigo, timeout=60, rotulo=""):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho JavaScript a executar."
-    return _correr_trecho("javascript", trecho, timeout)
+    return _correr_trecho("javascript", trecho, timeout, rotulo)

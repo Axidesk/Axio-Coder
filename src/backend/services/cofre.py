@@ -43,8 +43,9 @@ CATEGORIAS = {
     },
     "email": {
         "rotulo": "Email",
-        "dica": "A sua caixa de entrada. Guardo aqui endereco e senha para eu abrir o email e ler o codigo de confirmacao de um cadastro, sem interromper o trabalho.",
-        "campos": ("endereco", "senha", "servidor_imap", "email_de_busca"),
+        "dica": "A sua caixa de entrada. Guardo aqui endereco, senha da conta e a app password do IMAP - e por ela que eu leio o codigo de confirmacao de um cadastro sem interromper o trabalho. A app password e um segredo a parte: so se le uma vez, no momento em que nasce.",
+        "campos": ("endereco", "senha", "servidor_imap", "email_de_busca", "senha_imap", "notas"),
+        "opcionais": ("senha_imap",),
     },
     "site": {
         "rotulo": "Contas de sites",
@@ -71,6 +72,7 @@ ROTULOS_DE_CAMPO = {
     "nascimento": "Nascimento",
     "morada": "Morada",
     "servidor_imap": "Servidor IMAP",
+    "senha_imap": "Senha IMAP (app password)",
     "email_de_busca": "Email de busca",
     "url": "Site",
     "usuario": "Usuario",

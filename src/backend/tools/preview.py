@@ -201,6 +201,20 @@ def _texto_da_rede(dados):
     return "\n".join(linhas)
 
 
+def _texto_da_conferencia(conferencia):
+    """Diz se o campo ACEITOU o texto - um input de data recusa o insertText e fica vazio."""
+    if not conferencia:
+        return ""
+    if conferencia.get("entregue"):
+        if conferencia.get("via") == "valor-do-campo":
+            return (" O campo recusou o texto pelo teclado; o valor foi posto pelo caminho do "
+                    "proprio campo, com o evento de mudanca disparado.")
+        return ""
+    lido = str(conferencia.get("valor") or "")
+    return (" ATENCAO: o campo NAO ficou com o texto (esta " + (repr(lido[:60]) if lido else "vazio")
+            + ") - confira o seletor e o formato que o campo exige antes de seguir.")
+
+
 def _texto_do_efeito(efeito):
     """O que o gesto provocou: se a pagina se mexeu, e os erros e falhas que ele causou."""
     if not efeito:
@@ -770,7 +784,8 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         if not texto and limpar:
             return _com_efeito(f"Campo esvaziado{destino}.", dados)
         origem = " (valor guardado, vindo do cofre)" if do_cofre else ""
-        return _com_efeito(f"Escritos {dados.get('escrito')} caractere(s){destino}{origem}.", dados)
+        return _com_efeito(f"Escritos {dados.get('escrito')} caractere(s){destino}{origem}."
+                           + _texto_da_conferencia(dados.get("conferencia")), dados)
 
     if pedido == "roteiro":
         lista, falha = _passos_do_roteiro(passos)

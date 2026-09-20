@@ -1166,10 +1166,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1362,
+        "linha": 1369,
         "conferido": [
-          1789845519.183,
-          61867
+          1789872102.501,
+          62788
         ]
       }
     },
@@ -2237,8 +2237,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 973,
         "conferido": [
-          1789845519.183,
-          61867
+          1789872102.501,
+          62788
         ]
       }
     },
@@ -2363,10 +2363,10 @@
       "descricao": "Ferramenta que tira um print do ecra e o entrega ao agente como imagem (ImageGrab, com o processo declarado consciente de DPI para nao sair esticado). Grava o PNG em .axio/prints em resolucao cheia (maximo 50 ficheiros). O TETO DE RESOLUCAO E DA API: ela reduz toda a imagem a ~800x800 px equivalentes (640 000 px, teto de 384 tokens), logo um ecra 4K chega como 1066x600 e o texto pequeno desaparece. Para ler: (a) regiao estreita abaixo de ~640 000 px chega 1:1; (b) detalhe='tiles' parte a captura em pedacos de ate 1024x625 px que chegam TODOS 1:1. 'ecra' aceita 'principal', 'todos' ou o NUMERO de um monitor, e o retorno declara sempre o mapa dos ecras (numero, tamanho, posicao) - num PC com ecras de tamanhos diferentes, 'todos' inclui faixas pretas que se pagam em pedacos vazios. Captura so o que esta VISIVEL: janela tapada ou minimizada nao aparece.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 251,
+        "linha": 252,
         "conferido": [
-          1789849688.672,
-          26343
+          1789869099.103,
+          26408
         ]
       }
     },
@@ -2388,10 +2388,10 @@
       "descricao": "Caminho de uma imagem que o utilizador anexa ou cola no chat ate o modelo a ver: attach.js:addImage (frontend) manda o base64 do ficheiro ORIGINAL, sem reduzir nada -> payload.images -> routes/chat.py -> ai/loop.py:partes_usuario -> partes_da_imagem (services/imagem.py): dentro do orcamento de 640 000 px a imagem segue inteira e INTACTA; acima dele e CORTADA por tiles_da_imagem em pedacos de ate 1024x625 px, cada um em tamanho original (um pedaco paga 384 tokens). Teto de 16 pedacos por anexo (MAX_PEDACOS), com reducao previa quando passaria disso. Medido: 1920x1080 dava uma imagem unica de 1066x600 (escala 0,56) e passa a dar 4 pedacos a 1024x625 (escala 1,00); 2560x1440 = 9, 3840x2160 = 16, 6000x5000 = 15. preparar_imagem (:49) e o caminho de UMA imagem so, ainda usado pelo print em detalhe='unico' e por codificar_para_envio. As imagens so podem ir em mensagens do UTILIZADOR (nunca em system/assistant nem na resposta de uma ferramenta).",
       "localizacao": {
         "arquivo": "src/backend/services/imagem.py",
-        "linha": 63,
+        "linha": 75,
         "conferido": [
-          1789790110.623,
-          8347
+          1789869091.888,
+          11748
         ]
       }
     },
@@ -2408,10 +2408,10 @@
       "descricao": "Ferramenta que abre uma imagem que esta no projeto (png, jpg, gif, webp, bmp, ico) e a entrega ao agente como imagem, para ele olhar para um icone, um esquema ou um diagrama. Formato que a API nao aceita e convertido automaticamente para PNG (so a fonte que ja e JPEG continua JPEG). NAO confundir com 'print' (tool_capturar_print), que captura o ecra.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 338,
+        "linha": 339,
         "conferido": [
-          1789849688.672,
-          26343
+          1789869099.103,
+          26408
         ]
       }
     },
@@ -2429,10 +2429,10 @@
       "descricao": "Divisao de uma captura em PEDACOS que chegam ao modelo em tamanho original: a API reduz toda a imagem a ~800x800 px equivalentes (640 000 px, 384 tokens), logo nenhuma imagem unica entrega um ecra inteiro nitido. tiles_da_imagem (services/imagem.py) da a geometria - pedacos de ate 1024x625 px, com sobreposicao de 32 px para uma linha de texto cortada na fronteira aparecer inteira no pedaco vizinho - e tools/vision.py:_imagens_em_pedacos (:119) recorta e codifica. Accionado por tool_capturar_print com detalhe='tiles'; MAX_TILES=36 recusa regioes absurdas. Medicao num ecra 4K real: 16 pedacos, 0,8 MB em base64, 0,36 s, ~6144 tokens de imagem.",
       "localizacao": {
         "arquivo": "src/backend/services/imagem.py",
-        "linha": 89,
+        "linha": 101,
         "conferido": [
-          1789790110.623,
-          8347
+          1789869091.888,
+          11748
         ]
       }
     },
@@ -2550,10 +2550,10 @@
       "descricao": "Servidor HTTP efemero que o processo principal do Electron abre em 127.0.0.1 no arranque (src/preview-cdp.js:iniciarPonte), com token aleatorio por sessao e so a aceitar pedidos de casa e so por POST. E o unico caminho pelo qual as minhas ferramentas (que vivem no Flask) alcancam o Chrome DevTools Protocol do preview: o Python nao fala IPC. A porta e o token chegam ao Flask por AXIO_PONTE_PORTA/AXIO_PONTE_TOKEN, injetados no ambiente do spawn (src/main.js:startFlask) - por isso um Flask nascido antes desta mudanca nao tem ponte nenhuma, e as ferramentas avisam para fechar e reabrir o Axio. Sem ponte: mensagem honesta, nunca falha silenciosa.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1478,
+        "linha": 1504,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -2570,10 +2570,10 @@
       "descricao": "O que a pagina do preview escreveu na consola, devolvido como DADO (nivel, origem, ficheiro:linha) e nao como imagem - e a primeira coisa a olhar quando um botao da pagina nao responde. Dona do buffer: a lista `consola` de src/preview-cdp.js, alimentada pelo evento `Runtime.consoleAPICalled` (e por `Runtime.exceptionThrown` e pelo `Log.entryAdded`, que apanha os 404 de recursos - a classe exacta do \"html nu\"). Ligada por preview-cdp.js:prepararDepurador no nascimento da view, esvaziada a cada navegacao. A ferramenta que a le e tool_observar_preview com acao='consola' (filtra por 'nivel' e limpa com o proprio pedido).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1023,
+        "linha": 1043,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -2584,10 +2584,10 @@
       "descricao": "Clique e escrita a serio na pagina do preview, pelo Chrome DevTools Protocol - o clique vai por Input.dispatchMouseEvent (mover, premir, largar, no centro do elemento) e o texto por Input.insertText, por isso funciona com React, Vue e ouvintes nativos. O seletor e RE-RESOLVIDO no instante do gesto (preview-cdp.js:caixaDoPedido) e, antes de disparar, um hit-test (funcao tapa, dentro do SNIPPET_ALVOS) pergunta quem esta no topo no ponto do gesto: se for OUTRO elemento, RECUSA e diz quem tapa; se o centro cair fora da janela, RECUSA tambem. O gesto devolve o proprio EFEITO (assinatura da pagina, erros novos da consola, pedidos falhados, estado do alvo). Ferramenta: tool_operar_preview em src/backend/tools/preview.py (acoes carregar, mostrar, clicar, escrever, teclar).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1213,
+        "linha": 1233,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -2605,10 +2605,10 @@
       "descricao": "O que a pagina do preview tentou carregar e falhou, devolvido como DADO (estado, URL, tipo, motivo) e nao como imagem - e o que explica uma pagina que aparece sem estilo ou sem os scripts. Dona do buffer: a lista `rede` de src/preview-cdp.js, alimentada por Network.responseReceived (so status >= 400: aviso para 4xx, erro para 5xx) e por Network.loadingFailed com canceled=false; o url/tipo das falhas vem do mapa `pedidos` (requestId -> url/type), alimentado por Network.requestWillBeSent. Ligada por preview-cdp.js:prepararDepurador (Network.enable) e esvaziada a cada navegacao por limparRegistos, junto com a consola. A ferramenta que a le e tool_observar_preview com acao='rede' (filtra por 'nivel' tal como a consola).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1029,
+        "linha": 1049,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -2625,10 +2625,10 @@
       "descricao": "Circulo de 14px com anel verde --oliva que aparece na PAGINA do preview, no ponto exato onde eu vou clicar ou escrever, para o utilizador ver o gesto a acontecer - o papel que no Codex cabe ao cursor do rato. E um div fixo injetado por Runtime.evaluate (id __axio_cursor, pointer-events none, z-index maximo) com estilos INLINE (nunca um <style>, que uma CSP restritiva bloquearia): aparece antes do gesto com uma pausa de PAUSA_CURSOR_MS (150ms), encolhe no clique e desvanece num setTimeout de 240ms. So corre quando cursorAVista(view) e verdadeiro (o preview a frente) - com o preview atras de outra vista o gesto nao ganha atraso nenhum e nada e injetado. Vive em preview-cdp.js:desenharCursor, usado por acaoClicar e acaoEscrever.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1180,
+        "linha": 1200,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -2665,10 +2665,10 @@
       "descricao": "Recarga da pagina do preview pelo CDP com ignoreCache: true, para eu testar codigo frontend recem-editado sem risco de estar a medir uma versao velha. Distinta do botao de recarregar da barra (main.js:recarregarPreview), que usa a cache como qualquer navegador. A janela principal continua a correr o JS antigo ate o utilizador fazer Ctrl+R; o preview apanha o novo sozinho.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1370,
+        "linha": 1396,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -2704,10 +2704,10 @@
       "descricao": "Indice de tudo o que responde a um gesto na pagina, devolvido numa so chamada: seletor, rotulo e coordenada de cada botao, ligacao e campo. Ja exclui os que estao tapados por outro elemento, fora da janela ou sem nome. Apanha DOIS tipos de candidato: tags/roles genericos e qualquer elemento com `cursor: pointer` cujo pai nao seja pointer (o que lhe permite ver os cards do Axio, que sao divs com listener, sem button nem role) - e prefere devolver um seletor POR DADO (`[data-turn-id=\"...\"]`) quando esse atributo identifica um unico elemento, em vez do caminho posicional. E a acao a usar ANTES de agir; quem monta o texto e _texto_do_mapa (preview.py) e quem o colhe na pagina e o ramo mapa de SNIPPET_ALVOS (preview-cdp.js).",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 323,
+        "linha": 337,
         "conferido": [
-          1789868388.326,
-          39295
+          1789872221.409,
+          40078
         ]
       }
     },
@@ -2727,8 +2727,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 116,
         "conferido": [
-          1789868388.326,
-          39295
+          1789872221.409,
+          40078
         ]
       }
     },
@@ -2999,10 +2999,10 @@
       "descricao": "Parametro da tool_ver_imagem: entrega cada vista do modelo LADO A LADO com a imagem de referencia, na mesma imagem e na mesma altura (a referencia a esquerda). A composicao e a `lado_a_lado` de services/imagem.py. Usar sempre que se modela a partir de uma referencia visual - julgar semelhanca alternando entre duas imagens nao funciona.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 354,
+        "linha": 355,
         "conferido": [
-          1789849688.672,
-          26343
+          1789869099.103,
+          26408
         ]
       }
     },
@@ -3768,10 +3768,10 @@
       "descricao": "Le o desenho ja computado pelo browser pelo tool_observar_preview(acao='estilo').",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 459,
+        "linha": 479,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -3787,10 +3787,10 @@
       "descricao": "Overlay injetado DENTRO da pagina do preview (nao e o inspetor do Axio, que so ve o DOM do Axio): destaca o elemento sob o cursor, e no clique mostra seletor, caixa, layout, cores e fonte num painel na propria pagina, e manda o mesmo por console marcado para o campo de mensagem do Axio. Shift+clique interage, Esc sai. Sem DOM (canvas do IFC/DXF/PDF) nao ha o que apanhar alem do viewport.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 528,
+        "linha": 548,
         "conferido": [
-          1789857758.321,
-          57365
+          1789872183.988,
+          58940
         ]
       }
     },
@@ -3806,10 +3806,10 @@
       "descricao": "Um campo so para o login da conta de site, porque o site tem uma caixa so: aceita email ou nome de utilizador. Substituiu os dois campos (usuario + email) que existiam antes.",
       "localizacao": {
         "arquivo": "src/backend/services/cofre.py",
-        "linha": 51,
+        "linha": 52,
         "conferido": [
-          1789836550.624,
-          16366
+          1789871930.508,
+          16584
         ]
       }
     },
@@ -3889,10 +3889,10 @@
       "descricao": "Prepara uma captura de ecra para publicar: sem 'destino' devolve o mapa de atividade (grelha que mostra onde esta o conteudo aceso e onde a imagem e lisa), e com 'destino' recorta por 'caixa' (x,y,largura,altura da origem), reduz a 'largura' maxima e grava dentro do projeto. A origem pode estar fora dele (a pasta institucional); a escrita, nao. Servico em src/backend/services/capturas.py.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 431,
+        "linha": 434,
         "conferido": [
-          1789849688.672,
-          26343
+          1789869099.103,
+          26408
         ]
       }
     },
@@ -4012,7 +4012,11 @@
       "descricao": "Publica num canal externo (dev.to ou Bluesky), com as credenciais do cofre lidas pelo cartao que cada canal declara. O canal e DADO no registo CANAIS (services/publicacao.py): cada entrada diz as `credenciais` que precisa, se tem `rascunho`, se `precisa_titulo`, se `recebe_imagem`, o `limite` de caracteres e, quando a conversa nao e um POST simples, a sua propria funcao `publica` (o Bluesky faz sessao antes de escrever). O dev.to sai como rascunho por omissao; o Bluesky nao tem rascunho e exige publicado=true. Antes de sair para a rede, cada imagem e conferida (carrega? ja foi olhada?).",
       "localizacao": {
         "arquivo": "src/backend/tools/publicacao.py",
-        "linha": 94
+        "linha": 94,
+        "conferido": [
+          1789869128.686,
+          7359
+        ]
       }
     },
     {
@@ -4022,18 +4026,19 @@
         "pesquisa do chat",
         "busca nas conversas do chat",
         "filtrar as mensagens do chat",
-        "buscar nas mensagens enviadas e recebidas"
+        "buscar nas mensagens enviadas e recebidas",
+        "lupa do titulo",
+        "buscar no chat"
       ],
-      "identificador": "#btn-chat-search (botao) + alternarBuscaChat (comportamento)",
-      "descricao": "A lupa que fica no fim da barra de titulo, ao lado dos botoes da janela: abre o campo de busca por cima da conversa e esconde as mensagens que nao contem o termo - nas DUAS colunas (#chat-inner-left, do utilizador, e #chat-inner-right, da IA). A contagem (\"2 de 4\") fica no proprio campo; fechar ou limpar devolve tudo.",
+      "identificador": "alternarBuscaChat",
+      "descricao": "A lupa da barra de titulo (o botao vive em index.html, ao lado dos botoes da janela) abre um campo por cima da conversa e FILTRA as duas colunas - as mensagens enviadas pelo utilizador e as respostas do agente -, escondendo as que nao contem o termo, com a contagem no proprio campo. E `alternarBuscaChat` que abre e fecha; `reavaliarBuscaChat` volta a aplicar o filtro quando chega mensagem nova (chamada por messages.js), para uma mensagem recebida com a busca aberta ja entrar filtrada; `fecharBuscaChat` limpa o campo e repoe tudo. O painel e #chat-search-panel (src/frontend/index.html) e o CSS esta em src/frontend/css/editor.css (#chat-search-panel, grid-template-rows 0fr/1fr).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/busca_chat.js",
-        "linha": "",
+        "linha": 67,
         "conferido": [
           1789868210.227,
           2646
-        ],
-        "ausente": true
+        ]
       }
     },
     {
@@ -4044,13 +4049,14 @@
         "imagens da logo",
         "logo pra cabecalho",
         "logo do icone",
-        "icone da marca"
+        "icone da marca",
+        "logo da marca"
       ],
-      "identificador": "pasta das logos institucionais: D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos",
-      "descricao": "Pasta institucional das logos da Axidesk, fora do repositorio. Ficheiros: `axidesk.jpg` (monograma AD + palavra AXIDESK, verde com brilho, cabe em cabecalhos e capas - ATENCAO: tem a marca de agua do gerador no canto inferior direito, corte antes de usar; a versao ja cortada vive em docs/interface/axidesk-logo.jpg, 1408x640), `300x300 logo.png` (icone de aplicacao quadrado - e a fonte do avatar do perfil, que vive em docs/interface/axidesk-avatar.png depois de tirar a moldura e cortar quadrado) e `cartaz.png` (cartaz de MARCA da Axidesk - limpeza de desktop, cloud e IA - fala de outro produto e nao serve para publicar o Axio Coder). Serve para cabecalhos, capas, citacoes e avatar; so se publica depois de olhada (regra da guarda de imagens).",
+      "identificador": "axidesk-logo.jpg",
+      "descricao": "Logos da Axidesk para cabecalhos, capas, citacoes e avatar. O ORIGINAL vive FORA do repositorio, em D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos, e a tabela do que cada ficheiro e - com as copias ja tratadas e publicaveis - esta no fim de docs/material-institucional.md (seccao \"As logos da marca\"). Dentro do repositorio: docs/interface/axidesk-logo.jpg (1408x640, monograma AD + AXIDESK, sem a marca de agua do gerador, para cabecalhos e capas) e docs/interface/axidesk-avatar.png (512x512, sem a moldura, e o avatar do perfil). O cartaz.png NAO se usa: e o cartaz da marca Axidesk (limpeza de desktop, cloud e IA) e fala de outro produto. Toda imagem so se publica depois de OLHADA com tool_ver_imagem.",
       "localizacao": {
-        "arquivo": "D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos",
-        "linha": ""
+        "arquivo": "docs/material-institucional.md",
+        "linha": 51
       }
     }
   ]
