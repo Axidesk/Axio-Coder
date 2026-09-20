@@ -5,8 +5,8 @@ import time
 
 from src.backend.services.session import ler_log_sessao, pasta_session_logs, ts_de_arquivo_log
 
-CAMPOS_LEVES = ("id", "name", "title", "timestamp", "duration", "salvo", "questions", "aiResponse")
-VERSAO_INDICE = 2
+CAMPOS_LEVES = ("id", "name", "title", "timestamp", "duration", "salvo", "commit", "questions", "aiResponse")
+VERSAO_INDICE = 3
 
 _guarda_dos_bloqueios = threading.Lock()
 _bloqueios = {}
@@ -113,6 +113,7 @@ def rodada_completa_de_log(pasta_logs, nome_log, turn_id):
             "thoughts": grupo.get("thoughts") or [],
             "questions": grupo.get("questions") or [],
             "aiResponse": grupo.get("aiResponse") or "",
+            "commit": grupo.get("commit") or "",
         }
     return None
 

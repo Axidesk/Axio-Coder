@@ -749,6 +749,29 @@ def marcar_deletado_logs(rel):
         return False
     _aplicar_nos_logs(pasta_session_logs(), _aplicar)
 
+def marcar_commit_no_log(nome_log, turn_id, hash_commit):
+    """Grava o hash do commit do git no turno do log, para o card saber o ponto exato."""
+    pasta_logs = pasta_session_logs()
+    if not pasta_logs:
+        return False
+    caminho = os.path.join(pasta_logs, os.path.basename(nome_log or ""))
+    if not os.path.isfile(caminho):
+        return False
+    try:
+        payload = ler_log_sessao(caminho)
+    except Exception:
+        return False
+    for grupo in payload.get("logs") or []:
+        if str(grupo.get("id")) != str(turn_id):
+            continue
+        grupo["commit"] = hash_commit or ""
+        try:
+            gravar_log_sessao(caminho, payload)
+        except OSError:
+            return False
+        return True
+    return False
+
 def carregar_snapshot_restauracao(pasta_logs, filename, round_id, varredura=None):
     """Carrega o checkpoint a ser restaurado a partir do arquivo de log.
 

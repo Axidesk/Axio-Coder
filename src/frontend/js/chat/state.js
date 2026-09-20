@@ -11,6 +11,7 @@ export const state = {
     currentViewingThoughts: [],
     currentViewingQuestions: [],
     isShowingTools: false,
+    isShowingGit: false,
     isShowingThoughts: false,
     isShowingQuestions: false,
     thoughtsExpanded: false,

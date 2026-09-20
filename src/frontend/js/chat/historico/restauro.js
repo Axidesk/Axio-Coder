@@ -175,6 +175,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
     }
     async function performSessionRestore() {
         if (!state.pendingRestore) return;
+        if (state.pendingRestore.tipo === 'git') return performGitRestore();
         const filename = state.pendingRestore.filename;
         const roundId = state.pendingRestore.round_id || '';
         state.pendingRestore = null;
@@ -230,6 +231,121 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
             showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--perigo);">Erro ao conectar para restaurar a sessão.</div>');
         }
     }
+    async function requestGitRestore(revisao, label, roundId) {
+        if (!revisao) return;
+        cancelRestorePreview();
+        const abortController = new AbortController();
+        state.restoreAbortController = abortController;
+        showRestorePreviewLoading();
+        let restaurar = [];
+        let remover = [];
+        let quebras = [];
+        let vazio = false;
+        try {
+            const resp = await fetch('/api/git/restauro_preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ revisao }),
+                signal: abortController.signal
+            });
+            const data = await resp.json();
+            restaurar = data.restaurar || [];
+            remover = data.remover || [];
+            quebras = data.quebras || [];
+            vazio = !!data.vazio;
+        } catch (e) {
+            if (abortController.signal.aborted) {
+                state.pendingRestore = null;
+                closeRestoreConfirmPopup();
+                return;
+            }
+            console.error('Erro ao carregar a previa do restauro:', e);
+        }
+        state.restoreAbortController = null;
+        state.pendingRestore = {
+            tipo: 'git',
+            revisao,
+            round_id: roundId || '',
+            restaurar,
+            remover,
+            label: label || revisao
+        };
+        const curtoHash = String(revisao).slice(0, 7);
+        let msg = `<div style="text-align:center;font-weight:700;font-size:1rem;color:var(--text-inline);">Restaurar a ${escapeHtml(label || curtoHash)}</div>`;
+        msg += `<div style="text-align:center;font-size:0.75rem;color:var(--text-mutado);margin-top:2px;">commit ${escapeHtml(curtoHash)}</div>`;
+        msg += '<div style="height:14px;"></div>';
+        if (restaurar.length) {
+            msg += `${countLabelHtml(restaurar.length, 'Arquivo a Restaurar', 'Arquivos a Restaurar')}<br>${restaurar.map(r => '• ' + escapeHtml(r.caminho)).join('<br>')}<br><br>`;
+        } else if (!remover.length) {
+            msg += 'O codigo ja esta no estado deste commit.<br><br>';
+        }
+        if (remover.length) {
+            msg += `${countLabelHtml(remover.length, 'Arquivo a Remover', 'Arquivos a Remover')}<br>${remover.map(p => '• ' + escapeHtml(p)).join('<br>')}<br><br>`;
+        }
+        if (quebras.length) {
+            msg += `<div style="color:var(--perigo);font-size:0.78rem;line-height:1.5;"><b>Restauracao recusada: ${quebras.length} import(s) sem destino.</b><br>${_quebrasRestauroHtml(quebras, 6)}</div><br>`;
+        }
+        if (vazio && !quebras.length) {
+            showRestoreResult(msg);
+            return;
+        }
+        if (lblRestoreMessage) lblRestoreMessage.innerHTML = msg;
+        resetRestoreConfirmButtons();
+        openRestorePopup();
+    }
+    async function performGitRestore() {
+        const pendente = state.pendingRestore;
+        if (!pendente) return;
+        state.pendingRestore = null;
+        showRestoreLoading();
+        try {
+            const resp = await fetch('/api/git/restauro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    revisao: pendente.revisao,
+                    restaurar: pendente.restaurar || [],
+                    remover: pendente.remover || []
+                })
+            });
+            const data = await resp.json();
+            if (data.status === 'ok') {
+                const agoraEpoch = Date.now();
+                const roundId = pendente.round_id || '';
+                if (roundId) {
+                    state.restoreEvents.push({ ts: agoraEpoch, checkpoint_id: String(roundId) });
+                    state.currentCheckpointId = roundId;
+                    state.checkpointRestoredAt = agoraEpoch;
+                    saveCheckpointState();
+                }
+                document.querySelectorAll('.history-round-card').forEach(el => {
+                    marcarCheckpoint(el, el.dataset.turnId);
+                });
+                let restMsgHtml = '<div style="text-align:center;font-weight:700;font-size:1rem;color:var(--text-inline);">Restauracao concluida</div>';
+                restMsgHtml += '<div style="height:12px;"></div>';
+                if (data.count > 0) {
+                    restMsgHtml += `<div style="color:var(--text-claro);">${countLabelHtml(data.count, 'Arquivo Alterado', 'Arquivos Alterados')}</div>`;
+                } else {
+                    restMsgHtml += '<div style="color:var(--text-claro);">Nenhuma alteração necessária — o código já estava neste commit.</div>';
+                }
+                showRestoreResult(restMsgHtml);
+            } else if (data.status === 'blocked') {
+                let bloqueadoHtml = '<div style="text-align:center;font-weight:700;font-size:1rem;color:var(--perigo);">Restauracao cancelada</div>';
+                bloqueadoHtml += '<div style="height:8px;"></div>';
+                bloqueadoHtml += '<div style="text-align:center;color:var(--text-claro);">' + escapeHtml(data.message || '') + '</div>';
+                if (data.quebras && data.quebras.length) {
+                    bloqueadoHtml += '<div style="height:12px;"></div>';
+                    bloqueadoHtml += `<div style="font-size:0.78rem;line-height:1.5;">${_quebrasRestauroHtml(data.quebras, 8)}</div>`;
+                }
+                showRestoreResult(bloqueadoHtml);
+            } else {
+                showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--perigo);">Erro ao restaurar: ' + escapeHtml(data.message || 'falha desconhecida.') + '</div>');
+            }
+        } catch (e) {
+            console.error('Erro ao restaurar pelo git:', e);
+            showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--perigo);">Erro ao conectar para restaurar este commit.</div>');
+        }
+    }
     function countLabelHtml(count, singularLabel, pluralLabel) {
         const label = count === 1 ? singularLabel : pluralLabel;
         const padded = String(count).padStart(2, '0');
@@ -239,6 +355,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
 
 export {
     closeRestoreConfirmPopup,
+    requestGitRestore,
     requestRestoreTask,
     performSessionRestore
 };

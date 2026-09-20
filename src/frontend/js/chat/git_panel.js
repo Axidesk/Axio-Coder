@@ -1,0 +1,272 @@
+import { state } from './state.js';
+import { vistaDe } from './colunas.js';
+import { setCodeViewContent } from './files.js';
+import { escapeHtml } from './messages.js';
+import { requestGitRestore } from './historico/restauro.js';
+import { updateRoundCardCommitByTurnId } from './historico/cards.js';
+
+const LIMITE_COMMITS = 12;
+
+const COMANDO_DE_DEPENDENCIA = {
+    'requirements.txt': 'python -m pip install -r requirements.txt',
+    'package.json': 'npm install'
+};
+
+    function grupoAtivo() {
+        return state.currentSelectedHistoryGroup || window.currentActiveLogGroup || null;
+    }
+    function nomeDaTarefa(grupo) {
+        if (!grupo) return '';
+        return grupo.displayName || grupo.title || grupo.name || '';
+    }
+    function mensagemProposta(grupo) {
+        const perguntas = (grupo && grupo.questions) || [];
+        const pergunta = String(perguntas[0] || '').replace(/\s+/g, ' ').trim();
+        if (pergunta) return pergunta.slice(0, 72);
+        return nomeDaTarefa(grupo) || 'Tarefa sem titulo';
+    }
+    function ficheirosDaTarefa(grupo) {
+        return (grupo && grupo.files ? grupo.files : [])
+            .map(f => (typeof f === 'string' ? f : f && f.name))
+            .filter(Boolean);
+    }
+    async function pedirGit(url, corpo) {
+        const opcoes = corpo
+            ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }
+            : {};
+        const resp = await fetch(url, opcoes);
+        return resp.json();
+    }
+    function linhaRotulo(valor, rotulo) {
+        return `<div class="git-linha"><span class="git-valor">${escapeHtml(valor)}</span><span class="git-rotulo">${escapeHtml(rotulo)}</span></div>`;
+    }
+    function pill(acao, texto, extra) {
+        return `<button class="git-pill ${extra || ''}" data-git-acao="${acao}">${escapeHtml(texto)}</button>`;
+    }
+    function htmlSemRepo(motivo) {
+        return `<div class="git-painel">
+            <div class="git-seccao">
+                <div class="git-seccao-titulo">Repositorio</div>
+                <div class="git-vazio">${escapeHtml(motivo || 'Esta pasta nao e um repositorio git.')}</div>
+                <div class="git-nota">Sem repositorio nao ha commit nem restauro por aqui. Cria um repositorio nesta pasta para usar o painel.</div>
+            </div>
+        </div>`;
+    }
+    function htmlCabecalho(estado) {
+        const remoto = estado.remoto || 'sem remoto';
+        const frente = estado.ahead === null ? 'sem ligacao ao remoto' : `${estado.ahead} por subir, ${estado.behind} por descer`;
+        const sujos = estado.total_sujos;
+        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Repositorio</div>';
+        html += linhaRotulo(estado.branch, 'ramo');
+        html += linhaRotulo(remoto, 'remoto');
+        html += linhaRotulo(frente, 'em relacao ao remoto');
+        html += linhaRotulo(sujos === 0 ? 'limpo' : `${sujos} ficheiro(s) alterado(s)`, 'disco');
+        if (estado.ultimo) {
+            html += linhaRotulo(`${estado.ultimo.curto} ${estado.ultimo.mensagem}`, 'ultimo commit');
+        }
+        html += `<div class="git-acoes">${pill('atualizar', 'Atualizar')}</div>`;
+        html += '</div>';
+        return html;
+    }
+    function htmlDaTarefa(grupo, estado) {
+        const ficheiros = ficheirosDaTarefa(grupo);
+        const hash = (grupo && grupo.commit) || '';
+        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Esta tarefa</div>';
+        if (!grupo) {
+            html += '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
+            return html;
+        }
+        const nome = nomeDaTarefa(grupo);
+        if (nome) html += linhaRotulo(nome, 'tarefa');
+        html += linhaRotulo(String(ficheiros.length), 'ficheiro(s) tocado(s)');
+        if (hash) {
+            html += linhaRotulo(hash.slice(0, 7), 'commit desta tarefa');
+        } else {
+            html += '<div class="git-vazio">Esta tarefa ainda nao foi commitada.</div>';
+        }
+        if (ficheiros.length) {
+            const lista = ficheiros.slice(0, 12).map(f => `• ${escapeHtml(f)}`).join('<br>');
+            const restantes = ficheiros.length - Math.min(ficheiros.length, 12);
+            html += `<details class="git-detalhes"><summary><span>Ver os ficheiros</span></summary><div class="git-lista">${lista}${restantes > 0 ? `<br>• e mais ${restantes}…` : ''}</div></details>`;
+        }
+        const proposta = mensagemProposta(grupo);
+        html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(proposta)}" placeholder="Mensagem do commit">`;
+        html += '<div class="git-acoes">';
+        html += pill('sugerir', 'Sugerir com IA');
+        html += pill('commit', 'Commit desta tarefa', 'git-pill-forte');
+        if (hash) html += pill('restaurar', 'Restaurar esta tarefa');
+        html += '</div>';
+        html += '<div class="git-nota">O commit e local: nada sobe para o remoto sem tu mandares. Entram so os ficheiros desta tarefa.</div>';
+        html += '</div>';
+        return html;
+    }
+    function htmlHistorico(estado) {
+        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Historico do repositorio</div>';
+        const commits = (estado.commits || []).slice(0, LIMITE_COMMITS);
+        if (!commits.length) {
+            html += '<div class="git-vazio">Nenhum commit neste repositorio.</div></div>';
+            return html;
+        }
+        commits.forEach(c => {
+            const marcas = (c.tags || []).map(t => `<span class="git-tag">${escapeHtml(t)}</span>`).join('');
+            html += `<div class="git-commit${c.head ? ' git-commit-head' : ''}">
+                <span class="git-hash">${escapeHtml(c.curto)}</span>
+                <span class="git-commit-msg">${escapeHtml(c.mensagem)}</span>
+                ${marcas}
+            </div>`;
+        });
+        html += '</div>';
+        const tags = estado.tags || [];
+        if (tags.length) {
+            html += '<div class="git-seccao"><div class="git-seccao-titulo">Etiquetas</div><div class="git-tags">';
+            html += tags.slice(0, 20).map(t => `<span class="git-tag">${escapeHtml(t)}</span>`).join('');
+            html += '</div></div>';
+        }
+        return html;
+    }
+    function htmlDependencias(estado) {
+        const manifestos = estado.manifestos || [];
+        if (!manifestos.length) return '';
+        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Dependencias</div>';
+        html += `<div class="git-aviso">O manifesto mudou desde o ultimo commit: ${escapeHtml(manifestos.join(', '))}</div>`;
+        html += '<div class="git-nota">O ambiente virtual nao entra no git (tem binarios da maquina). Restaurar codigo antigo pode pedir versoes antigas: compara-se o manifesto antes de instalar.</div>';
+        html += `<div class="git-acoes">${pill('deps', 'Preparar as dependencias')}</div>`;
+        html += '<div id="git-comando"></div>';
+        html += '</div>';
+        return html;
+    }
+    function mostrarComandoDeps(vista) {
+        const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;
+        const caixa = painel ? painel.querySelector('#git-comando') : null;
+        if (!caixa) return;
+        const anterior = caixa.previousElementSibling;
+        const alvo = anterior ? anterior.textContent : '';
+        const comandos = Object.keys(COMANDO_DE_DEPENDENCIA)
+            .filter(rel => alvo.includes(rel))
+            .map(rel => COMANDO_DE_DEPENDENCIA[rel]);
+        if (!comandos.length) {
+            caixa.innerHTML = '<div class="git-nota">Nao identifiquei o gestor de pacotes deste projeto.</div>';
+            return;
+        }
+        caixa.innerHTML = comandos.map(c => `<div class="git-comando">${escapeHtml(c)}</div>`).join('')
+            + '<div class="git-nota">Corre este comando no terminal do Axio: a instalacao e longa e queres ver a saida. O ambiente virtual desta pasta fica pronto para a versao antiga do codigo.</div>';
+    }
+    function montarPainel(estado, grupo) {
+        if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
+        let html = '<div class="git-painel">';
+        html += htmlCabecalho(estado);
+        html += htmlDaTarefa(grupo, estado);
+        html += htmlHistorico(estado);
+        html += htmlDependencias(estado);
+        html += '</div>';
+        return html;
+    }
+    async function renderGitPanel(vista = vistaDe('historico')) {
+        const alvo = vista || vistaDe('historico');
+        setCodeViewContent('<div class="git-painel"><div class="git-vazio">A ler o repositorio…</div></div>', false, alvo);
+        let dados = null;
+        try {
+            dados = await pedirGit('/api/git/estado');
+        } catch (e) {
+            console.error('Erro ao ler o repositorio:', e);
+        }
+        const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: 'A ligacao ao servidor falhou.' };
+        const grupo = grupoAtivo();
+        setCodeViewContent(montarPainel(estado, grupo), false, alvo);
+        ligarAcoes(alvo);
+    }
+    function ligarAcoes(vista) {
+        const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;
+        if (!painel) return;
+        painel.addEventListener('click', async (e) => {
+            const botao = e.target.closest('[data-git-acao]');
+            if (!botao) return;
+            e.stopPropagation();
+            const acao = botao.dataset.gitAcao;
+            if (acao === 'atualizar') return renderGitPanel(vista);
+            if (acao === 'sugerir') return sugerirMensagem(vista);
+            if (acao === 'deps') return mostrarComandoDeps(vista);
+            if (acao === 'commit') return commitarTarefa(vista);
+            if (acao === 'restaurar') return restaurarTarefa();
+        });
+    }
+    async function commitarTarefa(vista) {
+        const grupo = grupoAtivo();
+        if (!grupo) return;
+        const campo = vista && vista.codigo ? vista.codigo.querySelector('#git-mensagem') : null;
+        const mensagem = campo ? campo.value.trim() : '';
+        const ficheiros = ficheirosDaTarefa(grupo);
+        try {
+            const dados = await pedirGit('/api/git/commit', {
+                mensagem,
+                ficheiros,
+                filename: grupo.__session || '',
+                round_id: grupo.id || ''
+            });
+            if (dados && dados.status === 'ok') {
+                grupo.commit = dados.hash || '';
+                updateRoundCardCommitByTurnId(grupo.id, dados.hash || '');
+                await renderGitPanel(vista);
+                return;
+            }
+            avisarNoPainel(vista, (dados && datos.message) || 'Nao foi possivel commitar.');
+        } catch (e) {
+            console.error('Erro ao commitar a tarefa:', e);
+            avisarNoPainel(vista, 'A ligacao ao servidor falhou ao commitar.');
+        }
+    }
+    async function sugerirMensagem(vista) {
+        const grupo = grupoAtivo();
+        if (!grupo) return;
+        const painel = vista && vista.codigo ? vista.codigo : null;
+        const campo = painel ? painel.querySelector('#git-mensagem') : null;
+        const botao = painel ? painel.querySelector('[data-git-acao="sugerir"]') : null;
+        if (botao) {
+            botao.textContent = 'A pensar…';
+            botao.disabled = true;
+        }
+        const perguntas = (grupo.questions || []).join(' ');
+        const resposta = String(grupo.aiResponse || '').slice(0, 800);
+        try {
+            const dados = await pedirGit('/api/git/sugestao', {
+                ficheiros: ficheirosDaTarefa(grupo),
+                contexto: [perguntas, resposta].filter(Boolean).join('\n\n')
+            });
+            if (dados && dados.status === 'ok' && campo) {
+                campo.value = dados.mensagem;
+            } else {
+                avisarNoPainel(vista, (dados && dados.message) || 'Nao foi possivel sugerir uma mensagem.');
+            }
+        } catch (e) {
+            console.error('Erro ao pedir a sugestao:', e);
+            avisarNoPainel(vista, 'A ligacao ao servidor falhou ao pedir a sugestao.');
+        } finally {
+            if (botao) {
+                botao.textContent = 'Sugerir com IA';
+                botao.disabled = false;
+            }
+        }
+    }
+    async function restaurarTarefa() {
+        const grupo = grupoAtivo();
+        if (!grupo || !grupo.commit) return;
+        await requestGitRestore(grupo.commit, nomeDaTarefa(grupo) || 'esta tarefa', grupo.id || '');
+    }
+    function avisarNoPainel(vista, texto) {
+        const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;
+        if (!painel) return;
+        const antigo = painel.querySelector('.git-erro');
+        if (antigo) antigo.remove();
+        const div = document.createElement('div');
+        div.className = 'git-erro';
+        div.textContent = texto;
+        painel.prepend(div);
+    }
+
+
+export {
+    renderGitPanel,
+    grupoAtivo,
+    ficheirosDaTarefa,
+    mensagemProposta
+};

@@ -4286,6 +4286,38 @@
           3424
         ]
       }
+    },
+    {
+      "termo": "icone do git",
+      "aliases": [
+        "painel de git",
+        "botao do git",
+        "comandos do git",
+        "comit pelo painel",
+        "icone de git do historico"
+      ],
+      "identificador": "btn-show-git-history",
+      "descricao": "Botao do cabecalho da coluna 2 do historico (e o gemeo btn-show-git no dock) que abre o painel de git na coluna 3: estado do repositorio, \"Commit desta tarefa\" (local, so os ficheiros da tarefa), \"Sugerir com IA\" (escreve a mensagem), \"Restaurar esta tarefa\" (modal com a lista de ficheiros) e \"Preparar as dependencias\". Renderizado por git_panel.js:renderGitPanel, ligado ao tipo 'git' de alternarPainelCol3.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 161
+      }
+    },
+    {
+      "termo": "commit da tarefa",
+      "aliases": [
+        "salvar a tarefa no git",
+        "commitar o card",
+        "ponto de recuperacao do card",
+        "hash do card",
+        "tarefa commitada"
+      ],
+      "identificador": "/api/git/commit",
+      "descricao": "Grava um commit LOCAL (sem push) com os ficheiros daquela tarefa e devolve o hash; com filename+round_id grava o hash no turno do log (services/session.py:marcar_commit_no_log), o que faz o card ganhar o pino com o hash no tooltip. Lista de ficheiros VAZIA e recusada - um commit do painel nunca leva tudo o que estiver sujo.",
+      "localizacao": {
+        "arquivo": "src/backend/routes/git_panel.py",
+        "linha": 68
+      }
     }
   ]
 }

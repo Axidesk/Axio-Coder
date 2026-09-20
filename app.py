@@ -21,6 +21,7 @@ from src.backend.routes.terminal import terminal_bp
 from src.backend.routes.editor import editor_bp
 from src.backend.routes.files import files_bp
 from src.backend.routes.session import session_bp
+from src.backend.routes.git_panel import git_bp
 from src.backend.routes.settings import settings_bp
 from src.backend.routes.cofre import cofre_bp
 from src.backend.routes.projeto import projeto_bp
@@ -41,6 +42,7 @@ app.register_blueprint(terminal_bp)
 app.register_blueprint(editor_bp)
 app.register_blueprint(files_bp)
 app.register_blueprint(session_bp)
+app.register_blueprint(git_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(cofre_bp)
 app.register_blueprint(projeto_bp)

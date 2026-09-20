@@ -1,4 +1,5 @@
 import { vistaDe } from './colunas.js';
+import { renderGitPanel } from './git_panel.js';
 import {
     chatContainerLeft,
     chatContainerRight,
@@ -32,6 +33,8 @@ import {
     btnShowToolsHistory,
     btnShowThoughtsHistory,
     btnShowQuestionHistory,
+    btnShowGit,
+    btnShowGitHistory,
     btnWorkspace,
     btnEditor,
     terminalMode,
@@ -231,11 +234,13 @@ import './busca_chat.js';
         if (!vista) return;
         const ativo = tipo === 'thoughts' ? state.isShowingThoughts
             : tipo === 'question' ? state.isShowingQuestions
+            : tipo === 'git' ? state.isShowingGit
             : state.isShowingTools;
         if (ativo && vista.col3Aberta()) {
             state.isShowingThoughts = false;
             state.isShowingQuestions = false;
             state.isShowingTools = false;
+            state.isShowingGit = false;
             vista.fecharCol3();
             pintarBotoesCol3(botoes, null, vista);
             return;
@@ -244,6 +249,7 @@ import './busca_chat.js';
         state.isShowingThoughts = tipo === 'thoughts';
         state.isShowingQuestions = tipo === 'question';
         state.isShowingTools = tipo === 'tools';
+        state.isShowingGit = tipo === 'git';
         syncDocTopBar();
         if (tipo === 'question') {
             showQuestionPanel(window.currentActiveLogGroup || {}, vista);
@@ -260,7 +266,7 @@ import './busca_chat.js';
         }
         const titulo = vista.titulo;
         if (titulo) {
-            titulo.textContent = tipo === 'thoughts' ? 'Raciocínio do Coder' : 'Ferramentas Usadas';
+            titulo.textContent = tipo === 'thoughts' ? 'Raciocínio do Coder' : tipo === 'git' ? 'Git' : 'Ferramentas Usadas';
             titulo.onclick = null;
             titulo.ondblclick = null;
             titulo.title = '';
@@ -269,6 +275,7 @@ import './busca_chat.js';
         }
         pintarBotoesCol3(botoes, tipo, vista);
         if (tipo === 'thoughts') renderThoughts(vista);
+        else if (tipo === 'git') renderGitPanel(vista);
         else renderTools(vista);
     }
 
@@ -285,9 +292,9 @@ import './busca_chat.js';
             });
         });
     }
-    ligarBotoesCol3({ question: btnShowQuestion, thoughts: btnShowThoughts, tools: btnShowTools }, 'dock');
+    ligarBotoesCol3({ question: btnShowQuestion, thoughts: btnShowThoughts, tools: btnShowTools, git: btnShowGit }, 'dock');
 
-    ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory }, 'historico');
+    ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory, git: btnShowGitHistory }, 'historico');
 
     if (btnEyeDiff) {
         btnEyeDiff.addEventListener('click', (e) => {

@@ -104,7 +104,9 @@ const { historyLogsWrapper } = dom;
         row.className = 'flex items-start gap-2';
         row.appendChild(content);
         sub.appendChild(row);
-        if (group.salvo) {
+        if (group.commit) {
+            _injectSavedIcon(sub, 'Guardada no commit ' + String(group.commit).slice(0, 7));
+        } else if (group.salvo) {
             _injectSavedIcon(sub);
         }
         sub.dataset.turnId = group.id;
@@ -187,14 +189,14 @@ const { historyLogsWrapper } = dom;
         card.appendChild(body);
         historyLogsWrapper.appendChild(card);
     }
-    function _injectSavedIcon(el) {
+    function _injectSavedIcon(el, titulo) {
         const existing = el.querySelector('.history-round-saved-icon');
         if (existing) existing.remove();
         const row = el.firstElementChild;
         if (!row) return;
         const savedIcon = document.createElement('span');
         savedIcon.className = 'shrink-0 mt-0.5 history-round-saved-icon';
-        savedIcon.title = 'Tarefa salva';
+        savedIcon.title = titulo || 'Tarefa salva';
         savedIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--oliva)]" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12a2 2 0 0 1 2 2v18l-8-4-8 4V4a2 2 0 0 1 2-2z"/></svg>`;
         row.appendChild(savedIcon);
     }
@@ -218,6 +220,14 @@ const { historyLogsWrapper } = dom;
             }
             const nameEl = el.querySelector('.history-round-name');
             if (nameEl) nameEl.textContent = novoNome;
+        });
+    }
+    function updateRoundCardCommitByTurnId(turnId, hash) {
+        document.querySelectorAll('.history-round-card').forEach(el => {
+            if (String(el.dataset.turnId) !== String(turnId)) return;
+            const g = el._group;
+            if (g) g.commit = hash || '';
+            if (hash) _injectSavedIcon(el, 'Guardada no commit ' + String(hash).slice(0, 7));
         });
     }
     async function toggleSaveSelectedTask(group) {
@@ -439,6 +449,7 @@ export {
     hidratarGroup,
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
+    updateRoundCardCommitByTurnId,
     updateRoundCardNameByTurnId,
     toggleSaveSelectedTask
 };
