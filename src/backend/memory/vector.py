@@ -356,7 +356,7 @@ def buscar_memorias_com_timeout(query, palace_path, wing, n_results=5, timeout=8
     if mineracao_em_andamento.is_set():
         return {"error": "minerador de memórias em andamento; contexto semântico indisponível nesta resposta"}
 
-    def _executar(w):
+    def _executar(w, limite=None):
         resultado = {}
 
         def _trabalho():
@@ -377,7 +377,7 @@ def buscar_memorias_com_timeout(query, palace_path, wing, n_results=5, timeout=8
 
         t = threading.Thread(target=_trabalho, daemon=True)
         t.start()
-        t.join(timeout)
+        t.join(timeout if limite is None else limite)
 
         if t.is_alive():
             return None, "timeout ao acessar banco de memorias"
@@ -391,6 +391,12 @@ def buscar_memorias_com_timeout(query, palace_path, wing, n_results=5, timeout=8
     data, erro = _executar(wing)
     if not erro and not _com_erro(data):
         return data
+
+    if _falha_do_client(erro, data):
+        descartar_client_do_palace()
+        data, erro = _executar(wing, timeout * 2)
+        if not erro and not _com_erro(data):
+            return data
 
     if wing:
         data_sem_filtro, erro_sem_filtro = _executar(None)
@@ -454,6 +460,35 @@ def _abrir_collection(palace_path):
         raise RuntimeError(f"falha ao importar mempalace: {e}") from e
     client = abrir_client(palace_path)
     return client, client.get_collection("mempalace_drawers")
+
+def descartar_client_do_palace():
+    """Descarta os clients do palace e limpa o registo global do ChromaDB.
+
+    O mempalace fecha os clients em cache sempre que o chroma.sqlite3 muda no
+    disco (mtime/inode) - o que acontece a CADA escrita nossa no palace. Quem
+    estiver a meio de uma busca nesse instante fica com a collection a apontar
+    para um System ja parado e rebenta com "'RustBindingsAPI' object has no
+    attribute 'bindings'" (reproduzido: o erro e exatamente este, e uma busca
+    nova logo a seguir funciona). Limpar o registo global do ChromaDB e o que
+    impede o client seguinte de herdar o System morto.
+    """
+    try:
+        from mempalace.backends.registry import get_backend
+        backend = get_backend("chroma")
+        if not getattr(backend, "_closed", False):
+            backend._drain_clients()
+    except Exception as e:
+        print(f"[memoria] falha ao descartar os clients do palace: {e}")
+    try:
+        from chromadb.api.shared_system_client import SharedSystemClient
+        SharedSystemClient.clear_system_cache()
+    except Exception as e:
+        print(f"[memoria] falha ao limpar o registo global do ChromaDB: {e}")
+
+def _falha_do_client(erro, data):
+    """Diz se a falha da busca tem a assinatura do client fechado por baixo de nos."""
+    texto = f"{erro or ''} {(data or {}).get('error') or ''}"
+    return any(sinal in texto for sinal in ("bindings", "closed", "timeout ao acessar"))
 
 def _iterar_drawers(col, incluir, tamanho=5000):
     """Percorre a collection em lotes, devolvendo (processados, total, lote).

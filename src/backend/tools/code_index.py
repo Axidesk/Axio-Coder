@@ -49,15 +49,16 @@ def _colecao_codigo(create=True):
     if not create and not os.path.isdir(_palace_path()):
         _erro_colecao["motivo"] = f"palace inexistente em {_palace_path()}"
         return None
-    try:
-        cliente = abrir_client(_palace_path())
-        col = cliente.get_or_create_collection(_COLLECTION_CODIGO) if create else cliente.get_collection(_COLLECTION_CODIGO)
-    except Exception as exc:
-        _erro_colecao["motivo"] = f"{type(exc).__name__}: {exc}"
-        return None
-    _erro_colecao["motivo"] = ""
-    if create:
-        _identidade_embedder["status"] = _gravar_identidade_embedder(col)
+    with memoria_lock:
+        try:
+            cliente = abrir_client(_palace_path())
+            col = cliente.get_or_create_collection(_COLLECTION_CODIGO) if create else cliente.get_collection(_COLLECTION_CODIGO)
+        except Exception as exc:
+            _erro_colecao["motivo"] = f"{type(exc).__name__}: {exc}"
+            return None
+        _erro_colecao["motivo"] = ""
+        if create:
+            _identidade_embedder["status"] = _gravar_identidade_embedder(col)
     return col
 
 def _gravar_identidade_embedder(col):

@@ -11,18 +11,22 @@ falharem em silencio.
 import base64
 import json
 import os
+import re
 import time
+from urllib.parse import quote
 
 from src.backend.services import cofre, ponte_preview
 from src.backend.services.file_service import resolver_caminho_arquivo
 from src.backend.services.imagem import codificar_para_envio, dimensoes_da_imagem
 from src.backend.state import emit_event
+from src.backend.tools.projeto_comum import caminho_relativo
 from src.backend.tools.registry import register
 
 ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "print")
 ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
 LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
+EXTENSOES_DE_PAGINA = (".html", ".htm")
 
 
 def _endereco_local(destino):
@@ -30,6 +34,52 @@ def _endereco_local(destino):
     if alvo.startswith("http://") or alvo.startswith("https://"):
         return "127.0.0.1" in alvo or "localhost" in alvo
     return True
+
+
+def _e_endereco(alvo):
+    """Um endereco ja pronto (http://..., localhost:5000/...) nao passa pela resolucao de ficheiro."""
+    if "://" in alvo:
+        return True
+    return bool(re.match(r"^(localhost|127\.0\.0\.1|\d{1,3}(\.\d{1,3}){3}):\d+", alvo, re.I))
+
+
+def _origem_do_servidor():
+    """Endereco do proprio servidor do Axio - o mesmo que a janela usa para servir o preview."""
+    try:
+        from flask import request
+        return request.host_url.rstrip("/")
+    except Exception:
+        return "http://127.0.0.1:5000"
+
+
+def _endereco_do_ficheiro(alvo):
+    """Endereco que abre um ficheiro DO PROJETO no preview: pagina servida ou viewer.
+
+    Um caminho relativo ('gerados/planta.dxf') e do projeto: quem o traduz no
+    endereco certo e esta funcao, e nao quem chama. Ficheiro de pagina vai pela
+    rota /preview, que resolve os caminhos do proprio documento contra o servidor
+    (por file:// resolvem contra a raiz do disco e a pagina aparece nua); os
+    formatos que o Chromium nao desenha (DXF, PDF, IFC) vao para o viewer, que os
+    recebe no fragmento #f=<caminho>. Devolve (None, "") quando o alvo nao e um
+    ficheiro do projeto - o endereco segue como veio.
+    """
+    try:
+        caminho, _erro = resolver_caminho_arquivo(alvo)
+    except Exception:
+        caminho = None
+    if not caminho or not os.path.isfile(caminho):
+        if os.path.isabs(alvo):
+            return None, ""
+        if "/" in alvo or "\\" in alvo:
+            return None, f"ficheiro do projeto nao encontrado: {alvo}"
+        return None, ""
+    relativo = caminho_relativo(caminho)
+    if not relativo or relativo.startswith("..") or os.path.isabs(relativo):
+        return None, ""
+    origem = _origem_do_servidor()
+    if caminho.lower().endswith(EXTENSOES_DE_PAGINA):
+        return origem + "/preview/" + "/".join(quote(parte) for parte in relativo.split("/")), None
+    return origem + "/vendor/viewer/index.html#f=" + quote(caminho, safe=""), None
 
 
 def _renovar_pagina_local(destino):
@@ -753,6 +803,12 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         destino = (alvo or texto).strip()
         if not destino:
             return "ERRO: indique 'alvo' com o endereco ou o ficheiro a abrir no preview."
+        if not _e_endereco(destino):
+            convertido, motivo = _endereco_do_ficheiro(destino)
+            if motivo:
+                return f"ERRO: {motivo}."
+            if convertido:
+                destino = convertido
         dados, erro = ponte_preview.pedir("carregar", alvo=destino)
         if erro:
             return f"ERRO: {erro}."
