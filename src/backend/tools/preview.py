@@ -185,6 +185,37 @@ def _alvo_do_passo(passo):
     return ""
 
 
+CAMPOS_LIDOS_POR_ACAO = {
+    "carregar": ("alvo", "texto"),
+    "mostrar": (),
+    "recarregar": (),
+    "clicar": ("seletor", "ponto"),
+    "arrastar": ("ponto",),
+    "roda": ("ponto", "seletor", "texto"),
+    "escrever": ("seletor", "texto", "limpar"),
+    "teclar": ("tecla", "seletor"),
+    "roteiro": ("passos",),
+    "ficheiro": ("alvo", "texto", "seletor"),
+}
+
+
+def _argumento_ignorado(pedido, valores):
+    """Aponta o argumento preenchido que a acao escolhida nao le - ele seria ignorado em silencio."""
+    if pedido not in CAMPOS_LIDOS_POR_ACAO:
+        return ""
+    lidos = CAMPOS_LIDOS_POR_ACAO[pedido]
+    for nome, valor in valores.items():
+        if nome in lidos:
+            continue
+        preenchido = bool(valor) if nome == "limpar" else bool(str(valor or "").strip())
+        if not preenchido:
+            continue
+        esperados = ", ".join(f"'{campo}'" for campo in lidos) or "nenhum campo"
+        return (f"ERRO: '{nome}' nao e lido por acao='{pedido}' (essa acao usa {esperados}) - "
+                "o valor que passou seria ignorado em silencio.")
+    return ""
+
+
 def _correr_roteiro(passos):
     """Corre os gestos em serie pela mesma ferramenta de um gesto isolado.
 
@@ -798,6 +829,13 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
     if pedido not in ACOES_DE_OPERACAO:
         return f"ERRO: acao desconhecida '{acao}'. Use uma de: {', '.join(ACOES_DE_OPERACAO)}."
     emit_event("executing", function=f"Agindo no preview: {pedido}")
+
+    ignorado = _argumento_ignorado(pedido, {
+        "seletor": seletor, "ponto": ponto, "alvo": alvo,
+        "texto": texto, "limpar": limpar, "tecla": tecla, "passos": passos,
+    })
+    if ignorado:
+        return ignorado
 
     if pedido == "carregar":
         destino = (alvo or texto).strip()
