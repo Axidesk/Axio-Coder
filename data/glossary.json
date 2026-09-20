@@ -259,10 +259,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1125,
+        "linha": 1194,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -443,10 +443,10 @@
       "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 266,
+        "linha": 273,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -1533,10 +1533,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1093,
+        "linha": 1162,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -2450,10 +2450,10 @@
       "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 387,
+        "linha": 394,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -2491,10 +2491,10 @@
       "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 387,
+        "linha": 394,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -2790,10 +2790,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1007,
+        "linha": 1026,
         "conferido": [
-          1789926802.765,
-          47326
+          1789928630.205,
+          48300
         ]
       }
     },
@@ -2811,10 +2811,10 @@
       "descricao": "Lanca um programa nativo pelo nome (ex: 'notepad', 'mspaint') ou pelo caminho completo, e devolve a janela dele ja com as contagens. Resolve pelo PATH e pelos App Paths do registo; NAO passa pela allowlist de _validar_comando_processo, que governa compilacao e nao abrir apps GUI.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 777,
+        "linha": 795,
         "conferido": [
-          1789926802.765,
-          47326
+          1789928630.205,
+          48300
         ]
       }
     },
@@ -2833,10 +2833,10 @@
       "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 925,
+        "linha": 944,
         "conferido": [
-          1789926802.765,
-          47326
+          1789928630.205,
+          48300
         ]
       }
     },
@@ -3301,8 +3301,8 @@
         "arquivo": "src/main.js",
         "linha": 41,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -3380,10 +3380,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 879,
+        "linha": 943,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -3540,10 +3540,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 835,
+        "linha": 899,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -3600,10 +3600,10 @@
       "descricao": "tool_operar_janela com acao='print' e 'janela' = trecho do titulo (ex: 'Axio Coder'): a resolucao da janela e pelo _janela() (hwnd ou texto do titulo) e a captura e pelo _acao_print -> _capturar_janela, que usa janela.capture_as_image() (composicao do sistema, do pywinauto) e o ImageGrab so como ultimo recurso - ou seja, funciona mesmo com a janela TAPADA, ao contrario do tool_capturar_print, que fotografa o ecra e so ve o que esta a vista. O 'regiao' deste print e RELATIVO a janela (crop no bitmap dela), nao coordenadas do ecra. NAO reimplementar resolucao de janelas por win32gui.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 752,
+        "linha": 770,
         "conferido": [
-          1789926802.765,
-          47326
+          1789928630.205,
+          48300
         ]
       }
     },
@@ -4028,17 +4028,14 @@
         "filtrar as mensagens do chat",
         "buscar nas mensagens enviadas e recebidas",
         "lupa do titulo",
-        "buscar no chat"
+        "buscar no chat",
+        "campo de busca do chat"
       ],
       "identificador": "alternarBuscaChat",
-      "descricao": "A lupa da barra de titulo (o botao vive em index.html, ao lado dos botoes da janela) abre um campo por cima da conversa e FILTRA as duas colunas - as mensagens enviadas pelo utilizador e as respostas do agente -, escondendo as que nao contem o termo, com a contagem no proprio campo. E `alternarBuscaChat` que abre e fecha; `reavaliarBuscaChat` volta a aplicar o filtro quando chega mensagem nova (chamada por messages.js), para uma mensagem recebida com a busca aberta ja entrar filtrada; `fecharBuscaChat` limpa o campo e repoe tudo. O painel e #chat-search-panel (src/frontend/index.html) e o CSS esta em src/frontend/css/editor.css (#chat-search-panel, grid-template-rows 0fr/1fr).",
+      "descricao": "A lupa vive na BARRA DE TITULO (#btn-chat-search, dentro de #chat-search-wrap, ao lado dos botoes da janela) e o campo abre ALI MESMO, na propria barra - nao na conversa. O efeito e o da lupa do explorer: o botao encolhe e some (.hide, scale 0.4) enquanto #chat-search-box cresce em largura da direita para a esquerda (width 0 -> 340px, ancorada a right:0, com a transicao width var(--dur-7) + opacity var(--dur-3)). FILTRA as duas colunas - as mensagens de #chat-inner-left (utilizador) e de #chat-inner-right (agente) -, escondendo as que nao contem o termo com .conversa-busca-fora (display:none) e mostrando a contagem no proprio campo. E `alternarBuscaChat` que abre e fecha (botao ou clique na lupa do campo); `reavaliarBuscaChat` volta a aplicar o filtro quando chega mensagem nova (chamado por messages.js:822); `fecharBuscaChat` limpa o campo e repoe tudo. O CSS vive em src/frontend/css/titulo.css (#chat-search-wrap, #chat-search-box, .chat-search-field). ARMADILHA: a barra tem -webkit-app-region: drag, logo o wrap e a caixa precisam de no-drag, senao o campo nao recebe o clique nem o foco. O #chat-search-panel antigo (painel dentro do #chat-mode, com grid-template-rows 0fr/1fr) foi APAGADO.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/busca_chat.js",
-        "linha": 67,
-        "conferido": [
-          1789868210.227,
-          2646
-        ]
+        "linha": 70
       }
     },
     {
@@ -4127,10 +4124,10 @@
       "descricao": "View filha do contentView da janela principal (nao uma janela separada)",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 631,
+        "linha": 667,
         "conferido": [
-          1789927593.708,
-          44347
+          1789929161.124,
+          47299
         ]
       }
     },
@@ -4237,10 +4234,30 @@
       "descricao": "Regra antiga: decidia no instante do despejo por `scrollHeight - scrollTop - clientHeight <= 4`, que mistura a posicao do utilizador com o TAMANHO da caixa (a linha #rc-estado tem 46px, a caixa da janela e o zoom tambem mudam) - e um ResizeObserver escrevia o fundo por essa conta. Hoje so o gesto e o scroll do utilizador mexem no estado `colado`, e o despejo limita-se a lê-lo.",
       "localizacao": {
         "arquivo": "src/frontend/js/raciocinio.js",
-        "linha": 48,
+        "linha": 52,
         "conferido": [
-          1789927621.435,
-          4414
+          1789929158.24,
+          5069
+        ]
+      }
+    },
+    {
+      "termo": "quadradinho do raciocinio",
+      "aliases": [
+        "icone de maximizar do raciocinio",
+        "quadradinho do painel",
+        "botao maximizar do painel",
+        "alargar a janela do raciocinio",
+        "botao de quadradinho"
+      ],
+      "identificador": "#rc-largo",
+      "descricao": "Botao de quadradinho ao lado do '-' que alarga o painel ate 16px das bordas laterais, mantendo a altura e a distancia ao fundo; fica aceso (oliva) quando o painel esta largo",
+      "localizacao": {
+        "arquivo": "src/frontend/raciocinio.html",
+        "linha": 15,
+        "conferido": [
+          1789928501.815,
+          1080
         ]
       }
     }

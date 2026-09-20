@@ -51,16 +51,19 @@ function reavaliarBuscaChat() {
 
 function abrirBuscaChat() {
     aberta = true;
-    if (dom.chatSearchPanel) dom.chatSearchPanel.classList.add('aberta');
-    if (dom.btnChatSearch) dom.btnChatSearch.classList.add('aberto');
-    if (dom.chatSearchInput) dom.chatSearchInput.focus();
+    if (dom.chatSearchBox) dom.chatSearchBox.classList.add('aberta');
+    if (dom.btnChatSearch) dom.btnChatSearch.classList.add('hide');
+    if (dom.chatSearchInput) {
+        dom.chatSearchInput.focus();
+        dom.chatSearchInput.select();
+    }
 }
 
 function fecharBuscaChat() {
     aberta = false;
     if (dom.chatSearchInput) dom.chatSearchInput.value = '';
-    if (dom.chatSearchPanel) dom.chatSearchPanel.classList.remove('aberta');
-    if (dom.btnChatSearch) dom.btnChatSearch.classList.remove('aberto');
+    if (dom.chatSearchBox) dom.chatSearchBox.classList.remove('aberta');
+    if (dom.btnChatSearch) dom.btnChatSearch.classList.remove('hide');
     aplicarFiltro('');
 }
 
@@ -71,6 +74,11 @@ function alternarBuscaChat() {
 
 function _ligar() {
     if (dom.btnChatSearch) dom.btnChatSearch.addEventListener('click', alternarBuscaChat);
+    if (dom.chatSearchLupa) {
+        dom.chatSearchLupa.addEventListener('click', () => {
+            if (aberta) fecharBuscaChat();
+        });
+    }
     if (!dom.chatSearchInput) return;
     let relogio = null;
     dom.chatSearchInput.addEventListener('input', () => {
