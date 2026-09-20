@@ -191,11 +191,18 @@ function sair() {
     document.body.classList.add('rc-saindo');
 }
 
+function avisarFimDoMovimento(evento) {
+    if (evento.target !== janela || evento.propertyName !== 'transform') return;
+    if (movimentoDaCaixa) return;
+    api.assentar();
+}
+
 botao.addEventListener('click', alternarRecolha);
 registo.addEventListener('scroll', acompanharRolagem, { passive: true });
 registo.addEventListener('wheel', marcarGesto, { passive: true });
 registo.addEventListener('pointerdown', marcarGesto, { passive: true });
 new ResizeObserver(marcarCorteNoTopo).observe(registo);
+janela.addEventListener('transitionend', avisarFimDoMovimento);
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
 setTimeout(() => {
