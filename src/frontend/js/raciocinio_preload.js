@@ -8,5 +8,7 @@ contextBridge.exposeInMainWorld('raciocinio', {
     aoSair: (fn) => ipcRenderer.on('raciocinio:sair', () => fn()),
     aoTrocar: (fn) => ipcRenderer.on('raciocinio:trocar', (_evento, valor) => fn(!!valor)),
     aoEscala: (fn) => ipcRenderer.on('raciocinio:escala', (_evento, valor) => fn(Number(valor))),
-    alternar: () => ipcRenderer.send('raciocinio:alternar')
+    aoAnimacao: (fn) => ipcRenderer.on('raciocinio:animacao', (_evento, ligado) => fn(!!ligado)),
+    alternar: () => ipcRenderer.send('raciocinio:alternar'),
+    tique: () => ipcRenderer.send('raciocinio:tique')
 });
