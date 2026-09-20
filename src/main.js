@@ -44,7 +44,7 @@ let raciocinioBuffer = [];
 let raciocinioOcioso = null;
 let raciocinioDeSeguir = null;
 let raciocinioParadoEm = 0;
-let raciocinioAnimando = null;
+let raciocinioAssentando = null;
 let raciocinioSaidaEm = null;
 let raciocinioPronto = false;
 let raciocinioSaindo = false;
@@ -61,8 +61,7 @@ const RACIOCINIO_ALTURA = 200;
 const RACIOCINIO_LARGURA_RECOLHIDA = 200;
 const RACIOCINIO_ALTURA_RECOLHIDA = 38;
 const RACIOCINIO_MARGEM_FUNDO = 16;
-const RACIOCINIO_ANIMACAO_MS = 250;
-const RACIOCINIO_PRAZO_MS = 240;
+const RACIOCINIO_ASSENTO_MS = 260;
 const RACIOCINIO_SEGUIR_MS = 16;
 const RACIOCINIO_PARADO_MS = 140;
 const RACIOCINIO_BURST_MS = 400;
@@ -518,7 +517,7 @@ function mesmoRect(a, b) {
 function aplicarLimitesDoRaciocinio() {
   if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (raciocinioAnimando || raciocinioSaindo) return;
+  if (raciocinioAssentando || raciocinioSaindo) return;
   const destino = limitesDoRaciocinio();
   if (mesmoRect(janelaRaciocinio.getBounds(), destino)) return;
   janelaRaciocinio.setBounds(destino);
@@ -529,7 +528,7 @@ function pararAcompanhamentoDoRaciocinio() {
     clearTimeout(raciocinioDeSeguir);
     raciocinioDeSeguir = null;
   }
-  cancelarAnimacaoDoRaciocinio();
+  cancelarAssentoDoRaciocinio();
 }
 
 function acompanharLayoutDoRaciocinio(impulso) {
@@ -547,93 +546,12 @@ function passoDeAcompanhamento() {
   if (!janela || janela.isDestroyed() || !janela.isVisible() || raciocinioSaindo) return;
   const antes = janela.getBounds();
   aplicarLimitesDoRaciocinio();
-  if (!mesmoRect(antes, janela.getBounds())) raciocinioParadoEm = Date.now();
+  if (!mesmoRect(antes, janela.getBounds())) {
+    raciocinioParadoEm = Date.now();
+    avisarCaixaDoRaciocinio(null, false);
+  }
   const aAndar = (Date.now() - raciocinioParadoEm) < RACIOCINIO_PARADO_MS;
   raciocinioDeSeguir = setTimeout(passoDeAcompanhamento, aAndar ? RACIOCINIO_SEGUIR_MS : RACIOCINIO_VIGIA_MS);
-}
-
-function curvaDaFluidez(t) {
-  const x1 = 0.4;
-  const y1 = 0;
-  const x2 = 0.2;
-  const y2 = 1;
-  const ponto = (a, b, u) => ((1 - 3 * b + 3 * a) * u + (3 * b - 6 * a)) * u * u + 3 * a * u;
-  let baixo = 0;
-  let alto = 1;
-  let u = t;
-  for (let i = 0; i < 24; i += 1) {
-    const x = ponto(x1, x2, u);
-    if (Math.abs(x - t) < 0.0005) break;
-    if (x < t) baixo = u;
-    else alto = u;
-    u = (baixo + alto) / 2;
-  }
-  return ponto(y1, y2, u);
-}
-
-function misturarRect(de, para, t) {
-  return {
-    x: Math.round(de.x + (para.x - de.x) * t),
-    y: Math.round(de.y + (para.y - de.y) * t),
-    width: Math.round(de.width + (para.width - de.width) * t),
-    height: Math.round(de.height + (para.height - de.height) * t)
-  };
-}
-
-function pedirRelogioDaAnimacao(ligado) {
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed() || janela.webContents.isLoading()) return;
-  janela.webContents.send('raciocinio:animacao', !!ligado);
-}
-
-function terminarAnimacaoDoRaciocinio() {
-  const anim = raciocinioAnimando;
-  raciocinioAnimando = null;
-  if (anim) clearTimeout(anim.prazo);
-  pedirRelogioDaAnimacao(false);
-  const janela = janelaRaciocinio;
-  if (janela && !janela.isDestroyed() && !janela.webContents.isLoading()) {
-    janela.webContents.send('raciocinio:trocar', false);
-  }
-}
-
-function cancelarAnimacaoDoRaciocinio() {
-  if (raciocinioAnimando) terminarAnimacaoDoRaciocinio();
-}
-
-function passoDaAnimacaoDoRaciocinio() {
-  const anim = raciocinioAnimando;
-  if (!anim) return;
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed() || raciocinioSaindo) {
-    terminarAnimacaoDoRaciocinio();
-    return;
-  }
-  const t = Math.min(1, (Date.now() - anim.comecou) / RACIOCINIO_ANIMACAO_MS);
-  janela.setBounds(misturarRect(anim.de, anim.para, curvaDaFluidez(t)));
-  if (t >= 1) terminarAnimacaoDoRaciocinio();
-}
-
-function animarCaixaDoRaciocinio(destino) {
-  const janela = janelaRaciocinio;
-  if (!janela || janela.isDestroyed() || !janela.isVisible() || raciocinioSaindo) return;
-  const inicio = janela.getBounds();
-  if (mesmoRect(inicio, destino)) return;
-  cancelarAnimacaoDoRaciocinio();
-  if (!janela.webContents.isLoading()) janela.webContents.send('raciocinio:trocar', true);
-  raciocinioAnimando = {
-    de: inicio,
-    para: destino,
-    comecou: Date.now(),
-    prazo: setTimeout(() => {
-      if (!raciocinioAnimando) return;
-      const alvo = janelaRaciocinio;
-      if (alvo && !alvo.isDestroyed()) alvo.setBounds(destino);
-      terminarAnimacaoDoRaciocinio();
-    }, RACIOCINIO_ANIMACAO_MS + RACIOCINIO_PRAZO_MS)
-  };
-  pedirRelogioDaAnimacao(true);
-  passoDaAnimacaoDoRaciocinio();
 }
 
 function descartarJanelaRaciocinio() {
@@ -698,6 +616,7 @@ function criarJanelaRaciocinio() {
     janelaRaciocinio.webContents.send('raciocinio:historico', raciocinioBuffer);
     janelaRaciocinio.webContents.send('raciocinio:recolhido', raciocinioRecolhido);
     avisarEscalaDoRaciocinio();
+    avisarCaixaDoRaciocinio(null, false);
     if (raciocinioQuerido && previewVisivel) mostrarJanelaRaciocinio();
   });
   janelaRaciocinio.loadURL('http://127.0.0.1:5000/raciocinio');
@@ -752,6 +671,7 @@ function mostrarJanelaRaciocinio() {
   if (apareceu) {
     janela.showInactive();
     avisarEscalaDoRaciocinio();
+    avisarCaixaDoRaciocinio(null, false);
     acompanharLayoutDoRaciocinio(true);
   }
   if (janela.webContents.isLoading()) return;
@@ -789,6 +709,17 @@ function avisarEscalaDoRaciocinio() {
   janelaRaciocinio.webContents.send('raciocinio:escala', zoom);
 }
 
+function avisarCaixaDoRaciocinio(caixa, animar) {
+  const janela = janelaRaciocinio;
+  if (!janela || janela.isDestroyed() || janela.webContents.isLoading()) return;
+  const alvo = caixa || janela.getBounds();
+  janela.webContents.send('raciocinio:caixa', {
+    largura: alvo.width,
+    altura: alvo.height,
+    animar: !!animar
+  });
+}
+
 function definirRecolhaDoRaciocinio(recolhido) {
   const alvo = !!recolhido;
   const mudou = alvo !== raciocinioRecolhido;
@@ -799,8 +730,34 @@ function definirRecolhaDoRaciocinio(recolhido) {
     return;
   }
   if (!mudou) return;
+  const destino = limitesDoRaciocinio();
   avisarRecolhaDoRaciocinio(alvo);
-  animarCaixaDoRaciocinio(limitesDoRaciocinio());
+  if (alvo) {
+    avisarCaixaDoRaciocinio(destino, true);
+    agendarAssentoDoRaciocinio(destino);
+    return;
+  }
+  cancelarAssentoDoRaciocinio();
+  janelaRaciocinio.setBounds(destino);
+  avisarCaixaDoRaciocinio(destino, true);
+}
+
+function cancelarAssentoDoRaciocinio() {
+  if (raciocinioAssentando) {
+    clearTimeout(raciocinioAssentando);
+    raciocinioAssentando = null;
+  }
+}
+
+function agendarAssentoDoRaciocinio(destino) {
+  cancelarAssentoDoRaciocinio();
+  raciocinioAssentando = setTimeout(() => {
+    raciocinioAssentando = null;
+    const janela = janelaRaciocinio;
+    if (!janela || janela.isDestroyed() || raciocinioSaindo || !janela.isVisible()) return;
+    janela.setBounds(destino);
+    avisarCaixaDoRaciocinio(null, false);
+  }, RACIOCINIO_ASSENTO_MS);
 }
 
 function urlDoAlvo(texto) {
@@ -1062,12 +1019,6 @@ app.on('ready', () => {
     if (e.sender !== janelaRaciocinio.webContents) return;
     definirRecolhaDoRaciocinio(!raciocinioRecolhido);
   });
-  ipcMain.on('raciocinio:tique', (e) => {
-    if (!janelaRaciocinio || janelaRaciocinio.isDestroyed()) return;
-    if (e.sender !== janelaRaciocinio.webContents) return;
-    passoDaAnimacaoDoRaciocinio();
-  });
-
   function montarMenu() {
     const menu = Menu.buildFromTemplate([
       {

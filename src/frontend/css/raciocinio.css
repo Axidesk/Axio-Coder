@@ -33,11 +33,6 @@ body {
         transform var(--dur-3) var(--ease-fluid);
 }
 
-body.rc-trocando #rc-barra,
-body.rc-trocando #rc-conteudo {
-    opacity: 0.35;
-}
-
 body.rc-saindo #rc-janela {
     opacity: 0;
     transform: translateX(-50%) translateY(26px) scale(0.97);

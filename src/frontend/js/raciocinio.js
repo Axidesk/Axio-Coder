@@ -4,28 +4,32 @@ const api = window.raciocinio || {
     aoHistorico: () => {},
     aoRecolha: () => {},
     aoSair: () => {},
-    aoAnimacao: () => {},
-    alternar: () => {},
-    tique: () => {}
+    aoCaixa: () => {},
+    aoEscala: () => {},
+    alternar: () => {}
 };
 
 const botao = document.getElementById('rc-recolher');
 const contador = document.getElementById('rc-contador');
 const estado = document.getElementById('rc-estado');
 const registo = document.getElementById('rc-registo');
+const janela = document.getElementById('rc-janela');
+const recorte = document.getElementById('rc-clip');
 
 const MARGEM_DO_FIM_PX = 4;
 const VIGIA_DA_ENTRADA_MS = 1000;
-const PORTAO_DO_GESTO_MS = 300;
+const DURACAO_DA_CAIXA_MS = 250;
+const CURVA_DA_CAIXA = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 let recolhido = false;
 let passos = 0;
-let portaoDoGesto = 0;
+let colado = true;
 let pendentes = [];
 let agendado = 0;
 let entradaResolvida = false;
-let relogio = 0;
-let relogioLigado = false;
+let escala = 1;
+let caixaDaJanela = null;
+let movimentoDaCaixa = null;
 
 function limpar() {
     if (agendado) {
@@ -35,10 +39,11 @@ function limpar() {
     pendentes = [];
     while (registo.firstChild) registo.removeChild(registo.firstChild);
     registo.classList.remove('rc-por-cima');
+    registo.scrollTop = 0;
     estado.textContent = '';
     passos = 0;
     contador.textContent = '';
-    portaoDoGesto = 0;
+    colado = true;
 }
 
 function noFimDoRegisto() {
@@ -54,22 +59,13 @@ function colarAoFundo() {
     marcarCorteNoTopo();
 }
 
-function portaoAberto() {
-    return performance.now() >= portaoDoGesto;
-}
-
 function marcarGesto() {
-    if (!noFimDoRegisto()) return;
-    portaoDoGesto = performance.now() + PORTAO_DO_GESTO_MS;
-}
-
-function libertarGesto() {
-    portaoDoGesto = 0;
+    colado = false;
 }
 
 function acompanharRolagem() {
     marcarCorteNoTopo();
-    if (!noFimDoRegisto()) libertarGesto();
+    colado = noFimDoRegisto();
 }
 
 function linhaDaFerramenta(evento) {
@@ -100,13 +96,12 @@ function despejar() {
     const lista = pendentes;
     pendentes = [];
     if (!lista.length) return;
-    const estavaNoFundo = noFimDoRegisto();
     for (const evento of lista) {
         registo.appendChild(evento.tipo === 'ferramenta' ? linhaDaFerramenta(evento) : linhaDoPensamento(evento));
         passos += 1;
     }
     contador.textContent = passos === 1 ? '1 passo' : passos + ' passos';
-    if (estavaNoFundo && portaoAberto()) colarAoFundo();
+    if (colado) colarAoFundo();
 }
 
 function agendarDespejo() {
@@ -147,53 +142,64 @@ function alternarRecolha() {
 function animarEntrada() {
     entradaResolvida = true;
     document.body.classList.remove('rc-saindo');
-    document.body.classList.remove('rc-trocando');
-}
-
-function marcarTroca(valor) {
-    document.body.classList.toggle('rc-trocando', !!valor);
 }
 
 function aplicarEscala(zoom) {
-    document.documentElement.style.setProperty('--rc-zoom', String(zoom > 0 ? zoom : 1));
+    escala = zoom > 0 ? zoom : 1;
+    document.documentElement.style.setProperty('--rc-zoom', String(escala));
+    if (caixaDaJanela) aplicarCaixa({ largura: caixaDaJanela.largura, altura: caixaDaJanela.altura, animar: false });
+}
+
+function aplicarCaixa(caixa) {
+    if (!caixa) return;
+    const largura = Number(caixa.largura);
+    const altura = Number(caixa.altura);
+    if (!Number.isFinite(largura) || !Number.isFinite(altura) || largura < 1 || altura < 1) return;
+    caixaDaJanela = { largura: largura, altura: altura };
+    const alvoL = largura / escala;
+    const alvoA = altura / escala;
+    const anterior = janela.getBoundingClientRect();
+    if (movimentoDaCaixa) {
+        movimentoDaCaixa.cancel();
+        movimentoDaCaixa = null;
+    }
+    janela.style.width = alvoL + 'px';
+    janela.style.height = alvoA + 'px';
+    if (caixa.animar && anterior.width > 1) {
+        recorte.style.width = Math.max(anterior.width, alvoL) + 'px';
+        movimentoDaCaixa = janela.animate(
+            [
+                { width: anterior.width + 'px', height: anterior.height + 'px' },
+                { width: alvoL + 'px', height: alvoA + 'px' }
+            ],
+            { duration: DURACAO_DA_CAIXA_MS, easing: CURVA_DA_CAIXA }
+        );
+        movimentoDaCaixa.finished.then(assentarCaixa, () => {});
+        return;
+    }
+    recorte.style.width = alvoL + 'px';
+}
+
+function assentarCaixa() {
+    movimentoDaCaixa = null;
+    if (caixaDaJanela) recorte.style.width = (caixaDaJanela.largura / escala) + 'px';
 }
 
 function sair() {
     document.body.classList.add('rc-saindo');
 }
 
-function passoDoRelogio() {
-    relogio = 0;
-    if (!relogioLigado) return;
-    relogio = requestAnimationFrame(passoDoRelogio);
-    api.tique();
-}
-
-function ligarRelogio(ligado) {
-    relogioLigado = !!ligado;
-    if (relogio) {
-        cancelAnimationFrame(relogio);
-        relogio = 0;
-    }
-    if (relogioLigado) relogio = requestAnimationFrame(passoDoRelogio);
-}
-
 botao.addEventListener('click', alternarRecolha);
 registo.addEventListener('scroll', acompanharRolagem, { passive: true });
-registo.addEventListener('scrollend', libertarGesto, { passive: true });
 registo.addEventListener('wheel', marcarGesto, { passive: true });
 registo.addEventListener('pointerdown', marcarGesto, { passive: true });
-new ResizeObserver(() => {
-    marcarCorteNoTopo();
-    if (portaoAberto() && noFimDoRegisto()) colarAoFundo();
-}).observe(registo);
+new ResizeObserver(marcarCorteNoTopo).observe(registo);
 document.body.classList.add('rc-saindo');
 api.aoAbrir(animarEntrada);
 setTimeout(() => {
     if (!entradaResolvida) animarEntrada();
 }, VIGIA_DA_ENTRADA_MS);
-api.aoTrocar(marcarTroca);
-api.aoAnimacao(ligarRelogio);
+api.aoCaixa(aplicarCaixa);
 api.aoEscala(aplicarEscala);
 api.aoSair(sair);
 api.aoRecolha(definirRecolha);

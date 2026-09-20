@@ -259,10 +259,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1047,
+        "linha": 1103,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -443,10 +443,10 @@
       "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 266,
+        "linha": 265,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -1533,10 +1533,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1015,
+        "linha": 1071,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -2450,10 +2450,10 @@
       "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 387,
+        "linha": 386,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -2491,10 +2491,10 @@
       "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 387,
+        "linha": 386,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -3301,8 +3301,8 @@
         "arquivo": "src/main.js",
         "linha": 40,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -3380,10 +3380,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 811,
+        "linha": 862,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -3540,10 +3540,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 767,
+        "linha": 818,
         "conferido": [
-          1789917112.764,
-          41282
+          1789919395.058,
+          43137
         ]
       }
     },
@@ -4124,7 +4124,11 @@
       "descricao": "Segunda BrowserWindow do Electron (transparente, sem moldura, filha da principal, nao focavel) que mostra o raciocinio do agente ENQUANTO ele opera o preview - existe porque a vista do preview e uma WebContentsView, que fica SEMPRE por cima do DOM. Servida em /raciocinio (raciocinio.html/js/css). ANCORADA A AREA DO PREVIEW: centro horizontal sobre a area e base a 16px do fundo; acompanha a janela-mae por um seguidor a 16ms (acompanharLayoutDoRaciocinio/passoDeAcompanhamento). SO EXISTE ENQUANTO A VISTA DO PREVIEW ESTA VISIVEL: definirVisibilidadeDoPreview(false) esconde-a sempre e o fim do turno esconde-a na hora (nao ha mais graca de 30s). O PAINEL TEM SEMPRE 100% x 100% DA JANELA (aberta 380x200, recolhida 200x38, em DIP) e NUNCA e maior que a area do preview (limitesDoRaciocinio aperta a largura/altura ao tamanho da area). A caixa muda por animarCaixaDoRaciocinio, que interpola x/y/largura/altura em passos de 16ms durante 250ms com a curva --ease-fluid resolvida por bisseccao (curvaDaFluidez) - a recolha e DESENHADA, nao saltada. NAO usar percentagem no #rc-janela: a percentagem muda de referencia quando a janela encolhe e deixou a barrinha fora da janela (medido: barra a 105 DIP numa janela de 200, botao em x=188..215 FORA). A barra e calc(38px / var(--rc-zoom)) porque px CSS so sao DIP com zoom a 100%. O botao de recolher tem AutomationId estavel 'rc-recolher' e o nome visivel troca ('Recolher'/'Exibir').",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 633
+        "linha": 656,
+        "conferido": [
+          1789919395.058,
+          43137
+        ]
       }
     },
     {
@@ -4221,17 +4225,16 @@
         "fica andando",
         "a rolagem desce sozinha",
         "nao para de descer",
-        "texto andando"
+        "texto andando",
+        "rolagem automatica do painel do raciocinio",
+        "o texto me empurra",
+        "forca a descer"
       ],
-      "identificador": "aoFundo / acompanharRolagem / marcarGesto",
-      "descricao": "Seguir o fim do registo do painel: so escreve com a posicao no fim, com 180ms de graca depois de um gesto do utilizador",
+      "identificador": "colarAoFundo / marcarGesto / acompanharRolagem",
+      "descricao": "Regra antiga: decidia no instante do despejo por `scrollHeight - scrollTop - clientHeight <= 4`, que mistura a posicao do utilizador com o TAMANHO da caixa (a linha #rc-estado tem 46px, a caixa da janela e o zoom tambem mudam) - e um ResizeObserver escrevia o fundo por essa conta. Hoje so o gesto e o scroll do utilizador mexem no estado `colado`, e o despejo limita-se a lê-lo.",
       "localizacao": {
         "arquivo": "src/frontend/js/raciocinio.js",
-        "linha": 50,
-        "conferido": [
-          1789917234.073,
-          4927
-        ]
+        "linha": 57
       }
     }
   ]

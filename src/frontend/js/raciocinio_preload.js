@@ -6,9 +6,7 @@ contextBridge.exposeInMainWorld('raciocinio', {
     aoAbrir: (fn) => ipcRenderer.on('raciocinio:abrir', () => fn()),
     aoRecolha: (fn) => ipcRenderer.on('raciocinio:recolhido', (_evento, valor) => fn(!!valor)),
     aoSair: (fn) => ipcRenderer.on('raciocinio:sair', () => fn()),
-    aoTrocar: (fn) => ipcRenderer.on('raciocinio:trocar', (_evento, valor) => fn(!!valor)),
+    aoCaixa: (fn) => ipcRenderer.on('raciocinio:caixa', (_evento, caixa) => fn(caixa)),
     aoEscala: (fn) => ipcRenderer.on('raciocinio:escala', (_evento, valor) => fn(Number(valor))),
-    aoAnimacao: (fn) => ipcRenderer.on('raciocinio:animacao', (_evento, ligado) => fn(!!ligado)),
-    alternar: () => ipcRenderer.send('raciocinio:alternar'),
-    tique: () => ipcRenderer.send('raciocinio:tique')
+    alternar: () => ipcRenderer.send('raciocinio:alternar')
 });
