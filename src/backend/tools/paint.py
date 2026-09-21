@@ -223,7 +223,7 @@ def _troços(valores):
 
 
 def _paleta(px, W, H, fundo):
-    """Cores pintadas (nº de pixels + caixa), por ordem de quantidade."""
+    """Cores pintadas (nº de pixels + caixa) por ordem de quantidade, com o total de tons."""
     tons = {}
     for y in range(H):
         for x in range(W):
@@ -236,7 +236,7 @@ def _paleta(px, W, H, fundo):
             t[2] = min(t[2], y)
             t[3] = max(t[3], x)
             t[4] = max(t[4], y)
-    return sorted(tons.items(), key=lambda kv: -kv[1][0])[:MAX_TONS]
+    return sorted(tons.items(), key=lambda kv: -kv[1][0])[:MAX_TONS], len(tons)
 
 
 def _desenho(px, W, H, alvo):
@@ -353,9 +353,15 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
                 if r["depois"]:
                     linhas.append("         ::after  %s" % r["depois"])
 
+        tons, total_tons = _paleta(px, W, H, fundo_rgb)
         linhas.append("")
-        linhas.append("PALETA (sem o fundo #%02x%02x%02x):" % fundo_rgb)
-        for c, t in _paleta(px, W, H, fundo_rgb):
+        cabecalho_paleta = "PALETA (sem o fundo #%02x%02x%02x):" % fundo_rgb
+        if total_tons > len(tons):
+            cabecalho_paleta += ("  %d tons distintos, mostrados os %d com mais pixels -"
+                                 " uma cor pouco pintada (o nucleo de um texto pequeno) pode nao caber"
+                                 " nesta lista: confirme-a com o parametro cor." % (total_tons, len(tons)))
+        linhas.append(cabecalho_paleta)
+        for c, t in tons:
             linhas.append("  #%02x%02x%02x: %6d px, caixa x %d..%d y %d..%d" %
                           (c[0], c[1], c[2], t[0], t[1], t[3], t[2], t[4]))
 
