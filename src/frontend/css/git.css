@@ -98,8 +98,7 @@
     color: var(--text-branco);
 }
 
-.git-chip-acesa,
-.git-chip-acesa .git-chip-num {
+.git-chip-acesa .git-chip-rotulo {
     color: var(--oliva);
 }
 

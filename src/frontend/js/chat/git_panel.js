@@ -142,7 +142,8 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         const ramos = (estado.ramos || []).length || 1;
         let html = `<div class="git-seccao">${linhaComTitulo('Repositorio', estado.slug || 'repositorio local')}`;
         html += '<div class="git-ramo-linha">';
-        html += `<span class="git-chip">${SVG_RAMO}<span class="git-chip-num">${ramos}</span>${escapeHtml(estado.branch || 'sem ramo')}</span>`;
+        html += `<span class="git-chip git-chip-acesa">${SVG_RAMO}<span class="git-chip-num">${ramos}</span>`
+            + `<span class="git-chip-rotulo">${escapeHtml(estado.branch || 'sem ramo')}</span></span>`;
         html += '</div>';
         html += blocoDeEtiquetas(estado, grupo, versaoDaTarefa);
         html += '</div>';
@@ -155,7 +156,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         return `<span class="git-chip${versaoDaTarefa ? ' git-chip-acesa' : ''}">`
             + SVG_ETIQUETA
             + `<span class="git-chip-num">${tags.length}</span>`
-            + escapeHtml(rotulo)
+            + `<span class="git-chip-rotulo">${escapeHtml(rotulo)}</span>`
             + '</span>';
     }
     function listaDeEtiquetas(estado, grupo, versaoDaTarefa) {
@@ -182,7 +183,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         return recolhivel(
             chipDeEtiquetas(estado, versaoDaTarefa),
             listaDeEtiquetas(estado, grupo, versaoDaTarefa),
-            true,
+            false,
             'git-grupo-etiquetas'
         );
     }
