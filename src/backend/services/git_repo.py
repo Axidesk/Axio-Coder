@@ -217,33 +217,25 @@ def tags_com_ponto(pasta):
     return _tags_com_ponto(raiz)[0]
 
 
-def _tags_que_contem(raiz, revisao):
-    saida, erro = git_saida(raiz, "tag", "--contains", revisao)
+def _tags_relacionadas(raiz, revisao, relacao):
+    """Etiquetas que contem a revisao (`--contains`) ou que ja vivem na historia dela (`--merged`)."""
+    saida, erro = git_saida(raiz, "tag", relacao, revisao)
     if erro:
         return [], erro
     return [l.strip() for l in (saida or "").splitlines() if l.strip()], ""
 
 
 def versao_da_revisao(pasta, revisao):
-    """A etiqueta mais antiga que leva esta revisao dentro: a versao onde ela entrou.
-
-    Uma tarefa e commitada ANTES de a versao ser publicada, logo a etiqueta da
-    versao dela raramente aponta para o commit da tarefa - aponta para um commit
-    POSTERIOR que ja a leva dentro. Marcar so a etiqueta com o mesmo ponto deixava
-    a lista toda apagada para praticamente qualquer tarefa. Havendo varias, vale a
-    mais ANTIGA: e a versao em que a tarefa apareceu pela primeira vez.
-    """
+    """A etiqueta vigente nesta revisao: a que o `git describe` elege, ou seja a ultima versionada que ja a leva dentro."""
     if not revisao:
         return ""
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:
         return ""
-    contem, erro = _tags_que_contem(raiz, revisao)
-    if erro or not contem:
+    saida, erro_tag = git_saida(raiz, "describe", "--tags", "--abbrev=0", revisao)
+    if erro_tag:
         return ""
-    tags, _ = _tags_com_ponto(raiz)
-    da_versao = [t["nome"] for t in tags if t["nome"] in contem]
-    return da_versao[-1] if da_versao else ""
+    return (saida or "").strip()
 
 
 def _commits_do_intervalo(raiz, ponta, base):
@@ -514,7 +506,7 @@ def emendar(pasta, mensagem, revisao=""):
     info = por_subir(pasta)
     if info.get("remoto") and ponta not in [c["hash"] for c in info.get("commits", [])]:
         return {"status": "error", "message": "Este commit ja esta no GitHub: mudar-lhe a mensagem so por reescrita de historia."}
-    etiquetas, _ = _tags_que_contem(raiz, ponta)
+    etiquetas, _ = _tags_relacionadas(raiz, ponta, "--contains")
     if etiquetas:
         return {"status": "error", "message": f"O commit ja leva a etiqueta {etiquetas[0]}: a etiqueta ficaria pendurada."}
     _, erro_commit = git_saida(raiz, "commit", "--amend", "-m", texto)

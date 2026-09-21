@@ -52,8 +52,7 @@
 }
 
 .git-grupo-etiquetas {
-    display: flex;
-    flex-direction: column;
+    margin-top: 2px;
 }
 
 .git-ramo-linha {

@@ -99,8 +99,8 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             + SVG_LAPIS
             + '</button>';
     }
-    function recolhivel(cabecalho, corpo, aberta) {
-        return `<div class="projeto-grupo git-recolhivel${aberta ? ' projeto-aberto' : ''}">`
+    function recolhivel(cabecalho, corpo, aberta, extra) {
+        return `<div class="projeto-grupo git-recolhivel${extra ? ' ' + extra : ''}${aberta ? ' projeto-aberto' : ''}">`
             + `<div class="projeto-linha projeto-linha-clicavel" data-git-acao="recolher">${cabecalho}<span class="projeto-mais">${aberta ? '−' : '+'}</span></div>`
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
@@ -141,24 +141,22 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
     function htmlCabecalho(estado, grupo, versaoDaTarefa) {
         const ramos = (estado.ramos || []).length || 1;
         let html = `<div class="git-seccao">${linhaComTitulo('Repositorio', estado.slug || 'repositorio local')}`;
-        html += '<div class="projeto-grupo git-grupo-etiquetas">';
         html += '<div class="git-ramo-linha">';
         html += `<span class="git-chip">${SVG_RAMO}<span class="git-chip-num">${ramos}</span>${escapeHtml(estado.branch || 'sem ramo')}</span>`;
-        html += chipDeEtiquetas(estado, versaoDaTarefa);
         html += '</div>';
-        html += listaDeEtiquetas(estado, grupo, versaoDaTarefa);
-        html += '</div></div>';
+        html += blocoDeEtiquetas(estado, grupo, versaoDaTarefa);
+        html += '</div>';
         return html;
     }
     function chipDeEtiquetas(estado, versaoDaTarefa) {
         const tags = estado.tags || [];
         if (!tags.length) return '';
-        const acesa = !!versaoDaTarefa;
-        const rotulo = acesa ? versaoDaTarefa : (tags.length === 1 ? '1 etiqueta' : `${tags.length} etiquetas`);
-        const numero = acesa ? `<span class="git-chip-num">${tags.length}</span>` : '';
-        return `<span class="git-chip git-chip-clicavel${acesa ? ' git-chip-acesa' : ''}" data-git-acao="recolher">`
-            + SVG_ETIQUETA + numero + escapeHtml(rotulo)
-            + '<span class="projeto-mais">+</span></span>';
+        const rotulo = versaoDaTarefa || (tags.length === 1 ? 'etiqueta' : 'etiquetas');
+        return `<span class="git-chip${versaoDaTarefa ? ' git-chip-acesa' : ''}">`
+            + SVG_ETIQUETA
+            + `<span class="git-chip-num">${tags.length}</span>`
+            + escapeHtml(rotulo)
+            + '</span>';
     }
     function listaDeEtiquetas(estado, grupo, versaoDaTarefa) {
         const tags = estado.tags || [];
@@ -177,8 +175,16 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
                 + (dono ? `<span class="git-tag-dono">${escapeHtml(dono)}</span>` : '')
                 + '</div>';
         }).join('');
-        return '<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">'
-            + `<div class="git-tags-vertical">${linhas}</div></div></div>`;
+        return `<div class="git-tags-vertical">${linhas}</div>`;
+    }
+    function blocoDeEtiquetas(estado, grupo, versaoDaTarefa) {
+        if (!(estado.tags || []).length) return '';
+        return recolhivel(
+            chipDeEtiquetas(estado, versaoDaTarefa),
+            listaDeEtiquetas(estado, grupo, versaoDaTarefa),
+            true,
+            'git-grupo-etiquetas'
+        );
     }
     function htmlPorSubir(estado) {
         if (!estado.remoto) return '';
