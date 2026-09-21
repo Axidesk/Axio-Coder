@@ -10,7 +10,6 @@ import urllib.request
 
 from PIL import Image
 
-from src.backend.config import APP_ROOT
 from src.backend.services import cofre, github
 from src.backend.services.file_service import git_saida, raiz_repositorio
 from src.backend.state import estado
@@ -20,7 +19,6 @@ _TAGS_POR_OMISSAO = 6
 _MAX_ITENS_LISTADOS = 40
 _MAX_LINHAS_DIFF = 80
 _SEGREDOS = (
-    ".env",
     ".axio/",
     "data/settings.json",
     "data/cofre.json",
@@ -28,6 +26,7 @@ _SEGREDOS = (
     "entities.json",
     "mempalace.yaml",
 )
+_TEMPLATES_DE_SEGREDO = (".env.example", ".env.sample", ".env.template", ".env.dist", ".env.defaults")
 
 
 def _curto(pasta, revisao):
@@ -186,6 +185,11 @@ def _e_segredo(nome):
     limpo = nome.replace("\\", "/")
     if limpo.startswith("./"):
         limpo = limpo[2:]
+    base = limpo.rsplit("/", 1)[-1]
+    if base in _TEMPLATES_DE_SEGREDO:
+        return False
+    if base == ".env" or base.startswith(".env."):
+        return True
     for segredo in _SEGREDOS:
         if segredo.endswith("/"):
             if limpo.startswith(segredo):
@@ -195,15 +199,38 @@ def _e_segredo(nome):
     return False
 
 
-def _nomes_do_status(raiz):
+def _escopo_relativo(raiz, escopo):
+    """A pasta do projeto dentro do repositorio. "" quando ela E a raiz do repositorio (ou esta fora dele)."""
+    if not escopo:
+        return ""
+    absoluta = os.path.abspath(escopo)
+    if os.path.normcase(absoluta) == os.path.normcase(os.path.abspath(raiz)):
+        return ""
+    relativo = os.path.relpath(absoluta, os.path.abspath(raiz))
+    if relativo == os.pardir or relativo.startswith(os.pardir + os.sep):
+        return ""
+    return relativo.replace(os.sep, "/")
+
+
+def _no_escopo(nome, prefixo):
+    if not prefixo:
+        return True
+    limpo = nome.replace("\\", "/")
+    if limpo.startswith("./"):
+        limpo = limpo[2:]
+    return limpo == prefixo or limpo.startswith(prefixo + "/")
+
+
+def _nomes_do_status(raiz, escopo=""):
     texto, erro = git_saida(raiz, "status", "--short")
     if erro:
         return [], erro
+    prefixo = _escopo_relativo(raiz, escopo)
     nomes = []
     for linha in (texto or "").splitlines():
         if len(linha) > 3:
             nomes.append(linha[3:].strip().strip('"'))
-    return nomes, ""
+    return [n for n in nomes if _no_escopo(n, prefixo)], ""
 
 
 def _lista_de_ficheiros(raiz, ficheiros):
@@ -226,9 +253,11 @@ def _ficheiro_da_mensagem(mensagem):
     return caminho
 
 
-def _ficheiros_em_stage(raiz):
+def _ficheiros_em_stage(raiz, escopo=""):
     saida, _ = git_saida(raiz, "diff", "--cached", "--name-only")
-    return [n.strip().strip('"') for n in (saida or "").splitlines() if n.strip()]
+    prefixo = _escopo_relativo(raiz, escopo)
+    nomes = [n.strip().strip('"') for n in (saida or "").splitlines() if n.strip()]
+    return [n for n in nomes if _no_escopo(n, prefixo)]
 
 
 def _recusa_de_publicacao(segredos):
@@ -236,24 +265,34 @@ def _recusa_de_publicacao(segredos):
             ". Nada foi commitado - tira esses caminhos do pedido ou poe-os no .gitignore.")
 
 
-def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
+def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
     if not (mensagem or "").strip():
         return ["ERRO: sem mensagem nao ha commit - escreve o que mudou."]
-    nomes, erro = _nomes_do_status(raiz)
+    prefixo = _escopo_relativo(raiz, escopo)
+    nomes, erro = _nomes_do_status(raiz, escopo)
     if erro:
         return [f"ERRO: git recusou o estado do repositorio: {erro}"]
     if not nomes:
+        if prefixo:
+            return [f"NADA A PUBLICAR: nao ha alteracoes dentro de '{prefixo}/' - o que estiver alterado fora "
+                    "da pasta do projeto nao entra neste commit."]
         return ["NADA A PUBLICAR: o repositorio esta limpo."]
     segredos = [n for n in nomes if _e_segredo(n)]
     if segredos:
         return [_recusa_de_publicacao(segredos) + " Nada foi posto em stage."]
 
-    antes = _ficheiros_em_stage(raiz)
+    antes = _ficheiros_em_stage(raiz, escopo)
+    todas_antes = _ficheiros_em_stage(raiz)
     linhas = []
     lista = _lista_de_ficheiros(raiz, ficheiros)
     if lista:
         _, erro = git_saida(raiz, "add", "--", *lista)
         linhas.append("git add " + " ".join(lista) + ": " + (f"ERRO: {erro}" if erro else "ok"))
+    elif prefixo:
+        _, erro = git_saida(raiz, "add", "-A", "--", prefixo)
+        linhas.append(f"git add -A -- {prefixo}: " + (f"ERRO: {erro}" if erro else "ok"))
+        linhas.append(f"ESCOPO: a pasta do projeto vive em '{prefixo}/' deste repositorio - so o que esta dentro "
+                      "dela entrou no stage, o resto do repositorio ficou de fora.")
     else:
         _, erro = git_saida(raiz, "add", "-A")
         linhas.append("git add -A: " + (f"ERRO: {erro}" if erro else "ok"))
@@ -264,14 +303,14 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
     itens = [l for l in (entrada or "").splitlines() if l.strip()]
     if not itens:
         return linhas + ["NADA EM STAGE depois do add: nao ha o que commitar."]
-    segredos = [n for n in _ficheiros_em_stage(raiz) if _e_segredo(n)]
+    segredos = [n for n in _ficheiros_em_stage(raiz, escopo) if _e_segredo(n)]
     if segredos:
         nota = " O stage ficou como estava antes."
         if git_saida(raiz, "reset")[1]:
             git_saida(raiz, "rm", "--cached", "--quiet", "--", *segredos)
             nota = " Tirei esses caminhos do stage; o resto ficou la."
-        elif antes:
-            git_saida(raiz, "add", "--", *antes)
+        elif todas_antes:
+            git_saida(raiz, "add", "--", *todas_antes)
         return linhas + [_recusa_de_publicacao(segredos) + nota]
     linhas += _linhas_do_estado("ENTRA NO COMMIT", itens)
 
@@ -311,6 +350,21 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
     return linhas
 
 
+def _base_do_repositorio(caminho):
+    """Pasta de onde partir para achar o repositorio: a pedida, ou a do projeto aberto - sem pasta, recusa.
+
+    Sem pasta indicada a resposta certa e dizer que nao se sabe: cair para a raiz do proprio Axio faria
+    uma sessao aberta sem projeto publicar no repositorio errado.
+    """
+    if caminho:
+        return caminho, ""
+    raiz = estado.get("pasta_raiz")
+    if not raiz:
+        return "", ("ERRO: nao ha pasta de projeto aberta e nenhum caminho foi indicado. Esta ferramenta nao "
+                    "adivinha o repositorio (publicaria no errado) - indique o 'caminho' do projeto.")
+    return raiz, ""
+
+
 @register(
     "tool_estado_git",
     "Retrato do repositorio git numa so chamada: raiz, branch e relacao com o remoto, ultimo commit, "
@@ -332,7 +386,9 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar):
     },
 )
 def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True):
-    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    base, falta = _base_do_repositorio(caminho)
+    if falta:
+        return falta
     raiz = raiz_repositorio(base)
     if not raiz:
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
@@ -361,12 +417,14 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True)
     },
 )
 def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho=""):
-    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    base, falta = _base_do_repositorio(caminho)
+    if falta:
+        return falta
     raiz = raiz_repositorio(base)
     if not raiz:
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
                 "(nenhuma pasta .git a subir a partir dai).")
-    return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar))
+    return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, base))
 
 
 @register(
@@ -388,7 +446,9 @@ def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="")
 def tool_publicar_release(etiqueta, titulo="", notas="", rascunho=False, caminho=""):
     if not etiqueta:
         return "ERRO: indique a etiqueta do Release (ex: 'v3.1.3')."
-    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    base, falta = _base_do_repositorio(caminho)
+    if falta:
+        return falta
     raiz = raiz_repositorio(base)
     if not raiz:
         return f"ERRO: '{base}' nao esta dentro de um repositorio git."
@@ -615,7 +675,9 @@ def _linhas_da_conferencia(raiz, ficheiro, ramo, max_frases):
     },
 )
 def tool_conferir_publicacao(ficheiro="README.md", ramo="", caminho="", max_frases=12):
-    base = caminho or estado.get("pasta_raiz") or APP_ROOT
+    base, falta = _base_do_repositorio(caminho)
+    if falta:
+        return falta
     raiz = raiz_repositorio(base)
     if not raiz:
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
