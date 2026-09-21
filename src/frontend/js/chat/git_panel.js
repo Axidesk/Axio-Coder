@@ -30,6 +30,11 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         if (!grupo) return '';
         return grupo.displayName || grupo.title || grupo.name || '';
     }
+    function numeroDaTarefa(grupo) {
+        const nome = nomeDaTarefa(grupo).trim();
+        const achado = /^Tarefa\s+(\d+)$/.exec(nome);
+        return achado ? achado[1] : nome;
+    }
     function valorDoCampo(grupo) {
         if (!grupo) return '';
         return RASCUNHOS.get(String(grupo.id)) || '';
@@ -105,6 +110,12 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
     }
+    function linhaComTitulo(titulo, valor) {
+        let linha = `<span class="git-seccao-titulo">${escapeHtml(titulo)}</span>`;
+        if (!valor) return `<div class="git-titulo-linha">${linha}</div>`;
+        return `<div class="git-titulo-linha">${linha}<span class="projeto-secao-sep">|</span>`
+            + `<span class="git-identidade">${escapeHtml(valor)}</span></div>`;
+    }
     function alternarRecolhido(cabecalho) {
         const bloco = cabecalho.closest('.projeto-grupo');
         if (!bloco) return;
@@ -123,11 +134,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
     }
     function htmlCabecalho(estado, grupo, versaoDaTarefa) {
         const ramos = (estado.ramos || []).length || 1;
-        let html = '<div class="git-seccao"><div class="git-repo-linha">';
-        html += '<span class="git-seccao-titulo">Repositorio</span>';
-        html += '<span class="projeto-secao-sep">|</span>';
-        html += `<span class="git-identidade">${escapeHtml(estado.slug || 'repositorio local')}</span>`;
-        html += '</div>';
+        let html = `<div class="git-seccao">${linhaComTitulo('Repositorio', estado.slug || 'repositorio local')}`;
         html += '<div class="projeto-grupo git-grupo-etiquetas">';
         html += '<div class="git-ramo-linha">';
         html += `<span class="git-chip">${SVG_RAMO}<span class="git-chip-num">${ramos}</span>${escapeHtml(estado.branch || 'sem ramo')}</span>`;
@@ -182,7 +189,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo);
     }
     function htmlDaTarefa(grupo, pendentes, estado) {
-        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Esta tarefa</div>';
+        let html = `<div class="git-seccao">${linhaComTitulo('Esta tarefa', grupo ? numeroDaTarefa(grupo) : '')}`;
         if (!grupo) {
             html += '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
             return html;
@@ -200,9 +207,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
             : (podeEnviar ? 'Enviar para o GitHub' : 'Tudo ja esta no GitHub');
         const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
-        let cabecalho = `<span class="projeto-nome">${escapeHtml(nomeDaTarefa(grupo) || 'Tarefa sem nome')}</span>`
-            + '<span class="projeto-secao-sep">|</span>'
-            + `<span class="projeto-contagem">${rotulo}</span>`;
+        let cabecalho = `<span class="projeto-contagem">${rotulo}</span>`;
         if (porCommitar !== null) {
             cabecalho += '<span class="projeto-secao-sep">|</span>'
                 + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
