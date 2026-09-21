@@ -4,7 +4,7 @@ import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
 import { btnGitRestoreHistory } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
-import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor } from './historico/cards.js';
 
 const LIMITE_COMMITS = 12;
 const LIMITE_FICHEIROS = 12;
@@ -120,7 +120,21 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         html += '</div>';
         return html;
     }
-    function htmlDaTarefa(grupo, pendentes) {
+    function htmlPorSubir(estado) {
+        if (!estado.remoto) return '';
+        const commits = estado.por_subir || [];
+        let corpo = '';
+        if (!commits.length) {
+            corpo = '<div class="git-nota">Tudo o que esta commitado ja subiu para o remoto.</div>';
+        } else {
+            corpo = '<div class="git-lista">' + commits.map(c => {
+                const dono = nomeDaTarefaDoCommit(c.hash);
+                return `• ${escapeHtml(c.curto)} ${escapeHtml(c.mensagem)}${dono ? ` · ${escapeHtml(dono)}` : ''}`;
+            }).join('<br>') + '</div>';
+        }
+        return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo);
+    }
+    function htmlDaTarefa(grupo, pendentes, estado) {
         let html = '<div class="git-seccao"><div class="git-seccao-titulo">Esta tarefa</div>';
         if (!grupo) {
             html += '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
@@ -129,7 +143,13 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         const ficheiros = ficheirosDaTarefa(grupo);
         const hash = hashDaTarefa(grupo);
         const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
-        const podeCommitar = ficheiros.length > 0 && porCommitar !== 0;
+        const temRemoto = !!(estado && estado.remoto);
+        const porSubir = (estado && estado.por_subir) || [];
+        const vaiCommitar = ficheiros.length > 0 && porCommitar !== 0;
+        const podeEnviar = temRemoto && (vaiCommitar || porSubir.length > 0);
+        const motivo = !temRemoto
+            ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
+            : (podeEnviar ? 'Enviar para o GitHub' : 'Tudo ja esta no GitHub');
         const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
         let cabecalho = `<span class="projeto-nome">${escapeHtml(nomeDaTarefa(grupo) || 'Tarefa sem nome')}</span>`
             + '<span class="projeto-secao-sep">|</span>'
@@ -138,11 +158,13 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             cabecalho += '<span class="projeto-secao-sep">|</span>'
                 + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
         }
-        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes)
-            + (hash ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(hash.slice(0, 7))}</div>` : ''));
+        const notaPonto = hash
+            ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(hash.slice(0, 7))}${enviadaParaOServidor(hash) ? ' (no GitHub)' : ' (so no PC, por enviar)'}</div>`
+            : '';
+        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto);
         html += '<div class="git-campo-linha">'
             + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(valorDoCampo(grupo))}" placeholder="Mensagem do commit">`
-            + aviao('commit', podeCommitar ? 'Commitar esta tarefa no git' : 'Nada por commitar nesta tarefa', !podeCommitar)
+            + aviao('enviar', motivo, !podeEnviar)
             + varinha('sugerir', 'Escrever a mensagem com a IA')
             + '</div>';
         html += '</div>';
@@ -239,7 +261,8 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado);
-        html += htmlDaTarefa(grupo, pendentes);
+        html += htmlPorSubir(estado);
+        html += htmlDaTarefa(grupo, pendentes, estado);
         html += htmlHistorico(estado, grupo);
         html += htmlEtiquetas(estado, grupo, versaoDaTarefa);
         html += htmlDependencias(estado);
@@ -271,6 +294,7 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             dados = { status: 'error', message: `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}` };
         }
         const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: (dados && dados.message) || 'Nao consegui ler o repositorio.' };
+        if (grupo) grupo.__pendentes = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
         sincronizarBotaoRestauro(alvo, grupo);
         ligarAcoes(alvo);
@@ -293,15 +317,15 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             if (acao === 'atualizar') return renderGitPanel(vista);
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
-            if (acao === 'commit') return commitarTarefa(vista);
+            if (acao === 'enviar') return enviarTarefa(vista);
         });
     }
-    async function commitarTarefa(vista) {
+    async function enviarTarefa(vista) {
         const grupo = grupoAtivo();
         if (!grupo) return;
         const painel = vista && vista.codigo ? vista.codigo : null;
         const campo = painel ? painel.querySelector('#git-mensagem') : null;
-        const botao = painel ? painel.querySelector('[data-git-acao="commit"]') : null;
+        const botao = painel ? painel.querySelector('[data-git-acao="enviar"]') : null;
         if (botao && botao.disabled) return;
         if (botao) {
             botao.classList.add('a-trabalhar');
@@ -309,24 +333,39 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         }
         const mensagem = campo ? campo.value.trim() : '';
         const ficheiros = ficheirosDaTarefa(grupo);
+        const porCommitar = grupo.__pendentes;
+        const podeCommitar = ficheiros.length > 0 && porCommitar !== 0;
         try {
-            const dados = await pedirGit('/api/git/commit', {
-                mensagem,
+            const commit = podeCommitar ? await pedirGit('/api/git/commit', {
+                mensagem: mensagem || (grupo.questions || [])[0] || nomeDaTarefa(grupo),
                 ficheiros,
                 filename: grupo.__session || '',
                 round_id: grupo.id || ''
-            });
-            if (dados && dados.status === 'ok') {
-                grupo.commit = dados.hash || '';
-                state.commitsDosTurnos[String(grupo.id)] = dados.hash || '';
-                RASCUNHOS.delete(String(grupo.id));
-                updateRoundCardCommitByTurnId(grupo.id, dados.hash || '');
-                await renderGitPanel(vista);
+            }) : null;
+            if (commit && commit.status === 'error') {
+                avisarNoPainel(vista, commit.message || 'Nao foi possivel commitar.');
                 return;
             }
-            avisarNoPainel(vista, (dados && datos.message) || 'Nao foi possivel commitar.');
+            if (commit && commit.status === 'ok') {
+                grupo.commit = commit.hash || '';
+                state.commitsDosTurnos[String(grupo.id)] = commit.hash || '';
+                RASCUNHOS.delete(String(grupo.id));
+                updateRoundCardCommitByTurnId(grupo.id, commit.hash || '');
+            }
+            const enviado = await pedirGit('/api/git/enviar', {});
+            if (!enviado || enviado.status !== 'ok') {
+                avisarNoPainel(vista, (enviado && enviado.message) || 'Nao foi possivel enviar para o GitHub.');
+                return;
+            }
+            state.porSubirLido = false;
+            state.commitsPorSubir = [];
+            await carregarPorSubir(true);
+            atualizarMarcasDosCards();
+            const quantos = enviado.enviados || 0;
+            await renderGitPanel(vista);
+            if (!quantos) avisarNoPainel(vista, 'O remoto ja tinha tudo: nada foi enviado.');
         } catch (e) {
-            console.error('Erro ao commitar a tarefa:', e);
+            console.error('Erro ao enviar para o git:', e);
             avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
         } finally {
             if (botao) {

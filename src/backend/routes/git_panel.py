@@ -49,6 +49,7 @@ def git_estado():
     info["commits"] = arvore.get("commits", [])
     info["tags"] = git_repo.tags_com_ponto(pasta)
     info["erro_historico"] = arvore.get("erro", "")
+    info["por_subir"] = git_repo.por_subir(pasta).get("commits", [])
     info["manifestos"] = git_repo.manifestos_diferentes(info.get("raiz", ""), "HEAD")
     return jsonify({"status": "ok", "estado": info})
 
@@ -104,6 +105,33 @@ def git_pendentes():
         "pendentes": info.get("pendentes", []),
         "count": info.get("count", 0),
     })
+
+
+@git_bp.route("/api/git/por_subir", methods=["GET"])
+def git_por_subir():
+    info = git_repo.por_subir(_pasta())
+    if not info.get("repo"):
+        return jsonify({
+            "status": "sem_repo",
+            "message": info.get("motivo", ""),
+            "remoto": "",
+            "commits": [],
+            "count": 0,
+        })
+    return jsonify({
+        "status": "ok",
+        "remoto": info.get("remoto", ""),
+        "commits": info.get("commits", []),
+        "count": info.get("count", 0),
+    })
+
+
+@git_bp.route("/api/git/enviar", methods=["POST"])
+def git_enviar():
+    resultado = git_repo.empurrar(_pasta())
+    if resultado.get("status") == "error":
+        return jsonify(resultado), 400
+    return jsonify(resultado)
 
 
 @git_bp.route("/api/git/versao", methods=["POST"])

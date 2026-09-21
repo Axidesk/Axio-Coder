@@ -104,11 +104,7 @@ const { historyLogsWrapper } = dom;
         row.className = 'flex items-start gap-2';
         row.appendChild(content);
         sub.appendChild(row);
-        if (group.commit) {
-            _injectSavedIcon(sub, 'Guardada no commit ' + String(group.commit).slice(0, 7));
-        } else if (group.salvo) {
-            _injectSavedIcon(sub);
-        }
+        if (group.commit) _marcasDoCard(sub, group);
         sub.dataset.turnId = group.id;
         group.domElement = sub;
         group.nameEl = sub.querySelector('.history-round-name');
@@ -189,11 +185,10 @@ const { historyLogsWrapper } = dom;
         card.appendChild(body);
         historyLogsWrapper.appendChild(card);
     }
-    function _injectSavedIcon(el, titulo, tag) {
-        const existing = el.querySelector('.history-round-saved-icon');
-        if (existing) existing.remove();
-        const antiga = el.querySelector('.history-round-tag');
-        if (antiga) antiga.remove();
+    const SVG_AVIAO_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--oliva)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
+
+    function _injectMarcas(el, titulo, tag) {
+        el.querySelectorAll('.history-round-saved-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
         if (tag) {
@@ -202,11 +197,34 @@ const { historyLogsWrapper } = dom;
             chip.textContent = tag;
             row.appendChild(chip);
         }
-        const savedIcon = document.createElement('span');
-        savedIcon.className = 'shrink-0 mt-0.5 history-round-saved-icon';
-        savedIcon.title = titulo || 'Tarefa salva';
-        savedIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--oliva)]" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12a2 2 0 0 1 2 2v18l-8-4-8 4V4a2 2 0 0 1 2-2z"/></svg>`;
-        row.appendChild(savedIcon);
+        if (!titulo) return;
+        const aviao = document.createElement('span');
+        aviao.className = 'shrink-0 mt-0.5 history-round-saved-icon';
+        aviao.title = titulo;
+        aviao.innerHTML = SVG_AVIAO_CARD;
+        row.appendChild(aviao);
+    }
+    function enviadaParaOServidor(hash) {
+        if (!hash || !state.temRemotoGit) return false;
+        return !(state.commitsPorSubir || []).includes(hash);
+    }
+    function _marcasDoCard(el, grupo) {
+        const commit = grupo && grupo.commit ? grupo.commit : '';
+        if (!commit) {
+            _injectMarcas(el, '', '');
+            return;
+        }
+        const tag = tagDoCommit(commit);
+        if (!enviadaParaOServidor(commit)) {
+            _injectMarcas(el, '', tag);
+            return;
+        }
+        _injectMarcas(el, 'Enviada para o GitHub (' + String(commit).slice(0, 7) + ')', tag);
+    }
+    function atualizarMarcasDosCards() {
+        document.querySelectorAll('.history-round-card').forEach(el => {
+            if (el._group) _marcasDoCard(el, el._group);
+        });
     }
     function updateRoundCardNameByTurnId(turnId, novoNome) {
         document.querySelectorAll('.history-round-card').forEach(el => {
@@ -225,7 +243,7 @@ const { historyLogsWrapper } = dom;
             if (String(el.dataset.turnId) !== String(turnId)) return;
             const g = el._group;
             if (g) g.commit = hash || '';
-            if (hash) _injectSavedIcon(el, 'Guardada no commit ' + String(hash).slice(0, 7), tagDoCommit(hash));
+            if (g) _marcasDoCard(el, g);
         });
     }
     function turnosComCommit() {
@@ -372,11 +390,11 @@ const { historyLogsWrapper } = dom;
         document.querySelectorAll('.history-round-card').forEach(el => {
             const grupo = el._group;
             if (!grupo || !grupo.commit) return;
-            const nome = tagDoCommit(grupo.commit);
-            if (nome) _injectSavedIcon(el, `${nome} · commit ${String(grupo.commit).slice(0, 7)}`, nome);
+            _marcasDoCard(el, grupo);
         });
     }
     async function ensureSessionDetailsLoaded() {
+        await carregarPorSubir();
         if (!state.sessionHistoryList.some(s => state.sessionDetailCache[s.filename] === undefined)) return;
         if (!state.sessionIndiceEmCurso) state.sessionIndiceEmCurso = carregarIndiceDeSessoes();
         try {
@@ -409,6 +427,23 @@ const { historyLogsWrapper } = dom;
         }
         state.versoesGit = await state.versoesEmCurso;
         return state.versoesGit;
+    }
+    async function carregarPorSubir(forcar) {
+        if (!forcar && state.porSubirLido) return;
+        if (!forcar && state.porSubirEmCurso) return state.porSubirEmCurso;
+        state.porSubirEmCurso = fetch('/api/git/por_subir')
+            .then(r => r.json())
+            .then(d => {
+                state.temRemotoGit = !!(d && d.status === 'ok' && d.remoto);
+                state.commitsPorSubir = (d && d.commits ? d.commits : []).map(c => c.hash);
+                state.porSubirLido = true;
+            })
+            .catch(() => {
+                state.temRemotoGit = false;
+                state.commitsPorSubir = [];
+            })
+            .finally(() => { state.porSubirEmCurso = null; });
+        return state.porSubirEmCurso;
     }
     async function carregarRodadaCompleta(saved) {
         if (!saved || !saved.__leve || !saved.__session) return saved;
@@ -516,5 +551,8 @@ export {
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
     updateRoundCardCommitByTurnId,
-    updateRoundCardNameByTurnId
+    updateRoundCardNameByTurnId,
+    carregarPorSubir,
+    atualizarMarcasDosCards,
+    enviadaParaOServidor
 };

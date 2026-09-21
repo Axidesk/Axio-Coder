@@ -9,6 +9,7 @@ _MANIFESTOS = ("requirements.txt", "package.json")
 _LIMITE_HISTORICO = 60
 _LIMITE_FICHEIROS = 80
 _LIMITE_TAGS = 24
+_LIMITE_POR_SUBIR = 20
 _LIMITE_INTERVALO = 200
 _LIMITE_HISTORIA = 500
 _SEPARADOR = "\x1f"
@@ -370,6 +371,55 @@ def pendentes(pasta, caminhos):
         if nome and nome not in nomes:
             nomes.append(nome)
     return {"repo": True, "pendentes": nomes, "count": len(nomes)}
+
+
+def por_subir(pasta, limite=_LIMITE_POR_SUBIR):
+    """Commits locais que ainda nao chegaram a nenhum ramo remoto."""
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return {"repo": False, "motivo": erro, "remoto": "", "commits": [], "count": 0}
+    remoto, _ = git_saida(raiz, "remote", "get-url", "origin")
+    remoto = (remoto or "").strip()
+    if not remoto:
+        return {"repo": True, "raiz": raiz, "remoto": "", "commits": [], "count": 0}
+    formato = _SEPARADOR.join(["%H", "%h", "%s", "%cI"])
+    saida, erro_log = git_saida(
+        raiz, "log", f"--max-count={int(limite)}", "HEAD", "--not", "--remotes", f"--pretty=format:{formato}"
+    )
+    commits = []
+    for linha in (saida or "").splitlines():
+        partes = linha.split(_SEPARADOR)
+        if len(partes) < 4:
+            continue
+        commits.append({"hash": partes[0], "curto": partes[1], "mensagem": partes[2], "data": partes[3]})
+    return {"repo": True, "raiz": raiz, "remoto": remoto, "commits": commits, "count": len(commits), "erro": erro_log}
+
+
+def empurrar(pasta):
+    """Envia o ramo atual para o remoto. Nunca reescreve historia: nao usa force."""
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return {"status": "error", "message": erro}
+    remoto, _ = git_saida(raiz, "remote", "get-url", "origin")
+    if not (remoto or "").strip():
+        return {"status": "error", "message": "Este projeto nao tem remoto (origin): nao ha para onde enviar."}
+    antes = por_subir(raiz).get("count", 0)
+    ramo = _ramo_atual(raiz)
+    _, sem_upstream = git_saida(raiz, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+    if sem_upstream:
+        saida, erro_push = git_saida(raiz, "push", "--set-upstream", "origin", ramo)
+    else:
+        saida, erro_push = git_saida(raiz, "push")
+    if erro_push:
+        return {"status": "error", "message": erro_push}
+    depois = por_subir(raiz).get("count", 0)
+    return {
+        "status": "ok",
+        "ramo": ramo,
+        "enviados": max(0, antes - depois),
+        "restantes": depois,
+        "saida": (saida or "").strip()[-400:],
+    }
 
 
 def commitar(pasta, mensagem, ficheiros=None):

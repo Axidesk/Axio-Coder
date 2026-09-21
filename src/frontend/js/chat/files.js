@@ -141,6 +141,7 @@ const NL = String.fromCharCode(10);
         state.isShowingTools = false;
         state.isShowingThoughts = false;
         state.isShowingQuestions = false;
+        state.isShowingGit = false;
         syncCopyButtons(vistaHistorico, null);
         syncDocTopBar();
     }
@@ -371,14 +372,17 @@ const NL = String.fromCharCode(10);
         });
         return linha - acima;
     }
-    function entregarAoMonaco(vista) {
+    function entregarAoMonaco(vista, origem) {
         const container = vista.codigo;
         if (!container) return false;
 
         const doHistorico = vista.id === 'historico';
         const painelAberto = state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions || state.isShowingGit;
-        const manterCamada = painelAberto && doHistorico;
-        if (painelAberto && !manterCamada) return false;
+        const dentroDoPainel = !!origem && typeof origem.closest === 'function'
+            && !!origem.closest('.git-painel, .thought-clamp-wrap, .ai-answer-wrap, .ai-answer-toggle');
+        const temCodigo = !!(vista.caminhoEntrega() || vista.caminhoOriginal());
+        const manterCamada = doHistorico && (dentroDoPainel || (painelAberto && !temCodigo));
+        if (painelAberto && !doHistorico) return false;
 
         const caminhoMonaco = vista.caminhoEntrega();
         const caminhoOriginal = vista.caminhoOriginal();
@@ -435,7 +439,7 @@ const NL = String.fromCharCode(10);
             if (e.target.closest('button, a, input, textarea, select')) return;
             const selecao = window.getSelection();
             if (selecao && String(selecao).length > 0) return;
-            entregarAoMonaco(vistaDock);
+            entregarAoMonaco(vistaDock, e.target);
         });
     }
 
@@ -444,7 +448,7 @@ const NL = String.fromCharCode(10);
             if (e.target.closest('button, a, input, textarea, select')) return;
             const selecao = window.getSelection();
             if (selecao && String(selecao).length > 0) return;
-            entregarAoMonaco(vistaHistorico);
+            entregarAoMonaco(vistaHistorico, e.target);
         });
     }
     function selecionarArquivo(fileData, vista = vistaDock) {
