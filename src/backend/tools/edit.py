@@ -46,6 +46,31 @@ def _preparar_substituicao(caminho_relativo, rotulo, texto_antigo, texto_novo):
     return (caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc, texto_novo_nfc, conteudo_nfc.count(texto_antigo_nfc)), None
 
 
+def _diagnostico_ancora(conteudo, texto_antigo):
+    """Aponta onde a ancora diverge do ficheiro, para nao se adivinhar espacos."""
+    linhas_arquivo = conteudo.split("\n")
+    busca = texto_antigo.split("\n")
+    primeira = next((l for l in busca if l.strip()), None)
+    if primeira is None:
+        return " O trecho antigo nao tem nenhuma linha com conteudo."
+    for i, linha in enumerate(linhas_arquivo):
+        if linha.strip() != primeira.strip():
+            continue
+        if linha != primeira:
+            return (f" A linha {i + 1} tem esse texto mas com indentacao DIFERENTE: "
+                    f"ficheiro={linha!r} vs ancora={primeira!r}.")
+        for j, alvo in enumerate(busca):
+            if i + j >= len(linhas_arquivo):
+                return f" O trecho comeca a casar na linha {i + 1} mas acaba antes do fim do ficheiro."
+            if linhas_arquivo[i + j] != alvo:
+                return (f" O trecho comeca a casar na linha {i + 1} e diverge na linha {i + j + 1}: "
+                        f"ficheiro={linhas_arquivo[i + j]!r} vs ancora={alvo!r}.")
+        return (f" O trecho aparece inteiro a partir da linha {i + 1} - se a busca nao casou, "
+                "ha diferenca de caracteres invisivel (reporte isto).")
+    return (f" Nenhuma linha do ficheiro e igual a primeira linha da ancora "
+            f"({primeira.strip()[:70]!r}).")
+
+
 def gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, action_name):
     """Grava o novo conteudo, registra no undo e emite o diff para a UI.
 
@@ -86,7 +111,7 @@ def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: 
         return erro
     caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc, texto_novo_nfc, ocorrencias = dados
     try:
-        if ocorrencias == 0: return "ERRO: O 'texto_antigo' não foi encontrado. Falha de indentação ou espaços. DICA: Não tente adivinhar os espaços. Use 'tool_ler_trecho_arquivo' novamente para copiar as linhas exatas, ou use uma âncora menor (ex: apenas 1 linha única) para garantir o match."
+        if ocorrencias == 0: return ("ERRO: O 'texto_antigo' não foi encontrado." + _diagnostico_ancora(conteudo_nfc, texto_antigo_nfc))
         elif ocorrencias > 1: return f"ERRO: O 'texto_antigo' ocorre {ocorrencias} vezes no arquivo. A âncora é ambígua. Forneça um trecho maior ou mais específico para garantir que apenas o local correto seja alterado."
         
         novo_conteudo = conteudo_nfc.replace(texto_antigo_nfc, texto_novo_nfc, 1)
@@ -141,7 +166,8 @@ def _aplicar_lote(conteudo_nfc, itens):
             return None, f"ERRO: o bloco {indice} tem o trecho antigo vazio."
         ocorrencias = atual.count(antigo)
         if ocorrencias == 0:
-            return None, f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado). DICA: releia o ficheiro com 'tool_ler_trecho_arquivo' e copie as linhas exatas."
+            return None, (f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado)."
+                          + _diagnostico_ancora(atual, antigo))
         if ocorrencias > 1:
             return None, f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro (ancora ambigua) - nada foi gravado."
         atual = atual.replace(antigo, novo, 1)
