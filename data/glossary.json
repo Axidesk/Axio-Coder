@@ -463,10 +463,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 351,
+        "linha": 410,
         "conferido": [
-          1789611406.658,
-          19469
+          1789947114.892,
+          22640
         ]
       }
     },
@@ -822,10 +822,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 427,
+        "linha": 489,
         "conferido": [
-          1789611406.658,
-          19469
+          1789947114.892,
+          22640
         ]
       }
     },
@@ -4323,8 +4323,8 @@
         "arquivo": "src/backend/routes/git_panel.py",
         "linha": 74,
         "conferido": [
-          1789942829.491,
-          6770
+          1789947866.564,
+          7027
         ]
       }
     },
@@ -4384,8 +4384,8 @@
         "arquivo": "src/backend/routes/git_panel.py",
         "linha": 90,
         "conferido": [
-          1789942829.491,
-          6770
+          1789947866.564,
+          7027
         ]
       }
     },
@@ -4442,10 +4442,10 @@
       "descricao": "Icone de enviar do painel de git: vive na .git-campo-linha, ANTES da varinha da mensagem, e commita os ficheiros da tarefa (ligaAcoes -> commitarTarefa, que le o campo #git-mensagem e chama POST /api/git/commit). Construido por aviao() e recolhido pelo handler generico [data-git-acao]. Fica DESATIVADO (disabled, com title a explicar) quando nada ha por commitar, e ao clicar entra em a-trabalhar (spinner) + disabled - e a guarda contra o duplo commit. Substituiu a pill \"Commit desta tarefa\".",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 296,
+        "linha": 304,
         "conferido": [
-          1789946009.917,
-          21572
+          1789947874.967,
+          22154
         ]
       }
     },
