@@ -2980,10 +2980,10 @@
       "descricao": "Quanto de conversa cabe antes de o Axio resumir e perder detalhe. Padrao no .env (LIMITE_TOKENS_HISTORICO=200000), maximo do modelo em LIMITE_TOKENS_HISTORICO_MAX (1000000). Numa tarefa longa (modelagem com varias iteracoes), subir o teto ANTES de chegar ao padrao evita compactar a conversa a meio. O ajuste vale so para a sessao.",
       "localizacao": {
         "arquivo": "src/backend/tools/memory_tools.py",
-        "linha": 82,
+        "linha": 86,
         "conferido": [
-          1789838569.002,
-          18117
+          1789953497.094,
+          18356
         ]
       }
     },
@@ -4444,10 +4444,10 @@
       "descricao": "Icone do painel de git, na .git-campo-linha ANTES da varinha: ENVIA para o remoto (nao so commita). ligarAcoes -> enviarTarefa: se houver ficheiros por commitar faz POST /api/git/commit (mensagem do campo, senao a pergunta da tarefa) e depois POST /api/git/enviar (git push, nunca force; estreia o upstream sozinho). Fica DESATIVADO com o motivo no title quando nao ha remoto ou quando nao ha nada por subir nem por commitar. Tooltip: \"Enviar para o GitHub\". Substituiu o botao que so commitava (data-git-acao=\"commit\").",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 356,
+        "linha": 376,
         "conferido": [
-          1789952703.629,
-          27151
+          1789953316.337,
+          29505
         ]
       }
     },
@@ -4485,10 +4485,10 @@
       "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 154,
+        "linha": 167,
         "conferido": [
-          1789952703.629,
-          27151
+          1789953316.337,
+          29505
         ]
       }
     },
@@ -4501,13 +4501,14 @@
         "destrancar o campo do commit",
         "campo trancado",
         "mensagem do commit trancada",
-        "lapis que abre o campo"
+        "lapis que abre o campo",
+        "lapis ao lado do aviao"
       ],
       "identificador": "destrancarMensagem (.git-lapis)",
-      "descricao": "O lapis so aparece quando o commit da tarefa ainda NAO subiu. O campo fica trancado a mostrar a mensagem real do commit; clicar no lapis habilita o campo, mete a mensagem dentro e troca as classes da linha (sai git-trancado-amendavel, entra git-a-editar), e entao o aviao volta a aparecer para enviar. Ja no GitHub, o campo fica trancado para sempre e o lapis nao existe.",
+      "descricao": "O lapis so existe quando o commit da tarefa ainda NAO subiu, e fica AO LADO do aviao - o aviao ja nao se esconde atras dele (pedido do utilizador: quem so quer enviar nao deve ter de clicar duas vezes). O campo esta trancado a mostrar a mensagem real do commit; clicar no lapis habilita o campo, mete a mensagem dentro e troca as classes da linha (sai git-trancado-amendavel, entra git-a-editar). O aviao, que ja estava visivel, passa a enviar - emendando a legenda so quando o texto muda. Ja no GitHub, o campo fica trancado para sempre e o lapis nao aparece; o aviao fica desativado com o motivo no title.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 475
+        "linha": 478
       }
     }
   ]

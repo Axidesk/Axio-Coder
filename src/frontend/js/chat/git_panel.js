@@ -123,8 +123,11 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
     }
     function htmlCabecalho(estado, grupo, versaoDaTarefa) {
         const ramos = (estado.ramos || []).length || 1;
-        let html = '<div class="git-seccao"><div class="git-seccao-titulo">Repositorio</div>';
-        html += `<div class="git-identidade">${escapeHtml(estado.slug || 'repositorio local')}</div>`;
+        let html = '<div class="git-seccao"><div class="git-repo-linha">';
+        html += '<span class="git-seccao-titulo">Repositorio</span>';
+        html += '<span class="projeto-secao-sep">|</span>';
+        html += `<span class="git-identidade">${escapeHtml(estado.slug || 'repositorio local')}</span>`;
+        html += '</div>';
         html += '<div class="projeto-grupo git-grupo-etiquetas">';
         html += '<div class="git-ramo-linha">';
         html += `<span class="git-chip">${SVG_RAMO}<span class="git-chip-num">${ramos}</span>${escapeHtml(estado.branch || 'sem ramo')}</span>`;

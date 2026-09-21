@@ -31,6 +31,16 @@
     font-weight: 600;
 }
 
+.git-repo-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.git-repo-linha .git-seccao-titulo {
+    margin-bottom: 0;
+}
+
 .git-grupo-etiquetas {
     display: flex;
     flex-direction: column;
@@ -199,11 +209,6 @@
 
 .git-campo-linha.git-trancado-amendavel .git-lapis {
     display: inline-flex;
-}
-
-.git-campo-linha.git-trancado-amendavel .git-aviao,
-.git-campo-linha.git-trancado-amendavel .git-varinha-edicao {
-    display: none;
 }
 
 .git-campo-linha:not(.git-a-editar) .git-varinha-edicao {
