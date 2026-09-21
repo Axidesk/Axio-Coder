@@ -140,7 +140,7 @@ const funcaoDoDisco = (rel, nome) => {
     const vizinhos = __vizinhosQueDefinem(caminho, nome);
     if (vizinhos.length === 1) return __corpoDeFuncao(fs.readFileSync(vizinhos[0], "utf8"), nome);
     const onde = vizinhos.length
-        ? " - ela vive em " + vizinhos.map((v) => path.relative(process.cwd(), v).replace(/\\/g, "/")).join(" e ") + " (passe esse ficheiro)"
+        ? " - ela vive em " + vizinhos.map((v) => path.relative(process.cwd(), v).split(path.sep).join("/")).join(" e ") + " (passe esse ficheiro)"
         : "";
     throw new Error("funcao nao encontrada no disco: " + nome + " em " + rel + onde);
 };
