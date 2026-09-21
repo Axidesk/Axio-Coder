@@ -1,3 +1,4 @@
+import difflib
 import os
 import re
 import time
@@ -254,6 +255,11 @@ def buscar_knowledge_textual(query, limite=8):
         "Contexto recuperado por busca textual (fallback do ChromaDB):\n\n"
         + "\n\n".join(trechos)
     )
+
+def buscar_titulos_parecidos(titulo, quantos=3):
+    """Titulos de notas proximos do pedido - evita perder a nota por um sufixo a mais no titulo."""
+    nomes = [n["nome"] for n in coletar_notas_knowledge()]
+    return difflib.get_close_matches(str(titulo or ""), nomes, n=max(1, int(quantos)), cutoff=0.6)
 
 def carregar_indice_knowledge(query=None, max_notas=12):
     """Amostra do acervo: as notas que casam com a mensagem + as mais recentes.

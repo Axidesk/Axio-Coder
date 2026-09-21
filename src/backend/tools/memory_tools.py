@@ -10,7 +10,7 @@ from src.backend.memory.glossary import (
     achar_linha_identificador,
     localizar_alvos,
 )
-from src.backend.memory.store import garantir_pasta_knowledge, nome_arquivo_seguro, dedup_nota, listar_notas_knowledge
+from src.backend.memory.store import garantir_pasta_knowledge, nome_arquivo_seguro, dedup_nota, listar_notas_knowledge, buscar_titulos_parecidos
 from src.backend.tools.registry import register
 from src.backend.memory.vector import salvar_memoria_no_vetor, excluir_memoria_do_vetor, varrer_memoria_vetor, reparar_memoria_vetor, limpar_memoria_orfaos, compactar_memoria_vetor, vetor_status
 from src.backend.memory.manutencao import raio_x_da_injecao, formatar_raio_x
@@ -50,6 +50,10 @@ def tool_gerenciar_memoria(acao: str, titulo: str = None, conteudo: str = None, 
         if os.path.exists(caminho):
             with open(caminho, "r", encoding="utf-8") as f:
                 return f.read()
+        parecidos = buscar_titulos_parecidos(titulo)
+        if parecidos:
+            return ("Nota não encontrada com este titulo exato. Titulos proximos:\n- "
+                    + "\n- ".join(parecidos))
         return "Nota não encontrada."
     elif acao == "excluir" and titulo:
         nome_seguro = nome_arquivo_seguro(titulo)
