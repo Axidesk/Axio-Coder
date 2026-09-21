@@ -6,10 +6,13 @@ import { btnGitRestoreHistory } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor } from './historico/cards.js';
 
-const LIMITE_COMMITS = 12;
+const LIMITE_COMMITS = 20;
 const LIMITE_FICHEIROS = 12;
 
 const RASCUNHOS = new Map();
+
+let commitsAMostrar = LIMITE_COMMITS;
+let ultimoEstadoGit = null;
 
 const COMANDO_DE_DEPENDENCIA = {
     'requirements.txt': 'python -m pip install -r requirements.txt',
@@ -29,11 +32,6 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
     function nomeDaTarefa(grupo) {
         if (!grupo) return '';
         return grupo.displayName || grupo.title || grupo.name || '';
-    }
-    function numeroDaTarefa(grupo) {
-        const nome = nomeDaTarefa(grupo).trim();
-        const achado = /^Tarefa\s+(\d+)$/.exec(nome);
-        return achado ? achado[1] : nome;
     }
     function valorDoCampo(grupo) {
         if (!grupo) return '';
@@ -59,6 +57,14 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         if (daLista && daLista.mensagem) return daLista.mensagem;
         const pendente = (estado.por_subir || []).find(c => c.hash === hash);
         return pendente && pendente.mensagem ? pendente.mensagem : '';
+    }
+    function campoDaTarefa(vista, acao) {
+        const painel = vista && vista.codigo ? vista.codigo : null;
+        return {
+            grupo: grupoAtivo(),
+            campo: painel ? painel.querySelector('#git-mensagem') : null,
+            botao: painel ? painel.querySelector(`[data-git-acao="${acao}"]`) : null
+        };
     }
     async function pedirGit(url, corpo) {
         const opcoes = corpo
@@ -99,13 +105,13 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
     }
-    function seccaoRecolhivel(titulo, resumo, corpo) {
+    function seccaoRecolhivel(titulo, resumo, corpo, chave) {
         let cabecalho = `<span class="projeto-secao-titulo">${escapeHtml(titulo)}</span>`;
         if (resumo) {
             cabecalho += '<span class="projeto-secao-sep">|</span>'
                 + `<span class="projeto-secao-resumo">${escapeHtml(resumo)}</span>`;
         }
-        return `<div class="projeto-grupo git-recolhivel">`
+        return `<div class="projeto-grupo git-recolhivel"${chave ? ` data-git-seccao="${chave}"` : ''}>`
             + `<div class="projeto-cabecalho git-cabecalho-clicavel" data-git-acao="recolher">${cabecalho}<span class="projeto-mais">+</span></div>`
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
@@ -189,7 +195,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo);
     }
     function htmlDaTarefa(grupo, pendentes, estado) {
-        let html = `<div class="git-seccao">${linhaComTitulo('Esta tarefa', grupo ? numeroDaTarefa(grupo) : '')}`;
+        let html = `<div class="git-seccao">${linhaComTitulo('Esta tarefa', grupo ? nomeDaTarefa(grupo) : '')}`;
         if (!grupo) {
             html += '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
             return html;
@@ -272,8 +278,13 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
     function htmlHistorico(estado, grupo) {
         const todos = estado.commits || [];
         if (!todos.length) return '';
+        commitsAMostrar = LIMITE_COMMITS;
+        return seccaoRecolhivel('Historico do repositorio', String(todos.length), corpoDoHistorico(estado, grupo), 'historico');
+    }
+    function corpoDoHistorico(estado, grupo) {
+        const todos = estado.commits || [];
         const pontoDaTarefa = hashDaTarefa(grupo);
-        const visiveis = todos.slice(0, LIMITE_COMMITS);
+        const visiveis = todos.slice(0, commitsAMostrar);
         const daTarefa = pontoDaTarefa ? todos.find(c => c.hash === pontoDaTarefa) : null;
         let corpo = '';
         visiveis.forEach(c => { corpo += linhaCommit(c, !!daTarefa && c.hash === pontoDaTarefa); });
@@ -281,7 +292,13 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             corpo += `<div class="git-nota">e mais ${todos.indexOf(daTarefa) - visiveis.length} commit(s) ate ao desta tarefa</div>`;
             corpo += linhaCommit(daTarefa, true);
         }
-        return seccaoRecolhivel('Historico do repositorio', String(todos.length), corpo);
+        const restantes = todos.length - visiveis.length;
+        if (restantes > 0) {
+            corpo += '<div class="git-acoes">'
+                + pill('mais-commits', `Ver mais ${Math.min(restantes, LIMITE_COMMITS)} de ${restantes}`)
+                + '</div>';
+        }
+        return corpo;
     }
     function htmlDependencias(estado) {
         const manifestos = estado.manifestos || [];
@@ -309,6 +326,13 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         }
         caixa.innerHTML = comandos.map(c => `<div class="git-comando">${escapeHtml(c)}</div>`).join('')
             + '<div class="git-nota">Corre este comando no terminal do Axio: a instalacao e longa e queres ver a saida. O ambiente virtual desta pasta fica pronto para a versao antiga do codigo.</div>';
+    }
+    function mostrarMaisCommits(botao) {
+        const bloco = botao.closest('[data-git-seccao="historico"]');
+        if (!bloco || !ultimoEstadoGit) return;
+        commitsAMostrar += LIMITE_COMMITS;
+        const clip = bloco.querySelector('.card-collapsible-clip');
+        if (clip) clip.innerHTML = corpoDoHistorico(ultimoEstadoGit, grupoAtivo());
     }
     function montarPainel(estado, grupo, pendentes, versaoDaTarefa) {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
@@ -351,6 +375,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             grupo.__podeEmendar = _podeEmendar(grupo, estado);
             grupo.__mensagemDoPonto = mensagemDoPontoDaTarefa(estado, hashDaTarefa(grupo));
         }
+        ultimoEstadoGit = estado;
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
         sincronizarBotaoRestauro(alvo, grupo);
         ligarAcoes(alvo);
@@ -373,15 +398,13 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             if (acao === 'editar') return destrancarMensagem(botao);
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
+            if (acao === 'mais-commits') return mostrarMaisCommits(botao);
             if (acao === 'enviar') return enviarTarefa(vista);
         });
     }
     async function enviarTarefa(vista) {
-        const grupo = grupoAtivo();
+        const { grupo, campo, botao } = campoDaTarefa(vista, 'enviar');
         if (!grupo) return;
-        const painel = vista && vista.codigo ? vista.codigo : null;
-        const campo = painel ? painel.querySelector('#git-mensagem') : null;
-        const botao = painel ? painel.querySelector('[data-git-acao="enviar"]') : null;
         if (botao && botao.disabled) return;
         if (botao) {
             botao.classList.add('a-trabalhar');
@@ -448,11 +471,8 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         return resultado;
     }
     async function sugerirMensagem(vista) {
-        const grupo = grupoAtivo();
+        const { grupo, campo, botao } = campoDaTarefa(vista, 'sugerir');
         if (!grupo) return;
-        const painel = vista && vista.codigo ? vista.codigo : null;
-        const campo = painel ? painel.querySelector('#git-mensagem') : null;
-        const botao = painel ? painel.querySelector('[data-git-acao="sugerir"]') : null;
         if (botao) {
             botao.classList.add('a-trabalhar');
             botao.disabled = true;

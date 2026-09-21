@@ -434,14 +434,13 @@ const { historyLogsWrapper } = dom;
         state.porSubirEmCurso = fetch('/api/git/por_subir')
             .then(r => r.json())
             .then(d => {
-                state.temRemotoGit = !!(d && d.status === 'ok' && d.remoto);
-                state.commitsPorSubir = (d && d.commits ? d.commits : []).map(c => c.hash);
+                if (!d || d.status !== 'ok') return;
+                state.temRemotoGit = !!d.remoto;
+                state.commitsPorSubir = (d.commits ? d.commits : []).map(c => c.hash);
                 state.porSubirLido = true;
+                atualizarMarcasDosCards();
             })
-            .catch(() => {
-                state.temRemotoGit = false;
-                state.commitsPorSubir = [];
-            })
+            .catch(() => {})
             .finally(() => { state.porSubirEmCurso = null; });
         return state.porSubirEmCurso;
     }

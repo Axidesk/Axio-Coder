@@ -103,10 +103,9 @@ const importarProjeto = (rel) => import(__paraUrl(__juntar(process.cwd(), rel)))
 // Extrai do disco o corpo EXATO de uma funcao nomeada, pronto para new Function.
 // Inclui o 'async' quando existe (esquece-lo da um SyntaxError que nao aponta para
 // a causa) e equilibra chaves - nao distingue chaves dentro de strings.
-const funcaoDoDisco = (rel, nome) => {
-    const texto = fs.readFileSync(path.join(process.cwd(), rel), "utf8");
+const __corpoDeFuncao = (texto, nome) => {
     let inicio = texto.indexOf("function " + nome + "(");
-    if (inicio < 0) throw new Error("funcao nao encontrada no disco: " + nome);
+    if (inicio < 0) return "";
     if (texto.slice(inicio - 6, inicio) === "async ") inicio -= 6;
     const abre = texto.indexOf("{", inicio);
     let nivel = 0;
@@ -114,7 +113,36 @@ const funcaoDoDisco = (rel, nome) => {
         if (texto[i] === "{") nivel++;
         else if (texto[i] === "}" && --nivel === 0) return texto.slice(inicio, i + 1);
     }
-    throw new Error("fim da funcao nao encontrado: " + nome);
+    return "";
+};
+
+// Quem define `nome` nos outros .js da MESMA pasta: o import diz de onde o modulo
+// a TIRA, nao onde ela vive (messages.js pode reexportar de escape.js), e o erro
+// "funcao nao encontrada" sem esta pista custa uma pesquisa ao modelo.
+const __vizinhosQueDefinem = (caminho, nome) => {
+    const alvo = "function " + nome + "(";
+    let ficheiros = [];
+    try {
+        ficheiros = fs.readdirSync(path.dirname(caminho));
+    } catch (_erro) {
+        return [];
+    }
+    return ficheiros
+        .filter((f) => f.endsWith(".js"))
+        .map((f) => path.join(path.dirname(caminho), f))
+        .filter((f) => f !== caminho && fs.readFileSync(f, "utf8").includes(alvo));
+};
+
+const funcaoDoDisco = (rel, nome) => {
+    const caminho = path.join(process.cwd(), rel);
+    const corpo = __corpoDeFuncao(fs.readFileSync(caminho, "utf8"), nome);
+    if (corpo) return corpo;
+    const vizinhos = __vizinhosQueDefinem(caminho, nome);
+    if (vizinhos.length === 1) return __corpoDeFuncao(fs.readFileSync(vizinhos[0], "utf8"), nome);
+    const onde = vizinhos.length
+        ? " - ela vive em " + vizinhos.map((v) => path.relative(process.cwd(), v).replace(/\\/g, "/")).join(" e ") + " (passe esse ficheiro)"
+        : "";
+    throw new Error("funcao nao encontrada no disco: " + nome + " em " + rel + onde);
 };
 
 const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join(String.fromCharCode(10));

@@ -6,7 +6,7 @@ import re
 from src.backend.services.file_service import git_saida, raiz_repositorio
 
 _MANIFESTOS = ("requirements.txt", "package.json")
-_LIMITE_HISTORICO = 60
+_LIMITE_HISTORICO = 200
 _LIMITE_FICHEIROS = 80
 _LIMITE_TAGS = 24
 _LIMITE_POR_SUBIR = 20

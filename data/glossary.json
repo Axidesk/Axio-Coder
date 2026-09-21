@@ -1168,8 +1168,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1449,
         "conferido": [
-          1789941547.392,
-          67768
+          1789954219.376,
+          68060
         ]
       }
     },
@@ -2237,8 +2237,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1029,
         "conferido": [
-          1789941547.392,
-          67768
+          1789954219.376,
+          68060
         ]
       }
     },
@@ -4344,8 +4344,8 @@
         "arquivo": "src/frontend/js/chat/historico/cards.js",
         "linha": 343,
         "conferido": [
-          1789952678.874,
-          25991
+          1789954989.177,
+          25952
         ]
       }
     },
@@ -4364,8 +4364,8 @@
         "arquivo": "src/frontend/js/chat/historico/cards.js",
         "linha": 389,
         "conferido": [
-          1789952678.874,
-          25991
+          1789954989.177,
+          25952
         ]
       }
     },
@@ -4440,15 +4440,11 @@
         "enviar para o github",
         "aviao do painel de git"
       ],
-      "identificador": "data-git-acao=\"enviar\" (.git-aviao)",
-      "descricao": "Icone do painel de git, na .git-campo-linha ANTES da varinha: ENVIA para o remoto (nao so commita). ligarAcoes -> enviarTarefa: se houver ficheiros por commitar faz POST /api/git/commit (mensagem do campo, senao a pergunta da tarefa) e depois POST /api/git/enviar (git push, nunca force; estreia o upstream sozinho). Fica DESATIVADO com o motivo no title quando nao ha remoto ou quando nao ha nada por subir nem por commitar. Tooltip: \"Enviar para o GitHub\". Substituiu o botao que so commitava (data-git-acao=\"commit\").",
+      "identificador": ".git-aviao",
+      "descricao": "Botao do painel que ENVIA: se houver ficheiros por commitar faz o commit (mensagem do campo, senao a pergunta da tarefa) e depois git push; se nao houver nada a commitar, so faz push. O atributo data-git-acao=\"enviar\" e INTERPOLADO em aviao(acao,...), por isso nao existe como texto fixo no ficheiro. Fica lado a lado com o lapis (.git-lapis) quando o commit da tarefa ainda nao subiu; desativado com o motivo no title quando nao ha remoto ou ja esta tudo no GitHub.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 376,
-        "conferido": [
-          1789953316.337,
-          29505
-        ]
+        "linha": 92
       }
     },
     {
@@ -4485,10 +4481,10 @@
       "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 167,
+        "linha": 183,
         "conferido": [
-          1789953316.337,
-          29505
+          1789955088.049,
+          30700
         ]
       }
     },
@@ -4508,7 +4504,11 @@
       "descricao": "O lapis so existe quando o commit da tarefa ainda NAO subiu, e fica AO LADO do aviao - o aviao ja nao se esconde atras dele (pedido do utilizador: quem so quer enviar nao deve ter de clicar duas vezes). O campo esta trancado a mostrar a mensagem real do commit; clicar no lapis habilita o campo, mete a mensagem dentro e troca as classes da linha (sai git-trancado-amendavel, entra git-a-editar). O aviao, que ja estava visivel, passa a enviar - emendando a legenda so quando o texto muda. Ja no GitHub, o campo fica trancado para sempre e o lapis nao aparece; o aviao fica desativado com o motivo no title.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 478
+        "linha": 503,
+        "conferido": [
+          1789955088.049,
+          30700
+        ]
       }
     }
   ]

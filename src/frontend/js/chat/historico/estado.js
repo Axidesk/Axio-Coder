@@ -5,6 +5,7 @@ import { state } from '../state.js';
         const data = await resp.json();
         state.sessionHistoryList = data.sessions || [];
         state.sessionDetailCache = {};
+        state.porSubirLido = false;
         state.sessionHistoryLoaded = true;
         await fetchCheckpointState();
     }
