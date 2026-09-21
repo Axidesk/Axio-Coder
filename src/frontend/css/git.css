@@ -114,10 +114,6 @@
     cursor: pointer;
 }
 
-.git-painel .projeto-mais {
-    margin-left: auto;
-}
-
 .git-cabecalho-clicavel:hover .projeto-mais,
 .git-recolhivel .projeto-linha-clicavel:hover .projeto-mais {
     color: var(--oliva);

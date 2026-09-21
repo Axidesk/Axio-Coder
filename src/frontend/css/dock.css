@@ -116,7 +116,8 @@
     width: calc(100vw - 3.5rem - var(--largura-col2-historico));
 }
 #panel-col-1 > div:first-child,
-#panel-col-2 > div:first-child {
+#panel-col-2 > div:first-child,
+#panel-log-session > div:first-child {
     height: 60px;
     box-sizing: border-box;
 }

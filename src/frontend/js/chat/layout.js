@@ -102,7 +102,7 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
     }
 
     function camadaCol3MostraPaineis() {
-        return !!(state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions);
+        return !!(state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions || state.isShowingGit);
     }
 
     function camadaNotasAberta() {
