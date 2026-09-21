@@ -19,6 +19,8 @@ const COMANDO_DE_DEPENDENCIA = {
 const SVG_VARINHA = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>';
 const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg>';
 const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>';
+const SVG_RAMO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>';
+const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>';
 
     function grupoAtivo() {
         return state.currentSelectedHistoryGroup || window.currentActiveLogGroup || null;
@@ -40,6 +42,11 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         if (!grupo) return '';
         return grupo.commit || (state.commitsDosTurnos || {})[String(grupo.id)] || '';
     }
+    function _podeEmendar(grupo, estado) {
+        const hash = hashDaTarefa(grupo);
+        if (!hash || !estado || !estado.repo) return false;
+        return (estado.por_subir || []).map(c => c.hash).includes(hash);
+    }
     async function pedirGit(url, corpo) {
         const opcoes = corpo
             ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }
@@ -52,9 +59,6 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             const amostra = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 160);
             return { status: 'error', message: `O servidor respondeu ${resp.status}${amostra ? ': ' + amostra : ''}` };
         }
-    }
-    function linhaRotulo(valor, rotulo) {
-        return `<div class="git-linha"><span class="git-valor">${escapeHtml(valor)}</span><span class="git-rotulo">${escapeHtml(rotulo)}</span></div>`;
     }
     function pill(acao, texto, extra) {
         return `<button class="git-pill ${extra || ''}" data-git-acao="${acao}">${escapeHtml(texto)}</button>`;
@@ -104,21 +108,48 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             </div>
         </div>`;
     }
-    function htmlCabecalho(estado) {
-        const remoto = estado.remoto || 'sem remoto';
-        const frente = estado.ahead === null ? 'sem ligacao ao remoto' : `${estado.ahead} por subir, ${estado.behind} por descer`;
-        const sujos = estado.total_sujos;
+    function htmlCabecalho(estado, grupo, versaoDaTarefa) {
+        const ramos = (estado.ramos || []).length || 1;
         let html = '<div class="git-seccao"><div class="git-seccao-titulo">Repositorio</div>';
-        html += linhaRotulo(estado.branch, 'ramo');
-        html += linhaRotulo(remoto, 'remoto');
-        html += linhaRotulo(frente, 'em relacao ao remoto');
-        html += linhaRotulo(sujos === 0 ? 'limpo' : `${sujos} ficheiro(s) alterado(s)`, 'disco');
-        if (estado.ultimo) {
-            html += linhaRotulo(`${estado.ultimo.curto} ${estado.ultimo.mensagem}`, 'ultimo commit');
-        }
-        html += `<div class="git-acoes">${pill('atualizar', 'Atualizar')}</div>`;
+        html += `<div class="git-identidade">${escapeHtml(estado.slug || 'repositorio local')}</div>`;
+        html += '<div class="projeto-grupo git-grupo-etiquetas">';
+        html += '<div class="git-ramo-linha">';
+        html += `<span class="git-chip">${SVG_RAMO}<span class="git-chip-num">${ramos}</span>${escapeHtml(estado.branch || 'sem ramo')}</span>`;
+        html += chipDeEtiquetas(estado, versaoDaTarefa);
         html += '</div>';
+        html += listaDeEtiquetas(estado, grupo, versaoDaTarefa);
+        html += '</div></div>';
         return html;
+    }
+    function chipDeEtiquetas(estado, versaoDaTarefa) {
+        const tags = estado.tags || [];
+        if (!tags.length) return '';
+        const acesa = !!versaoDaTarefa;
+        const rotulo = acesa ? versaoDaTarefa : (tags.length === 1 ? '1 etiqueta' : `${tags.length} etiquetas`);
+        const numero = acesa ? `<span class="git-chip-num">${tags.length}</span>` : '';
+        return `<span class="git-chip git-chip-clicavel${acesa ? ' git-chip-acesa' : ''}" data-git-acao="recolher">`
+            + SVG_ETIQUETA + numero + escapeHtml(rotulo)
+            + '<span class="projeto-mais">+</span></span>';
+    }
+    function listaDeEtiquetas(estado, grupo, versaoDaTarefa) {
+        const tags = estado.tags || [];
+        if (!tags.length) return '';
+        const pontoDaTarefa = hashDaTarefa(grupo);
+        const linhas = tags.map(t => {
+            const nome = typeof t === 'string' ? t : t.nome;
+            const ponto = typeof t === 'string' ? '' : t.ponto;
+            const curto = typeof t === 'string' ? '' : t.curto;
+            const acesa = (!!pontoDaTarefa && ponto === pontoDaTarefa)
+                || (!!versaoDaTarefa && nome === versaoDaTarefa);
+            const dono = ponto ? nomeDaTarefaDoCommit(ponto) : '';
+            return `<div class="git-tag-linha${acesa ? ' git-tag-acesa' : ''}">`
+                + `<span class="git-tag-nome">${escapeHtml(nome)}</span>`
+                + (curto ? `<span class="git-tag-ponto">${escapeHtml(curto)}</span>` : '')
+                + (dono ? `<span class="git-tag-dono">${escapeHtml(dono)}</span>` : '')
+                + '</div>';
+        }).join('');
+        return '<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">'
+            + `<div class="git-tags-vertical">${linhas}</div></div></div>`;
     }
     function htmlPorSubir(estado) {
         if (!estado.remoto) return '';
@@ -146,6 +177,8 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         const temRemoto = !!(estado && estado.remoto);
         const porSubir = (estado && estado.por_subir) || [];
         const vaiCommitar = ficheiros.length > 0 && porCommitar !== 0;
+        const podeEmendar = !vaiCommitar && _podeEmendar(grupo, estado);
+        const campoAtivo = vaiCommitar || podeEmendar;
         const podeEnviar = temRemoto && (vaiCommitar || porSubir.length > 0);
         const motivo = !temRemoto
             ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
@@ -163,12 +196,25 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             : '';
         html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto);
         html += '<div class="git-campo-linha">'
-            + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false" value="${escapeHtml(valorDoCampo(grupo))}" placeholder="Mensagem do commit">`
+            + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`
+            + ` value="${campoAtivo ? escapeHtml(valorDoCampo(grupo)) : ''}"`
+            + ` placeholder="${escapeHtml(rotuloDoCampo(vaiCommitar, podeEmendar, estado, hash))}"`
+            + `${campoAtivo ? '' : ' disabled'}>`
             + aviao('enviar', motivo, !podeEnviar)
-            + varinha('sugerir', 'Escrever a mensagem com a IA')
+            + (campoAtivo ? varinha('sugerir', 'Escrever a mensagem com a IA') : '')
             + '</div>';
+        if (podeEmendar) {
+            html += '<div class="git-nota">Este commit ainda nao subiu: escrever aqui reescreve a mensagem dele.</div>';
+        }
         html += '</div>';
         return html;
+    }
+    function rotuloDoCampo(vaiCommitar, podeEmendar, estado, hash) {
+        if (vaiCommitar) return 'Mensagem do commit';
+        if (podeEmendar) return 'Reescrever a mensagem deste commit';
+        const commit = hash ? (estado.commits || []).find(c => c.hash === hash) : null;
+        if (commit) return `Ja no GitHub: ${commit.mensagem}`;
+        return 'Ja no GitHub: nada por escrever';
     }
     function corpoDaTarefa(grupo, pendentes) {
         const ficheiros = ficheirosDaTarefa(grupo);
@@ -211,25 +257,6 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         }
         return seccaoRecolhivel('Historico do repositorio', String(todos.length), corpo);
     }
-    function htmlEtiquetas(estado, grupo, versaoDaTarefa) {
-        const tags = estado.tags || [];
-        if (!tags.length) return '';
-        const pontoDaTarefa = hashDaTarefa(grupo);
-        const linhas = tags.map(t => {
-            const nome = typeof t === 'string' ? t : t.nome;
-            const ponto = typeof t === 'string' ? '' : t.ponto;
-            const curto = typeof t === 'string' ? '' : t.curto;
-            const acesa = (!!pontoDaTarefa && ponto === pontoDaTarefa)
-                || (!!versaoDaTarefa && nome === versaoDaTarefa);
-            const dono = ponto ? nomeDaTarefaDoCommit(ponto) : '';
-            return `<div class="git-tag-linha${acesa ? ' git-tag-acesa' : ''}">`
-                + `<span class="git-tag-nome">${escapeHtml(nome)}</span>`
-                + (curto ? `<span class="git-tag-ponto">${escapeHtml(curto)}</span>` : '')
-                + (dono ? `<span class="git-tag-dono">${escapeHtml(dono)}</span>` : '')
-                + '</div>';
-        }).join('');
-        return seccaoRecolhivel('Etiquetas', String(tags.length), `<div class="git-tags-vertical">${linhas}</div>`);
-    }
     function htmlDependencias(estado) {
         const manifestos = estado.manifestos || [];
         if (!manifestos.length) return '';
@@ -260,11 +287,10 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
     function montarPainel(estado, grupo, pendentes, versaoDaTarefa) {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
-        html += htmlCabecalho(estado);
+        html += htmlCabecalho(estado, grupo, versaoDaTarefa);
         html += htmlPorSubir(estado);
         html += htmlDaTarefa(grupo, pendentes, estado);
         html += htmlHistorico(estado, grupo);
-        html += htmlEtiquetas(estado, grupo, versaoDaTarefa);
         html += htmlDependencias(estado);
         html += '</div>';
         return html;
@@ -294,7 +320,10 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             dados = { status: 'error', message: `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}` };
         }
         const estado = dados && dados.estado ? dados.estado : { repo: false, motivo: (dados && dados.message) || 'Nao consegui ler o repositorio.' };
-        if (grupo) grupo.__pendentes = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
+        if (grupo) {
+            grupo.__pendentes = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
+            grupo.__podeEmendar = _podeEmendar(grupo, estado);
+        }
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
         sincronizarBotaoRestauro(alvo, grupo);
         ligarAcoes(alvo);
@@ -314,7 +343,6 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
             e.stopPropagation();
             const acao = botao.dataset.gitAcao;
             if (acao === 'recolher') return alternarRecolhido(botao);
-            if (acao === 'atualizar') return renderGitPanel(vista);
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
             if (acao === 'enviar') return enviarTarefa(vista);
@@ -336,21 +364,10 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
         const porCommitar = grupo.__pendentes;
         const podeCommitar = ficheiros.length > 0 && porCommitar !== 0;
         try {
-            const commit = podeCommitar ? await pedirGit('/api/git/commit', {
-                mensagem: mensagem || (grupo.questions || [])[0] || nomeDaTarefa(grupo),
-                ficheiros,
-                filename: grupo.__session || '',
-                round_id: grupo.id || ''
-            }) : null;
-            if (commit && commit.status === 'error') {
+            const commit = await gravarPonto(grupo, mensagem, ficheiros, podeCommitar);
+            if (commit && commit.status !== 'ok') {
                 avisarNoPainel(vista, commit.message || 'Nao foi possivel commitar.');
                 return;
-            }
-            if (commit && commit.status === 'ok') {
-                grupo.commit = commit.hash || '';
-                state.commitsDosTurnos[String(grupo.id)] = commit.hash || '';
-                RASCUNHOS.delete(String(grupo.id));
-                updateRoundCardCommitByTurnId(grupo.id, commit.hash || '');
             }
             const enviado = await pedirGit('/api/git/enviar', {});
             if (!enviado || enviado.status !== 'ok') {
@@ -373,6 +390,34 @@ const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill=
                 botao.disabled = false;
             }
         }
+    }
+    async function gravarPonto(grupo, mensagem, ficheiros, podeCommitar) {
+        let corpo = null;
+        if (podeCommitar) {
+            corpo = {
+                mensagem: mensagem || (grupo.questions || [])[0] || nomeDaTarefa(grupo),
+                ficheiros,
+                filename: grupo.__session || '',
+                round_id: grupo.id || ''
+            };
+        } else if (mensagem && grupo.__podeEmendar) {
+            corpo = {
+                emendar: true,
+                mensagem,
+                revisao: hashDaTarefa(grupo),
+                filename: grupo.__session || '',
+                round_id: grupo.id || ''
+            };
+        }
+        if (!corpo) return null;
+        const resultado = await pedirGit('/api/git/commit', corpo);
+        if (resultado && resultado.status === 'ok') {
+            grupo.commit = resultado.hash || '';
+            state.commitsDosTurnos[String(grupo.id)] = resultado.hash || '';
+            RASCUNHOS.delete(String(grupo.id));
+            updateRoundCardCommitByTurnId(grupo.id, resultado.hash || '');
+        }
+        return resultado;
     }
     async function sugerirMensagem(vista) {
         const grupo = grupoAtivo();

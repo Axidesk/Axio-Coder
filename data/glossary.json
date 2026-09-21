@@ -1607,10 +1607,10 @@
       "descricao": "A troca da camada do code view pelo Monaco. REGRA: A CAMADA NAO TOCA NO MONACO AO ABRIR, SO NA ENTREGA. files.js:entregarAoMonaco(vista) le a linha do retrato (marcas [data-ln] -> linhaNoFicheiroAtual; vista de FICHEIRO -> a grelha) e chama SEMPRE workspace.js:transferirDaCamada(caminho, linha, arquivoOriginal), que sai do modo do Monaco sem fade, recarrega o ficheiro quando o modelo em maos nao e o ficheiro e alinha. O 4o argumento entrar do setCodeViewContent controla o fade de entrada (diff passa false). Duas vistas chamam isto: a doc (vistaDock) e o HISTORICO (vistaHistorico). NA DOC: o clique entrega e a camada sai em fade, sempre. NO HISTORICO (2026-09-15): (a) com CODIGO a mostra (vista de ficheiro ou diff) entrega como o dock e a camada sai - e a unica forma de ver o Monaco, porque a camada e inset 0 por cima do #editor-host-wrap; (b) com um PAINEL aberto (raciocinio, ferramentas ou pergunta) NAO fecha a camada nem le linha nenhuma (o corpo mostra o painel, nao codigo) - o guard olhava so para tools/thoughts, logo clicar no painel da PERGUNTA entregava com uma linha falsa e fechava a camada a meio da leitura. O abrirDiff do historico passou a chamar marcarLinhasAlteradas e a marcar caminhoEntrega E caminhoOriginal como o do dock (era o que deixava o diff do historico sem linha). O MONACO DEPOIS DA ENTREGA NAO FECHA O HISTORICO: entregar codigo do historico liga state.codigoDoHistoricoNoEditor, que isenta o clique no editor no clique-fora (renderer.js) - sem isso, clicar no Monaco fechava o painel do historico (closeHistoryPanel). Desliga-se no closeHistory, na entrega da doc e no axio-editor-file-open (arvore).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 374,
+        "linha": 375,
         "conferido": [
-          1789941451.983,
-          39511
+          1789950759.957,
+          39880
         ]
       }
     },
@@ -1629,10 +1629,10 @@
       "descricao": "As quebras que morriam no retrato, por DUAS vias distintas. (1) VISTA DE FICHEIRO: o texto entrava por textContent num contentor com white-space normal e o ficheiro inteiro virava um paragrafo; o pre vive no PROPRIO texto (files.js:setCodeViewContent com escapeHtml), nunca no contentor, onde o raciocinio/ferramentas/pergunta precisam de quebrar - css/dock.css:.code-view-plain. (2) RETRATO DO DIFF: files.js:marcarLado reconstroi cada linha num span proprio e deitava fora a quebra final de cada bloco .diff-*, logo o ultimo pedaco de um bloco \"added\" colava-se ao bloco seguinte (as tres frases e a aspa de fecho vem em blocos separados) - a flag quebraFinal repoe-a.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 160,
+        "linha": 161,
         "conferido": [
-          1789941451.983,
-          39511
+          1789950759.957,
+          39880
         ]
       }
     },
@@ -1739,10 +1739,10 @@
       "descricao": "Ficheiros com o MESMO nome em pastas diferentes (src/backend/services/session.py e src/backend/routes/session.py) tem de ser identificados pelo CAMINHO, nunca pelo nome. encontrarArquivoUndo (files.js) procura match exato pelo caminho_relativo, depois por sufixo, e o nome simples SO se houver um unico candidato - antes havia um OR com o basename e, como o /api/undo_redo_status devolve a lista ordenada por nome, qualquer card abria sempre o PRIMEIRO da lista. O rotulo da aba e decidido por rotulosDasAbas (src/frontend/js/editor/editor.js, chamada por renderTabs): o PRIMEIRO ficheiro da lista fica com o nome simples e os seguintes ganham o sufixo da pasta (routes/session.py), subindo niveis enquanto houver colisao.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 178,
+        "linha": 179,
         "conferido": [
-          1789941451.983,
-          39511
+          1789950759.957,
+          39880
         ]
       }
     },
@@ -4321,10 +4321,10 @@
       "descricao": "Grava um commit LOCAL (sem push) com os ficheiros daquela tarefa e devolve o hash; com filename+round_id grava o hash no turno do log (services/session.py:marcar_commit_no_log), o que faz o card ganhar o pino com o hash no tooltip. Lista de ficheiros VAZIA e recusada - um commit do painel nunca leva tudo o que estiver sujo.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 74,
+        "linha": 75,
         "conferido": [
-          1789947866.564,
-          7027
+          1789950566.469,
+          7867
         ]
       }
     },
@@ -4342,10 +4342,10 @@
       "descricao": "Cards das etiquetas e do ramo no fim do historico (substituiu a pilha dos salvos); cada etiqueta abre as tarefas do seu intervalo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 325,
+        "linha": 343,
         "conferido": [
-          1789945983.152,
-          24572
+          1789950600.383,
+          25937
         ]
       }
     },
@@ -4362,10 +4362,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 371,
+        "linha": 389,
         "conferido": [
-          1789945983.152,
-          24572
+          1789950600.383,
+          25937
         ]
       }
     },
@@ -4382,10 +4382,10 @@
       "descricao": "Estado do que falta commitar numa tarefa. A rota POST /api/git/pendentes recebe os ficheiros da tarefa e devolve o subconjunto com alteracoes no disco (git status --porcelain -- <paths>); o painel cruza-o com group.files e, com count==0, TIRA o botao Commit desta tarefa e explica \"Nada por commitar\". Leitura falhada (null) mantem o botao: a falta de dado nunca tira a capacidade.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 90,
+        "linha": 91,
         "conferido": [
-          1789947866.564,
-          7027
+          1789950566.469,
+          7867
         ]
       }
     },
@@ -4402,10 +4402,10 @@
       "descricao": "A camada da coluna 3 fecha porque o clique e interpretado como entrega de codigo ao Monaco. entregarAoMonaco so considerava os paineis ferramentas/raciocinio/pergunta; com o painel GIT aberto o painelAberto era falso, o alvo ficava null e a camada era fechada. A lista inclui agora state.isShowingGit e vale para qualquer painel novo que se acrescente a coluna 3.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 379,
+        "linha": 380,
         "conferido": [
-          1789941451.983,
-          39511
+          1789950759.957,
+          39880
         ]
       }
     },
@@ -4444,7 +4444,11 @@
       "descricao": "Icone do painel de git, na .git-campo-linha ANTES da varinha: ENVIA para o remoto (nao so commita). ligarAcoes -> enviarTarefa: se houver ficheiros por commitar faz POST /api/git/commit (mensagem do campo, senao a pergunta da tarefa) e depois POST /api/git/enviar (git push, nunca force; estreia o upstream sozinho). Fica DESATIVADO com o motivo no title quando nao ha remoto ou quando nao ha nada por subir nem por commitar. Tooltip: \"Enviar para o GitHub\". Substituiu o botao que so commitava (data-git-acao=\"commit\").",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 328
+        "linha": 328,
+        "conferido": [
+          1789950748.767,
+          24401
+        ]
       }
     },
     {
@@ -4481,7 +4485,11 @@
       "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 123
+        "linha": 123,
+        "conferido": [
+          1789950748.767,
+          24401
+        ]
       }
     }
   ]

@@ -377,10 +377,10 @@ const { historyLogsWrapper } = dom;
     async function loadRamoCards(ramo, body) {
         await ensureSessionDetailsLoaded();
         assignDisplayNamesByDay();
-        const alvo = new Set(ramo.commits || []);
+        const alvo = new Set(ramo.todos && ramo.todos.length ? ramo.todos : ramo.commits || []);
         const grupos = turnosComCommit().filter(l => alvo.has(l.commit)).map(rebuildGroupFromSaved);
         if (!grupos.length) {
-            body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nada por publicar neste ramo.</div>';
+            body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nenhuma tarefa commitada neste ramo.</div>';
             return;
         }
         body.innerHTML = '';

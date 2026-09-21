@@ -25,6 +25,65 @@
     margin-bottom: 3px;
 }
 
+.git-identidade {
+    color: var(--text-claro);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.git-grupo-etiquetas {
+    display: flex;
+    flex-direction: column;
+}
+
+.git-ramo-linha {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.git-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border-radius: 9999px;
+    padding: 4px 10px;
+    color: var(--text-suave);
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: background var(--dur-1) var(--ease-fluid), color var(--dur-1) var(--ease-fluid);
+}
+
+.git-chip svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+.git-chip-num {
+    font-weight: 400;
+    color: var(--text-mutado);
+}
+
+.git-chip-clicavel {
+    cursor: pointer;
+}
+
+.git-chip-clicavel:hover {
+    background: var(--bg-hover-suave);
+    color: var(--text-branco);
+}
+
+.git-chip-acesa,
+.git-chip-acesa .git-chip-num {
+    color: var(--oliva);
+}
+
+.git-grupo-etiquetas > .projeto-filhos > .card-collapsible-clip {
+    padding-left: 10px;
+}
+
 .git-seccao .projeto-cabecalho {
     margin: 0 0 5px;
 }

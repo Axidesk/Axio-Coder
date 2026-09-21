@@ -68,6 +68,29 @@ def _ramo_atual(raiz):
     return (saida or "").strip() or "sem ramo"
 
 
+def _slug_do_remoto(url):
+    """`Axidesk/Axio-Coder` a partir de https://github.com/Axidesk/Axio-Coder.git ou git@github.com:Axidesk/Axio-Coder.git."""
+    texto = (url or "").strip()
+    if not texto:
+        return ""
+    if "://" in texto:
+        texto = texto.split("://", 1)[1]
+        if "/" in texto:
+            texto = texto.split("/", 1)[1]
+    elif "@" in texto and ":" in texto:
+        texto = texto.split(":", 1)[1]
+    if texto.endswith(".git"):
+        texto = texto[:-4]
+    return texto.strip("/")
+
+
+def _nomes_dos_ramos(raiz):
+    saida, erro = git_saida(raiz, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+    if erro:
+        return []
+    return [l.strip() for l in (saida or "").splitlines() if l.strip()]
+
+
 def _frente(raiz):
     saida, erro = git_saida(raiz, "rev-list", "--left-right", "--count", "HEAD...@{upstream}")
     if erro:
@@ -115,11 +138,14 @@ def estado(pasta):
     em_stage, fora, novos, erro_status = _sujos(raiz)
     ahead, behind = _frente(raiz)
     remoto, _ = git_saida(raiz, "remote", "get-url", "origin")
+    remoto = (remoto or "").strip()
     return {
         "repo": True,
         "raiz": raiz,
         "branch": _ramo_atual(raiz),
-        "remoto": (remoto or "").strip(),
+        "ramos": _nomes_dos_ramos(raiz),
+        "remoto": remoto,
+        "slug": _slug_do_remoto(remoto),
         "ahead": ahead,
         "behind": behind,
         "ultimo": _ultimo_commit(raiz),
@@ -292,6 +318,7 @@ def _ramos_com_ponto(raiz):
         nome = campos[0]
         base = _base_do_ramo(raiz, nome, campos[3].strip(), principal)
         commits, _ = _commits_do_intervalo(raiz, nome, base) if base else ([], "")
+        todos, _ = _commits_do_intervalo(raiz, nome, "")
         ramos.append({
             "nome": nome,
             "ponto": campos[1],
@@ -300,6 +327,7 @@ def _ramos_com_ponto(raiz):
             "base": base,
             "por_publicar": len(commits),
             "commits": commits,
+            "todos": todos,
             "data": campos[4],
             "mensagem": (campos[5] or "").strip(),
         })
@@ -460,6 +488,41 @@ def commitar(pasta, mensagem, ficheiros=None):
         "count": len(entrando),
         "ficheiros": entrando[:_LIMITE_FICHEIROS],
     }
+
+
+def emendar(pasta, mensagem, revisao=""):
+    """Reescreve a mensagem do ultimo commit, so quando isso nao reescreve historia publicada.
+
+    Exige tres condicoes: nada em stage (senao o amend levaria ficheiros que nao sao
+    desta tarefa), o commit da tarefa ser a ponta do ramo (senao apagaria o que veio
+    depois) e ainda nao estar no remoto nem levar etiqueta (senao a etiqueta e os
+    hashes ja gravados apontariam para um commit que deixa de existir).
+    """
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro:
+        return {"status": "error", "message": erro}
+    texto = (mensagem or "").strip()
+    if not texto:
+        return {"status": "error", "message": "Escreve a mensagem que queres dar a este commit."}
+    em_stage, _, _, _ = _sujos(raiz)
+    if em_stage:
+        return {"status": "error", "message": "Ha ficheiros em stage: emendar levaria coisas que nao sao desta tarefa."}
+    ponta, _ = git_saida(raiz, "rev-parse", "HEAD")
+    ponta = (ponta or "").strip()
+    if revisao and revisao != ponta:
+        return {"status": "error", "message": "Ja ha commits depois deste: emendar apagaria o que veio a seguir."}
+    info = por_subir(pasta)
+    if info.get("remoto") and ponta not in [c["hash"] for c in info.get("commits", [])]:
+        return {"status": "error", "message": "Este commit ja esta no GitHub: mudar-lhe a mensagem so por reescrita de historia."}
+    etiquetas, _ = _tags_que_contem(raiz, ponta)
+    if etiquetas:
+        return {"status": "error", "message": f"O commit ja leva a etiqueta {etiquetas[0]}: a etiqueta ficaria pendurada."}
+    _, erro_commit = git_saida(raiz, "commit", "--amend", "-m", texto)
+    if erro_commit:
+        return {"status": "error", "message": erro_commit}
+    novo, _ = git_saida(raiz, "rev-parse", "HEAD")
+    novo = (novo or "").strip()
+    return {"status": "ok", "hash": novo, "curto": curto(novo), "emendado": True}
 
 
 def _nome_do_status(linha):

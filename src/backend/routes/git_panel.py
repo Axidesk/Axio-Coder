@@ -75,8 +75,11 @@ def git_versoes():
 @git_bp.route("/api/git/commit", methods=["POST"])
 def git_commit():
     dados = request.json or {}
-    ficheiros = git_repo.caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
-    resultado = git_repo.commitar(_pasta(), dados.get("mensagem") or "", ficheiros)
+    if dados.get("emendar"):
+        resultado = git_repo.emendar(_pasta(), dados.get("mensagem") or "", str(dados.get("revisao") or ""))
+    else:
+        ficheiros = git_repo.caminhos_do_repo(_pasta(), dados.get("ficheiros") or [])
+        resultado = git_repo.commitar(_pasta(), dados.get("mensagem") or "", ficheiros)
     if resultado.get("status") == "error":
         return jsonify(resultado), 400
     if resultado.get("status") != "ok":
