@@ -3,6 +3,7 @@ import time
 import threading
 import re
 import base64
+import hashlib
 import logging
 
 logging.getLogger("google.genai").setLevel(logging.ERROR)
@@ -335,6 +336,28 @@ def _bruto_da_imagem_anexada(img_data):
     except Exception:
         return None, nome
 
+def _guardar_imagem_anexada(bruto, nome):
+    """Grava o anexo do chat em .axio/anexos/ e devolve o caminho dentro do projeto."""
+    raiz = estado.get("pasta_raiz")
+    if not bruto or not raiz:
+        return ""
+    limpo = re.sub(r"[^\w.\- ]", "_", os.path.basename(nome or "")).strip() or "imagem"
+    if not os.path.splitext(limpo)[1]:
+        limpo = f"{limpo}.png"
+    pasta = os.path.join(raiz, ".axio", "anexos")
+    try:
+        os.makedirs(pasta, exist_ok=True)
+        destino = os.path.join(pasta, limpo)
+        if os.path.exists(destino) and open(destino, "rb").read() != bruto:
+            nome_base, ext = os.path.splitext(limpo)
+            destino = os.path.join(pasta, f"{nome_base}_{hashlib.sha1(bruto).hexdigest()[:8]}{ext}")
+        if not os.path.exists(destino):
+            with open(destino, "wb") as f:
+                f.write(bruto)
+        return os.path.relpath(destino, raiz).replace("\\", "/")
+    except OSError:
+        return ""
+
 def _separar_imagem_do_resultado(resultado):
     """(texto, imagens) de um resultado de ferramenta.
 
@@ -412,7 +435,12 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
         if not partes_imagem:
             emit_event("status", message=f"Aviso: a imagem '{nome}' nao pode ser lida e foi ignorada.")
             continue
-        partes_usuario.append(types.Part.from_text(text=f"[Imagem anexada: {nome}]"))
+        caminho_anexo = _guardar_imagem_anexada(bruto, nome)
+        etiqueta = f"[Imagem anexada: {nome}]"
+        if caminho_anexo:
+            etiqueta = (f"[Imagem anexada: {nome} | gravada em {caminho_anexo} -"
+                        " use este caminho nas ferramentas de visao e de medida]")
+        partes_usuario.append(types.Part.from_text(text=etiqueta))
         if len(partes_imagem) > 1:
             emit_event("status", message=(
                 f"A imagem '{nome}' e grande: segue em {len(partes_imagem)} pedacos, cada um em"
