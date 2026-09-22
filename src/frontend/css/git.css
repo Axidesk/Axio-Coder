@@ -223,11 +223,11 @@
     display: none;
 }
 
-.git-aviao {
+.git-salvar {
     color: var(--oliva);
 }
 
-.git-aviao:hover {
+.git-salvar:hover {
     color: var(--oliva-hover);
 }
 

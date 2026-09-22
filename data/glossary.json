@@ -4412,28 +4412,6 @@
       }
     },
     {
-      "termo": "aviaozinho do commit",
-      "aliases": [
-        "aviao do commit",
-        "icone de enviar",
-        "botao de enviar o commit",
-        "aviaozinho ao lado da varinha",
-        "mandar o commit pro git",
-        "enviar para o github",
-        "aviao do painel de git"
-      ],
-      "identificador": ".git-aviao",
-      "descricao": "Botao do painel que ENVIA: se houver ficheiros por commitar faz o commit (mensagem do campo, senao a pergunta da tarefa) e depois git push; se nao houver nada a commitar, so faz push. O atributo data-git-acao=\"enviar\" e INTERPOLADO em aviao(acao,...), por isso nao existe como texto fixo no ficheiro. Fica lado a lado com o lapis (.git-lapis) quando o commit da tarefa ainda nao subiu; desativado com o motivo no title quando nao ha remoto ou ja esta tudo no GitHub.",
-      "localizacao": {
-        "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 109,
-        "conferido": [
-          1790118730.824,
-          31740
-        ]
-      }
-    },
-    {
       "termo": "icone de restaurar do git",
       "aliases": [
         "restaurar esta tarefa",
@@ -5058,6 +5036,51 @@
           1790115113.719,
           41662
         ]
+      }
+    },
+    {
+      "termo": "aviaozinho do commit",
+      "aliases": [
+        "aviao do commit",
+        "icone de enviar",
+        "botao de enviar o commit",
+        "mandar o commit pro git",
+        "enviar para o github",
+        "aviao do painel de git"
+      ],
+      "identificador": "#btn-git-enviar-history",
+      "descricao": "Avião do cabeçalho da coluna 3 do histórico, ao lado do restaurar: empurra para o remoto TUDO o que está commitado, de qualquer tarefa - não commita nada e não é por card. Desativado quando não há commits por subir.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 161
+      }
+    },
+    {
+      "termo": "icone de salvar da tarefa",
+      "aliases": [
+        "salvar a tarefa",
+        "icone de salvar"
+      ],
+      "identificador": ".git-salvar",
+      "descricao": "Botão do corpo do card de tarefa (onde antes vivia o avião): grava um commit LOCAL com os ficheiros daquela tarefa e a mensagem escrita no campo - nunca empurra. Com commit já feito, o mesmo botão corrige a mensagem do ponto.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/git_panel.js",
+        "linha": 109
+      }
+    },
+    {
+      "termo": "interruptor de publicacao automatica",
+      "aliases": [
+        "publicar automatico",
+        "commit automatico no fim da rodada",
+        "liga e desliga o git",
+        "interruptor do git"
+      ],
+      "identificador": "#btn-git-auto-history / git_automatico",
+      "descricao": "Interruptor pequeno no cabeçalho da coluna 3 do histórico, ao lado do avião. Ligado, o AGENTE commita e empurra no fim de cada rodada com mensagem escrita por ele (nunca a pergunta do utilizador) e o commit passa a dar ponto ao card daquela rodada. Vive em data/settings.json (git.automatico), logo sobrevive a reiniciar; ligado, injeta um bloco no contexto do agente (ai/instructions.py:_bloco_git_automatico). Rota: POST /api/git/automatico.",
+      "localizacao": {
+        "arquivo": "src/backend/services/settings.py",
+        "linha": 60
       }
     }
   ]
