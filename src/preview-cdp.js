@@ -445,6 +445,17 @@ const JS_RESUMO_ESTILO = `
     return el.tagName.toLowerCase();
   }
 
+  function _opacidadeEfetiva(el) {
+    var total = 1;
+    var no = el;
+    while (no && no.nodeType === 1) {
+      var valor = parseFloat(getComputedStyle(no).opacity);
+      if (!isNaN(valor)) total *= valor;
+      no = no.parentElement;
+    }
+    return Math.round(total * 100) / 100;
+  }
+
   function _resumoDeEstilo(el) {
     var cs = getComputedStyle(el);
     var r = el.getBoundingClientRect();
@@ -477,6 +488,7 @@ const JS_RESUMO_ESTILO = `
       fonte: cs.fontFamily.split(',')[0].replace(/["']/g, '').trim() + ' ' + cs.fontSize + ' / ' + cs.lineHeight + ' ' + cs.fontWeight,
       transicao: cs.transitionDuration === '0s' ? '' : cs.transition,
       opacidade: cs.opacity,
+      opacidade_efetiva: _opacidadeEfetiva(el),
       cursor: cs.cursor
     };
   }
@@ -549,6 +561,173 @@ ${JS_RESUMO_ESTILO}
     pai: alvo.parentElement ? _resumoDeEstilo(alvo.parentElement) : null,
     filhos: filhos
   };
+})`;
+
+const SNIPPET_CANVAS = `(function (parametros) {
+  var seletor = String(parametros.seletor || '');
+  var colunas = Math.max(8, Math.min(Number(parametros.grelha) || 48, 160));
+  var espera = Math.max(60, Math.min(Number(parametros.espera) || 300, 2000));
+  var LADO_MINI = 160;
+
+  function _escolher() {
+    if (seletor) {
+      try { return document.querySelector(seletor); } catch (e) { return null; }
+    }
+    var todos = document.querySelectorAll('canvas');
+    var melhor = null;
+    for (var i = 0; i < todos.length; i++) {
+      if (!melhor || todos[i].width * todos[i].height > melhor.width * melhor.height) melhor = todos[i];
+    }
+    return melhor;
+  }
+
+  function _rotulo(el) {
+    if (!el) return '';
+    var id = el.id ? '#' + el.id : '';
+    var classe = String(el.getAttribute('class') || '').trim().split(/\\s+/)[0];
+    return el.tagName.toLowerCase() + id + (classe ? '.' + classe : '');
+  }
+
+  function _ler() {
+    var c2d = null;
+    try { c2d = canvas.getContext('2d'); } catch (e) { c2d = null; }
+    if (c2d && c2d.getImageData) {
+      return { dados: c2d.getImageData(0, 0, canvas.width, canvas.height).data, motor: '2d' };
+    }
+    var tipos = ['webgl2', 'webgl', 'experimental-webgl'];
+    var gl = null;
+    for (var i = 0; i < tipos.length && !gl; i++) {
+      try { gl = canvas.getContext(tipos[i]); } catch (e) { gl = null; }
+    }
+    if (!gl || !gl.readPixels) return null;
+    var buf = new Uint8Array(canvas.width * canvas.height * 4);
+    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    return { dados: buf, motor: 'webgl' };
+  }
+
+  function _esperarFrame() {
+    return new Promise(function (resolve) {
+      var feito = false;
+      function concluir(via) { if (!feito) { feito = true; resolve(via); } }
+      try { requestAnimationFrame(function () { concluir('rAF'); }); } catch (e) {}
+      setTimeout(function () { concluir('espera'); }, espera);
+    });
+  }
+
+  var canvas = _escolher();
+  if (!canvas) {
+    return Promise.resolve({
+      ok: false,
+      erro: seletor ? 'Nenhum elemento encontrado para ' + seletor : 'A pagina nao tem nenhum canvas.'
+    });
+  }
+  if (String(canvas.tagName || '').toLowerCase() !== 'canvas') {
+    return Promise.resolve({ ok: false, erro: _rotulo(canvas) + ' nao e um canvas.' });
+  }
+  if (!canvas.width || !canvas.height) {
+    return Promise.resolve({ ok: false, erro: 'O canvas ' + _rotulo(canvas) + ' tem 0x0 pixeis de desenho.' });
+  }
+
+  return _esperarFrame().then(function (via) {
+    var leitura = _ler();
+    if (!leitura) {
+      return { ok: false, erro: 'O canvas ' + _rotulo(canvas) + ' nao tem contexto 2d nem WebGL legivel.' };
+    }
+    var dados = leitura.dados;
+    var w = canvas.width;
+    var h = canvas.height;
+    var linhas = Math.max(4, Math.round(colunas * h / w));
+    var soma = [];
+    var somaCor = [];
+    var contagem = [];
+    for (var i = 0; i < colunas * linhas; i++) { soma.push(0); contagem.push(0); somaCor.push([0, 0, 0, 0]); }
+    for (var y = 0; y < h; y++) {
+      var linha = Math.min(linhas - 1, Math.floor(y * linhas / h));
+      for (var x = 0; x < w; x++) {
+        var p = (y * w + x) * 4;
+        var r = dados[p], g = dados[p + 1], b = dados[p + 2], a = dados[p + 3];
+        var alfa = a / 255;
+        var luz = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 * alfa;
+        var celula = linha * colunas + Math.min(colunas - 1, Math.floor(x * colunas / w));
+        soma[celula] += luz;
+        contagem[celula] += 1;
+        somaCor[celula][0] += r * alfa;
+        somaCor[celula][1] += g * alfa;
+        somaCor[celula][2] += b * alfa;
+        somaCor[celula][3] += a;
+      }
+    }
+    var valores = [];
+    var total = 0;
+    var maximo = 0;
+    var acesas = 0;
+    var cor = [0, 0, 0, 0];
+    for (var l = 0; l < linhas; l++) {
+      var linhaValores = [];
+      for (var c = 0; c < colunas; c++) {
+        var indice = l * colunas + c;
+        var n = contagem[indice] || 1;
+        var valor = soma[indice] / n;
+        linhaValores.push(Math.round(valor * 1000) / 1000);
+        total += valor;
+        if (valor > maximo) maximo = valor;
+        if (valor > 0.05) acesas += 1;
+        cor[0] += somaCor[indice][0] / n;
+        cor[1] += somaCor[indice][1] / n;
+        cor[2] += somaCor[indice][2] / n;
+        cor[3] += somaCor[indice][3] / n;
+      }
+      valores.push(linhaValores);
+    }
+    var celulas = colunas * linhas;
+    var mini = null;
+    try {
+      var lado = Math.max(16, Math.min(LADO_MINI, colunas));
+      var alturaMini = Math.max(8, Math.round(lado * linhas / colunas));
+      var alvoMini = document.createElement('canvas');
+      alvoMini.width = lado;
+      alvoMini.height = alturaMini;
+      var ctx = alvoMini.getContext('2d');
+      var imagem = ctx.createImageData(lado, alturaMini);
+      for (var lm = 0; lm < alturaMini; lm++) {
+        for (var cm = 0; cm < lado; cm++) {
+          var origem = valores[Math.min(linhas - 1, Math.floor(lm * linhas / alturaMini))][Math.min(colunas - 1, Math.floor(cm * colunas / lado))];
+          var destino = (lm * lado + cm) * 4;
+          var escala = maximo > 0 ? Math.min(1, origem / maximo) : 0;
+          imagem.data[destino] = Math.round(255 * escala);
+          imagem.data[destino + 1] = Math.round(255 * escala);
+          imagem.data[destino + 2] = Math.round(255 * escala);
+          imagem.data[destino + 3] = 255;
+        }
+      }
+      ctx.putImageData(imagem, 0, 0);
+      mini = String(alvoMini.toDataURL('image/png')).split(',')[1] || null;
+    } catch (e) { mini = null; }
+    var caixa = canvas.getBoundingClientRect();
+    return {
+      ok: true,
+      elemento: _rotulo(canvas),
+      motor: leitura.motor,
+      via: via,
+      largura: w,
+      altura: h,
+      caixa: { x: Math.round(caixa.left), y: Math.round(caixa.top), largura: Math.round(caixa.width), altura: Math.round(caixa.height) },
+      colunas: colunas,
+      linhas: linhas,
+      valores: valores,
+      media: Math.round(total / celulas * 1000) / 1000,
+      maximo: Math.round(maximo * 1000) / 1000,
+      fracao_acesa: Math.round(acesas / celulas * 1000) / 1000,
+      cor: {
+        r: Math.round(cor[0] / celulas),
+        g: Math.round(cor[1] / celulas),
+        b: Math.round(cor[2] / celulas),
+        a: Math.round(cor[3] / celulas)
+      },
+      zerado: maximo <= 0.004,
+      mini: mini
+    };
+  });
 })`;
 
 const SNIPPET_INSPECIONAR = `(function (parametros) {
@@ -1171,6 +1350,33 @@ async function acaoEstilo(view, params) {
   return dados;
 }
 
+async function acaoCanvas(view, params) {
+  const depurador = depuradorDe(view);
+  if (!depurador) return { ok: false, erro: 'A pagina do preview nao esta a falar com o depurador.' };
+  try {
+    await enviarComando(depurador, 'Page.setWebLifecycleState', { state: 'active' });
+  } catch (e) {}
+  const expressao = SNIPPET_CANVAS + '(' + JSON.stringify({
+    seletor: String(params.seletor || ''),
+    grelha: Number(params.grelha) || 48,
+    espera: Number(params.espera) || 300
+  }) + ')';
+  const resposta = await enviarComando(depurador, 'Runtime.evaluate', {
+    expression: expressao,
+    returnByValue: true,
+    awaitPromise: true,
+    userGesture: false
+  });
+  if (resposta && resposta.exceptionDetails) {
+    return { ok: false, erro: descreverExcecao(resposta.exceptionDetails) };
+  }
+  const resultado = (resposta && resposta.result && resposta.result.value) || null;
+  if (!resultado || typeof resultado !== 'object') {
+    return { ok: false, erro: 'A pagina nao devolveu o quadro do canvas.' };
+  }
+  return resultado;
+}
+
 async function prepararAlvo(view, params) {
   const depurador = depuradorDe(view);
   if (!depurador) return { erro: 'A pagina do preview nao esta a falar com o depurador.' };
@@ -1620,6 +1826,7 @@ const ACOES = {
   mapa: (view, params) => acaoMapa(view, params),
   avaliar: (view, params) => acaoAvaliar(view, params),
   estilo: (view, params) => acaoEstilo(view, params),
+  canvas: (view, params) => acaoCanvas(view, params),
   print: (view, params) => acaoPrint(view, params),
   clicar: (view, params) => acaoClicar(view, params),
   arrastar: (view, params) => acaoArrastar(view, params),

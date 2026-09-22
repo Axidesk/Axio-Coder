@@ -22,7 +22,8 @@ from src.backend.state import emit_event
 from src.backend.tools.projeto_comum import caminho_relativo
 from src.backend.tools.registry import register
 
-ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "print")
+ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "canvas", "print")
+CARACTERES_DE_LUZ = " .:-=+*#%@"
 ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
 LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
@@ -522,6 +523,18 @@ def _caracteristicas(dados):
         linhas.append(f"fonte {dados['fonte']}")
     if dados.get("transicao"):
         linhas.append(f"transicao {dados['transicao']}")
+    try:
+        propria = float(dados.get("opacidade") or 1)
+    except (TypeError, ValueError):
+        propria = 1.0
+    efetiva = dados.get("opacidade_efetiva")
+    if isinstance(efetiva, (int, float)) and efetiva < 1:
+        if propria < 1 and abs(propria - efetiva) <= 0.01:
+            linhas.append(f"opacidade {propria}")
+        elif propria < 1:
+            linhas.append(f"opacidade {propria}, mas so {efetiva} efetiva - o resto vem dos ancestrais")
+        else:
+            linhas.append(f"opacidade efetiva {efetiva} - vem de um ancestral, este elemento e opaco")
     return linhas
 
 
@@ -579,6 +592,44 @@ def _texto_do_estilo(dados):
         linhas.append(f"Dentro dele, {len(filhos)} filho(s) diretos:")
         for filho in filhos:
             linhas.append(f"- {filho.get('seletor')}: " + ", ".join(_caracteristicas(filho)[:3]))
+    return "\n".join(linhas)
+
+
+def _simbolo_de_luz(valor, escala):
+    """A luz de uma celula num caracter: do vazio ao cheio, na escada de CARACTERES_DE_LUZ."""
+    nivel = int(round(float(valor) / escala * (len(CARACTERES_DE_LUZ) - 1)))
+    return CARACTERES_DE_LUZ[max(0, min(nivel, len(CARACTERES_DE_LUZ) - 1))]
+
+
+def _texto_do_canvas(dados):
+    """O quadro de um canvas em numeros e em grelha de caracteres: a luz de cada zona, lida do pixel."""
+    valores = dados.get("valores") or []
+    if not valores:
+        return "ERRO: o canvas nao devolveu quadro nenhum."
+    caixa = dados.get("caixa") or {}
+    cor = dados.get("cor") or {}
+    maximo = float(dados.get("maximo") or 0)
+    escala = maximo if maximo > 0 else 1
+    linhas = [
+        f"Canvas {dados.get('elemento') or '?'}: {dados.get('largura')}x{dados.get('altura')} px de "
+        f"desenho, {caixa.get('largura')}x{caixa.get('altura')} px no ecra, motor {dados.get('motor')}, "
+        f"quadro lido por {dados.get('via')}.",
+        f"Luz media {dados.get('media')} (0 a 1), maior celula {maximo}, "
+        f"{round(float(dados.get('fracao_acesa') or 0) * 100, 1)}% da grelha acesa. Cor media ja "
+        f"pesada pela opacidade: rgb({cor.get('r')}, {cor.get('g')}, {cor.get('b')}) com alfa "
+        f"{cor.get('a')} de 255.",
+        f"Grelha {dados.get('colunas')}x{dados.get('linhas')} - '{CARACTERES_DE_LUZ[0]}' e vazio e "
+        f"'{CARACTERES_DE_LUZ[-1]}' e cheio:",
+    ]
+    for linha in valores:
+        linhas.append("  " + "".join(_simbolo_de_luz(valor, escala) for valor in linha))
+    if dados.get("zerado"):
+        linhas.append(
+            "AVISO: o quadro veio TODO vazio - o buffer do desenho ja tinha sido descartado quando o "
+            "li. Isto e o que acontece a um canvas WebGL cuja vista esta escondida (o Chromium suspende "
+            "o desenho) ou cuja aplicacao usa preserveDrawingBuffer falso. Traga a vista a frente com "
+            "acao='mostrar' e repita antes de concluir que o canvas esta em branco."
+        )
     return "\n".join(linhas)
 
 
@@ -701,7 +752,11 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
     "'estilo' devolve o RAI-X DO DESENHO - medidas, "
     "cores, arredondamentos, fontes e transicoes ja computados pelo browser - de um elemento (com o pai "
     "e os filhos) ou da pagina inteira (os blocos com mais area e os tokens por frequencia), e e o "
-    "caminho para replicar um layout noutra pagina sem ler o HTML e o CSS a mao; 'print' entrega uma imagem da regiao pedida "
+    "caminho para replicar um layout noutra pagina sem ler o HTML e o CSS a mao; 'canvas' le o QUADRO "
+    "de um canvas (2D ou WebGL) pixel a pixel e devolve-o em NUMEROS e em grelha de luz, mais uma "
+    "miniatura - e o unico caminho para julgar o que esta desenhado num canvas, onde o DOM nao chega "
+    "(holograma, jogo, grafico, WebGL), e forca a leitura dentro de um frame para nao trazer o buffer "
+    "ja descartado; 'print' entrega uma imagem da regiao pedida "
     "(do seletor ou de um retangulo x,y,largura,altura). PREFIRA 'mapa', 'elemento' e 'consola' ao "
     "'print': o DOM responde com precisao e a imagem serve para confirmar. NAO confundir com "
     "tool_capturar_print, que tira um print do ecra do sistema e nao sabe nada do DOM.",
@@ -709,11 +764,11 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
         "acao": {
             "tipo": "STRING", "obrig": True, "padrao": "estado",
             "enum": list(ACOES_DE_OBSERVACAO),
-            "desc": "'mapa' (indice de tudo o que responde a um gesto, com rotulo e coordenada - comece por aqui), 'estado' (o que esta carregado), 'consola' (erros e avisos da pagina), 'rede' (pedidos que falharam: 404, 500, ligacao recusada), 'elemento' (localizar por seletor ou texto), 'avaliar' (correr JS na pagina; com 'durante' devolve a serie de amostras ao longo do tempo), 'estilo' (o desenho de um elemento ou da pagina: medidas, cores, fontes, transicoes - para replicar um layout), 'print' (imagem de uma regiao).",
+            "desc": "'mapa' (indice de tudo o que responde a um gesto, com rotulo e coordenada - comece por aqui), 'estado' (o que esta carregado), 'consola' (erros e avisos da pagina), 'rede' (pedidos que falharam: 404, 500, ligacao recusada), 'elemento' (localizar por seletor ou texto), 'avaliar' (correr JS na pagina; com 'durante' devolve a serie de amostras ao longo do tempo), 'estilo' (o desenho de um elemento ou da pagina: medidas, cores, fontes, transicoes - para replicar um layout), 'canvas' (o quadro de um canvas em numeros e grelha de luz: a unica forma de julgar o que esta desenhado onde o DOM nao chega - 2D ou WebGL, com a vista a frente ou escondida), 'print' (imagem de uma regiao).",
         },
         "seletor": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Seletor CSS do alvo ('#btn-send', '.editor-tab'). Em 'elemento' devolve todos os que casam; em 'print' recorta a imagem ao primeiro; em 'estilo' devolve o desenho dele (com o pai e os filhos) - vazio devolve o desenho da pagina inteira.",
+            "desc": "Seletor CSS do alvo ('#btn-send', '.editor-tab'). Em 'elemento' devolve todos os que casam; em 'print' recorta a imagem ao primeiro; em 'estilo' devolve o desenho dele (com o pai e os filhos) - vazio devolve o desenho da pagina inteira; em 'canvas' escolhe o canvas (vazio le o maior da pagina).",
         },
         "texto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -722,6 +777,10 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
             "desc": "Em 'print': retangulo 'x,y,largura,altura' em pixeis da janela do preview. Vazio imprime a janela inteira. Regioes pequenas chegam nitidas ao modelo.",
+        },
+        "grelha": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "Em 'canvas': colunas da grelha de luz (padrao 48, teto 160). O numero de linhas sai da proporcao do canvas; 48x26 chega para ver onde esta a luz e onde esta o vazio.",
         },
         "js": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -745,7 +804,7 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
         },
     },
 )
-def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0):
+def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0):
     pedido = str(acao or "estado").strip().lower()
     if pedido not in ACOES_DE_OBSERVACAO:
         return f"ERRO: acao desconhecida '{acao}'. Use uma de: {', '.join(ACOES_DE_OBSERVACAO)}."
@@ -757,6 +816,8 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         emit_event("executing", function="Mapeando a pagina do preview")
     elif pedido == "estilo":
         emit_event("executing", function="Lendo o desenho da pagina do preview")
+    elif pedido == "canvas":
+        emit_event("executing", function="Lendo o quadro do canvas do preview")
     elif pedido == "print":
         emit_event("executing", function="Imprimindo o preview")
 
@@ -829,7 +890,38 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             f"Resultado de '{js[:120]}' (tipo {dados.get('tipo')}):\n{texto_resultado}", dados
         )
 
+    if pedido == "canvas":
+        dados, erro = ponte_preview.pedir("canvas", seletor=seletor, grelha=grelha)
+        if erro:
+            return f"ERRO: {erro}."
+        if not dados.get("ok"):
+            return f"ERRO: {dados.get('erro') or 'a pagina nao respondeu'}."
+        return _quadro_do_canvas(dados)
+
     return _print_do_preview(seletor, regiao)
+
+
+def _quadro_do_canvas(dados):
+    """O texto do quadro e, quando ha, a miniatura da luz como imagem."""
+    texto = _texto_do_canvas(dados)
+    mini = dados.get("mini")
+    if not mini:
+        return _com_alvo(texto, dados)
+    try:
+        bruto = base64.b64decode(mini)
+        base64_img, mime, _entregue = codificar_para_envio(bruto)
+    except Exception:
+        return _com_alvo(
+            texto + "\nA miniatura do quadro veio ilegivel e nao pode ser entregue como imagem.",
+            dados,
+        )
+    if not bruto:
+        return _com_alvo(texto, dados)
+    rotulo = f"[Quadro do canvas {dados.get('elemento') or ''}]"
+    return {
+        "texto": _com_alvo(texto + "\nA miniatura do quadro segue com esta resposta.", dados),
+        "imagem": {"base64": base64_img, "mime": mime, "rotulo": rotulo},
+    }
 
 
 @register(

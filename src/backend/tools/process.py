@@ -9,6 +9,7 @@ import threading
 import time
 import webbrowser
 
+from src.backend.services import arvore_processos
 from src.backend.services.process_manager import montar_env_processo, tokenizar_linha
 from src.backend.services.saida import recortar_linhas
 from src.backend.services.sugestoes import detectar_url_na_saida
@@ -660,13 +661,56 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
         emit_event("process_finished", pid=pid, exit_code=None, status="erro")
         return f"ERRO: {e}"
 
+ESPERA_MORTE = 0.25
+TENTATIVAS_MORTE = 4
+
+
 def parar_processo_reg(pid, reg):
-    """Marca o processo como parado e encerra sua arvore, se ainda estiver ativa."""
-    reg["status"] = "parado"
+    """Marca o processo como parado, encerra a arvore e devolve quem morreu e quem escapou."""
     popen = reg.get("popen")
+    alvos = []
+    if popen is not None and _processo_vivo(reg):
+        alvos = arvore_processos.arvore(getattr(popen, "pid", 0))
+    reg["status"] = "parado"
     if popen is not None:
         matar_arvore(popen)
+    sobraram = _encerrar_sobreviventes(alvos)
     emit_event("process_finished", pid=pid, exit_code=None, status="parado")
+    return {"alvos": alvos, "sobraram": sobraram}
+
+
+def _esperar_morrer(pids):
+    """Reconta os pids ao longo de um curto intervalo: a morte de um processo nao e instantanea."""
+    restantes = arvore_processos.vivos(pids)
+    for _ in range(TENTATIVAS_MORTE):
+        if not restantes:
+            return []
+        time.sleep(ESPERA_MORTE / TENTATIVAS_MORTE)
+        restantes = arvore_processos.vivos(pids)
+    return restantes
+
+
+def _matar_pid(pid):
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True, timeout=10)
+        else:
+            os.kill(int(pid), 9)
+    except Exception:
+        pass
+
+
+def _encerrar_sobreviventes(alvos):
+    """Segunda passagem pelos que escaparam a junta, um a um pelo pid, e reconta."""
+    pids = [item["pid"] for item in alvos if item.get("existe")]
+    if not pids:
+        return []
+    sobraram = _esperar_morrer(pids)
+    if not sobraram:
+        return []
+    for item in sobraram:
+        _matar_pid(item["pid"])
+    return _esperar_morrer([item["pid"] for item in sobraram])
 
 def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False):
     """Abre o comando, registra-o em estado['processos'] e liga o leitor da saida.
@@ -746,7 +790,7 @@ def escrever_stdin_processo(pid, texto, timeout=2.0):
 
 @register(
     "tool_parar_processo",
-    'Para (mata) um processo em segundo plano pelo pid. Use para encerrar servidores e processos longos antes de reinicia-los. Obtenha os pids em /api/processos.',
+    'Para (mata) um processo em segundo plano pelo pid, com a arvore inteira. Use para encerrar servidores e processos longos antes de reinicia-los. Obtenha os pids em /api/processos. A resposta PROVA o que aconteceu: diz quantos processos a arvore tinha, quais morreram e se algum sobreviveu (com pid e nome) - sao os que seguram a porta que voce acha livre.',
     {
         'pid': {"tipo": "STRING", "desc": 'Identificador do processo (ex: proc_1)', "obrig": True, "padrao": ""},
     },
@@ -760,8 +804,30 @@ def tool_parar_processo(pid: str):
     reg = estado.get("processos", {}).get(pid)
     if reg is None:
         return f"ERRO: processo '{pid}' nao encontrado. Liste os pids em /api/processos."
-    parar_processo_reg(pid, reg)
-    return f"Processo {pid} parado."
+    return _texto_da_paragem(pid, parar_processo_reg(pid, reg))
+
+
+def _texto_da_paragem(pid, relato):
+    """A prova da paragem: a arvore que existia, o que morreu e o que ficou de pe."""
+    vivos = [item for item in (relato.get("alvos") or []) if item.get("existe")]
+    sobraram = relato.get("sobraram") or []
+    escaparam = {item["pid"] for item in sobraram}
+    if not vivos:
+        return f"Processo {pid} parado: a arvore ja estava morta quando o pedido chegou."
+    linhas = [
+        f"Processo {pid} parado: a arvore tinha {len(vivos)} processo(s), "
+        f"morreram {len(vivos) - len(escaparam)}."
+    ]
+    for item in sorted(vivos, key=lambda i: (i["nivel"], i["pid"])):
+        marca = "SOBREVIVEU" if item["pid"] in escaparam else "morto"
+        linhas.append(f"  {'  ' * item['nivel']}{item['pid']} {item['nome'] or '?'} [{marca}]")
+    if sobraram:
+        quem = ", ".join(f"{item['pid']} {item['nome'] or '?'}" for item in sobraram)
+        linhas.append(
+            f"AVISO: {quem} continua(m) vivo(s) - sem permissao para matar ou fora do alcance da "
+            "junta. Confirme com tool_listar_processos antes de arrancar outro igual."
+        )
+    return "\n".join(linhas)
 
 @register(
     "tool_listar_processos",
