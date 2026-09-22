@@ -5,13 +5,14 @@ import sys
 from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register, tool_names
 from src.backend.services.file_service import versao_pacote, venv_projeto, dirs_leitura_extra
+from src.backend.services.hardware import relato_maquina
 from src.backend.services.process_manager import detectar_shell
 
 CAPACIDADES = (
     ("Imagem: abrir, recortar e converter (.png .jpg .gif .webp .bmp .ico)", "PIL", "pillow"),
     ("Imagem: analise por pixel e visao de ecra (.png .jpg)", "cv2", "opencv-python"),
     ("PDF: ler texto e renderizar a pagina (.pdf)", "pymupdf", "pymupdf"),
-    ("OCR: texto de imagem digitalizada (exige o binario tesseract instalado)", "pytesseract", "pytesseract"),
+    ("OCR: texto de imagem e de pagina de PDF (foto, prancha, cota)", "rapidocr", "rapidocr"),
     ("IFC/BIM: criar, ler e medir o modelo (.ifc)", "ifcopenshell", "ifcopenshell"),
     ("CAD: ler e criar desenho vetorial (.dxf)", "ezdxf", "ezdxf"),
     ("CAD 3D: criar e ler solido B-rep e gravar STEP para CAD mecanico (.step)", "cadquery", "cadquery"),
@@ -27,7 +28,7 @@ CAPACIDADES = (
 
 @register(
     "tool_info_ambiente",
-    'Retorna metadados do ambiente: caminho do venv em uso, versões de Python, Mempalace e ChromaDB, diretórios de leitura permitidos e estado do palace do mempalace. Traz também o relatório de CAPACIDADES por família de formato (imagem, PDF, OCR, IFC/BIM, CAD/DXF, CAD 3D/STEP, malhas 3D, planilha, documento, áudio) — é aqui que se responde "eu consigo ler/criar este formato?" antes de dizer que não: cada família mostra OK com a versão ou FALTA com o pacote pip candidato.',
+    'Retorna metadados do ambiente: caminho do venv em uso, versões de Python, Mempalace e ChromaDB, diretórios de leitura permitidos e estado do palace do mempalace. Traz também o relatório de CAPACIDADES por família de formato (imagem, PDF, OCR, IFC/BIM, CAD/DXF, CAD 3D/STEP, malhas 3D, planilha, documento, áudio) — é aqui que se responde "eu consigo ler/criar este formato?" antes de dizer que não: cada família mostra OK com a versão ou FALTA com o pacote pip candidato. E traz o PODER DA MAQUINA medido (CPU com nucleos e threads, RAM com pentes e velocidade, placa de video com VRAM total e livre, driver, compute capability, temperatura, discos, e se o Python que corre o Axio tem aceleracao por GPU) mais o veredito do que cabe nesta maquina — é aqui que se responde "esta maquina aguenta isto?" antes de propor um modelo de IA, uma dependencia pesada ou mais poder de interface, sem ter de adivinhar nem pedir ao utilizador para medir.',
     {
     },
 )
@@ -60,6 +61,7 @@ def tool_info_ambiente():
         linhas.append("Dica: se buscas filtradas por wing falharem, rode 'mempalace repair' (issue #1035 do MemPalace).")
     else:
         linhas.append("Palace do mempalace: não encontrado.")
+    linhas.append(relato_maquina())
     linhas.extend(_capacidades())
     return "\n".join(linhas)
 

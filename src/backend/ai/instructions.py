@@ -384,6 +384,23 @@ def _bloco_modo_projeto():
         "notas. Toda a contabilidade do meu desgaste vive na minha pasta, nao na dele.\n"
     )
 
+
+def _bloco_maquina():
+    """Poder real da maquina, medido uma vez por processo e injetado sempre.
+
+    Sem isto o agente decide sobre hardware as cegas: evita propor modelos de IA
+    que nao cabem na VRAM, ou pedir ao utilizador para medir o que ele nao sabe
+    medir. O que muda (VRAM e RAM livres, temperatura) fica fora daqui de
+    proposito - valor vivo injetado em cada rodada seria verdade do arranque
+    lida horas depois; esse pede-se com tool_info_ambiente.
+    """
+    try:
+        from src.backend.services.hardware import resumo_da_maquina
+        return resumo_da_maquina()
+    except Exception as erro:
+        return f"=== MAQUINA ===\nNao foi possivel medir o hardware ({type(erro).__name__}).\n"
+
+
 def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_continuidade, contexto_projeto="", contexto_codigo="", contexto_edicoes="", tem_web_search=True, use_deepseek=False, mensagem_usuario="", ai_model="gemini"):
     bloco_projeto = f"=== ESTRUTURA DO PROJETO ===\n{contexto_projeto}\n" if contexto_projeto else ""
     bloco_codigo = f"=== CÓDIGO RELEVANTE ===\n{contexto_codigo}\n" if contexto_codigo else ""
@@ -468,6 +485,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
     bloco_atrito_rodada = bloco_atrito()
     bloco_terminal = _bloco_terminal_ativo()
     bloco_venv = _bloco_venv()
+    bloco_maquina = _bloco_maquina()
     bloco_modo = _bloco_modo_projeto()
     nome_agente = "Axio Coder"
     if use_deepseek:
@@ -514,6 +532,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         f"{bloco_atrito_rodada}"
         f"{bloco_terminal}"
         f"{bloco_venv}"
+        f"{bloco_maquina}"
         f"{bloco_modo}"
         f"{bloco_projeto}"
         f"{bloco_codigo}"

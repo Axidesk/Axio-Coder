@@ -2363,10 +2363,10 @@
       "descricao": "Ferramenta que tira um print do ecra e o entrega ao agente como imagem (ImageGrab, com o processo declarado consciente de DPI para nao sair esticado). Grava o PNG em .axio/prints em resolucao cheia (maximo 50 ficheiros). O TETO DE RESOLUCAO E DA API: ela reduz toda a imagem a ~800x800 px equivalentes (640 000 px, teto de 384 tokens), logo um ecra 4K chega como 1066x600 e o texto pequeno desaparece. Para ler: (a) regiao estreita abaixo de ~640 000 px chega 1:1; (b) detalhe='tiles' parte a captura em pedacos de ate 1024x625 px que chegam TODOS 1:1. 'ecra' aceita 'principal', 'todos' ou o NUMERO de um monitor, e o retorno declara sempre o mapa dos ecras (numero, tamanho, posicao) - num PC com ecras de tamanhos diferentes, 'todos' inclui faixas pretas que se pagam em pedacos vazios. Captura so o que esta VISIVEL: janela tapada ou minimizada nao aparece.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 252,
+        "linha": 254,
         "conferido": [
-          1790035881.504,
-          27674
+          1790040662.66,
+          29504
         ]
       }
     },
@@ -2388,10 +2388,10 @@
       "descricao": "Caminho de uma imagem que o utilizador anexa ou cola no chat ate o modelo a ver: attach.js:addImage (frontend) manda o base64 do ficheiro ORIGINAL, sem reduzir nada -> payload.images -> routes/chat.py -> ai/loop.py:partes_usuario -> partes_da_imagem (services/imagem.py): dentro do orcamento de 640 000 px a imagem segue inteira e INTACTA; acima dele e CORTADA por tiles_da_imagem em pedacos de ate 1024x625 px, cada um em tamanho original (um pedaco paga 384 tokens). Teto de 16 pedacos por anexo (MAX_PEDACOS), com reducao previa quando passaria disso. Medido: 1920x1080 dava uma imagem unica de 1066x600 (escala 0,56) e passa a dar 4 pedacos a 1024x625 (escala 1,00); 2560x1440 = 9, 3840x2160 = 16, 6000x5000 = 15. preparar_imagem (:49) e o caminho de UMA imagem so, ainda usado pelo print em detalhe='unico' e por codificar_para_envio. As imagens so podem ir em mensagens do UTILIZADOR (nunca em system/assistant nem na resposta de uma ferramenta). O FICHEIRO PASSA A SER GRAVADO NO PROJETO por _guardar_imagem_anexada (ai/loop.py): vai para <projeto>/.axio/anexos/<nome>, com dedup por conteudo, e o caminho segue na propria etiqueta que o modelo le ('[Imagem anexada: <nome> | gravada em <caminho>]') - e por onde as ferramentas de visao e de medida (tool_ver_imagem, tool_medir_referencia, tool_comparar_com_referencia) chegam a imagem que o utilizador mandou. Antes de 2026-09-27 o base64 nunca tocava o disco e nenhuma ferramenta lhe chegava.",
       "localizacao": {
         "arquivo": "src/backend/services/imagem.py",
-        "linha": 75,
+        "linha": 76,
         "conferido": [
-          1789869091.888,
-          11748
+          1790040654.373,
+          12354
         ]
       }
     },
@@ -2408,10 +2408,10 @@
       "descricao": "Ferramenta que abre uma imagem que esta no projeto (png, jpg, gif, webp, bmp, ico) e a entrega ao agente como imagem, para ele olhar para um icone, um esquema ou um diagrama. Formato que a API nao aceita e convertido automaticamente para PNG (so a fonte que ja e JPEG continua JPEG). NAO confundir com 'print' (tool_capturar_print), que captura o ecra.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 357,
+        "linha": 369,
         "conferido": [
-          1790035881.504,
-          27674
+          1790040662.66,
+          29504
         ]
       }
     },
@@ -2429,10 +2429,10 @@
       "descricao": "Divisao de uma captura em PEDACOS que chegam ao modelo em tamanho original: a API reduz toda a imagem a ~800x800 px equivalentes (640 000 px, 384 tokens), logo nenhuma imagem unica entrega um ecra inteiro nitido. tiles_da_imagem (services/imagem.py) da a geometria - pedacos de ate 1024x625 px, com sobreposicao de 32 px para uma linha de texto cortada na fronteira aparecer inteira no pedaco vizinho - e tools/vision.py:_imagens_em_pedacos (:119) recorta e codifica. Accionado por tool_capturar_print com detalhe='tiles'; MAX_TILES=36 recusa regioes absurdas. Medicao num ecra 4K real: 16 pedacos, 0,8 MB em base64, 0,36 s, ~6144 tokens de imagem.",
       "localizacao": {
         "arquivo": "src/backend/services/imagem.py",
-        "linha": 101,
+        "linha": 102,
         "conferido": [
-          1789869091.888,
-          11748
+          1790040654.373,
+          12354
         ]
       }
     },
@@ -2999,10 +2999,10 @@
       "descricao": "Parametro da tool_ver_imagem: entrega cada vista do modelo LADO A LADO com a imagem de referencia, na mesma imagem e na mesma altura (a referencia a esquerda). A composicao e a `lado_a_lado` de services/imagem.py. Usar sempre que se modela a partir de uma referencia visual - julgar semelhanca alternando entre duas imagens nao funciona.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 373,
+        "linha": 396,
         "conferido": [
-          1790035881.504,
-          27674
+          1790040662.66,
+          29504
         ]
       }
     },
@@ -3889,10 +3889,10 @@
       "descricao": "Prepara uma captura de ecra para publicar: sem 'destino' devolve o mapa de atividade (grelha que mostra onde esta o conteudo aceso e onde a imagem e lisa), e com 'destino' recorta por 'caixa' (x,y,largura,altura da origem), reduz a 'largura' maxima e grava dentro do projeto. A origem pode estar fora dele (a pasta institucional); a escrita, nao. Servico em src/backend/services/capturas.py.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 452,
+        "linha": 475,
         "conferido": [
-          1790035881.504,
-          27674
+          1790040662.66,
+          29504
         ]
       }
     },
@@ -4655,7 +4655,11 @@
       "descricao": "Le a escrita de uma imagem ou pagina de PDF (RapidOCR sobre onnxruntime, modelos PP-OCRv6 dentro do pacote) e devolve cada trecho com caixa em % e confianca. E o caminho para tirar as COTAS de uma prancha.",
       "localizacao": {
         "arquivo": "src/backend/tools/ocr.py",
-        "linha": 51
+        "linha": 51,
+        "conferido": [
+          1790040788.189,
+          7292
+        ]
       }
     },
     {
@@ -4672,7 +4676,33 @@
       "descricao": "Recorta 'x,y,largura,altura' em pixels e amplia ate 8x: a imagem inteira chega ao modelo num teto de ~800x800 px equivalentes e a letra de 8-10 px desaparece la dentro; recortada e ampliada, fica legivel.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 585
+        "linha": 585,
+        "conferido": [
+          1790040662.66,
+          29504
+        ]
+      }
+    },
+    {
+      "termo": "poder da maquina",
+      "aliases": [
+        "informacoes do meu pc",
+        "potencia do pc",
+        "quanto aguenta minha maquina",
+        "placa de video",
+        "vram",
+        "tem cuda",
+        "quanta memoria tem",
+        "ram",
+        "processador",
+        "nucleos e threads",
+        "hardware"
+      ],
+      "identificador": "relato_maquina / resumo_da_maquina",
+      "descricao": "Mede a maquina de verdade (WMI + nvidia-smi) e diz o que ela aguenta: CPU com nucleos/threads, RAM com pentes e velocidade, GPU com VRAM total e livre, driver, compute capability, temperatura, discos, e se o Python do Axio tem aceleracao por GPU. resumo_da_maquina() e injetado no contexto a cada rodada (medido no arranque, estatico); relato_maquina() sai em tool_info_ambiente com os valores vivos e o veredito do que cabe na VRAM de agora.",
+      "localizacao": {
+        "arquivo": "src/backend/services/hardware.py",
+        "linha": 254
       }
     }
   ]
