@@ -1,40 +1,11 @@
-"""Aceleracao por GPU para o que corre dentro do Python do Axio.
-
-O onnxruntime-gpu sozinho nao chega: o cuDNN 9 e modular e o preload_dlls() do
-onnxruntime nao carrega as sub-bibliotecas (engines_tensor_ir, engines_precompiled,
-heuristic, ops, graph), o que faz a primeira convolucao falhar com
-CUDNN_BACKEND_API_FAILED e cair para CPU EM SILENCIO - o provider aparece na lista
-e a inferencia corre na mesma, so que devagar. Aqui as DLLs sao registadas e
-pre-carregadas por ordem, e o veredicto sai de uma inferencia a SERIO, nunca da
-lista de provedores.
-
-Caso real medido a 2026-09-22 nesta maquina (GTX 1660 Ti Max-Q, driver 576.02):
-sem este pre-carga o OCR ficava em 1,27 s por imagem e a VRAM nao mexia; com ele,
-0,0154 s contra 0,2941 s na CPU - 19x, com a VRAM a subir de 1912 para 2124 MB.
-
-O driver 576.02 tem como teto CUDA 12.9, logo a versao certa e onnxruntime-gpu
-1.26.0 (build CUDA 12.8). Da 1.27 em diante os pacotes do PyPI sao CUDA 13.0 e
-exigem driver >= 580 - instalar a mais recente dava erro de DLL.
+"""Aceleracao por GPU para o que corre dentro do Python do Axio: registo das DLLs do
+runtime CUDA, pre-carga do cuDNN e veredicto por inferencia real.
 """
 import ctypes
 import os
+import re
 import sysconfig
 from pathlib import Path
-
-SUBPACOTES_NVIDIA = ("cudnn", "cublas", "cufft", "curand", "cuda_runtime", "cuda_nvrtc", "nvjitlink")
-
-DLLS_CUDNN_POR_ORDEM = (
-    "cudnn_ops64_9.dll",
-    "cudnn_cnn64_9.dll",
-    "cudnn_graph64_9.dll",
-    "cudnn_adv64_9.dll",
-    "cudnn_heuristic64_9.dll",
-    "cudnn_engines_precompiled64_9.dll",
-    "cudnn_engines_runtime_compiled64_9.dll",
-    "cudnn_engines_tensor_ir64_9.dll",
-    "cudnn_ext64_9.dll",
-    "cudnn64_9.dll",
-)
 
 MODELOS_DE_SONDA = ("PP-OCRv6_det_small.onnx", "PP-OCRv6_rec_small.onnx")
 
@@ -48,8 +19,12 @@ def _site_packages():
 
 
 def _pastas_bin():
+    """As pastas bin/ do runtime CUDA instalado pelo pip, lidas do disco: a lista de
+    subpacotes nao fica escrita aqui, para nao envelhecer com a versao."""
     raiz = _site_packages() / "nvidia"
-    return [raiz / sub / "bin" for sub in SUBPACOTES_NVIDIA]
+    if not raiz.is_dir():
+        return []
+    return sorted(pasta for pasta in raiz.iterdir() if (pasta / "bin").is_dir())
 
 
 def registar_dlls():
@@ -66,18 +41,23 @@ def registar_dlls():
     return registadas
 
 
+def _dlls_cudnn(pasta):
+    """As DLLs do cuDNN: as sub-bibliotecas primeiro e o carregador no fim, que e quem as
+    procura ao carregar. Os nomes saem do disco - o '_9' da versao nao fica no codigo."""
+    carregador = re.compile(r"^cudnn\d+_\d+\.dll$")
+    nomes = sorted(alvo.name for alvo in pasta.glob("*.dll"))
+    return ([nome for nome in nomes if not carregador.match(nome)]
+            + [nome for nome in nomes if carregador.match(nome)])
+
 def precarregar_cudnn():
     """Carrega as sub-bibliotecas do cuDNN por ordem de dependencia. Devolve as que falharam."""
     pasta = _site_packages() / "nvidia" / "cudnn" / "bin"
     if not pasta.is_dir():
         return ["cuDNN ausente"]
     falhadas = []
-    for nome in DLLS_CUDNN_POR_ORDEM:
-        alvo = pasta / nome
-        if not alvo.is_file():
-            continue
+    for nome in _dlls_cudnn(pasta):
         try:
-            ctypes.CDLL(str(alvo))
+            ctypes.CDLL(str(pasta / nome))
         except OSError:
             falhadas.append(nome)
     return falhadas
@@ -112,12 +92,19 @@ def _resumir(erro):
 
 
 def _modelo_de_sonda():
+    """O det do OCR (uma convolucao - e isso que falha sem o cuDNN completo) e, quando ele
+    nao existe nesta maquina, um exemplo que viaja dentro do proprio onnxruntime."""
     pasta = _site_packages() / "rapidocr" / "models"
     for nome in MODELOS_DE_SONDA:
         alvo = pasta / nome
         if alvo.is_file():
             return alvo
-    return None
+    try:
+        from onnxruntime.datasets import get_example
+
+        return Path(get_example("logreg_iris.onnx"))
+    except Exception:
+        return None
 
 
 def provar():

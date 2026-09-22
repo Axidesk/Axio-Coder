@@ -63,7 +63,8 @@ def _gpus_nvidia():
         try:
             r = subprocess.run(
                 [exe, f"--query-gpu={campos}", "--format=csv,noheader,nounits"],
-                capture_output=True, text=True, timeout=20, creationflags=_sem_janela(),
+                capture_output=True, text=True, errors="replace", timeout=20,
+                creationflags=_sem_janela(),
             )
         except Exception:
             continue
@@ -75,7 +76,8 @@ def _gpus_nvidia():
             placas.append(dict(zip(nomes, valores)))
         break
     try:
-        r = subprocess.run([exe], capture_output=True, text=True, timeout=20, creationflags=_sem_janela())
+        r = subprocess.run([exe], capture_output=True, text=True, errors="replace", timeout=20,
+                           creationflags=_sem_janela())
         achado = re.search(r"CUDA Version:\s*([\d.]+)", r.stdout)
         cuda = achado.group(1) if achado else ""
     except Exception:

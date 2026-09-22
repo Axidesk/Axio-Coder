@@ -79,8 +79,11 @@ def _motor_de_leitura():
 
         from src.backend.services.aceleracao import provar
 
+        parametros = {"Global.log_level": "warning"}
         com_gpu, _ = provar()
-        _motor = RapidOCR(params={"EngineConfig.onnxruntime.use_cuda": True}) if com_gpu else RapidOCR()
+        if com_gpu:
+            parametros["EngineConfig.onnxruntime.use_cuda"] = True
+        _motor = RapidOCR(params=parametros)
     return _motor
 
 

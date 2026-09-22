@@ -73,7 +73,7 @@ def _correr_manifesto(comando, cwd):
     """
     try:
         proc = subprocess.run(
-            comando, cwd=cwd, capture_output=True, text=True,
+            comando, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=TIMEOUT_DESATUALIZADOS,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )

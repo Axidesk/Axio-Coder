@@ -325,6 +325,20 @@ class _DecodificadorSaida:
             return texto
         return self.decoder.decode(b"", True)
 
+def _texto_de_saida(bruto):
+    """Descodifica a saida ja capturada de um subprocesso, sem nunca rebentar.
+
+    Em modo texto e o proprio subprocesso que descodifica dentro da sua thread
+    leitora: um byte fora do UTF-8 (o cp1252 de um comando do Windows) mata essa
+    thread, imprime um traceback no terminal do Axio, a saida do comando perde-se
+    INTEIRA e o stdout chega ao chamador como None (nao vazio). Aqui a leitura e
+    binaria e a pagina sai do mesmo criterio que o stream usa.
+    """
+    if not bruto:
+        return ""
+    decodificador = _DecodificadorSaida()
+    return decodificador.alimentar(bruto) + decodificador.fechar()
+
 def _codificar_entrada_processo(texto):
     """UTF-8 primeiro: os subprocessos arrancam com PYTHONIOENCODING=utf-8, logo e
     UTF-8 que esperam na entrada; a pagina OEM so fica como recurso."""
@@ -858,8 +872,6 @@ def run_com_timeout(cmd, timeout=60):
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
         shell=isinstance(cmd, str),
     )
     _juntar_ao_job(proc)
@@ -872,7 +884,8 @@ def run_com_timeout(cmd, timeout=60):
         except Exception:
             pass
         raise
-    return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
+    return subprocess.CompletedProcess(proc.args, proc.returncode,
+                                       _texto_de_saida(out), _texto_de_saida(err))
 
 
 FATIA_PROGRESSO_PROCESSO = 10.0

@@ -290,7 +290,8 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
         with open(os.path.join(tmp, "main.js"), "w", encoding="utf-8") as f:
             f.write(_main_js(_sonda_js(seletores)).replace("__W__", str(int(largura))).replace("__H__", str(int(altura))))
         proc = subprocess.run([_ELECTRON, os.path.join(tmp, "main.js")],
-                              capture_output=True, text=True, timeout=TIMEOUT_PINTURA, cwd=tmp)
+                              capture_output=True, text=True, errors="replace",
+                              timeout=TIMEOUT_PINTURA, cwd=tmp)
         png = os.path.join(tmp, "capture.png")
         if not os.path.exists(png):
             cauda = (proc.stderr or proc.stdout or "")[-400:]
