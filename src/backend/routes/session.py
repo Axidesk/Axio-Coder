@@ -104,6 +104,26 @@ def _commits_ja_gravados(pay_dia):
     return mapa
 
 
+def _marcar_commit_do_agente(logs):
+    """Da ao turno que fecha a rodada o commit que o AGENTE publicou nela.
+
+    O commit feito no painel marca o proprio turno; o que o agente faz com
+    tool_publicar_git nao tem como saber o turno, por isso deixa o hash aqui e a
+    gravacao do log consome-o. E de uso unico: consumido ou nao, sai do estado,
+    para um rastro velho nunca dar ponto a um turno de outra rodada."""
+    pendente = estado.pop("commit_do_agente", None)
+    if not pendente or not logs:
+        return False
+    grupo = logs[-1]
+    if grupo.get("commit"):
+        return False
+    achado = re.search(r"(\d+)$", str(grupo.get("id") or ""))
+    if not achado or int(achado.group(1)) > int(pendente.get("quando") or 0):
+        return False
+    grupo["commit"] = pendente.get("hash") or ""
+    return True
+
+
 @session_bp.route('/api/session_log/save', methods=['POST'])
 def session_log_save():
     pasta_raiz = estado.get("pasta_raiz", "")
@@ -146,6 +166,8 @@ def session_log_save():
         except Exception:
             pass
         return hoje
+
+    _marcar_commit_do_agente(logs)
 
     grupos_por_dia = {}
     for grupo in logs:

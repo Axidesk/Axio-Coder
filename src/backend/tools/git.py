@@ -4,6 +4,7 @@ import io
 import os
 import re
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -338,6 +339,10 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
         if etiqueta:
             _, erro = git_saida(raiz, "tag", "-a", etiqueta, "-F", caminho_msg)
             linhas.append(f"ETIQUETA {etiqueta}: " + (f"ERRO: {erro}" if erro else "criada"))
+
+        hash_novo, _ = git_saida(raiz, "rev-parse", "HEAD")
+        if hash_novo:
+            estado["commit_do_agente"] = {"hash": hash_novo.strip(), "quando": int(time.time() * 1000)}
     finally:
         try:
             os.remove(caminho_msg)

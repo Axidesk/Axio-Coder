@@ -3223,8 +3223,8 @@
         "arquivo": "src/frontend/js/chat/messages.js",
         "linha": 661,
         "conferido": [
-          1790039920.389,
-          42557
+          1790117394.897,
+          42236
         ]
       }
     },
@@ -4344,10 +4344,10 @@
       "descricao": "Cards das etiquetas e do ramo no fim do historico (substituiu a pilha dos salvos); cada etiqueta abre as tarefas do seu intervalo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 343,
+        "linha": 348,
         "conferido": [
-          1789954989.177,
-          25952
+          1790117863.76,
+          26220
         ]
       }
     },
@@ -4364,10 +4364,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 389,
+        "linha": 394,
         "conferido": [
-          1789954989.177,
-          25952
+          1790117863.76,
+          26220
         ]
       }
     },
@@ -4426,10 +4426,10 @@
       "descricao": "Botao do painel que ENVIA: se houver ficheiros por commitar faz o commit (mensagem do campo, senao a pergunta da tarefa) e depois git push; se nao houver nada a commitar, so faz push. O atributo data-git-acao=\"enviar\" e INTERPOLADO em aviao(acao,...), por isso nao existe como texto fixo no ficheiro. Fica lado a lado com o lapis (.git-lapis) quando o commit da tarefa ainda nao subiu; desativado com o motivo no title quando nao ha remoto ou ja esta tudo no GitHub.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 91,
+        "linha": 109,
         "conferido": [
-          1790116643.428,
-          29992
+          1790118730.824,
+          31740
         ]
       }
     },
@@ -4467,10 +4467,10 @@
       "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 184,
+        "linha": 216,
         "conferido": [
-          1790116643.428,
-          29992
+          1790118730.824,
+          31740
         ]
       }
     },
@@ -4481,10 +4481,10 @@
       "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 146,
+        "linha": 178,
         "conferido": [
-          1790116643.428,
-          29992
+          1790118730.824,
+          31740
         ]
       }
     },

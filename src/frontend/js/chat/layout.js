@@ -4,7 +4,7 @@ import { vistaDe } from './colunas.js';
 import { collapseHistorySearchInline } from './historico/busca.js';
 import { recolherContextPopup, syncMenuIcons, syncWorkspaceTopBar } from './ui.js';
 
-const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles, btnDockLogSession, btnEyeDiff, btnGitRestoreHistory, btnHistorySearch, btnRedo, btnShowQuestion, btnShowThoughts, btnShowTools, btnUndo, col3Header, col3Title, lblRedoCount, lblUndoCount, logDock, modeSubmenu, panelCol2, panelCol3, panelLogSession, plusMenu, slidingPanelContainer } = dom;
+const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles, btnDockLogSession, btnEyeDiff, btnGitAutoHistory, btnGitEnviarHistory, btnGitRestoreHistory, btnHistorySearch, btnRedo, btnShowQuestion, btnShowThoughts, btnShowTools, btnUndo, col3Header, col3Title, lblRedoCount, lblUndoCount, logDock, modeSubmenu, panelCol2, panelCol3, panelLogSession, plusMenu, slidingPanelContainer } = dom;
 
 
     function closePlusMenus() {
@@ -127,7 +127,10 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         const ferramentas = ativo === 'tools' && !!alvo;
         if (btnCopyTools) btnCopyTools.classList.toggle('hidden', !(ferramentas && alvo.id === 'dock'));
         if (btnCopyToolsHistory) btnCopyToolsHistory.classList.toggle('hidden', !(ferramentas && alvo.id === 'historico'));
-        if (btnGitRestoreHistory && ativo !== 'git') btnGitRestoreHistory.classList.add('hidden');
+        if (ativo === 'git') return;
+        [btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory].forEach(botao => {
+            if (botao) botao.classList.add('hidden');
+        });
     }
     function openPanelCol(panel) {
         if (!panel) return;

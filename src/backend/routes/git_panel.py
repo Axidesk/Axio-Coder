@@ -8,6 +8,7 @@ from src.backend.services import git_repo
 from src.backend.services.git_sugestao import sugerir_mensagem
 from src.backend.services.file_service import mover_para_lixeira, registrar_edicao
 from src.backend.services.session import marcar_commit_no_log
+from src.backend.services.settings import definir_git_automatico, git_automatico
 from src.backend.state import estado
 from src.backend.tools.js_contrato import quebras_introduzidas
 
@@ -51,6 +52,7 @@ def git_estado():
     info["erro_historico"] = arvore.get("erro", "")
     info["por_subir"] = git_repo.por_subir(pasta).get("commits", [])
     info["manifestos"] = git_repo.manifestos_diferentes(info.get("raiz", ""), "HEAD")
+    info["automatico"] = git_automatico()
     return jsonify({"status": "ok", "estado": info})
 
 
@@ -70,6 +72,12 @@ def git_versoes():
         "ramos": info.get("ramos", []),
         "erro": info.get("erro", ""),
     })
+
+
+@git_bp.route("/api/git/automatico", methods=["POST"])
+def git_automatico_rota():
+    dados = request.json or {}
+    return jsonify({"status": "ok", "automatico": definir_git_automatico(bool(dados.get("ligado")))})
 
 
 @git_bp.route("/api/git/commit", methods=["POST"])

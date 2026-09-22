@@ -521,3 +521,29 @@ body.inspect-mode * {
 .settings-toggle.on .settings-toggle-knob {
     transform: translateX(20px);
 }
+
+.settings-toggle-mini {
+    width: 30px;
+    height: 17px;
+    border: none;
+    background: var(--bg-input);
+}
+.settings-toggle-mini .settings-toggle-knob {
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    background: var(--text-suave);
+}
+.settings-toggle-mini.on {
+    background: var(--oliva);
+}
+.settings-toggle-mini.on .settings-toggle-knob {
+    background: var(--text-branco);
+    transform: translateX(13px);
+}
+
+#btn-git-enviar-history:disabled {
+    opacity: 0.3;
+    cursor: default;
+}

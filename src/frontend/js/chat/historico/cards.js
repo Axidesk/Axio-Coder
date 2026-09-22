@@ -187,7 +187,9 @@ const { historyLogsWrapper } = dom;
     }
     const SVG_AVIAO_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--oliva)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
 
-    function _injectMarcas(el, titulo, tag) {
+    const SVG_SALVAR_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`;
+
+    function _injectMarcas(el, titulo, tag, enviada) {
         el.querySelectorAll('.history-round-saved-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
@@ -198,9 +200,15 @@ const { historyLogsWrapper } = dom;
             row.appendChild(chip);
         }
         if (!titulo) return;
+        const salvo = document.createElement('span');
+        salvo.className = 'shrink-0 mt-0.5 history-round-saved-icon';
+        salvo.title = titulo;
+        salvo.innerHTML = SVG_SALVAR_CARD;
+        row.appendChild(salvo);
+        if (!enviada) return;
         const aviao = document.createElement('span');
         aviao.className = 'shrink-0 mt-0.5 history-round-saved-icon';
-        aviao.title = titulo;
+        aviao.title = 'Enviada para o GitHub';
         aviao.innerHTML = SVG_AVIAO_CARD;
         row.appendChild(aviao);
     }
@@ -211,15 +219,16 @@ const { historyLogsWrapper } = dom;
     function _marcasDoCard(el, grupo) {
         const commit = grupo && grupo.commit ? grupo.commit : '';
         if (!commit) {
-            _injectMarcas(el, '', '');
+            _injectMarcas(el, '', '', false);
             return;
         }
         const tag = tagDoCommit(commit);
+        const curto = String(commit).slice(0, 7);
         if (!enviadaParaOServidor(commit)) {
-            _injectMarcas(el, '', tag);
+            _injectMarcas(el, 'Guardada no PC (' + curto + '), por enviar', tag, false);
             return;
         }
-        _injectMarcas(el, 'Enviada para o GitHub (' + String(commit).slice(0, 7) + ')', tag);
+        _injectMarcas(el, 'Guardada e enviada para o GitHub (' + curto + ')', tag, true);
     }
     function atualizarMarcasDosCards() {
         document.querySelectorAll('.history-round-card').forEach(el => {

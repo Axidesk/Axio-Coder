@@ -2,14 +2,16 @@ import { state } from './state.js';
 import { vistaDe } from './colunas.js';
 import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
-import { btnGitRestoreHistory } from './dom.js';
+import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor } from './historico/cards.js';
 
 const LIMITE_COMMITS = 20;
 const LIMITE_FICHEIROS = 12;
 
-const RASCUNHOS = new Map();
+const CHAVE_RASCUNHOS = 'axio.git.rascunhos';
+
+const RASCUNHOS = new Map(Object.entries(rascunhosGuardados()));
 
 let commitsAMostrar = LIMITE_COMMITS;
 let ultimoEstadoGit = null;
@@ -21,7 +23,7 @@ const COMANDO_DE_DEPENDENCIA = {
 
 const SVG_VARINHA = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>';
 const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg>';
-const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>';
+const SVG_SALVAR = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>';
 const SVG_RAMO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>';
 const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>';
 
@@ -35,6 +37,22 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     function valorDoCampo(grupo) {
         if (!grupo) return '';
         return RASCUNHOS.get(String(grupo.id)) || '';
+    }
+    function rascunhosGuardados() {
+        if (typeof localStorage === 'undefined') return {};
+        try {
+            return JSON.parse(localStorage.getItem(CHAVE_RASCUNHOS) || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function guardarRascunhos() {
+        if (typeof localStorage === 'undefined') return;
+        try {
+            localStorage.setItem(CHAVE_RASCUNHOS, JSON.stringify(Object.fromEntries(RASCUNHOS)));
+        } catch (e) {
+            console.warn('Nao consegui guardar o rascunho da mensagem:', e);
+        }
     }
     function ficheirosDaTarefa(grupo) {
         return (grupo && grupo.files ? grupo.files : [])
@@ -87,9 +105,9 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
             + '</button>';
     }
-    function aviao(acao, titulo, desativado) {
-        return `<button class="projeto-notas-acao git-aviao" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}"${desativado ? ' disabled' : ''}>`
-            + `<span class="projeto-icone-wand">${SVG_AVIAO}</span>`
+    function salvar(acao, titulo, desativado) {
+        return `<button class="projeto-notas-acao git-salvar" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}"${desativado ? ' disabled' : ''}>`
+            + `<span class="projeto-icone-wand">${SVG_SALVAR}</span>`
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
             + '</button>';
     }
@@ -117,6 +135,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<span class="git-identidade">${escapeHtml(valor)}</span></div>`;
     }
     async function comBotaoOcupado(botao, tarefa) {
+        const antes = botao ? botao.disabled : false;
         if (botao) {
             botao.classList.add('a-trabalhar');
             botao.disabled = true;
@@ -126,7 +145,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         } finally {
             if (botao) {
                 botao.classList.remove('a-trabalhar');
-                botao.disabled = false;
+                botao.disabled = antes;
             }
         }
     }
@@ -154,6 +173,9 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<span class="git-chip-rotulo">${escapeHtml(estado.branch || 'sem ramo')}</span></span>`;
         html += '</div>';
         html += blocoDeEtiquetas(estado, grupo, versaoDaTarefa);
+        if (estado.automatico) {
+            html += '<div class="git-nota">Interruptor ligado: o agente publica no git no fim de cada rodada.</div>';
+        }
         html += '</div>';
         return html;
     }
@@ -218,8 +240,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const ficheiros = ficheirosDaTarefa(grupo);
         const pontoDaTarefa = hashDaTarefa(grupo);
         const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
-        const temRemoto = !!(estado && estado.remoto);
-        const porSubir = (estado && estado.por_subir) || [];
         const levou = (pendentes && pendentes.levou) || null;
         const noutroCommit = !pontoDaTarefa && porCommitar === 0 && !!levou;
         const vaiCommitar = !pontoDaTarefa && ficheiros.length > 0 && porCommitar !== 0;
@@ -227,12 +247,8 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const textoDoCampo = noutroCommit
             ? 'Ficheiros commitados noutra tarefa'
             : rotuloDoCampo(vaiCommitar, mensagemDoPonto, !!pontoDaTarefa);
-        const podeEnviar = temRemoto && (vaiCommitar || porSubir.length > 0);
-        const motivo = !temRemoto
-            ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
-            : (podeEnviar
-                ? descricaoDoEnvio(porSubir, vaiCommitar)
-                : (noutroCommit ? 'Nao ha nada proprio desta tarefa por commitar' : 'Tudo ja esta no GitHub'));
+        const podeSalvar = vaiCommitar || (!!pontoDaTarefa && !!grupo.__podeEmendar);
+        const motivo = descricaoDoSalvar(vaiCommitar, pontoDaTarefa, porCommitar, noutroCommit, ficheiros.length);
         const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
         let cabecalho = `<span class="projeto-contagem">${rotulo}</span>`;
         if (porCommitar !== null) {
@@ -263,7 +279,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
                 + ` value="${escapeHtml(mensagemDoPonto)}"`
                 + ` placeholder="${escapeHtml(textoDoCampo)}">`;
         }
-        html += aviao('enviar', motivo, !podeEnviar);
+        html += salvar('salvar', motivo, !podeSalvar);
         html += '</div>';
         html += '</div>';
         return html;
@@ -272,6 +288,13 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (vaiCommitar) return 'Mensagem do commit';
         if (mensagemDoPonto) return 'Ja no GitHub';
         return temPonto ? 'Ponto registado, mas fora do historico visivel' : 'Sem commit registado nesta tarefa';
+    }
+    function descricaoDoSalvar(vaiCommitar, pontoDaTarefa, porCommitar, noutroCommit, quantos) {
+        if (vaiCommitar) return 'Guardar o commit desta tarefa (fica so no teu PC)';
+        if (pontoDaTarefa) return 'Guardar a mensagem corrigida neste commit';
+        if (noutroCommit) return 'Nao ha nada proprio desta tarefa por commitar';
+        if (porCommitar === 0) return 'Nada por commitar: nenhum ficheiro desta tarefa mudou';
+        return quantos ? 'Sem commit registado nesta tarefa' : 'Esta tarefa nao tem ficheiros registados';
     }
     function descricaoDoEnvio(porSubir, vaiCommitar) {
         const commits = porSubir || [];
@@ -412,6 +435,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         ultimoEstadoGit = estado;
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
         sincronizarBotaoRestauro(alvo, grupo);
+        sincronizarCabecalhoGit(alvo, estado);
         ligarAcoes(alvo);
     }
     function ligarAcoes(vista) {
@@ -422,6 +446,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             const grupo = grupoAtivo();
             if (!grupo) return;
             RASCUNHOS.set(String(grupo.id), e.target.value);
+            guardarRascunhos();
         });
         painel.addEventListener('click', async (e) => {
             const botao = e.target.closest('[data-git-acao]');
@@ -432,11 +457,11 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
             if (acao === 'mais-commits') return mostrarMaisCommits(botao);
-            if (acao === 'enviar') return enviarTarefa(vista);
+            if (acao === 'salvar') return salvarTarefa(vista);
         });
     }
-    async function enviarTarefa(vista) {
-        const { grupo, campo, botao } = campoDaTarefa(vista, 'enviar');
+    async function salvarTarefa(vista) {
+        const { grupo, campo, botao } = campoDaTarefa(vista, 'salvar');
         if (!grupo) return;
         if (botao && botao.disabled) return;
         const mensagem = campo ? campo.value.trim() : '';
@@ -444,7 +469,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const porCommitar = grupo.__pendentes;
         const podeCommitar = !hashDaTarefa(grupo) && ficheiros.length > 0 && porCommitar !== 0;
         if (podeCommitar && !mensagem) {
-            avisarNoPainel(vista, 'Escreve a mensagem do commit ou usa a varinha antes de enviar.');
+            avisarNoPainel(vista, 'Escreve a mensagem do commit ou usa a varinha antes de guardar.');
             return;
         }
         await comBotaoOcupado(botao, async () => {
@@ -454,6 +479,20 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
                     avisarNoPainel(vista, commit.message || 'Nao foi possivel commitar.');
                     return;
                 }
+                if (!commit) {
+                    avisarNoPainel(vista, 'Nada para guardar: a mensagem e a mesma do ponto desta tarefa.');
+                    return;
+                }
+                await renderGitPanel(vista);
+            } catch (e) {
+                console.error('Erro ao guardar o ponto da tarefa:', e);
+                avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
+            }
+        });
+    }
+    async function enviarRepositorio(vista, botao) {
+        await comBotaoOcupado(botao, async () => {
+            try {
                 const enviado = await pedirGit('/api/git/enviar', {});
                 if (!enviado || enviado.status !== 'ok') {
                     avisarNoPainel(vista, (enviado && enviado.message) || 'Nao foi possivel enviar para o GitHub.');
@@ -471,6 +510,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
                 avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
             }
         });
+    }
+    async function alternarAutomatico(vista, botao) {
+        const ligado = !(botao && botao.classList.contains('on'));
+        const dados = await pedirGit('/api/git/automatico', { ligado });
+        if (!dados || dados.status !== 'ok') {
+            avisarNoPainel(vista, (dados && dados.message) || 'Nao consegui mudar o interruptor.');
+            return;
+        }
+        await renderGitPanel(vista);
     }
     async function gravarPonto(grupo, mensagem, ficheiros, podeCommitar) {
         let corpo = null;
@@ -496,6 +544,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             grupo.commit = resultado.hash || '';
             state.commitsDosTurnos[String(grupo.id)] = resultado.hash || '';
             RASCUNHOS.delete(String(grupo.id));
+            guardarRascunhos();
             updateRoundCardCommitByTurnId(grupo.id, resultado.hash || '');
         }
         return resultado;
@@ -514,6 +563,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
                 if (dados && dados.status === 'ok' && campo) {
                     campo.value = dados.mensagem;
                     RASCUNHOS.set(String(grupo.id), campo.value);
+                    guardarRascunhos();
                 } else {
                     avisarNoPainel(vista, (dados && dados.message) || 'Nao foi possivel sugerir uma mensagem.');
                 }
@@ -545,6 +595,33 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             e.stopPropagation();
             restaurarTarefa();
         } : null;
+    }
+    function sincronizarCabecalhoGit(vista, estado) {
+        const info = estado && estado.repo ? estado : null;
+        const porSubir = (info && info.por_subir) || [];
+        if (btnGitEnviarHistory) {
+            const pode = !!(info && info.remoto && porSubir.length);
+            btnGitEnviarHistory.classList.toggle('hidden', !info || !info.remoto);
+            btnGitEnviarHistory.disabled = !pode;
+            btnGitEnviarHistory.title = pode ? descricaoDoEnvio(porSubir, false) : 'Tudo o que esta commitado ja subiu';
+            btnGitEnviarHistory.onclick = pode ? (e) => {
+                e.stopPropagation();
+                enviarRepositorio(vista, btnGitEnviarHistory);
+            } : null;
+        }
+        if (btnGitAutoHistory) {
+            const ligado = !!(info && info.automatico);
+            btnGitAutoHistory.classList.toggle('hidden', !info);
+            btnGitAutoHistory.classList.toggle('on', ligado);
+            btnGitAutoHistory.setAttribute('aria-checked', ligado ? 'true' : 'false');
+            btnGitAutoHistory.title = ligado
+                ? 'Publicar no git no fim de cada rodada (ligado - clica para desligar)'
+                : 'Publicar no git no fim de cada rodada (desligado - clica para ligar)';
+            btnGitAutoHistory.onclick = info ? (e) => {
+                e.stopPropagation();
+                alternarAutomatico(vista, btnGitAutoHistory);
+            } : null;
+        }
     }
     function avisarNoPainel(vista, texto) {
         const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;

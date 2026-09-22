@@ -316,6 +316,8 @@ def _bloco_terminal_ativo():
         "Para algo exclusivo do shell do usuario, peca a ele para correr no painel do terminal.\n"
     )
 
+
+
 def _bloco_venv():
     """Interpretador Python certo para correr scripts, medido - nunca adivinhado.
 
@@ -345,6 +347,25 @@ def _bloco_venv():
         f"ponha-o entre aspas: \"{sys.executable}\" script.py. Nao ande a adivinhar caminhos de venv - use os que estao aqui."
     )
     return "\n".join(linhas) + "\n"
+
+def _bloco_git_automatico():
+    """Publicacao de fim de rodada: vazio enquanto o interruptor do utilizador estiver desligado."""
+    from src.backend.services.settings import git_automatico
+    try:
+        ligado = git_automatico()
+    except Exception:
+        ligado = False
+    if not ligado:
+        return ""
+    return (
+        "=== PUBLICACAO NO GIT NO FIM DA RODADA (INTERRUPTOR LIGADO PELO UTILIZADOR) ===\n"
+        "No FIM de cada rodada que mexa em ficheiros, publica o trabalho com tool_publicar_git: a mensagem "
+        "e escrita por TI (nunca a pergunta do utilizador), curta e a dizer o que mudou. Isso da ao card da "
+        "rodada o ponto de restauro dele - sem esta publicacao o card fica sem ponto no git.\n"
+        "Se a rodada nao mexeu em nenhum ficheiro, nao publiques nada. Se a rodada mexeu so em parte do que "
+        "esta alterado no disco (ficou trabalho de outra tarefa por commitar), passa 'ficheiros' com os "
+        "caminhos desta rodada. Se a publicacao falhar, diz numa linha e segue - nunca afirmes que correu.\n"
+    )
 
 def _bloco_modo_projeto():
     """Diz em que projeto o agente esta e se a auto-melhoria (regra 26) esta ativa.
@@ -484,6 +505,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
     bloco_procs = bloco_processos()
     bloco_atrito_rodada = bloco_atrito()
     bloco_terminal = _bloco_terminal_ativo()
+    bloco_git = _bloco_git_automatico()
     bloco_venv = _bloco_venv()
     bloco_maquina = _bloco_maquina()
     bloco_modo = _bloco_modo_projeto()
@@ -531,6 +553,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         f"{bloco_procs}"
         f"{bloco_atrito_rodada}"
         f"{bloco_terminal}"
+        f"{bloco_git}"
         f"{bloco_venv}"
         f"{bloco_maquina}"
         f"{bloco_modo}"
