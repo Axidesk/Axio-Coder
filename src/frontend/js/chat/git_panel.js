@@ -116,6 +116,20 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         return `<div class="git-titulo-linha">${linha}<span class="projeto-secao-sep">|</span>`
             + `<span class="git-identidade">${escapeHtml(valor)}</span></div>`;
     }
+    async function comBotaoOcupado(botao, tarefa) {
+        if (botao) {
+            botao.classList.add('a-trabalhar');
+            botao.disabled = true;
+        }
+        try {
+            return await tarefa();
+        } finally {
+            if (botao) {
+                botao.classList.remove('a-trabalhar');
+                botao.disabled = false;
+            }
+        }
+    }
     function alternarRecolhido(cabecalho) {
         const bloco = cabecalho.closest('.projeto-grupo');
         if (!bloco) return;
@@ -217,7 +231,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const motivo = !temRemoto
             ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
             : (podeEnviar
-                ? 'Enviar para o GitHub'
+                ? descricaoDoEnvio(porSubir, vaiCommitar)
                 : (noutroCommit ? 'Nao ha nada proprio desta tarefa por commitar' : 'Tudo ja esta no GitHub'));
         const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
         let cabecalho = `<span class="projeto-contagem">${rotulo}</span>`;
@@ -255,6 +269,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (vaiCommitar) return 'Mensagem do commit';
         if (mensagemDoPonto) return 'Ja no GitHub';
         return temPonto ? 'Ponto registado, mas fora do historico visivel' : 'Sem commit registado nesta tarefa';
+    }
+    function descricaoDoEnvio(porSubir, vaiCommitar) {
+        const commits = porSubir || [];
+        const quantos = commits.length + (vaiCommitar ? 1 : 0);
+        const acao = vaiCommitar ? 'Commitar esta tarefa e enviar' : 'Enviar';
+        if (quantos <= 1) return vaiCommitar ? `${acao} para o GitHub` : 'Enviar para o GitHub';
+        const nomes = commits.map(c => nomeDaTarefaDoCommit(c.hash)).filter(Boolean).slice(0, 3);
+        if (!nomes.length) return `${acao} ${quantos} commits para o GitHub`;
+        return `${acao} ${quantos} commits para o GitHub (${nomes.join(', ')}${nomes.length < quantos ? ', ...' : ''})`;
     }
     function corpoDaTarefa(grupo, pendentes) {
         const ficheiros = ficheirosDaTarefa(grupo);
@@ -421,37 +444,30 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             avisarNoPainel(vista, 'Escreve a mensagem do commit ou usa a varinha antes de enviar.');
             return;
         }
-        if (botao) {
-            botao.classList.add('a-trabalhar');
-            botao.disabled = true;
-        }
-        try {
-            const commit = await gravarPonto(grupo, mensagem, ficheiros, podeCommitar);
-            if (commit && commit.status !== 'ok') {
-                avisarNoPainel(vista, commit.message || 'Nao foi possivel commitar.');
-                return;
+        await comBotaoOcupado(botao, async () => {
+            try {
+                const commit = await gravarPonto(grupo, mensagem, ficheiros, podeCommitar);
+                if (commit && commit.status !== 'ok') {
+                    avisarNoPainel(vista, commit.message || 'Nao foi possivel commitar.');
+                    return;
+                }
+                const enviado = await pedirGit('/api/git/enviar', {});
+                if (!enviado || enviado.status !== 'ok') {
+                    avisarNoPainel(vista, (enviado && enviado.message) || 'Nao foi possivel enviar para o GitHub.');
+                    return;
+                }
+                state.porSubirLido = false;
+                state.commitsPorSubir = [];
+                await carregarPorSubir(true);
+                atualizarMarcasDosCards();
+                const quantos = enviado.enviados || 0;
+                await renderGitPanel(vista);
+                if (!quantos) avisarNoPainel(vista, 'O remoto ja tinha tudo: nada foi enviado.');
+            } catch (e) {
+                console.error('Erro ao enviar para o git:', e);
+                avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
             }
-            const enviado = await pedirGit('/api/git/enviar', {});
-            if (!enviado || enviado.status !== 'ok') {
-                avisarNoPainel(vista, (enviado && enviado.message) || 'Nao foi possivel enviar para o GitHub.');
-                return;
-            }
-            state.porSubirLido = false;
-            state.commitsPorSubir = [];
-            await carregarPorSubir(true);
-            atualizarMarcasDosCards();
-            const quantos = enviado.enviados || 0;
-            await renderGitPanel(vista);
-            if (!quantos) avisarNoPainel(vista, 'O remoto ja tinha tudo: nada foi enviado.');
-        } catch (e) {
-            console.error('Erro ao enviar para o git:', e);
-            avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
-        } finally {
-            if (botao) {
-                botao.classList.remove('a-trabalhar');
-                botao.disabled = false;
-            }
-        }
+        });
     }
     async function gravarPonto(grupo, mensagem, ficheiros, podeCommitar) {
         let corpo = null;
@@ -484,32 +500,25 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     async function sugerirMensagem(vista) {
         const { grupo, campo, botao } = campoDaTarefa(vista, 'sugerir');
         if (!grupo) return;
-        if (botao) {
-            botao.classList.add('a-trabalhar');
-            botao.disabled = true;
-        }
         const perguntas = (grupo.questions || []).join(' ');
         const resposta = String(grupo.aiResponse || '').slice(0, 800);
-        try {
-            const dados = await pedirGit('/api/git/sugestao', {
-                ficheiros: ficheirosDaTarefa(grupo),
-                contexto: [perguntas, resposta].filter(Boolean).join('\n\n')
-            });
-            if (dados && dados.status === 'ok' && campo) {
-                campo.value = dados.mensagem;
-                RASCUNHOS.set(String(grupo.id), campo.value);
-            } else {
-                avisarNoPainel(vista, (dados && dados.message) || 'Nao foi possivel sugerir uma mensagem.');
+        await comBotaoOcupado(botao, async () => {
+            try {
+                const dados = await pedirGit('/api/git/sugestao', {
+                    ficheiros: ficheirosDaTarefa(grupo),
+                    contexto: [perguntas, resposta].filter(Boolean).join('\n\n')
+                });
+                if (dados && dados.status === 'ok' && campo) {
+                    campo.value = dados.mensagem;
+                    RASCUNHOS.set(String(grupo.id), campo.value);
+                } else {
+                    avisarNoPainel(vista, (dados && dados.message) || 'Nao foi possivel sugerir uma mensagem.');
+                }
+            } catch (e) {
+                console.error('Erro ao pedir a sugestao:', e);
+                avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
             }
-        } catch (e) {
-            console.error('Erro ao pedir a sugestao:', e);
-            avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);
-        } finally {
-            if (botao) {
-                botao.classList.remove('a-trabalhar');
-                botao.disabled = false;
-            }
-        }
+        });
     }
     async function restaurarTarefa() {
         const grupo = grupoAtivo();
