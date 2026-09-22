@@ -66,8 +66,7 @@ import { state } from '../state.js';
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const data = await resp.json();
-            return (data && data.commits) || {};
+            await resp.json();
         } catch (e) {
             console.error('Erro ao salvar log da sessão:', e);
             return {};
