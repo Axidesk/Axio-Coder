@@ -247,7 +247,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const jaNoGitHub = !!pontoDaTarefa && !!estado && enviadaParaOServidor(pontoDaTarefa);
         const textoDoCampo = noutroCommit
             ? 'Ficheiros commitados noutra tarefa'
-            : rotuloDoCampo(vaiCommitar, !!pontoDaTarefa, jaNoGitHub);
+            : rotuloDoCampo(vaiCommitar, !!pontoDaTarefa, jaNoGitHub, ficheiros.length, porCommitar);
         const podeCorrigir = !vaiCommitar && !!pontoDaTarefa && !!grupo.__podeEmendar;
         const podeSalvar = vaiCommitar || podeCorrigir;
         const motivo = descricaoDoSalvar(vaiCommitar, pontoDaTarefa, porCommitar, noutroCommit, ficheiros.length, podeCorrigir);
@@ -287,9 +287,13 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         html += '</div>';
         return html;
     }
-    function rotuloDoCampo(vaiCommitar, temPonto, jaNoGitHub) {
+    function rotuloDoCampo(vaiCommitar, temPonto, jaNoGitHub, ficheirosTocados, porCommitar) {
         if (vaiCommitar) return 'Mensagem do commit';
-        if (!temPonto) return 'Sem commit registado nesta tarefa';
+        if (!temPonto) {
+            if (ficheirosTocados === 0) return 'Nada para salvar: esta tarefa nao tocou ficheiros';
+            if (porCommitar === 0) return 'Nada para salvar: nenhum ficheiro mudou';
+            return 'Sem ponto registado nesta tarefa';
+        }
         return jaNoGitHub ? 'Ja no GitHub' : 'Ponto so no teu PC, por enviar';
     }
     function descricaoDoSalvar(vaiCommitar, pontoDaTarefa, porCommitar, noutroCommit, quantos, podeEmendar) {
@@ -297,7 +301,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (pontoDaTarefa) return podeEmendar ? 'Guardar a mensagem corrigida neste commit' : 'Este commit ja subiu: a mensagem nao se muda';
         if (noutroCommit) return 'Nao ha nada proprio desta tarefa por commitar';
         if (porCommitar === 0) return 'Nada por commitar: nenhum ficheiro desta tarefa mudou';
-        return quantos ? 'Sem commit registado nesta tarefa' : 'Esta tarefa nao tem ficheiros registados';
+        return quantos === 0 ? 'Esta tarefa nao tem ficheiros registados' : 'Nada para salvar';
     }
     function descricaoDoEnvio(porSubir, vaiCommitar) {
         const commits = porSubir || [];
