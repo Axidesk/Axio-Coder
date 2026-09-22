@@ -700,10 +700,10 @@
       "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 793,
+        "linha": 800,
         "conferido": [
-          1789850171.866,
-          32267
+          1790115076.749,
+          32731
         ]
       }
     },
@@ -1582,7 +1582,11 @@
       "descricao": "A barra de abas do doc (#ws-top-bar, com #editor-tabs) recolhe sempre que a camada de codigo da coluna 3 do DOCK esta aberta - mostre ela um painel (ferramentas/raciocinio/pergunta/git) ou um FICHEIRO/diff. O predicado e `camadaCol3Aberta()` (a antiga `camadaCol3MostraPaineis` era um caso particular dela e foi apagada em 2026-09-22). No mesmo passo o cabecalho da coluna 3 (#col-3-header, com o caminho do ficheiro) passa a ficar a vista, e o titulo clicado revela o ficheiro na arvore do explorer (files.js:_ligarTituloAoExplorer). Quando a camada sai, as abas voltam. O historico tem a sua propria parcela na mesma funcao (`isHistoryOpen() && !historicoNoEditor`).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/layout.js",
-        "linha": 114
+        "linha": 114,
+        "conferido": [
+          1790115107.009,
+          9648
+        ]
       }
     },
     {
@@ -1605,10 +1609,10 @@
       "descricao": "A troca da camada do code view pelo Monaco. REGRA: A CAMADA NAO TOCA NO MONACO AO ABRIR, SO NA ENTREGA. files.js:entregarAoMonaco(vista) le a linha do retrato (marcas [data-ln] -> linhaNoFicheiroAtual; vista de FICHEIRO -> a grelha) e chama SEMPRE workspace.js:transferirDaCamada(caminho, linha, arquivoOriginal), que sai do modo do Monaco sem fade, recarrega o ficheiro quando o modelo em maos nao e o ficheiro e alinha. O 4o argumento entrar do setCodeViewContent controla o fade de entrada (diff passa false). Duas vistas chamam isto: a doc (vistaDock) e o HISTORICO (vistaHistorico). NA DOC: o clique entrega e a camada sai em fade, sempre. NO HISTORICO (2026-09-15): (a) com CODIGO a mostra (vista de ficheiro ou diff) entrega como o dock e a camada sai - e a unica forma de ver o Monaco, porque a camada e inset 0 por cima do #editor-host-wrap; (b) com um PAINEL aberto (raciocinio, ferramentas ou pergunta) NAO fecha a camada nem le linha nenhuma (o corpo mostra o painel, nao codigo) - o guard olhava so para tools/thoughts, logo clicar no painel da PERGUNTA entregava com uma linha falsa e fechava a camada a meio da leitura. O abrirDiff do historico passou a chamar marcarLinhasAlteradas e a marcar caminhoEntrega E caminhoOriginal como o do dock (era o que deixava o diff do historico sem linha). O MONACO DEPOIS DA ENTREGA NAO FECHA O HISTORICO: entregar codigo do historico liga state.codigoDoHistoricoNoEditor, que isenta o clique no editor no clique-fora (renderer.js) - sem isso, clicar no Monaco fechava o painel do historico (closeHistoryPanel). Desliga-se no closeHistory, na entrega da doc e no axio-editor-file-open (arvore).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 375,
+        "linha": 387,
         "conferido": [
-          1790114413.583,
-          41133
+          1790115113.719,
+          41662
         ]
       }
     },
@@ -1627,10 +1631,10 @@
       "descricao": "As quebras que morriam no retrato, por DUAS vias distintas. (1) VISTA DE FICHEIRO: o texto entrava por textContent num contentor com white-space normal e o ficheiro inteiro virava um paragrafo; o pre vive no PROPRIO texto (files.js:setCodeViewContent com escapeHtml), nunca no contentor, onde o raciocinio/ferramentas/pergunta precisam de quebrar - css/dock.css:.code-view-plain. (2) RETRATO DO DIFF: files.js:marcarLado reconstroi cada linha num span proprio e deitava fora a quebra final de cada bloco .diff-*, logo o ultimo pedaco de um bloco \"added\" colava-se ao bloco seguinte (as tres frases e a aspa de fecho vem em blocos separados) - a flag quebraFinal repoe-a.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 161,
+        "linha": 173,
         "conferido": [
-          1790114413.583,
-          41133
+          1790115113.719,
+          41662
         ]
       }
     },
@@ -1737,10 +1741,10 @@
       "descricao": "Ficheiros com o MESMO nome em pastas diferentes (src/backend/services/session.py e src/backend/routes/session.py) tem de ser identificados pelo CAMINHO, nunca pelo nome. encontrarArquivoUndo (files.js) procura match exato pelo caminho_relativo, depois por sufixo, e o nome simples SO se houver um unico candidato - antes havia um OR com o basename e, como o /api/undo_redo_status devolve a lista ordenada por nome, qualquer card abria sempre o PRIMEIRO da lista. O rotulo da aba e decidido por rotulosDasAbas (src/frontend/js/editor/editor.js, chamada por renderTabs): o PRIMEIRO ficheiro da lista fica com o nome simples e os seguintes ganham o sufixo da pasta (routes/session.py), subindo niveis enquanto houver colisao.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 179,
+        "linha": 191,
         "conferido": [
-          1790114413.583,
-          41133
+          1790115113.719,
+          41662
         ]
       }
     },
@@ -1884,10 +1888,10 @@
       "descricao": "Icones de copiar ao lado do titulo da coluna 3: #btn-copy-tools-history no historico e #btn-copy-tools na doc (ambos em dom.js). Os dois sao decididos por UMA funcao, layout.js:syncCopyButtons(vista, ativo): mostra so o da vista que tem painel ativo (raciocinio, ferramentas ou pergunta) e esconde os dois quando nao ha painel. E chamada por renderer.js:pintarBotoesCol3(botoes, ativo, vista) - o 3o argumento e a vista e vem de alternarPainelCol3/ligarBotoesCol3/aoFecharCol3 -, por question_panel.js:showQuestionPanel e por setupCol3ForFileView/resetCol3State/files.js:_modoCodigoHistorico. ANTES o icone do historico era escondido num sitio e mostrado noutro (o caminho da PERGUNTA em alternarPainelCol3 devolvia antes dos toggles e deixava-o escondido) e o alternarPainelCol3 nao limpava os isShowing* ao fechar o painel pelo proprio icone, o que estragava a copia (_copiarPainelAtivo escolhe o texto pelo flag). O clique vive em renderer.js:_copiarPainelAtivo.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/layout.js",
-        "linha": 128,
+        "linha": 125,
         "conferido": [
-          1790113681.093,
-          9817
+          1790115107.009,
+          9648
         ]
       }
     },
@@ -2644,10 +2648,10 @@
       "descricao": "O #preview-float (index.html) e o botao que surge flutuando quando EU uso o preview e o icone #btn-preview nao esta a vista (barra #ws-top-bar escondida ou colapsada). Nasce no index.html logo acima do #ws-top-bar e e posicionado por preview.js:mostrarAvisoDeUso com a ULTIMA caixa vista do icone (state.previewIconeCaixa, memorizada por memorizarIcone sempre que ele esta dentro do ecra; sem medida nenhuma cai na CAIXA_DE_RECURSO 16/6). Tem o mesmo desenho e o mesmo tamanho do icone real e desliza para cima ao aparecer (transform translateY 14px -> 0). Fica 8s e sai; clicar nele abre a vista do preview. Todo o aviso de uso entra pelo canal 'preview:uso' (o main.js repassa o que a ponte classifica) e e aplicado por marcarUsoDoPreview, que acende o #btn-preview com a classe .preview-em-uso (verde --oliva a pulsar, 2.6s) e, quando a acao E DE AGIR, traz a vista para a frente sozinha.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/preview.js",
-        "linha": 317,
+        "linha": 310,
         "conferido": [
-          1790114413.321,
-          23007
+          1790115080.749,
+          22717
         ]
       }
     },
@@ -3320,8 +3324,8 @@
         "arquivo": "src/frontend/js/editor/editor.js",
         "linha": 237,
         "conferido": [
-          1789850171.866,
-          32267
+          1790115076.749,
+          32731
         ]
       }
     },
@@ -4400,30 +4404,10 @@
       "descricao": "A camada da coluna 3 fecha porque o clique e interpretado como entrega de codigo ao Monaco. entregarAoMonaco so considerava os paineis ferramentas/raciocinio/pergunta; com o painel GIT aberto o painelAberto era falso, o alvo ficava null e a camada era fechada. A lista inclui agora state.isShowingGit e vale para qualquer painel novo que se acrescente a coluna 3.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 380,
+        "linha": 392,
         "conferido": [
-          1790114413.583,
-          41133
-        ]
-      }
-    },
-    {
-      "termo": "commit automatico da tarefa",
-      "aliases": [
-        "commit sem clique",
-        "tarefa commitada sozinha",
-        "salvar sozinho no git",
-        "pino sem clique",
-        "commit automatico por tarefa"
-      ],
-      "identificador": "_commit_automatico",
-      "descricao": "Commit LOCAL dos ficheiros da tarefa no fim da rodada, sem clique: grava o hash no turno do log (o card ganha o pino sozinho). Nunca interrompe a gravacao do log - sem repositorio ou sem alteracoes, segue sem hash.",
-      "localizacao": {
-        "arquivo": "src/backend/routes/session.py",
-        "linha": 119,
-        "conferido": [
-          1789946063.211,
-          31592
+          1790115113.719,
+          41662
         ]
       }
     },
@@ -5048,10 +5032,10 @@
       "descricao": "O icone do preview no card de terminal e um INTERRUPTOR, nao so um botao de abrir. Com a pagina a mostra no preview, um clique LARGA-a (largarPreview): a vista nativa deixa de ser mostrada (sincronizar passa a exigir !state.previewLargado) e o #preview-vazio volta a aparecer - a pagina NAO e descarregada, o processo continua a correr, so deixa de ser desenhada (e o Chromium abranda-a por backgroundThrottling). Novo clique RETOMA (retomarPreview) e ela volta sem recarregar. O estado vive em state.previewLargado; qualquer carregamento novo limpa-o. O preview avisa os cards por CustomEvent 'axio-preview-largado' (detail largado + alvo) e terminal_cards.js:_marcarLargura pinta o botao com .term-card-preview-largado e muda o titulo. O evento 'axio-preview-open' ganhou o campo 'alternar' (true quando o clique veio do card que JA tem o processo a correr).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/preview.js",
-        "linha": 253,
+        "linha": 246,
         "conferido": [
-          1790114413.321,
-          23007
+          1790115080.749,
+          22717
         ]
       }
     },
@@ -5069,7 +5053,11 @@
       "descricao": "Liga o TITULO da coluna 3 (doc e historico) ao explorer: poe cursor-pointer, o title 'Mostrar na arvore de ficheiros' e o onclick para WorkspaceView.revealAndSelectFile(caminho). O titulo e INFORMACAO E NAVEGACAO; a ENTREGA AO MONACO e o clique no CORPO do code view. Antes, no dock, o titulo entregava ao Monaco e no historico nao fazia nada.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 156
+        "linha": 156,
+        "conferido": [
+          1790115113.719,
+          41662
+        ]
       }
     }
   ]

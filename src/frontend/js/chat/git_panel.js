@@ -404,14 +404,18 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const { grupo, campo, botao } = campoDaTarefa(vista, 'enviar');
         if (!grupo) return;
         if (botao && botao.disabled) return;
-        if (botao) {
-            botao.classList.add('a-trabalhar');
-            botao.disabled = true;
-        }
         const mensagem = campo ? campo.value.trim() : '';
         const ficheiros = ficheirosDaTarefa(grupo);
         const porCommitar = grupo.__pendentes;
         const podeCommitar = !hashDaTarefa(grupo) && ficheiros.length > 0 && porCommitar !== 0;
+        if (podeCommitar && !mensagem) {
+            avisarNoPainel(vista, 'Escreve a mensagem do commit ou usa a varinha antes de enviar.');
+            return;
+        }
+        if (botao) {
+            botao.classList.add('a-trabalhar');
+            botao.disabled = true;
+        }
         try {
             const commit = await gravarPonto(grupo, mensagem, ficheiros, podeCommitar);
             if (commit && commit.status !== 'ok') {
@@ -444,7 +448,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         let corpo = null;
         if (podeCommitar) {
             corpo = {
-                mensagem: mensagem || (grupo.questions || [])[0] || nomeDaTarefa(grupo),
+                mensagem,
                 ficheiros,
                 filename: grupo.__session || '',
                 round_id: grupo.id || ''
