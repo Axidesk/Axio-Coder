@@ -2385,14 +2385,10 @@
         "melhora a resolucao do print"
       ],
       "identificador": "partes_da_imagem",
-      "descricao": "Caminho de uma imagem que o utilizador anexa ou cola no chat ate o modelo a ver: attach.js:addImage (frontend) manda o base64 do ficheiro ORIGINAL, sem reduzir nada -> payload.images -> routes/chat.py -> ai/loop.py:partes_usuario -> partes_da_imagem (services/imagem.py): dentro do orcamento de 640 000 px a imagem segue inteira e INTACTA; acima dele e CORTADA por tiles_da_imagem em pedacos de ate 1024x625 px, cada um em tamanho original (um pedaco paga 384 tokens). Teto de 16 pedacos por anexo (MAX_PEDACOS), com reducao previa quando passaria disso. Medido: 1920x1080 dava uma imagem unica de 1066x600 (escala 0,56) e passa a dar 4 pedacos a 1024x625 (escala 1,00); 2560x1440 = 9, 3840x2160 = 16, 6000x5000 = 15. preparar_imagem (:49) e o caminho de UMA imagem so, ainda usado pelo print em detalhe='unico' e por codificar_para_envio. As imagens so podem ir em mensagens do UTILIZADOR (nunca em system/assistant nem na resposta de uma ferramenta).",
+      "descricao": "Caminho de uma imagem que o utilizador anexa ou cola no chat ate o modelo a ver: attach.js:addImage (frontend) manda o base64 do ficheiro ORIGINAL, sem reduzir nada -> payload.images -> routes/chat.py -> ai/loop.py:partes_usuario -> partes_da_imagem (services/imagem.py): dentro do orcamento de 640 000 px a imagem segue inteira e INTACTA; acima dele e CORTADA por tiles_da_imagem em pedacos de ate 1024x625 px, cada um em tamanho original (um pedaco paga 384 tokens). Teto de 16 pedacos por anexo (MAX_PEDACOS), com reducao previa quando passaria disso. Medido: 1920x1080 dava uma imagem unica de 1066x600 (escala 0,56) e passa a dar 4 pedacos a 1024x625 (escala 1,00); 2560x1440 = 9, 3840x2160 = 16, 6000x5000 = 15. preparar_imagem (:49) e o caminho de UMA imagem so, ainda usado pelo print em detalhe='unico' e por codificar_para_envio. As imagens so podem ir em mensagens do UTILIZADOR (nunca em system/assistant nem na resposta de uma ferramenta). O FICHEIRO PASSA A SER GRAVADO NO PROJETO por _guardar_imagem_anexada (ai/loop.py): vai para <projeto>/.axio/anexos/<nome>, com dedup por conteudo, e o caminho segue na propria etiqueta que o modelo le ('[Imagem anexada: <nome> | gravada em <caminho>]') - e por onde as ferramentas de visao e de medida (tool_ver_imagem, tool_medir_referencia, tool_comparar_com_referencia) chegam a imagem que o utilizador mandou. Antes de 2026-09-27 o base64 nunca tocava o disco e nenhuma ferramenta lhe chegava.",
       "localizacao": {
         "arquivo": "src/backend/services/imagem.py",
-        "linha": 75,
-        "conferido": [
-          1789869091.888,
-          11748
-        ]
+        "linha": 75
       }
     },
     {
@@ -4684,7 +4680,11 @@
       "descricao": "Mede uma imagem de referencia em numeros (silhueta, proporcao, largura por faixas da altura, zonas mais acesas) e entrega o desenho do diagnostico. A medicao de fato vive em src/backend/geometry/referencia.py:medir.",
       "localizacao": {
         "arquivo": "src/backend/tools/referencia.py",
-        "linha": 66
+        "linha": 66,
+        "conferido": [
+          1790037506.994,
+          10158
+        ]
       }
     },
     {
@@ -4701,7 +4701,11 @@
       "descricao": "Mede o modelo num render e a referencia pelo mesmo instrumento e devolve as duas lado a lado em numeros, com a diferenca faixa a faixa e um veredicto. O lado a lado SO para os olhos continua em tool_ver_imagem(comparar_com).",
       "localizacao": {
         "arquivo": "src/backend/tools/referencia.py",
-        "linha": 135
+        "linha": 135,
+        "conferido": [
+          1790037506.994,
+          10158
+        ]
       }
     }
   ]

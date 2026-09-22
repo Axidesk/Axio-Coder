@@ -24,6 +24,7 @@ MINIMO_PECA = 0.02
 MINIMO_MARCA = 0.0015
 MAXIMO_MARCA = 0.6
 LIMIAR_COMPACTA = 0.15
+LIMIAR_PECA_SOLTA = 0.5
 PESO_LUZ = (0.299, 0.587, 0.114)
 
 
@@ -90,6 +91,9 @@ def relato(medidas, caminho=""):
     largura_objeto, altura_objeto = medidas["objeto"]
     linhas = [
         f"=== SILHUETA DE {caminho or 'imagem'} ===",
+    ]
+    linhas += _aviso_de_confianca(medidas)
+    linhas += [
         f"Imagem: {largura_imagem}x{altura_imagem} px. Objeto separado do fundo por: {medidas['como']}.",
         f"Objeto: {largura_objeto}x{altura_objeto} px, caixa em x {medidas['caixa'][0]}..{medidas['caixa'][2]} "
         f"e y {medidas['caixa'][1]}..{medidas['caixa'][3]}.",
@@ -102,23 +106,12 @@ def relato(medidas, caminho=""):
         f"Centro de massa: x {medidas['centro'][0]:.1%}, y {medidas['centro'][1]:.1%} (relativo ao objeto).",
     ]
     if medidas["outras_pecas"]:
-        linhas.append(
-            "Outras pecas soltas, ignoradas (a medicao e a maior): "
-            + ", ".join(f"{area:.1%} da maior" for area in medidas["outras_pecas"])
-            + "."
-        )
-    if medidas["toca_a_moldura"]:
-        linhas.append(
-            "AVISO: a silhueta encosta a moldura da imagem - ou o objeto sai do enquadramento, "
-            "ou a separacao do fundo ficou com o fundo em vez do objeto. Confirme no desenho "
-            "do diagnostico antes de usar estas medidas."
-        )
-    if medidas["area_relativa"] < LIMIAR_COMPACTA:
-        linhas.append(
-            f"AVISO: a silhueta enche so {medidas['area_relativa']:.0%} da sua propria caixa - "
-            "pouco para uma forma cheia. A separacao do fundo pode ter falhado: olhe para o "
-            "desenho do diagnostico antes de confiar nestas medidas."
-        )
+        mostradas = medidas["outras_pecas"][:5]
+        texto = ", ".join(f"{area:.1%} da maior" for area in mostradas)
+        restantes = len(medidas["outras_pecas"]) - len(mostradas)
+        if restantes > 0:
+            texto += f", e mais {restantes} peca(s) menores"
+        linhas.append("Outras pecas soltas, ignoradas (a medicao e a maior): " + texto + ".")
     if medidas["buracos"]:
         linhas.append(
             "Vazios interiores (o objeto tem "
@@ -531,3 +524,29 @@ def _veredicto_do_desvio(desvio):
     if desvio <= 0.18:
         return "Diferenca clara de forma: a proporcao geral ainda nao bate com a referencia."
     return "A forma ainda e outra coisa: trata a geometria antes de afinar detalhe."
+
+
+def _aviso_de_confianca(medidas):
+    """Bloco de aviso quando a separacao do fundo nao sustenta as medidas (vazio quando sustenta)."""
+    motivos = []
+    if medidas["toca_a_moldura"]:
+        motivos.append("a silhueta encosta a moldura da imagem")
+    if medidas["area_relativa"] < LIMIAR_COMPACTA:
+        motivos.append(f"a silhueta enche so {medidas['area_relativa']:.0%} da sua propria caixa")
+    soltas = [area for area in medidas["outras_pecas"] if area >= LIMIAR_PECA_SOLTA]
+    if soltas:
+        motivos.append(
+            f"ha {len(soltas)} peca(s) solta(s), a maior com {soltas[0]:.0%} do tamanho da principal"
+        )
+    if not motivos:
+        return []
+    return [
+        "",
+        "=== ATENCAO: NAO HA SILHUETA DE CONFIANCA ===",
+        "As medidas abaixo NAO descrevem a forma do objeto. Motivo: " + "; ".join(motivos) + ".",
+        "Acontece quando objeto e fundo partilham a cor ou a luminosidade (malha de pontos, "
+        "wireframe, holograma, fundo texturizado) - pela cor nao ha como separa-los, e nenhum "
+        "limiar resolve isso. O que resolve: recortar a imagem ao objeto sobre fundo liso, ou "
+        "fotografar em contraluz. Sem isso, desta imagem so se aproveita o desenho do diagnostico.",
+        "",
+    ]
