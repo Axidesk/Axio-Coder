@@ -35,8 +35,11 @@ MARCAS = medicao.MARCAS
     "ele mesmo: se a separacao do fundo falhar, o relato avisa. Medir a referencia antes de "
     "modelar poupa rodadas inteiras: modelar por intuicao erra por dezenas de pontos percentuais. "
     "Quando a silhueta encosta a moldura (o relato avisa logo no inicio): OLHE para a imagem, diga "
-    "onde esta o objeto em 'quadro' e as marcas acesas passam a ser relativas a esse quadro - e "
-    "delas que saem as proporcoes (a que altura estao os olhos, o centro do rosto) para modelar.",
+    "onde esta o objeto em 'quadro' - a separacao passa a correr DENTRO desse quadro, por corte de "
+    "grafos, e a forma sai medida (proporcao, largura por faixa, centro); as marcas acesas passam a "
+    "ser relativas ao objeto, e e delas que saem as proporcoes (a que altura estao os olhos, o "
+    "centro do rosto) para modelar. Sem quadro, uma imagem sem fundo separavel so da o desenho do "
+    "diagnostico e as marcas.",
     {
         "imagem": {
             "tipo": "STRING",
@@ -56,7 +59,7 @@ MARCAS = medicao.MARCAS
         },
         "quadro": {
             "tipo": "STRING",
-            "desc": "Para quando a separacao do fundo falha (o relato diz que a silhueta encosta a moldura): olhe para a imagem, diga onde esta o objeto e tudo passa a ser medido dentro desse quadro. Quatro numeros SEPARADOS POR VIRGULA, em porcentagem da imagem, no sentido x0,y0,x1,y1 a partir do canto superior esquerdo (ex: '15,6,86,93'). Sem ele, a imagem sem fundo separavel so da o desenho do diagnostico.",
+            "desc": "Para quando a separacao do fundo falha (o relato diz que a silhueta encosta a moldura): olhe para a imagem, diga onde esta o objeto. A partir daqui a ferramenta corta o objeto DENTRO desse quadro por corte de grafos (GrabCut) e mede a forma dele - proporcao, largura por faixa, centro - com as marcas acesas relativas ao objeto; so quando esse corte nao da resultado fiavel (quadro a cobrir quase toda a imagem) e que fica valendo o quadro indicado. Quatro numeros SEPARADOS POR VIRGULA, em porcentagem da imagem, no sentido x0,y0,x1,y1 a partir do canto superior esquerdo (ex: '15,6,86,93'). Sem ele, a imagem sem fundo separavel so da o desenho do diagnostico.",
             "padrao": "",
         },
         "destino": {
@@ -195,9 +198,12 @@ def tool_comparar_com_referencia(modelo, referencia, vista="frente", cima="", fa
                   "lado a lado se a separacao do fundo ficou com o objeto. Se o fundo nao se "
                   "separa, passe 'quadro' com o retangulo do objeto (x0,y0,x1,y1 em % da imagem): "
                   "a comparacao passa a ser relativa a ele.")
-        if medidas_referencia.get("quadro"):
+        if medidas_referencia.get("quadro") and not medidas_referencia.get("silhueta", True):
             texto += ("\nAVISO: na referencia vale o quadro declarado, nao a silhueta - o modelo "
                       "do outro lado e medido pela silhueta do desenho.")
+        if medidas_referencia.get("quadro") and medidas_referencia.get("silhueta", True):
+            texto += ("\nAVISO: na referencia o objeto foi separado DENTRO do quadro que indicaste, "
+                      "por corte de grafos, e a comparacao ja e entre as duas silhuetas.")
     try:
         juntas = lado_a_lado(
             medicao.desenho(medidas_referencia),

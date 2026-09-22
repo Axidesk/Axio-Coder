@@ -9,9 +9,11 @@ import os
 from src.backend.state import MSG_SEM_PASTA, estado, emit_event, notificar_mudanca_arquivos
 from src.backend.tools.registry import register
 from src.backend.services.file_service import caminho_contido, resolver_caminho, registrar_edicao, mover_para_lixeira, listar_lixeira, listar_conteudo_lixeira, resolver_item_lixeira, restaurar_item_lixeira
+from src.backend.services.busca_texto import EXTS_BINARIAS
 
 
 _PASTAS_PROTEGIDAS = {".git", ".axio"}
+TETO_TEXTO_NO_DIFF = 512 * 1024
 
 
 def _validar_alvo_exclusao(caminho_relativo, caminho_absoluto):
@@ -75,14 +77,28 @@ def tool_deletar_arquivo(caminho_relativo: str):
     erro_alvo = _validar_alvo_exclusao(caminho_relativo, caminho_absoluto)
     if erro_alvo: return erro_alvo
     if os.path.isdir(caminho_absoluto): return _deletar_pasta(caminho_relativo, caminho_absoluto)
+    ext = os.path.splitext(caminho_absoluto)[1].lower()
     try:
-        with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
-            texto_antigo = f.read()
+        tamanho = os.path.getsize(caminho_absoluto)
+    except OSError:
+        tamanho = 0
+    texto_antigo = None
+    if ext not in EXTS_BINARIAS and 0 <= tamanho <= TETO_TEXTO_NO_DIFF:
+        try:
+            with open(caminho_absoluto, 'r', encoding='utf-8') as f:
+                texto_antigo = f.read()
+        except (OSError, UnicodeDecodeError):
+            texto_antigo = None
+    try:
         mover_para_lixeira(caminho_absoluto)
         if os.path.exists(caminho_absoluto):
             return f"ERRO: não foi possível mover '{caminho_relativo}' para a lixeira."
-        registrar_edicao(caminho_absoluto, texto_antigo, None)
-        emit_event("action_diff", actionName=f"Excluído: {caminho_relativo}", diff=[{"type": "deleted", "text": texto_antigo}])
+        if texto_antigo is None:
+            diff = [{"type": "deleted", "text": f"[sem texto para mostrar: {tamanho} bytes - o arquivo esta recuperavel pela lixeira]"}]
+        else:
+            registrar_edicao(caminho_absoluto, texto_antigo, None)
+            diff = [{"type": "deleted", "text": texto_antigo}]
+        emit_event("action_diff", actionName=f"Excluído: {caminho_relativo}", diff=diff)
         notificar_mudanca_arquivos()
         return f"SUCESSO: Arquivo '{caminho_relativo}' movido para a lixeira."
     except Exception as e: return f"ERRO: {str(e)}"

@@ -839,7 +839,18 @@ export {
     marcarLinhasAlteradas,
     createChildBalloon
 };
+    const TETO_TEXTO_DO_CARD = 200000;
+    function _textoDoCard(texto) {
+        if (typeof texto !== 'string' || texto.length <= TETO_TEXTO_DO_CARD) return texto;
+        return texto.slice(0, TETO_TEXTO_DO_CARD) + NL + NL + '[cortado: ' + texto.length + ' caracteres - ficheiro binario ou demasiado grande]';
+    }
     function createChildBalloon(title, htmlContent, snippetHtml, rawTextOld, rawTextNew, fileName, sessionTools, fullOriginalText, fullNewText, deletedLines, addedLines, origToMod, modToOrig, subtitle) {
+        htmlContent = _textoDoCard(htmlContent);
+        snippetHtml = _textoDoCard(snippetHtml);
+        rawTextOld = _textoDoCard(rawTextOld);
+        rawTextNew = _textoDoCard(rawTextNew);
+        fullOriginalText = _textoDoCard(fullOriginalText);
+        fullNewText = _textoDoCard(fullNewText);
         const child = document.createElement('div');
         child.className = 'rounded-[10px] overflow-hidden';
         const header = document.createElement('div');

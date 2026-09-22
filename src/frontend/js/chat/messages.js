@@ -538,7 +538,17 @@ async function tratar_undo_changed() {
 
     if (typeof atualizarBotoesUndoRedo === 'function') atualizarBotoesUndoRedo();
 }
+const TETO_DIFF = 400000;
+function _diffDentroDoTeto(diff) {
+    let total = 0;
+    (diff || []).forEach(part => {
+        total += String((part && part.text) || '').length;
+    });
+    if (total <= TETO_DIFF) return diff;
+    return [{ type: 'added', text: '[' + total + ' caracteres de alteracao - demasiado grande para mostrar (ficheiro binario ou enorme). O arquivo esta no projeto: abra-o pelo explorador.]' }];
+}
 async function tratar_action_diff(data) {
+    data = { ...data, diff: _diffDentroDoTeto(data.diff) };
     if (typeof atualizarBotoesUndoRedo === 'function') atualizarBotoesUndoRedo();
     let fileName = data.actionName;
     if (fileName.indexOf(' -> ') !== -1) {

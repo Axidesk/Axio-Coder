@@ -50,7 +50,17 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS, quadro=None):
     furada, outras = _limpar(bruta)
     cheia = _preencher(furada)
     declarada = _quadro_em_pixeis(quadro, cheia.shape)
-    caixa = declarada if declarada else _caixa(cheia)
+    silhueta = True
+    if declarada is not None and (_toca_a_moldura(cheia) or _compactacao(cheia) < LIMIAR_COMPACTA):
+        separada = _por_grabcut(rgb, declarada)
+        limpa, _soltas = _limpar(separada)
+        medida = _preencher(limpa)
+        if _compactacao(medida) >= LIMIAR_COMPACTA and not _toca_a_moldura(medida):
+            furada, cheia, outras = limpa, medida, []
+            como = "corte de grafos (GrabCut) dentro do quadro que indicaste"
+        else:
+            silhueta = False
+    caixa = _caixa(cheia) if silhueta else declarada
     if caixa is None:
         raise ValueError("nao encontrei objeto nenhum: a imagem parece vazia ou de uma cor so")
     x0, y0, x1, y1 = caixa
@@ -88,6 +98,7 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS, quadro=None):
         "outras_pecas": outras,
         "toca_a_moldura": _toca_a_moldura(cheia),
         "quadro": declarada,
+        "silhueta": silhueta,
         "rgb": rgb,
         "mascara": cheia,
     }
@@ -98,6 +109,7 @@ def relato(medidas, caminho=""):
     largura_imagem, altura_imagem = medidas["imagem"]
     largura_objeto, altura_objeto = medidas["objeto"]
     declarado = medidas.get("quadro")
+    medida_de_verdade = bool(medidas.get("silhueta", True)) and not _sem_objeto(medidas)
     linhas = [
         f"=== MEDIDA DENTRO DE UM QUADRO QUE TU INDICASTE: {caminho or 'imagem'} ===" if declarado
         else f"=== SILHUETA DE {caminho or 'imagem'} ===",
@@ -108,13 +120,14 @@ def relato(medidas, caminho=""):
     linhas += [
         f"Imagem: {largura_imagem}x{altura_imagem} px. "
         + (f"Separacao do fundo tentada por: {medidas['como']} - sem resultado fiavel, vale o quadro "
-           f"que indicaste." if declarado else f"Objeto separado do fundo por: {medidas['como']}."),
+           f"que indicaste." if declarado and not medida_de_verdade
+           else f"Objeto separado do fundo por: {medidas['como']}."),
         f"Objeto: {largura_objeto}x{altura_objeto} px"
-        + (" (o quadro declarado)" if declarado else "")
+        + (" (o quadro declarado)" if declarado and not medida_de_verdade else "")
         + f", caixa em x {medidas['caixa'][0]}..{medidas['caixa'][2]} "
         f"e y {medidas['caixa'][1]}..{medidas['caixa'][3]}.",
     ]
-    if not declarado:
+    if not declarado or medida_de_verdade:
         linhas += [
             f"Proporcao (largura/altura): {medidas['proporcao']:.3f} - {_leitura_da_proporcao(medidas['proporcao'])}.",
             f"Eixo mais longo: {medidas['eixo']} ({_texto_do_eixo(medidas)}).",
@@ -143,8 +156,8 @@ def relato(medidas, caminho=""):
             "o desenho do diagnostico marca-os e mostra qual e)."
         )
     linhas += ["", "=== PROPORCOES POR FAIXAS (do topo para a base) ==="]
-    if declarado or _sem_objeto(medidas):
-        linhas.append(_texto_sem_silhueta(declarado))
+    if (declarado and not medida_de_verdade) or _sem_objeto(medidas):
+        linhas.append(_texto_sem_silhueta(declarado and not medida_de_verdade))
     else:
         linhas.append("y (altura)   largura   centro-x   brilho")
         for (y_pct, largura_pct, x_centro, densidade), brilho in zip(medidas["perfil"], medidas["brilho"]):
@@ -178,10 +191,15 @@ def relato(medidas, caminho=""):
                 "Estas marcas foram medidas na IMAGEM inteira, sem depender da silhueta - "
                 "continuam a valer quando a separacao do fundo falha."
             )
-        if declarado:
+        if declarado and not medida_de_verdade:
             linhas.append(
                 "As posicoes acima sao relativas ao QUADRO que indicaste, nao a imagem: usa-as como "
                 "proporcao do objeto que vais modelar."
+            )
+        if declarado and medida_de_verdade:
+            linhas.append(
+                "As posicoes acima sao relativas ao OBJETO, que separei do fundo dentro do quadro que "
+                "indicaste: usa-as como proporcao do objeto que vais modelar."
             )
         if medidas.get("marcas_fora"):
             linhas.append(
@@ -333,6 +351,51 @@ def _por_otsu(rgb):
     limpas = [_limpar(candidata)[0] for candidata in candidatas]
     soltas = [mascara for mascara in limpas if not _toca_a_moldura(mascara)]
     return max(soltas or limpas, key=_compactacao)
+
+
+LIMITE_DO_QUADRO_NA_IMAGEM = 0.70
+LADO_PARA_MEIA_ESCALA = 360
+
+
+def _por_grabcut(rgb, caixa):
+    """Silhueta do objeto DENTRO do quadro, por corte de grafos sobre a cor (GrabCut do OpenCV).
+
+    E o passo que resolve o caso em que objeto e fundo partilham a cor: nenhum limiar separa
+    uma malha de pontos do fundo que tem a mesma familia de cor, mas a mistura de cores com a
+    vizinhanca separa. O que fica de fora do quadro conta como fundo garantido, por isso o
+    quadro tem de deixar moldura a volta (com o quadro a cobrir a imagem toda nao ha fundo e o
+    resultado e um borrao).
+    """
+    import cv2
+
+    x0, y0, x1, y1 = caixa
+    largura_imagem, altura_imagem = rgb.shape[1], rgb.shape[0]
+    dentro_da_imagem = (x1 - x0 + 1) * (y1 - y0 + 1) / float(largura_imagem * altura_imagem)
+    if dentro_da_imagem > LIMITE_DO_QUADRO_NA_IMAGEM:
+        return np.zeros(rgb.shape[:2], bool)
+    recorte = np.ascontiguousarray(rgb[y0:y1 + 1, x0:x1 + 1].astype(np.uint8))
+    if min(recorte.shape[:2]) < 8:
+        return np.zeros(rgb.shape[:2], bool)
+    escala = 1.0
+    if max(recorte.shape[:2]) > LADO_PARA_MEIA_ESCALA:
+        escala = 0.5
+        recorte = cv2.resize(
+            recorte,
+            (max(8, int(recorte.shape[1] * escala)), max(8, int(recorte.shape[0] * escala))),
+            interpolation=cv2.INTER_AREA,
+        )
+    bgr = cv2.cvtColor(recorte, cv2.COLOR_RGB2BGR)
+    mascara = np.zeros(bgr.shape[:2], np.uint8)
+    fundo = np.zeros((1, 65), np.float64)
+    frente = np.zeros((1, 65), np.float64)
+    retangulo = (1, 1, bgr.shape[1] - 2, bgr.shape[0] - 2)
+    cv2.grabCut(bgr, mascara, retangulo, fundo, frente, 5, cv2.GC_INIT_WITH_RECT)
+    dentro = ((mascara == cv2.GC_FGD) | (mascara == cv2.GC_PR_FGD)).astype(np.uint8)
+    if escala != 1.0:
+        dentro = cv2.resize(dentro, (x1 - x0 + 1, y1 - y0 + 1), interpolation=cv2.INTER_NEAREST)
+    achado = np.zeros(rgb.shape[:2], bool)
+    achado[y0:y1 + 1, x0:x1 + 1] = dentro > 0
+    return achado
 
 
 def _toca_a_moldura(mascara):
@@ -663,8 +726,11 @@ def _bloco_do_quadro(medidas):
         f"y {y0 / max(1, altura_imagem - 1):.1%} a {y1 / max(1, altura_imagem - 1):.1%} da imagem "
         f"(em px: x {x0}..{x1}, y {y0}..{y1} - {largura_objeto}x{altura_objeto} px, "
         f"proporcao {medidas['proporcao']:.3f}).",
-        "A separacao do fundo nao encontrou o objeto nesta imagem, por isso a caixa do objeto e ESTA - "
-        "indicada, nao medida. Todas as percentagens abaixo sao relativas a ela e nao a imagem: e o "
+        ("O quadro foi o ponto de partida: a separacao do fundo correu DENTRO dele e o objeto saiu de "
+         "la medido, nao indicado." if medidas.get("silhueta", True) else
+         "A separacao do fundo nao encontrou o objeto nesta imagem, por isso a caixa do objeto e ESTA - "
+         "indicada, nao medida.")
+        + " Todas as percentagens abaixo sao relativas a ela e nao a imagem: e o "
         "que torna a medida utilizavel para modelar.",
         "",
     ]
