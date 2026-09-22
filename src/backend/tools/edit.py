@@ -43,6 +43,9 @@ def _preparar_substituicao(caminho_relativo, rotulo, texto_antigo, texto_novo):
     caminho_absoluto, conteudo, conteudo_nfc = dados
     texto_antigo_nfc = normalizar_unicode(texto_antigo)
     texto_novo_nfc = normalizar_unicode(texto_novo)
+    if texto_antigo_nfc == texto_novo_nfc:
+        return None, (f"ERRO: o 'texto_novo' e igual ao 'texto_antigo' em '{caminho_relativo}': "
+                      "nao ha nada a mudar. Nada foi gravado.")
     return (caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc, texto_novo_nfc, conteudo_nfc.count(texto_antigo_nfc)), None
 
 
