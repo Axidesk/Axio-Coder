@@ -34,6 +34,21 @@ def _wing():
 def _palace_path():
     return os.path.expanduser("~/.mempalace/palace")
 
+def _embedding_do_palace():
+    """A embedding function do palace, para esta colecao nao ser servida pela
+    DefaultEmbeddingFunction do chromadb.
+
+    Essa default pede a lista COMPLETA de provedores do onnxruntime, que inclui o
+    TensorRtExecutionProvider: nesta maquina ele nao carrega (falta a nvinfer_10.dll) e
+    cada sessao imprime o aviso de fallback no terminal. A do mempalace resolve para o
+    acelerador que existe (CUDA, quando existe) e a sessao e partilhada com o resto da
+    memoria. O nome dela e 'default' - a mesma identidade que o chromadb gravou nesta
+    colecao, por isso a troca nao conflitua.
+    """
+    from mempalace.embedding import get_embedding_function
+
+    return get_embedding_function()
+
 def _colecao_codigo(create=True):
     """A colecao de codigo e NOSSA: abre pelo cliente do ChromaDB, nao pelo mempalace.
 
@@ -52,7 +67,9 @@ def _colecao_codigo(create=True):
     with memoria_lock:
         try:
             cliente = abrir_client(_palace_path())
-            col = cliente.get_or_create_collection(_COLLECTION_CODIGO) if create else cliente.get_collection(_COLLECTION_CODIGO)
+            ef = _embedding_do_palace()
+            col = (cliente.get_or_create_collection(_COLLECTION_CODIGO, embedding_function=ef)
+                   if create else cliente.get_collection(_COLLECTION_CODIGO, embedding_function=ef))
         except Exception as exc:
             _erro_colecao["motivo"] = f"{type(exc).__name__}: {exc}"
             return None
