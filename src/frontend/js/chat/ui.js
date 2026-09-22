@@ -385,9 +385,9 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
             btnSessionHistory.classList.toggle('sidebar-active', active);
         }
     }
-    function syncWorkspaceTopBar(hidden = false) {
+    function syncWorkspaceTopBar(hidden = false, manterBarraTerminal = false) {
         if (window.WorkspaceView && typeof window.WorkspaceView.setTopBarHidden === 'function') {
-            window.WorkspaceView.setTopBarHidden(hidden);
+            window.WorkspaceView.setTopBarHidden(hidden, manterBarraTerminal);
         }
     }
     function selectFirstSessionLogCard() {

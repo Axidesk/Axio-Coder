@@ -4493,29 +4493,6 @@
       }
     },
     {
-      "termo": "lapis da mensagem do commit",
-      "aliases": [
-        "lapis",
-        "icone de lapis",
-        "editar a mensagem do commit",
-        "destrancar o campo do commit",
-        "campo trancado",
-        "mensagem do commit trancada",
-        "lapis que abre o campo",
-        "lapis ao lado do aviao"
-      ],
-      "identificador": "destrancarMensagem (.git-lapis)",
-      "descricao": "O lapis so existe quando o commit da tarefa ainda NAO subiu, e fica AO LADO do aviao - o aviao ja nao se esconde atras dele (pedido do utilizador: quem so quer enviar nao deve ter de clicar duas vezes). O campo esta trancado a mostrar a mensagem real do commit; clicar no lapis habilita o campo, mete a mensagem dentro e troca as classes da linha (sai git-trancado-amendavel, entra git-a-editar). O aviao, que ja estava visivel, passa a enviar - emendando a legenda so quando o texto muda. Ja no GitHub, o campo fica trancado para sempre e o lapis nao aparece; o aviao fica desativado com o motivo no title.",
-      "localizacao": {
-        "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 515,
-        "conferido": [
-          1790038417.706,
-          31221
-        ]
-      }
-    },
-    {
       "termo": "etiquetas do painel de git",
       "aliases": [],
       "identificador": "chipDeEtiquetas",
@@ -4770,7 +4747,11 @@
       "descricao": "Le o quadro de um canvas (2D ou WebGL) pixel a pixel e devolve-o em numeros, numa grelha de luz de caracteres e numa miniatura: e o unico caminho para julgar o que esta desenhado onde o DOM nao chega (holograma, jogo, grafico, WebGL). Ferramenta: tool_observar_preview(acao='canvas'), com o texto em src/backend/tools/preview.py (_texto_do_canvas, _simbolo_de_luz, _quadro_do_canvas) e o campo 'grelha' para as colunas. A luminancia e ponderada pelo alfa, que e o que revela um veu; o quadro e lido dentro de um requestAnimationFrame e o Page.setWebLifecycleState('active') acorda uma vista escondida. O campo do snippet que da o rotulo do canvas chama-se 'elemento' (nao 'alvo' - a ponte sobrescreve 'alvo' com a identidade da vista).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 566
+        "linha": 566,
+        "conferido": [
+          1790104712.928,
+          75484
+        ]
       }
     },
     {
@@ -4788,7 +4769,271 @@
       "descricao": "Mede a arvore de processos do Windows pelo instantaneo Toolhelp32 (ctypes, sem dependencia nova): instantaneo() da todos os processos com pid, pai e nome; arvore(pid) devolve o processo e os descendentes em largura com o nivel; vivos(pids) e a prova de quem ainda existe. Alimenta a prova da paragem em src/backend/tools/process.py (parar_processo_reg devolve {alvos, sobraram}, _encerrar_sobreviventes faz a segunda passagem por taskkill /F /PID e _texto_da_paragem escreve a arvore com [morto]/[SOBREVIVEU]). Armadilha: PROCESSENTRY32W com o dwSize errado (568 bytes em 64-bit, ULONG_PTR = c_size_t) faz a lista vir VAZIA sem erro nenhum.",
       "localizacao": {
         "arquivo": "src/backend/services/arvore_processos.py",
-        "linha": 67
+        "linha": 67,
+        "conferido": [
+          1790104438.855,
+          3508
+        ]
+      }
+    },
+    {
+      "termo": "cards do hud",
+      "aliases": [
+        "cards",
+        "card do hud",
+        "paineis",
+        "painel de dados",
+        "card do cpu",
+        "card da memoria",
+        "card da gpu",
+        "card do disco",
+        "card de carga"
+      ],
+      "identificador": "criarPaineisDoHud / avancarPaineisDoHud / chamarPaineisDoHud",
+      "descricao": "Painel do HUD: desenhado em canvas (moldura, titulo e conteudo), com ciclo de vida proprio - falha, some, renasce noutro posto livre. No maximo 2 acesos em simultaneo (MAXIMO_DE_ACESOS); o Axio pode forcar um a pedido (chamarPaineisDoHud, por cima do interruptor).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/paineis_do_hud.js",
+        "linha": 168,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "brilho",
+      "aliases": [
+        "efeito do brilho",
+        "aura",
+        "aura da fala",
+        "aura da orla",
+        "brilho atras dele"
+      ],
+      "identificador": "definirBrilho",
+      "descricao": "As duas aureolas (fria e quente) que abracam o HUD. Escala de 0 a 100: 0 apaga-as por completo. O peso e suavizado (pesoDoBrilho) para nao saltar.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/cabeca.js",
+        "linha": 739,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "luzes do fundo",
+      "aliases": [
+        "luzes do fundo",
+        "pontinhos do fundo",
+        "pontinhos",
+        "poeira",
+        "nebulosa",
+        "faiscas",
+        "aneis de fundo",
+        "orbitas"
+      ],
+      "identificador": "definirFundo",
+      "descricao": "Tudo o que vive atras do avatar: a poeira de nebulosa, as faiscas, as orbitas/arcos e a nuvem de particulas. Escala 0 a 100 (pesoDoFundo). NAO inclui as aureolas - essas sao o 'brilho' - nem os textos, que tem interruptor proprio.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/cabeca.js",
+        "linha": 745,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "grafico das acoes",
+      "aliases": [
+        "grafico de acoes",
+        "velas",
+        "grafico das acoes",
+        "acoes",
+        "ativos",
+        "mercado"
+      ],
+      "identificador": "criarVelasDoMercado / avancarVelasDoMercado / chamarVelasDoMercado",
+      "descricao": "As velas de bolsa e cripto (PETR4, BTC-USD), soltas fora dos cards. Somem com o interruptor 'cards do HUD' e podem ser chamadas pelo Axio com o painel 'mercado'.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/velas.js",
+        "linha": 58,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "menu do avatar",
+      "aliases": [
+        "popup das configuracoes",
+        "popup do avatar",
+        "menu do avatar",
+        "menu do rosto",
+        "painel de configuracao",
+        "interruptores"
+      ],
+      "identificador": "criarControles",
+      "descricao": "O menu que abre ao clicar no rosto do avatar. Tem 4 interruptores (Cards do HUD, Textos, Visao, Audio) e 2 deslizadores (Brilho, Luzes do fundo). O sinal '+' vira '-'. Os valores persistem e sincronizam com o servidor.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/controles.js",
+        "linha": 54,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "abre um programa ou um site",
+      "aliases": [
+        "abrir o youtube",
+        "abre o chrome",
+        "abre a calculadora",
+        "abre o navegador",
+        "abre a pasta",
+        "lanca o programa",
+        "jarvis",
+        "abrir coisas no pc"
+      ],
+      "identificador": "abrir",
+      "descricao": "Ferramenta usar_o_computador no Axio Assistant: abre sites, programas, pastas e ficheiros com os.startfile, e poe uma janela em primeiro plano com focar (ctypes EnumWindows/SetForegroundWindow).",
+      "localizacao": {
+        "arquivo": "src/backend/mundo/pc.py",
+        "linha": 113,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "cotacao de outro ativo",
+      "aliases": [
+        "cotacao do dolar",
+        "preco do bitcoin",
+        "ver a cotacao da tesla",
+        "muda o grafico",
+        "grafico das acoes",
+        "velas do ativo"
+      ],
+      "identificador": "pedir",
+      "descricao": "Ferramenta consultar_mercado: pedir(ativo, pasta_de_dados) resolve o simbolo (candidatos .SA, =X, -USD e, se falhar, por nome via Tavily), guarda-o na lista de pedidos e o retrato() devolve-o para o card das velas. largar() tira-o.",
+      "localizacao": {
+        "arquivo": "src/backend/services/ponte_preview.py",
+        "linha": 24,
+        "conferido": [
+          1789831974.879,
+          2397
+        ]
+      }
+    },
+    {
+      "termo": "procura na internet",
+      "aliases": [
+        "busca na web",
+        "pesquisar na internet",
+        "ver o tempo",
+        "noticias",
+        "buscar o simbolo do ativo",
+        "tavily"
+      ],
+      "identificador": "procurar",
+      "descricao": "Ferramenta buscar_na_web: Tavily por REST (POST api.tavily.com/search com Bearer), com a chave lida do cofre por chave_do_servico (cerebro/chave.py). Sem a dependencia tavily-python instalada.",
+      "localizacao": {
+        "arquivo": "src/backend/mundo/busca.py",
+        "linha": 30,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "automação de ui",
+      "aliases": [
+        "operar janelas",
+        "fechar janela",
+        "escrever num programa",
+        "arrastar no ecra",
+        "clicar no programa",
+        "mexer em programa nativo",
+        "jarvis"
+      ],
+      "identificador": "fechar / escrever / teclas / clicar / arrastar (ferramenta usar_o_computador)",
+      "descricao": "Operar programas nativos: fechar (WM_CLOSE), escrever, carregar teclas, clicar e arrastar. A injecção vive em src/backend/mundo/entrada.py (SendInput puro em ctypes, zero dependencias) e as janelas/coordenadas em src/backend/mundo/pc.py. Comandos por voz despachados em src/backend/nucleo/dialogo.py:usar_ocomputador.",
+      "localizacao": {
+        "arquivo": "src/backend/mundo/pc.py",
+        "linha": 308,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "olhos do axio",
+      "aliases": [
+        "ver o ecra",
+        "olhar para o ecra",
+        "le o ecra",
+        "enxerga"
+      ],
+      "identificador": "olhar",
+      "descricao": "Tira uma fotografia ao ecra inteiro ou a uma janela por GDI (ctypes, sem dependencias), guarda o PNG e le o texto visivel por OCR nativo do Windows (winrt Windows.Media.Ocr, com pt-PT instalado), devolvendo cada linha com a posicao. A imagem segue dentro do proprio resultado da ferramenta (content array com image_url), por isso o modelo VE o ecra.",
+      "localizacao": {
+        "arquivo": "src/backend/geometry/vista.py",
+        "linha": 199,
+        "conferido": [
+          1790035518.004,
+          13500
+        ]
+      }
+    },
+    {
+      "termo": "correr um comando",
+      "aliases": [
+        "executar um comando",
+        "npm start",
+        "rodar um comando",
+        "correr npm"
+      ],
+      "identificador": "executar",
+      "descricao": "Corre um comando pelo shell do Windows numa pasta indicada e devolve a saida, os erros e o codigo de saida (descodificados com a codepage OEM, por isso os acentos saem certos). Com em_segundo_plano abre numa consola propria e devolve o pid, para servidores.",
+      "localizacao": {
+        "arquivo": "src/backend/mundo/pc.py",
+        "linha": 160,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "esperar que carregue",
+      "aliases": [
+        "ve se ja carregou",
+        "esperar pelo servidor",
+        "esperar que apareca",
+        "esperar que abra"
+      ],
+      "identificador": "esperar_porta / esperar",
+      "descricao": "Esperar com teto de tempo: esperar_porta (pc.py) fica a bater a porta local ate um servidor responder; esperar (ecra.py) fica a espera que apareca uma janela com certo titulo ou um texto no ecra lido por OCR. E isto que permite confirmar que uma coisa carregou em vez de adivinhar.",
+      "localizacao": {
+        "arquivo": "src/backend/mundo/pc.py",
+        "linha": 541,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "mandar mensagem ao axio coder",
+      "aliases": [
+        "falar com o axio",
+        "pedir ao axio",
+        "passar a tarefa ao axio",
+        "mandar mensagem ao programador"
+      ],
+      "identificador": "falar / descobrir",
+      "descricao": "Ponte para o Axio Coder (a app em D:\\Dropbox\\2 - Startup\\CODER\\coder): descobrir() acha a porta dele sondando as portas locais e confirmando o titulo da pagina; falar() faz POST ao /api/chat dele com {message, mode, use_deepseek} e devolve o status. E assim que o assistente entrega um pedido ao programador.",
+      "localizacao": {
+        "arquivo": "src/backend/mundo/axio.py",
+        "linha": 34,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "campo onde escrevo a mensagem",
+      "aliases": [
+        "input do chat",
+        "caixa de texto do axio",
+        "campo de mensagem",
+        "escrever a mensagem",
+        "campo do rodape"
+      ],
+      "identificador": "#linha",
+      "descricao": "Campo de texto do Axio Assistant onde se escreve a mensagem (o input do rodape). O Axio pode le-lo e envia-lo com a ferramenta usar_a_minha_interface.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 26,
+        "conferido": [
+          1790013280.712,
+          81114
+        ],
+        "ausente": true
       }
     }
   ]

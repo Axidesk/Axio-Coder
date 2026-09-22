@@ -90,10 +90,10 @@ function _aplicarEstado(card, status) {
     card.el.classList.toggle('term-card-rodando', efetivo === 'rodando');
     card.el.classList.toggle('term-card-erro', efetivo === 'erro' || efetivo === 'timeout');
     if (card.sugerido) {
-        card.ponto.title = 'Executar';
+        card.ponto.title = 'Sugestao pronta a executar';
         card.fim.textContent = card.dica || '';
     } else {
-        card.ponto.title = efetivo === 'rodando' ? 'Parar o processo' : 'Executar de novo';
+        card.ponto.title = efetivo === 'rodando' ? 'A correr: clica para parar' : 'Parado';
         card.fim.textContent = _rotuloFim(efetivo, card.exitCode);
     }
 }
@@ -298,12 +298,9 @@ export async function escreverNoCardSelecionado(texto) {
 }
 
 async function _alternarExecucao(card) {
-    if (card.el.classList.contains('term-card-rodando')) {
-        await _parar(card.pid);
-        _aplicarEstado(card, 'parado');
-        return;
-    }
-    await _executarNoCard(card);
+    if (!card.el.classList.contains('term-card-rodando')) return;
+    await _parar(card.pid);
+    _aplicarEstado(card, 'parado');
 }
 
 function _fecharCard(card) {
@@ -456,19 +453,21 @@ function _avisarPreview(url, automatico) {
 function _anunciarUrl(card, url) {
     if (card.url === url) return;
     card.url = url;
+    if (card.repetir && card.repetir.parentNode) card.repetir.remove();
     let botao = card.cabeca.querySelector('.term-card-preview');
     if (!botao) {
         botao = document.createElement('button');
         botao.type = 'button';
         botao.className = 'term-card-btn term-card-preview';
         botao.innerHTML = SVG_PREVIEW;
-        botao.addEventListener('click', (e) => {
+        botao.addEventListener('click', async (e) => {
             e.stopPropagation();
+            if (!_estaRodando(card)) await _executarNoCard(card);
             _avisarPreview(card.url, false);
         });
-        card.cabeca.insertBefore(botao, card.repetir);
+        card.cabeca.insertBefore(botao, card.cabeca.querySelector('.term-card-fechar'));
     }
-    botao.title = 'Abrir no preview: ' + url;
+    botao.title = 'Abrir no preview (arranca o processo se estiver parado): ' + url;
     _avisarPreview(url, true);
 }
 

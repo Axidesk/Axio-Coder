@@ -83,6 +83,7 @@ state.vistaDeTrabalho = 'editor';
 state.viewTimers = {};
 state.workspaceActive = false;
 state.topBarHidden = false;
+state.termTopBarHidden = false;
 state.explorerLoaded = false;
 state.explorerReadyPromise = null;
 state.explorerRenderPath = null;

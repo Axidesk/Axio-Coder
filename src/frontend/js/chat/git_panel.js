@@ -24,7 +24,6 @@ const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="
 const SVG_AVIAO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>';
 const SVG_RAMO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>';
 const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>';
-const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
 
     function grupoAtivo() {
         return state.currentSelectedHistoryGroup || window.currentActiveLogGroup || null;
@@ -92,11 +91,6 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         return `<button class="projeto-notas-acao git-aviao" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}"${desativado ? ' disabled' : ''}>`
             + `<span class="projeto-icone-wand">${SVG_AVIAO}</span>`
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
-            + '</button>';
-    }
-    function lapis(titulo) {
-        return `<button class="projeto-notas-acao git-lapis" type="button" data-git-acao="editar" title="${escapeHtml(titulo)}">`
-            + SVG_LAPIS
             + '</button>';
     }
     function recolhivel(cabecalho, corpo, aberta, extra) {
@@ -213,9 +207,8 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         const temRemoto = !!(estado && estado.remoto);
         const porSubir = (estado && estado.por_subir) || [];
         const vaiCommitar = !pontoDaTarefa && ficheiros.length > 0 && porCommitar !== 0;
-        const podeEmendar = !vaiCommitar && _podeEmendar(grupo, estado);
         const mensagemDoPonto = mensagemDoPontoDaTarefa(estado, pontoDaTarefa);
-        const textoDoCampo = rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto, !!pontoDaTarefa);
+        const textoDoCampo = rotuloDoCampo(vaiCommitar, mensagemDoPonto, !!pontoDaTarefa);
         const podeEnviar = temRemoto && (vaiCommitar || porSubir.length > 0);
         const motivo = !temRemoto
             ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
@@ -233,30 +226,24 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             ? '<div class="git-nota">Estes ficheiros mudaram depois do ponto: o que esta por commitar e trabalho de outra tarefa.</div>'
             : '';
         html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto + notaDepoisDoPonto);
-        html += `<div class="git-campo-linha${podeEmendar ? ' git-trancado-amendavel' : ''}">`;
+        html += '<div class="git-campo-linha">';
         if (vaiCommitar) {
             html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`
                 + ` value="${escapeHtml(valorDoCampo(grupo))}"`
                 + ` placeholder="${escapeHtml(textoDoCampo)}">`;
+            html += varinha('sugerir', 'Escrever a mensagem com a IA');
         } else {
             html += `<input id="git-mensagem" class="git-campo git-campo-trancado" type="text" spellcheck="false" disabled`
-                + ` value="${escapeHtml(mensagemDoPonto)}" data-git-mensagem="${escapeHtml(mensagemDoPonto)}"`
+                + ` value="${escapeHtml(mensagemDoPonto)}"`
                 + ` placeholder="${escapeHtml(textoDoCampo)}">`;
         }
-        if (vaiCommitar) html += varinha('sugerir', 'Escrever a mensagem com a IA');
-        else if (podeEmendar) html += varinha('sugerir', 'Escrever a mensagem com a IA', 'git-varinha-edicao');
-        if (podeEmendar) html += lapis('Editar a mensagem deste commit');
         html += aviao('enviar', motivo, !podeEnviar);
         html += '</div>';
-        if (podeEmendar) {
-            html += '<div class="git-nota">Este commit ainda nao subiu: o lapis abre a mensagem dele para reescrever.</div>';
-        }
         html += '</div>';
         return html;
     }
-    function rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto, temPonto) {
+    function rotuloDoCampo(vaiCommitar, mensagemDoPonto, temPonto) {
         if (vaiCommitar) return 'Mensagem do commit';
-        if (podeEmendar) return 'Reescrever a mensagem deste commit';
         if (mensagemDoPonto) return 'Ja no GitHub';
         return temPonto ? 'Ponto registado, mas fora do historico visivel' : 'Sem commit registado nesta tarefa';
     }
@@ -407,7 +394,6 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             e.stopPropagation();
             const acao = botao.dataset.gitAcao;
             if (acao === 'recolher') return alternarRecolhido(botao);
-            if (acao === 'editar') return destrancarMensagem(botao);
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
             if (acao === 'mais-commits') return mostrarMaisCommits(botao);
@@ -511,22 +497,6 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
                 botao.disabled = false;
             }
         }
-    }
-    function destrancarMensagem(botao) {
-        const linha = botao.closest('.git-campo-linha');
-        if (!linha) return;
-        const campo = linha.querySelector('#git-mensagem');
-        if (!campo) return;
-        const grupo = grupoAtivo();
-        const mensagem = campo.dataset.gitMensagem || '';
-        if (grupo) RASCUNHOS.set(String(grupo.id), mensagem);
-        campo.disabled = false;
-        campo.classList.remove('git-campo-trancado');
-        campo.value = mensagem;
-        linha.classList.remove('git-trancado-amendavel');
-        linha.classList.add('git-a-editar');
-        campo.focus();
-        campo.select();
     }
     async function restaurarTarefa() {
         const grupo = grupoAtivo();

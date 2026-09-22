@@ -118,8 +118,9 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         const paineis = camadaCol3MostraPaineis();
         const historico = vistaDe('historico');
         const historicoNoEditor = state.codigoDoHistoricoNoEditor && !(historico && historico.col3Aberta());
-        const esconder = vistaPreviewAtiva() || camadaNotasAberta() || (paineis && camadaCol3Aberta()) || (isHistoryOpen() && !historicoNoEditor);
-        syncWorkspaceTopBar(esconder);
+        const preview = vistaPreviewAtiva();
+        const esconder = preview || camadaNotasAberta() || (paineis && camadaCol3Aberta()) || (isHistoryOpen() && !historicoNoEditor);
+        syncWorkspaceTopBar(esconder, preview);
 
         if (col3Header) col3Header.style.display = paineis ? '' : 'none';
     }

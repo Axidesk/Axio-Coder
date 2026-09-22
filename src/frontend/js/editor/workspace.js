@@ -137,7 +137,7 @@ function emVistaDeTrabalho() {
 export function applyTopBarVisibility() {
     if (!state.workspaceActive && !emVistaDeTrabalho()) return;
     if (state.wsTopBar) state.wsTopBar.classList.toggle('ws-top-bar-collapsed', state.topBarHidden);
-    if (state.termTopBar) state.termTopBar.classList.toggle('term-top-bar-collapsed', state.topBarHidden);
+    if (state.termTopBar) state.termTopBar.classList.toggle('term-top-bar-collapsed', state.termTopBarHidden);
 }
 
 export function applyTabsVisibility() {
@@ -146,8 +146,9 @@ export function applyTabsVisibility() {
     state.editorTabs.classList.toggle('editor-tabs-visible', show);
 }
 
-export function setTopBarHidden(hidden) {
+export function setTopBarHidden(hidden, manterBarraTerminal) {
     state.topBarHidden = !!hidden;
+    state.termTopBarHidden = !!hidden && !manterBarraTerminal;
     applyTopBarVisibility();
 }
 

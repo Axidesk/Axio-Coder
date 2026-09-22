@@ -69,6 +69,11 @@
       "area": "seccoes",
       "texto": "Secao longa de painel = cabecalho curto (TITULO | contagem) com um + a direita no fim da linha, que expande com animacao e comeca RECOLHIDA (mesmo desenho do painel de informacoes do projeto: grid-template-rows 0fr->1fr). O sinal e + que vira - e volta. Texto explicativo NUNCA fica solto na pagina: vive DENTRO da expansao, e muitas vezes basta o estado (\"Nada por commitar: ...\"). Listas longas (etiquetas, versoes) ficam em COLUNA, uma por linha - nunca em pills a enrolar. Campo de texto com acao por icone: o icone (ex: varinha) fica ENCOSTADO ao campo, que fica mais estreito, e o proprio icone mostra o spinner (a-trabalhar) enquanto processa - nunca um botao com label ao lado do campo. Informacao que ja existe noutro sitio (a lista de ficheiros da tarefa, que vive na pilha dos cards) NAO se repete no painel.",
       "atualizado": "2026-09-20 23:56:49"
+    },
+    {
+      "area": "melhorias",
+      "texto": "Em MODO AXIO (pasta aberta = raiz do Axio), as melhorias de uso geral identificadas na rodada fazem-se DIRETO no codigo, na mesma rodada, sem parar para avisar no fim - o utilizador autorizou a 2026-09-22. Regras: (a) a tarefa pedida vem SEMPRE primeiro; (b) a melhoria tem de ser de uso GERAL (serve uma familia de situacoes, nao so a ocasiao de hoje) - melhoria especifica de um projeto/modelo/cliente nao se faz; (c) vale a regra 21: estender/reusar a ferramenta existente ganha a criar outra; (d) testar e validar antes de a anunciar; (e) nunca deixar a tarefa do utilizador a meio. No fim, reportar em duas ou tres linhas o que melhorou. O que ficar por fazer e adiado de verdade escreve-se como 'AUTO-MELHORIA (adiada): <o que faltou, numa frase>' para nao se perder entre sessoes.",
+      "atualizado": "2026-09-22 20:20:18"
     }
   ]
 }

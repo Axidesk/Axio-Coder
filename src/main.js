@@ -401,21 +401,19 @@ function criarViewDoTipo(tipo) {
           nodeIntegration: true,
           contextIsolation: false,
           sandbox: false,
-          backgroundThrottling: false,
           spellcheck: false
         }
       : {
           nodeIntegration: false,
           contextIsolation: true,
-          sandbox: true,
-          backgroundThrottling: false
+          sandbox: true
         }
   });
   previewViews[tipo] = view;
   view.__axioAlvo = tipo;
   view.setBackgroundColor('#1e1e1e');
   view.setBounds(previewLimites || limitesDeArranque());
-  view.setVisible(false);
+  aplicarVisibilidadeDaView(view, false);
   ligarEventosDoPreview(view, querNode);
   view.webContents.on('did-finish-load', () => {
     aplicarZoomAoPreview();
@@ -430,12 +428,18 @@ function criarViewDoTipo(tipo) {
   return view;
 }
 
+function aplicarVisibilidadeDaView(view, visivel) {
+  if (!view || view.webContents.isDestroyed()) return;
+  view.setVisible(!!visivel);
+  view.webContents.setBackgroundThrottling(!visivel);
+}
+
 function mostrarSoAVista(tipo) {
   previewAtiva = tipo;
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
     if (!view) continue;
-    view.setVisible(previewVisivel && chave === tipo);
+    aplicarVisibilidadeDaView(view, previewVisivel && chave === tipo);
   }
 }
 
@@ -452,7 +456,7 @@ function definirVisibilidadeDoPreview(visivel) {
   for (const chave of TIPOS_DE_VIEW) {
     const view = viewDoTipo(chave);
     if (!view) continue;
-    view.setVisible(previewVisivel && chave === previewAtiva);
+    aplicarVisibilidadeDaView(view, previewVisivel && chave === previewAtiva);
     if (previewVisivel && mainWindow && !mainWindow.isDestroyed()) {
       if (!mainWindow.contentView.children.includes(view)) {
         mainWindow.contentView.addChildView(view);
