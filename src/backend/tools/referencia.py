@@ -33,7 +33,10 @@ MARCAS = medicao.MARCAS
     "imagens de escalas diferentes. Devolve tambem um desenho do diagnostico (contorno, faixas e "
     "marcas) para se ver se a medicao acertou - use-o SEMPRE antes de confiar nos numeros, e "
     "ele mesmo: se a separacao do fundo falhar, o relato avisa. Medir a referencia antes de "
-    "modelar poupa rodadas inteiras: modelar por intuicao erra por dezenas de pontos percentuais.",
+    "modelar poupa rodadas inteiras: modelar por intuicao erra por dezenas de pontos percentuais. "
+    "Quando a silhueta encosta a moldura (o relato avisa logo no inicio): OLHE para a imagem, diga "
+    "onde esta o objeto em 'quadro' e as marcas acesas passam a ser relativas a esse quadro - e "
+    "delas que saem as proporcoes (a que altura estao os olhos, o centro do rosto) para modelar.",
     {
         "imagem": {
             "tipo": "STRING",
@@ -51,6 +54,11 @@ MARCAS = medicao.MARCAS
             "desc": "Quantas zonas acesas listar, da mais clara para a menos.",
             "padrao": MARCAS,
         },
+        "quadro": {
+            "tipo": "STRING",
+            "desc": "Para quando a separacao do fundo falha (o relato diz que a silhueta encosta a moldura): olhe para a imagem, diga onde esta o objeto e tudo passa a ser medido dentro desse quadro. Quatro numeros SEPARADOS POR VIRGULA, em porcentagem da imagem, no sentido x0,y0,x1,y1 a partir do canto superior esquerdo (ex: '15,6,86,93'). Sem ele, a imagem sem fundo separavel so da o desenho do diagnostico.",
+            "padrao": "",
+        },
         "destino": {
             "tipo": "STRING",
             "desc": "Caminho onde gravar o desenho do diagnostico (ex: gerados/x/medida_ref.png). Vazio so mede.",
@@ -63,7 +71,7 @@ MARCAS = medicao.MARCAS
         },
     },
 )
-def tool_medir_referencia(imagem, faixas=FAIXAS, marcas=MARCAS, destino="", mostrar=True):
+def tool_medir_referencia(imagem, faixas=FAIXAS, marcas=MARCAS, quadro="", destino="", mostrar=True):
     emit_event("executing", function=f"Medindo referencia: {imagem}")
     alvo, erro = resolver_caminho(imagem, permitir_extra=True)
     if erro:
@@ -71,7 +79,9 @@ def tool_medir_referencia(imagem, faixas=FAIXAS, marcas=MARCAS, destino="", most
     if not os.path.isfile(alvo):
         return f"ERRO: ficheiro nao encontrado: {imagem}"
     try:
-        medidas = medicao.medir(alvo, faixas=_teto(faixas, 8, 40), marcas=_teto(marcas, 1, 12))
+        medidas = medicao.medir(
+            alvo, faixas=_teto(faixas, 8, 40), marcas=_teto(marcas, 1, 12), quadro=_quadro(quadro)
+        )
     except ValueError as falha:
         return f"ERRO: {falha}."
     except Exception as falha:
@@ -120,6 +130,11 @@ def tool_medir_referencia(imagem, faixas=FAIXAS, marcas=MARCAS, destino="", most
             "desc": "Em quantas faixas horizontais a altura e dividida na comparacao (8 a 40).",
             "padrao": FAIXAS,
         },
+        "quadro": {
+            "tipo": "STRING",
+            "desc": "Retangulo do objeto DENTRO da referencia, em porcentagem dela no sentido x0,y0,x1,y1 (ex: '15,6,86,93') - use quando o fundo da referencia nao se separa. O modelo continua a ser medido pela silhueta do desenho.",
+            "padrao": "",
+        },
         "destino": {
             "tipo": "STRING",
             "desc": "Caminho onde gravar a imagem das duas lado a lado (ex: gerados/x/comparacao.png). Vazio nao grava.",
@@ -133,7 +148,7 @@ def tool_medir_referencia(imagem, faixas=FAIXAS, marcas=MARCAS, destino="", most
     },
 )
 def tool_comparar_com_referencia(modelo, referencia, vista="frente", cima="", faixas=FAIXAS,
-                                 destino="", mostrar=True):
+                                 quadro="", destino="", mostrar=True):
     emit_event("executing", function=f"Comparando {modelo} com {referencia}")
     caminho_modelo, erro = resolver_caminho(modelo, permitir_extra=True)
     if erro:
@@ -158,7 +173,9 @@ def tool_comparar_com_referencia(modelo, referencia, vista="frente", cima="", fa
     except ValueError as falha:
         return f"ERRO: {falha}."
     try:
-        medidas_referencia = medicao.medir(caminho_referencia, faixas=quantas)
+        medidas_referencia = medicao.medir(
+            caminho_referencia, faixas=quantas, quadro=_quadro(quadro)
+        )
     except ValueError as falha:
         return f"ERRO na referencia '{referencia}': {falha}."
     except Exception as falha:
@@ -175,7 +192,12 @@ def tool_comparar_com_referencia(modelo, referencia, vista="frente", cima="", fa
     texto += f"\nVista do modelo: {nome} (azimute {azimute:g}, elevacao {elevacao:g}){rodape}."
     if medidas_referencia["toca_a_moldura"]:
         texto += ("\nAVISO: na referencia a silhueta encosta a moldura - confirme no desenho "
-                  "lado a lado se a separacao do fundo ficou com o objeto.")
+                  "lado a lado se a separacao do fundo ficou com o objeto. Se o fundo nao se "
+                  "separa, passe 'quadro' com o retangulo do objeto (x0,y0,x1,y1 em % da imagem): "
+                  "a comparacao passa a ser relativa a ele.")
+        if medidas_referencia.get("quadro"):
+            texto += ("\nAVISO: na referencia vale o quadro declarado, nao a silhueta - o modelo "
+                      "do outro lado e medido pela silhueta do desenho.")
     try:
         juntas = lado_a_lado(
             medicao.desenho(medidas_referencia),
@@ -228,3 +250,17 @@ def _teto(valor, minimo, maximo):
     except (TypeError, ValueError):
         return minimo
     return max(minimo, min(maximo, numero))
+
+
+def _quadro(declarado):
+    if not str(declarado).strip():
+        return None
+    partes = [parte for parte in str(declarado).replace(";", ",").split(",") if parte.strip()]
+    if len(partes) != 4:
+        raise ValueError(
+            f"o quadro precisa de 4 numeros (x0,y0,x1,y1 em % da imagem) e chegaram {len(partes)}"
+        )
+    try:
+        return tuple(float(parte) / 100.0 for parte in partes)
+    except ValueError:
+        raise ValueError(f"o quadro tem um valor que nao e numero: '{declarado}'")

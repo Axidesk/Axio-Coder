@@ -33,22 +33,24 @@ def carregar(caminho):
         return _dados_da_imagem(ficheiro.read())
 
 
-def medir(caminho, faixas=FAIXAS, marcas=MARCAS):
+def medir(caminho, faixas=FAIXAS, marcas=MARCAS, quadro=None):
     rgb, alfa = carregar(caminho)
-    return medir_dados(rgb, alfa, faixas, marcas)
+    return medir_dados(rgb, alfa, faixas, marcas, quadro)
 
 
-def medir_bytes(bruto, faixas=FAIXAS, marcas=MARCAS):
+def medir_bytes(bruto, faixas=FAIXAS, marcas=MARCAS, quadro=None):
     """Como medir(), mas de bytes de imagem - um render em memoria nao passa pelo disco."""
     rgb, alfa = _dados_da_imagem(bruto)
-    return medir_dados(rgb, alfa, faixas, marcas)
+    return medir_dados(rgb, alfa, faixas, marcas, quadro)
 
 
-def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS):
+def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS, quadro=None):
+    """quadro: (x0, y0, x1, y1) em fraccao da imagem, declarado por quem olhou onde esta o objeto."""
     bruta, como = _mascara_do_objeto(rgb, alfa)
     furada, outras = _limpar(bruta)
     cheia = _preencher(furada)
-    caixa = _caixa(cheia)
+    declarada = _quadro_em_pixeis(quadro, cheia.shape)
+    caixa = declarada if declarada else _caixa(cheia)
     if caixa is None:
         raise ValueError("nao encontrei objeto nenhum: a imagem parece vazia ou de uma cor so")
     x0, y0, x1, y1 = caixa
@@ -61,6 +63,10 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS):
     cinza = cinza_da_imagem[y0:y1 + 1, x0:x1 + 1]
     inclinacao, alongamento = _eixos(recorte)
     centro = _centro(recorte)
+    achados = _marcas_acesas(
+        cinza_da_imagem, (x0, y0, largura, altura), marcas * 3 if declarada else marcas
+    )
+    marcas_do_relato, marcas_fora = _marcas_no_quadro(achados, declarada, marcas)
     medidas = {
         "imagem": (int(cheia.shape[1]), int(cheia.shape[0])),
         "como": como,
@@ -76,10 +82,12 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS):
         "eixo": "vertical" if altura >= largura else "horizontal",
         "perfil": _perfil(recorte, faixas),
         "brilho": _brilho_por_faixa(cinza, recorte, faixas),
-        "marcas": _marcas_acesas(cinza_da_imagem, (x0, y0, largura, altura), marcas),
+        "marcas": marcas_do_relato,
+        "marcas_fora": marcas_fora,
         "buracos": _buracos(furada[y0:y1 + 1, x0:x1 + 1], float(recorte.sum())),
         "outras_pecas": outras,
         "toca_a_moldura": _toca_a_moldura(cheia),
+        "quadro": declarada,
         "rgb": rgb,
         "mascara": cheia,
     }
@@ -89,30 +97,41 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS):
 def relato(medidas, caminho=""):
     largura_imagem, altura_imagem = medidas["imagem"]
     largura_objeto, altura_objeto = medidas["objeto"]
+    declarado = medidas.get("quadro")
     linhas = [
-        f"=== SILHUETA DE {caminho or 'imagem'} ===",
+        f"=== MEDIDA DENTRO DE UM QUADRO QUE TU INDICASTE: {caminho or 'imagem'} ===" if declarado
+        else f"=== SILHUETA DE {caminho or 'imagem'} ===",
     ]
     linhas += _aviso_de_confianca(medidas)
+    if declarado:
+        linhas += _bloco_do_quadro(medidas)
     linhas += [
-        f"Imagem: {largura_imagem}x{altura_imagem} px. Objeto separado do fundo por: {medidas['como']}.",
-        f"Objeto: {largura_objeto}x{altura_objeto} px, caixa em x {medidas['caixa'][0]}..{medidas['caixa'][2]} "
+        f"Imagem: {largura_imagem}x{altura_imagem} px. "
+        + (f"Separacao do fundo tentada por: {medidas['como']} - sem resultado fiavel, vale o quadro "
+           f"que indicaste." if declarado else f"Objeto separado do fundo por: {medidas['como']}."),
+        f"Objeto: {largura_objeto}x{altura_objeto} px"
+        + (" (o quadro declarado)" if declarado else "")
+        + f", caixa em x {medidas['caixa'][0]}..{medidas['caixa'][2]} "
         f"e y {medidas['caixa'][1]}..{medidas['caixa'][3]}.",
-        f"Proporcao (largura/altura): {medidas['proporcao']:.3f} - {_leitura_da_proporcao(medidas['proporcao'])}.",
-        f"Eixo mais longo: {medidas['eixo']} ({_texto_do_eixo(medidas)}).",
-        f"Inclinacao do eixo principal: {medidas['inclinacao']:.1f} graus a partir da vertical; "
-        f"alongamento {_texto_do_alongamento(medidas['alongamento'])}.",
-        f"Area: {medidas['area_relativa']:.0%} da caixa (o quanto a forma a enche) e "
-        f"{medidas['area_da_imagem']:.1%} da imagem.",
-        f"Centro de massa: x {medidas['centro'][0]:.1%}, y {medidas['centro'][1]:.1%} (relativo ao objeto).",
     ]
-    if medidas["outras_pecas"]:
+    if not declarado:
+        linhas += [
+            f"Proporcao (largura/altura): {medidas['proporcao']:.3f} - {_leitura_da_proporcao(medidas['proporcao'])}.",
+            f"Eixo mais longo: {medidas['eixo']} ({_texto_do_eixo(medidas)}).",
+            f"Inclinacao do eixo principal: {medidas['inclinacao']:.1f} graus a partir da vertical; "
+            f"alongamento {_texto_do_alongamento(medidas['alongamento'])}.",
+            f"Area: {medidas['area_relativa']:.0%} da caixa (o quanto a forma a enche) e "
+            f"{medidas['area_da_imagem']:.1%} da imagem.",
+            f"Centro de massa: x {medidas['centro'][0]:.1%}, y {medidas['centro'][1]:.1%} (relativo ao objeto).",
+        ]
+    if medidas["outras_pecas"] and not declarado:
         mostradas = medidas["outras_pecas"][:5]
         texto = ", ".join(f"{area:.1%} da maior" for area in mostradas)
         restantes = len(medidas["outras_pecas"]) - len(mostradas)
         if restantes > 0:
             texto += f", e mais {restantes} peca(s) menores"
         linhas.append("Outras pecas soltas, ignoradas (a medicao e a maior): " + texto + ".")
-    if medidas["buracos"]:
+    if medidas["buracos"] and not declarado:
         linhas.append(
             "Vazios interiores (o objeto tem "
             + ", ".join(
@@ -124,13 +143,16 @@ def relato(medidas, caminho=""):
             "o desenho do diagnostico marca-os e mostra qual e)."
         )
     linhas += ["", "=== PROPORCOES POR FAIXAS (do topo para a base) ==="]
-    linhas.append("y (altura)   largura   centro-x   brilho")
-    for (y_pct, largura_pct, x_centro, densidade), brilho in zip(medidas["perfil"], medidas["brilho"]):
-        linhas.append(
-            f"{y_pct:8.1%}   {largura_pct:7.1%}   {x_centro:8.1%}   {brilho:6.0%}"
-            + ("   <- faixa vazia" if densidade <= 0.0 else "")
-        )
-    linhas.append(_leitura_do_perfil(medidas))
+    if declarado or _sem_objeto(medidas):
+        linhas.append(_texto_sem_silhueta(declarado))
+    else:
+        linhas.append("y (altura)   largura   centro-x   brilho")
+        for (y_pct, largura_pct, x_centro, densidade), brilho in zip(medidas["perfil"], medidas["brilho"]):
+            linhas.append(
+                f"{y_pct:8.1%}   {largura_pct:7.1%}   {x_centro:8.1%}   {brilho:6.0%}"
+                + ("   <- faixa vazia" if densidade <= 0.0 else "")
+            )
+        linhas.append(_leitura_do_perfil(medidas))
     linhas += ["", f"=== ZONAS MAIS ACESAS ({len(medidas['marcas'])}) ==="]
     if not medidas["marcas"]:
         linhas.append(
@@ -155,6 +177,16 @@ def relato(medidas, caminho=""):
             linhas.append(
                 "Estas marcas foram medidas na IMAGEM inteira, sem depender da silhueta - "
                 "continuam a valer quando a separacao do fundo falha."
+            )
+        if declarado:
+            linhas.append(
+                "As posicoes acima sao relativas ao QUADRO que indicaste, nao a imagem: usa-as como "
+                "proporcao do objeto que vais modelar."
+            )
+        if medidas.get("marcas_fora"):
+            linhas.append(
+                f"{medidas['marcas_fora']} mancha(s) acesa(s) cai(em) fora do quadro declarado "
+                f"(paineis, particulas do fundo) e nao entram na lista."
             )
     return "\n".join(linhas)
 
@@ -354,6 +386,29 @@ def _caixa(mascara):
     return int(colunas[0]), int(linhas[0]), int(colunas[-1]), int(linhas[-1])
 
 
+def _quadro_em_pixeis(quadro, forma):
+    if not quadro:
+        return None
+    altura, largura = forma[:2]
+    valores = [float(valor) for valor in quadro]
+    if len(valores) != 4:
+        raise ValueError("o quadro precisa de 4 numeros: x0, y0, x1, y1")
+    x0, y0, x1, y1 = valores
+    if not (0.0 <= x0 < x1 <= 1.0 and 0.0 <= y0 < y1 <= 1.0):
+        raise ValueError(
+            "o quadro tem de caber na imagem e ter area: x0 < x1 e y0 < y1, os quatro entre 0% e 100%"
+        )
+    caixa = (
+        int(round(x0 * largura)),
+        int(round(y0 * altura)),
+        min(largura - 1, int(round(x1 * largura)) - 1),
+        min(altura - 1, int(round(y1 * altura)) - 1),
+    )
+    if (caixa[2] - caixa[0] + 1) * (caixa[3] - caixa[1] + 1) < MINIMO_OBJETO * largura * altura:
+        raise ValueError("o quadro declarado e pequeno demais para medir (menos de 0,15% da imagem)")
+    return caixa
+
+
 def _centro(recorte):
     ys, xs = np.nonzero(recorte)
     if xs.size == 0:
@@ -460,6 +515,16 @@ def _marcas_acesas(cinza, caixa, quantas):
     return achados[:max(1, quantas)]
 
 
+def _marcas_no_quadro(achados, declarada, quantas):
+    if not declarada:
+        return achados[:quantas], 0
+    dentro = [
+        achado for achado in achados
+        if 0.0 <= achado["x"] <= 1.0 and 0.0 <= achado["y"] <= 1.0
+    ]
+    return dentro[:quantas], len(achados) - len(dentro)
+
+
 def _buracos(recorte, area_objeto):
     import cv2
 
@@ -538,6 +603,19 @@ def _texto_da_diferenca(valor_a, valor_b, formato):
     return formato.format(valor_b - valor_a)
 
 
+def _texto_sem_silhueta(declarado):
+    if declarado:
+        return (
+            "Largura por faixa nao medida: ela sairia da silhueta, que nao se separa do fundo nesta "
+            "imagem. Deste relato aproveitam-se o quadro acima e as marcas acesas abaixo."
+        )
+    return (
+        "Nao ha largura por faixa a relatar: nada foi separado do fundo e a caixa do objeto e a "
+        "imagem inteira, logo cada faixa mediria a largura da propria imagem. O que vale deste "
+        "relato sao as marcas acesas abaixo - e um quadro, se o indicares."
+    )
+
+
 def _veredicto_do_desvio(desvio):
     if desvio <= 0.03:
         return "As duas silhuetas praticamente coincidem faixa a faixa."
@@ -569,6 +647,32 @@ def _aviso_de_confianca(medidas):
         "Acontece quando objeto e fundo partilham a cor ou a luminosidade (malha de pontos, "
         "wireframe, holograma, fundo texturizado) - pela cor nao ha como separa-los, e nenhum "
         "limiar resolve isso. O que resolve: recortar a imagem ao objeto sobre fundo liso, ou "
-        "fotografar em contraluz. Sem isso, desta imagem so se aproveita o desenho do diagnostico.",
+        "fotografar em contraluz. Sem isso, deste relato valem as marcas acesas (nao dependem da "
+        "silhueta) e o quadro, quando o indicas: a forma, essa, nao sai daqui.",
         "",
     ]
+
+
+def _bloco_do_quadro(medidas):
+    largura_imagem, altura_imagem = medidas["imagem"]
+    x0, y0, x1, y1 = medidas["caixa"]
+    largura_objeto, altura_objeto = medidas["objeto"]
+    return [
+        "=== QUADRO DECLARADO (indicado por quem olhou, nao medido) ===",
+        f"Quadro: x {x0 / max(1, largura_imagem - 1):.1%} a {x1 / max(1, largura_imagem - 1):.1%} e "
+        f"y {y0 / max(1, altura_imagem - 1):.1%} a {y1 / max(1, altura_imagem - 1):.1%} da imagem "
+        f"(em px: x {x0}..{x1}, y {y0}..{y1} - {largura_objeto}x{altura_objeto} px, "
+        f"proporcao {medidas['proporcao']:.3f}).",
+        "A separacao do fundo nao encontrou o objeto nesta imagem, por isso a caixa do objeto e ESTA - "
+        "indicada, nao medida. Todas as percentagens abaixo sao relativas a ela e nao a imagem: e o "
+        "que torna a medida utilizavel para modelar.",
+        "",
+    ]
+
+
+def _sem_objeto(medidas):
+    """True quando a 'caixa do objeto' e a imagem inteira: nada foi separado do fundo."""
+    largura, altura = medidas["imagem"]
+    return tuple(medidas["caixa"]) == (0, 0, largura - 1, altura - 1)
+
+
