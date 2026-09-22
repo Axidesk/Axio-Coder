@@ -206,22 +206,6 @@
     text-overflow: ellipsis;
 }
 
-.git-campo-linha .git-lapis {
-    display: none;
-    color: var(--text-suave);
-}
-
-.git-lapis:hover {
-    color: var(--text-claro);
-}
-
-.git-campo-linha.git-trancado-amendavel .git-lapis {
-    display: inline-flex;
-}
-
-.git-campo-linha:not(.git-a-editar) .git-varinha-edicao {
-    display: none;
-}
 
 .git-salvar {
     color: var(--oliva);
