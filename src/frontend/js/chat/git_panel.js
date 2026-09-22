@@ -206,13 +206,19 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
         const temRemoto = !!(estado && estado.remoto);
         const porSubir = (estado && estado.por_subir) || [];
+        const levou = (pendentes && pendentes.levou) || null;
+        const noutroCommit = !pontoDaTarefa && porCommitar === 0 && !!levou;
         const vaiCommitar = !pontoDaTarefa && ficheiros.length > 0 && porCommitar !== 0;
         const mensagemDoPonto = mensagemDoPontoDaTarefa(estado, pontoDaTarefa);
-        const textoDoCampo = rotuloDoCampo(vaiCommitar, mensagemDoPonto, !!pontoDaTarefa);
+        const textoDoCampo = noutroCommit
+            ? 'Ficheiros commitados noutra tarefa'
+            : rotuloDoCampo(vaiCommitar, mensagemDoPonto, !!pontoDaTarefa);
         const podeEnviar = temRemoto && (vaiCommitar || porSubir.length > 0);
         const motivo = !temRemoto
             ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
-            : (podeEnviar ? 'Enviar para o GitHub' : 'Tudo ja esta no GitHub');
+            : (podeEnviar
+                ? 'Enviar para o GitHub'
+                : (noutroCommit ? 'Nao ha nada proprio desta tarefa por commitar' : 'Tudo ja esta no GitHub'));
         const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
         let cabecalho = `<span class="projeto-contagem">${rotulo}</span>`;
         if (porCommitar !== null) {
@@ -225,7 +231,10 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const notaDepoisDoPonto = pontoDaTarefa && porCommitar
             ? '<div class="git-nota">Estes ficheiros mudaram depois do ponto: o que esta por commitar e trabalho de outra tarefa.</div>'
             : '';
-        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto + notaDepoisDoPonto);
+        const notaNoutroCommit = noutroCommit
+            ? `<div class="git-nota">Estes ficheiros ja foram dentro do commit ${escapeHtml(levou.curto)} · ${escapeHtml(levou.mensagem)}: esta tarefa nao guarda ponto proprio.</div>`
+            : '';
+        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto + notaDepoisDoPonto + notaNoutroCommit);
         html += '<div class="git-campo-linha">';
         if (vaiCommitar) {
             html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`

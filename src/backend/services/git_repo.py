@@ -104,10 +104,11 @@ def _frente(raiz):
         return None, None
 
 
-def _ultimo_commit(raiz):
-    saida, erro = git_saida(
-        raiz, "log", "-1", "--pretty=format:%H" + _SEPARADOR + "%s" + _SEPARADOR + "%cI"
-    )
+def _ultimo_commit(raiz, caminhos=None):
+    """Commit mais recente do ramo, ou o mais recente que tocou nestes caminhos."""
+    formato = "--pretty=format:%H" + _SEPARADOR + "%s" + _SEPARADOR + "%cI"
+    so_estes = ["--", *caminhos] if caminhos else []
+    saida, erro = git_saida(raiz, "log", "-1", formato, *so_estes)
     if erro or not (saida or "").strip():
         return None
     partes = saida.split(_SEPARADOR)
@@ -390,6 +391,8 @@ def pendentes(pasta, caminhos):
             nome = nome.split(" -> ")[-1]
         if nome and nome not in nomes:
             nomes.append(nome)
+    if not nomes:
+        return {"repo": True, "pendentes": [], "count": 0, "levou": _ultimo_commit(raiz, caminhos)}
     return {"repo": True, "pendentes": nomes, "count": len(nomes)}
 
 

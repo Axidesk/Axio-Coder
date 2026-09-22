@@ -102,11 +102,13 @@ def git_pendentes():
             "message": info.get("motivo", ""),
             "pendentes": [],
             "count": 0,
+            "levou": None,
         })
     return jsonify({
         "status": "ok",
         "pendentes": info.get("pendentes", []),
         "count": info.get("count", 0),
+        "levou": info.get("levou"),
     })
 
 
