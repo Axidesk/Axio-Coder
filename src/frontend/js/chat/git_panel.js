@@ -208,13 +208,14 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             return html;
         }
         const ficheiros = ficheirosDaTarefa(grupo);
-        const hash = hashDaTarefa(grupo);
+        const pontoDaTarefa = hashDaTarefa(grupo);
         const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
         const temRemoto = !!(estado && estado.remoto);
         const porSubir = (estado && estado.por_subir) || [];
-        const vaiCommitar = ficheiros.length > 0 && porCommitar !== 0;
+        const vaiCommitar = !pontoDaTarefa && ficheiros.length > 0 && porCommitar !== 0;
         const podeEmendar = !vaiCommitar && _podeEmendar(grupo, estado);
-        const mensagemDoPonto = mensagemDoPontoDaTarefa(estado, hash);
+        const mensagemDoPonto = mensagemDoPontoDaTarefa(estado, pontoDaTarefa);
+        const textoDoCampo = rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto, !!pontoDaTarefa);
         const podeEnviar = temRemoto && (vaiCommitar || porSubir.length > 0);
         const motivo = !temRemoto
             ? 'Este projeto nao tem remoto (origin): nao ha para onde enviar'
@@ -225,19 +226,22 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
             cabecalho += '<span class="projeto-secao-sep">|</span>'
                 + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
         }
-        const notaPonto = hash
-            ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(hash.slice(0, 7))}${enviadaParaOServidor(hash) ? ' (no GitHub)' : ' (so no PC, por enviar)'}</div>`
+        const notaPonto = pontoDaTarefa
+            ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(pontoDaTarefa.slice(0, 7))}${enviadaParaOServidor(pontoDaTarefa) ? ' (no GitHub)' : ' (so no PC, por enviar)'}</div>`
             : '';
-        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto);
+        const notaDepoisDoPonto = pontoDaTarefa && porCommitar
+            ? '<div class="git-nota">Estes ficheiros mudaram depois do ponto: o que esta por commitar e trabalho de outra tarefa.</div>'
+            : '';
+        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto + notaDepoisDoPonto);
         html += `<div class="git-campo-linha${podeEmendar ? ' git-trancado-amendavel' : ''}">`;
         if (vaiCommitar) {
             html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`
                 + ` value="${escapeHtml(valorDoCampo(grupo))}"`
-                + ` placeholder="${escapeHtml(rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto))}">`;
+                + ` placeholder="${escapeHtml(textoDoCampo)}">`;
         } else {
             html += `<input id="git-mensagem" class="git-campo git-campo-trancado" type="text" spellcheck="false" disabled`
                 + ` value="${escapeHtml(mensagemDoPonto)}" data-git-mensagem="${escapeHtml(mensagemDoPonto)}"`
-                + ` placeholder="${escapeHtml(rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto))}">`;
+                + ` placeholder="${escapeHtml(textoDoCampo)}">`;
         }
         if (vaiCommitar) html += varinha('sugerir', 'Escrever a mensagem com a IA');
         else if (podeEmendar) html += varinha('sugerir', 'Escrever a mensagem com a IA', 'git-varinha-edicao');
@@ -250,10 +254,11 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         html += '</div>';
         return html;
     }
-    function rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto) {
+    function rotuloDoCampo(vaiCommitar, podeEmendar, mensagemDoPonto, temPonto) {
         if (vaiCommitar) return 'Mensagem do commit';
         if (podeEmendar) return 'Reescrever a mensagem deste commit';
-        return mensagemDoPonto ? 'Ja no GitHub' : 'Sem commit registado nesta tarefa';
+        if (mensagemDoPonto) return 'Ja no GitHub';
+        return temPonto ? 'Ponto registado, mas fora do historico visivel' : 'Sem commit registado nesta tarefa';
     }
     function corpoDaTarefa(grupo, pendentes) {
         const ficheiros = ficheirosDaTarefa(grupo);
@@ -420,7 +425,7 @@ const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" f
         const mensagem = campo ? campo.value.trim() : '';
         const ficheiros = ficheirosDaTarefa(grupo);
         const porCommitar = grupo.__pendentes;
-        const podeCommitar = ficheiros.length > 0 && porCommitar !== 0;
+        const podeCommitar = !hashDaTarefa(grupo) && ficheiros.length > 0 && porCommitar !== 0;
         try {
             const commit = await gravarPonto(grupo, mensagem, ficheiros, podeCommitar);
             if (commit && commit.status !== 'ok') {
