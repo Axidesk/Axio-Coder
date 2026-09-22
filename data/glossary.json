@@ -19,9 +19,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 402,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -39,9 +40,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 449,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -58,9 +60,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 437,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -76,9 +79,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 436,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -95,9 +99,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 173,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -116,9 +121,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 213,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -135,9 +141,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 80,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -154,9 +161,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 370,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -174,9 +182,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 352,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -193,9 +202,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 491,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -220,9 +230,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 481,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -239,9 +250,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 239,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -281,9 +293,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 423,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -302,9 +315,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 85,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -322,9 +336,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 362,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -345,9 +360,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 353,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -365,9 +381,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 664,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -385,9 +402,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 275,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -423,9 +441,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 179,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -463,10 +482,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 410,
+        "linha": 411,
         "conferido": [
-          1789947114.892,
-          22640
+          1790042814.202,
+          22671
         ]
       }
     },
@@ -485,9 +504,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 266,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -506,9 +526,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 391,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -626,9 +647,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 434,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -665,9 +687,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 188,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -683,9 +706,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 202,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -722,9 +746,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 285,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -742,9 +767,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 254,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -761,9 +787,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 176,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -804,8 +831,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 168,
         "conferido": [
-          1790036011.513,
-          36294
+          1790042858.406,
+          36983
         ]
       }
     },
@@ -822,10 +849,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 489,
+        "linha": 490,
         "conferido": [
-          1789947114.892,
-          22640
+          1790042814.202,
+          22671
         ]
       }
     },
@@ -978,9 +1005,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 248,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -999,9 +1027,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 613,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1121,10 +1150,10 @@
       "descricao": "Grava a identidade do embedder no sidecar do palace. O aviso 'has no recorded embedder identity; assuming the current model' sai UMA vez, no arranque em que a identidade e gravada (a verificacao corre antes da gravacao) e nao volta enquanto o sidecar tiver a chave. Apagar o palace apaga o sidecar, logo o aviso reaparece uma vez na reconstrucao.",
       "localizacao": {
         "arquivo": "src/backend/tools/code_index.py",
-        "linha": 64,
+        "linha": 81,
         "conferido": [
-          1789909298.752,
-          21997
+          1790043679.806,
+          22850
         ]
       }
     },
@@ -1370,9 +1399,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 420,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1390,9 +1420,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 242,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1410,9 +1441,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 273,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1430,9 +1462,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 124,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1452,9 +1485,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 149,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1472,9 +1506,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 93,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1762,9 +1797,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 618,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1783,9 +1819,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 648,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1804,9 +1841,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 636,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1826,9 +1864,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 646,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1846,9 +1885,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 642,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1908,9 +1948,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 632,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1928,9 +1969,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 568,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -1998,9 +2040,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 383,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -2041,9 +2084,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 379,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -2214,9 +2258,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 374,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -2320,8 +2365,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 300,
         "conferido": [
-          1790036011.513,
-          36294
+          1790042858.406,
+          36983
         ]
       }
     },
@@ -2473,9 +2518,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 513,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -2685,9 +2731,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 502,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -2855,9 +2902,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 499,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -3119,8 +3167,8 @@
         "arquivo": "src/backend/tools/pacotes.py",
         "linha": 975,
         "conferido": [
-          1790035906.642,
-          44252
+          1790042814.32,
+          44288
         ]
       }
     },
@@ -3140,9 +3188,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 475,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -3241,9 +3290,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 28,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -3260,9 +3310,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 597,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -3500,9 +3551,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 515,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -3911,9 +3963,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 653,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -3930,9 +3983,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 590,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -4152,9 +4206,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 116,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -4303,9 +4358,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 136,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -4467,9 +4523,10 @@
         "arquivo": "src/frontend/index.html",
         "linha": 156,
         "conferido": [
-          1790013280.712,
-          81114
-        ]
+          1790019264.017,
+          881
+        ],
+        "ausente": true
       }
     },
     {
@@ -4657,8 +4714,8 @@
         "arquivo": "src/backend/tools/ocr.py",
         "linha": 51,
         "conferido": [
-          1790042259.913,
-          7462
+          1790042974.427,
+          7545
         ]
       }
     },
@@ -4702,10 +4759,10 @@
       "descricao": "Mede a maquina de verdade (WMI + nvidia-smi) e diz o que ela aguenta: CPU com nucleos/threads, RAM com pentes e velocidade, GPU com VRAM total e livre, driver, compute capability, temperatura, discos, e se o Python do Axio tem aceleracao por GPU. resumo_da_maquina() e injetado no contexto a cada rodada (medido no arranque, estatico); relato_maquina() sai em tool_info_ambiente com os valores vivos e o veredito do que cabe na VRAM de agora.",
       "localizacao": {
         "arquivo": "src/backend/services/hardware.py",
-        "linha": 259,
+        "linha": 261,
         "conferido": [
-          1790042265.022,
-          12634
+          1790042814.261,
+          12715
         ]
       }
     },
@@ -4725,10 +4782,10 @@
       "descricao": "Regista o runtime CUDA do pip e pre-carrega as sub-bibliotecas do cuDNN (que o preload_dlls do onnxruntime nao carrega) e PROVA a GPU com uma inferencia real - a lista de provedores mente, porque sem isto tudo cai para CPU em silencio. Chamado no arranque por app.py e pelo motor do OCR.",
       "localizacao": {
         "arquivo": "src/backend/services/aceleracao.py",
-        "linha": 86,
+        "linha": 66,
         "conferido": [
-          1790042252.937,
-          6336
+          1790042826.69,
+          5944
         ]
       }
     },
@@ -4746,7 +4803,11 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 328
+        "linha": 328,
+        "conferido": [
+          1790042858.406,
+          36983
+        ]
       }
     }
   ]
