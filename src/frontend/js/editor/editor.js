@@ -460,6 +460,12 @@ export async function revealPath(relPath) {
     }
     highlightSelection();
 }
+export function caminhoRelativoAoProjeto(caminho, separador) {
+    const p = String(caminho || '').replace(/\\/g, '/');
+    const raiz = String(state.rootPath || state.currentCwd || '').replace(/\\/g, '/').replace(/\/+$/, '');
+    const rel = (raiz && p.toLowerCase().startsWith(raiz.toLowerCase() + '/')) ? p.slice(raiz.length + 1) : p;
+    return separador ? rel.replace(/\//g, separador) : rel;
+}
 export async function revealAndSelectFile(path) {
     if (!path) return;
     if (!state.explorerLoaded && typeof loadExplorer === 'function') {
@@ -470,13 +476,14 @@ export async function revealAndSelectFile(path) {
     if (state.explorerReadyPromise) {
         try { await state.explorerReadyPromise; } catch (e) {}
     }
-    const segments = String(path).split('/').filter(Boolean);
+    const relativo = caminhoRelativoAoProjeto(path);
+    const segments = relativo.split('/').filter(Boolean);
     const parent = segments.length > 1 ? segments.slice(0, -1).join('/') : '';
     if (parent !== state.currentCwdRel && typeof enterDir === 'function') {
         await enterDir(parent);
     }
-    selectEntry(path, 'file');
-    const row = findExplorerRow(path);
+    selectEntry(relativo, 'file');
+    const row = findExplorerRow(relativo);
     if (row && typeof row.scrollIntoView === 'function') {
         row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }

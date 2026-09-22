@@ -74,6 +74,11 @@
       "area": "melhorias",
       "texto": "Em MODO AXIO (pasta aberta = raiz do Axio), as melhorias de uso geral identificadas na rodada fazem-se DIRETO no codigo, na mesma rodada, sem parar para avisar no fim - o utilizador autorizou a 2026-09-22. Regras: (a) a tarefa pedida vem SEMPRE primeiro; (b) a melhoria tem de ser de uso GERAL (serve uma familia de situacoes, nao so a ocasiao de hoje) - melhoria especifica de um projeto/modelo/cliente nao se faz; (c) vale a regra 21: estender/reusar a ferramenta existente ganha a criar outra; (d) testar e validar antes de a anunciar; (e) nunca deixar a tarefa do utilizador a meio. No fim, reportar em duas ou tres linhas o que melhorou. O que ficar por fazer e adiado de verdade escreve-se como 'AUTO-MELHORIA (adiada): <o que faltou, numa frase>' para nao se perder entre sessoes.",
       "atualizado": "2026-09-22 20:20:18"
+    },
+    {
+      "area": "camada de codigo",
+      "texto": "Na camada de codigo (coluna 3 do doc e do historico), o cabecalho com o CAMINHO do ficheiro fica visivel enquanto a camada esta aberta, e nesse momento as abas do editor NAO aparecem (a barra de abas do doc recolhe). Clicar no TITULO revela o ficheiro na arvore do explorer - nunca entrega ao Monaco; a entrega ao Monaco e o clique no CORPO do codigo, e e ele que fecha a camada e traz as abas de volta. O titulo e so informacao e navegacao, nao uma acao sobre o editor.",
+      "atualizado": "2026-09-22 23:12:56"
     }
   ]
 }

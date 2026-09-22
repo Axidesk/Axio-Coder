@@ -545,8 +545,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1789873067.917,
-          10884
+          1790114413.563,
+          10949
         ]
       }
     },
@@ -1085,8 +1085,8 @@
         "arquivo": "src/backend/routes/chat.py",
         "linha": 37,
         "conferido": [
-          1789932541.37,
-          7165
+          1790114389.484,
+          7368
         ]
       }
     },
@@ -1574,17 +1574,15 @@
         "tabs escondidas",
         "barra de abas recolhe quando nao devia",
         "barra de abas volta a aparecer",
-        "abrir as notas recolhe a barra de abas"
+        "abrir as notas recolhe a barra de abas",
+        "barra de abas apareceu quando cliquei no ficheiro do log",
+        "abas do editor em vez do titulo"
       ],
       "identificador": "syncDocTopBar",
-      "descricao": "A barra de abas do doc (#ws-top-bar, com o #editor-tabs) recolhe em TRES casos: (a) quando o painel do historico esta aberto SEM o codigo dele no editor; (b) quando a camada do code view (#panel-col-3, a da doc) mostra um dos TRES PAINEIS (ferramentas, raciocinio, pergunta); (c) quando a CAMADA DE NOTAS (#panel-col-3-notes) esta aberta - condicao camadaNotasAberta() (layout.js:105), DERIVADA da vista 'notas' como todas as outras, nunca guardada a mao (era o defeito: um flag obsoleto mantinha a barra a mostra por baixo da camada). A barra e reavaliada quando a camada de notas abre (o abrirCol3 da vista chama syncDocTopBar) e quando fecha (aoFecharCol3). Com o historico aberto a barra so reaparece quando o codigo do historico entrou no Monaco (state.codigoDoHistoricoNoEditor) E a camada #panel-col-3-history ja fechou. Recolhida sobe 40px e o #editor-view passa a top:0.",
+      "descricao": "A barra de abas do doc (#ws-top-bar, com #editor-tabs) recolhe sempre que a camada de codigo da coluna 3 do DOCK esta aberta - mostre ela um painel (ferramentas/raciocinio/pergunta/git) ou um FICHEIRO/diff. O predicado e `camadaCol3Aberta()` (a antiga `camadaCol3MostraPaineis` era um caso particular dela e foi apagada em 2026-09-22). No mesmo passo o cabecalho da coluna 3 (#col-3-header, com o caminho do ficheiro) passa a ficar a vista, e o titulo clicado revela o ficheiro na arvore do explorer (files.js:_ligarTituloAoExplorer). Quando a camada sai, as abas voltam. O historico tem a sua propria parcela na mesma funcao (`isHistoryOpen() && !historicoNoEditor`).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/layout.js",
-        "linha": 117,
-        "conferido": [
-          1790113681.093,
-          9817
-        ]
+        "linha": 114
       }
     },
     {
@@ -1609,8 +1607,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 375,
         "conferido": [
-          1790039930.876,
-          40509
+          1790114413.583,
+          41133
         ]
       }
     },
@@ -1631,8 +1629,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 161,
         "conferido": [
-          1790039930.876,
-          40509
+          1790114413.583,
+          41133
         ]
       }
     },
@@ -1741,8 +1739,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 179,
         "conferido": [
-          1790039930.876,
-          40509
+          1790114413.583,
+          41133
         ]
       }
     },
@@ -2021,8 +2019,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 300,
         "conferido": [
-          1790113694.626,
-          18945
+          1790114413.2,
+          20309
         ]
       }
     },
@@ -2062,8 +2060,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 58,
         "conferido": [
-          1790113694.626,
-          18945
+          1790114413.2,
+          20309
         ]
       }
     },
@@ -2082,10 +2080,10 @@
       "descricao": "Cards PAUSADOS que aparecem sozinhos no TOPO da zona dos cards com os comandos de arranque da pasta que o explorer mostra. Criados por atualizarSugestoes(pastaRel), chamada por explorer.js:renderExplorer a cada navegacao de pasta. Chave sintetica 'sug:<comando>' no Map interno (ainda nao tem pid). A bolinha diz 'Executar' e o rotulo do fim (.term-card-fim) mostra a ORIGEM ('scripts.start', 'ponto de entrada', 'Docker Compose'...). O CLIQUE NO CABECALHO de uma sugestao NAO faz nada - nem abre (nao tem corpo) nem seleciona (nao aceita resposta); so a bolinha (play) e o X respondem. PERSISTENTES: nascem com `card.persistente = true` e essa marca SOBREVIVE ao play, por isso limparCards (a borrachinha e o cls) salta-os - o card do modulo continua a vista mesmo depois de correr e terminar. Quem os leva e: o X do card, o Ctrl+R (nao vem do GET /api/processos) e o MUDAR DE PASTA, por _removerSugestoes (que filtra por `persistente` e nao por `sugerido`, e poupa os que ainda correm). NAO RECONSTROI O QUE NAO MUDOU: o fetch corre ANTES de tocar no DOM e _mesmasSugestoes compara com sugestoesAtuais, saindo cedo quando a lista e igual - sem isso a zona piscava a cada renderExplorer (que corre a cada files_changed).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 554,
+        "linha": 592,
         "conferido": [
-          1790113694.626,
-          18945
+          1790114413.2,
+          20309
         ]
       }
     },
@@ -2171,8 +2169,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1789873067.917,
-          10884
+          1790114413.563,
+          10949
         ]
       }
     },
@@ -2257,8 +2255,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 230,
         "conferido": [
-          1790113694.626,
-          18945
+          1790114413.2,
+          20309
         ]
       }
     },
@@ -2278,8 +2276,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 422,
         "conferido": [
-          1790113694.626,
-          18945
+          1790114413.2,
+          20309
         ]
       }
     },
@@ -2530,10 +2528,10 @@
       "descricao": "Quando um comando de card imprime um endereco local, o backend anexa essa URL ao evento process_output (tools/process.py:_emitir_saida_processo, deteccao em services/sugestoes.py:detectar_url_na_saida) e o card ganha um botao de preview no cabecalho e ABRE a janela do preview sozinho, uma vez por URL. O anuncio sai por um CustomEvent 'axio-preview-open' com detail.auto (true = automatico), escutado em preview.js; o clique no botao reabre sem recarregar se aquele endereco ja estiver a mostra.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 453,
+        "linha": 486,
         "conferido": [
-          1790113694.626,
-          18945
+          1790114413.2,
+          20309
         ]
       }
     },
@@ -2646,10 +2644,10 @@
       "descricao": "O #preview-float (index.html) e o botao que surge flutuando quando EU uso o preview e o icone #btn-preview nao esta a vista (barra #ws-top-bar escondida ou colapsada). Nasce no index.html logo acima do #ws-top-bar e e posicionado por preview.js:mostrarAvisoDeUso com a ULTIMA caixa vista do icone (state.previewIconeCaixa, memorizada por memorizarIcone sempre que ele esta dentro do ecra; sem medida nenhuma cai na CAIXA_DE_RECURSO 16/6). Tem o mesmo desenho e o mesmo tamanho do icone real e desliza para cima ao aparecer (transform translateY 14px -> 0). Fica 8s e sai; clicar nele abre a vista do preview. Todo o aviso de uso entra pelo canal 'preview:uso' (o main.js repassa o que a ponte classifica) e e aplicado por marcarUsoDoPreview, que acende o #btn-preview com a classe .preview-em-uso (verde --oliva a pulsar, 2.6s) e, quando a acao E DE AGIR, traz a vista para a frente sozinha.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/preview.js",
-        "linha": 292,
+        "linha": 317,
         "conferido": [
-          1789875887.404,
-          21790
+          1790114413.321,
+          23007
         ]
       }
     },
@@ -4404,8 +4402,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 380,
         "conferido": [
-          1790039930.876,
-          40509
+          1790114413.583,
+          41133
         ]
       }
     },
@@ -5050,7 +5048,28 @@
       "descricao": "O icone do preview no card de terminal e um INTERRUPTOR, nao so um botao de abrir. Com a pagina a mostra no preview, um clique LARGA-a (largarPreview): a vista nativa deixa de ser mostrada (sincronizar passa a exigir !state.previewLargado) e o #preview-vazio volta a aparecer - a pagina NAO e descarregada, o processo continua a correr, so deixa de ser desenhada (e o Chromium abranda-a por backgroundThrottling). Novo clique RETOMA (retomarPreview) e ela volta sem recarregar. O estado vive em state.previewLargado; qualquer carregamento novo limpa-o. O preview avisa os cards por CustomEvent 'axio-preview-largado' (detail largado + alvo) e terminal_cards.js:_marcarLargura pinta o botao com .term-card-preview-largado e muda o titulo. O evento 'axio-preview-open' ganhou o campo 'alternar' (true quando o clique veio do card que JA tem o processo a correr).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/preview.js",
-        "linha": 253
+        "linha": 253,
+        "conferido": [
+          1790114413.321,
+          23007
+        ]
+      }
+    },
+    {
+      "termo": "titulo do ficheiro na coluna 3",
+      "aliases": [
+        "titulo da coluna 3",
+        "clicar no titulo do ficheiro",
+        "revelar na arvore",
+        "mostrar na arvore de ficheiros",
+        "abrir o ficheiro na arvore",
+        "titulo que nao e link"
+      ],
+      "identificador": "_ligarTituloAoExplorer",
+      "descricao": "Liga o TITULO da coluna 3 (doc e historico) ao explorer: poe cursor-pointer, o title 'Mostrar na arvore de ficheiros' e o onclick para WorkspaceView.revealAndSelectFile(caminho). O titulo e INFORMACAO E NAVEGACAO; a ENTREGA AO MONACO e o clique no CORPO do code view. Antes, no dock, o titulo entregava ao Monaco e no historico nao fazia nada.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/files.js",
+        "linha": 156
       }
     }
   ]

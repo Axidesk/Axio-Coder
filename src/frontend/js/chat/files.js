@@ -49,7 +49,7 @@ const NL = String.fromCharCode(10);
             vistaDock.marcarCaminhoEntrega(null);
             vistaDock.marcarCaminhoOriginal(caminhoAlvo);
 
-            col3Title.onclick = () => entregarAoMonaco(vistaDock);
+            _ligarTituloAoExplorer(col3Title, caminhoAlvo);
             carregarConteudoOriginal(caminhoAlvo, vistaDock);
             atualizarBotoesUndoRedo();
         },
@@ -75,7 +75,7 @@ const NL = String.fromCharCode(10);
             setupCol3ForFileView(dados.fileName, true);
             atualizarIconeOlho();
 
-            col3Title.onclick = () => entregarAoMonaco(vistaDock);
+            _ligarTituloAoExplorer(col3Title, caminhoAlvo);
             state.currentOpenedDiff = {
                 fullHtml: dados.htmlContent,
                 snippetHtml: dados.snippetHtml,
@@ -121,6 +121,7 @@ const NL = String.fromCharCode(10);
             vistaHistorico.marcarCaminhoOriginal(caminho);
             _modoCodigoHistorico();
             if (col3TitleHistory) col3TitleHistory.textContent = fileData.name;
+            _ligarTituloAoExplorer(col3TitleHistory, caminho);
             carregarConteudoOriginal(caminho, vistaHistorico);
         },
         abrirDiff(dados) {
@@ -129,6 +130,7 @@ const NL = String.fromCharCode(10);
             vistaHistorico.marcarCaminhoOriginal(caminho);
             _modoCodigoHistorico();
             if (col3TitleHistory) col3TitleHistory.textContent = dados.fileName;
+            _ligarTituloAoExplorer(col3TitleHistory, caminho);
 
             setCodeViewContent(dados.htmlContent, false, vistaHistorico, false);
             marcarLinhasAlteradas(codeViewContainerHistory, dados);
@@ -149,6 +151,16 @@ const NL = String.fromCharCode(10);
     function _focarAbaDoArquivo(caminho) {
         const wv = window.WorkspaceView;
         if (wv && typeof wv.focarAba === 'function') wv.focarAba(caminho);
+    }
+
+    function _ligarTituloAoExplorer(titulo, caminho) {
+        if (!titulo) return;
+        titulo.classList.add('cursor-pointer', 'hover:underline');
+        titulo.title = 'Mostrar na arvore de ficheiros';
+        titulo.onclick = () => {
+            const wv = window.WorkspaceView;
+            if (wv && typeof wv.revealAndSelectFile === 'function') wv.revealAndSelectFile(caminho);
+        };
     }
 
 

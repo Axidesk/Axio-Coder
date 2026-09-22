@@ -42,7 +42,7 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         if (lblRedoCount) lblRedoCount.classList.remove('hidden');
         
         col3Title.textContent = fileName;
-        col3Title.title = 'Abrir no editor';
+        col3Title.title = 'Mostrar na arvore de ficheiros';
         col3Title.classList.remove('text-[var(--text)]', 'text-[var(--text-branco)]');
         col3Title.classList.add('cursor-pointer', 'hover:underline', 'text-[var(--oliva)]');
         col3Title.ondblclick = null;
@@ -101,9 +101,6 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         return !!panelCol3 && !panelCol3.classList.contains('panel-col-closed');
     }
 
-    function camadaCol3MostraPaineis() {
-        return !!(state.isShowingTools || state.isShowingThoughts || state.isShowingQuestions || state.isShowingGit);
-    }
 
     function camadaNotasAberta() {
         const notas = vistaDe('notas');
@@ -115,14 +112,14 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
     }
 
     function syncDocTopBar() {
-        const paineis = camadaCol3MostraPaineis();
         const historico = vistaDe('historico');
         const historicoNoEditor = state.codigoDoHistoricoNoEditor && !(historico && historico.col3Aberta());
         const preview = vistaPreviewAtiva();
-        const esconder = preview || camadaNotasAberta() || (paineis && camadaCol3Aberta()) || (isHistoryOpen() && !historicoNoEditor);
+        const camadaDoDock = camadaCol3Aberta();
+        const esconder = preview || camadaNotasAberta() || camadaDoDock || (isHistoryOpen() && !historicoNoEditor);
         syncWorkspaceTopBar(esconder, preview);
 
-        if (col3Header) col3Header.style.display = paineis ? '' : 'none';
+        if (col3Header) col3Header.style.display = camadaDoDock ? '' : 'none';
     }
 
     function syncCopyButtons(vista, ativo) {

@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { setView } from './explorer.js';
 import { abreNoViewer, enderecoDoViewer } from './familia_ficheiro.js';
 import { abrirAbaDeFicheiro, abrirAbaWeb, ativarAlvoJaCarregado, definirAoTrocarDeAba, sincronizarEndereco } from './preview_abas.js';
+import { caminhoRelativoAoProjeto } from './editor.js';
 
 const ESQUEMA_URL = /^[a-z][a-z0-9+.-]*:\/\//i;
 const HOST_SEM_PORTA = /^(localhost|127\.0\.0\.1|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#]|$)/i;
@@ -102,14 +103,6 @@ function destinoDaBarra(texto) {
     return { tipo: 'busca', url: urlDeBusca(alvo) };
 }
 
-function relativoAoProjeto(caminho) {
-    const raiz = String(state.rootPath || state.currentCwd || '').replace(/[\\/]+$/, '').replace(/\//g, '\\');
-    const alvo = String(caminho || '').replace(/\//g, '\\');
-    if (!raiz) return alvo;
-    const base = raiz.toLowerCase() + '\\';
-    if (alvo.toLowerCase().startsWith(base)) return alvo.slice(base.length);
-    return alvo;
-}
 
 function urlDeFicheiroLocal(caminho) {
     const raiz = String(state.rootPath || state.currentCwd || '').replace(/[\\/]+$/, '');
@@ -370,7 +363,7 @@ export function abrirPreviewDoFicheiro(caminho) {
     if (!texto) return null;
     setView('preview');
     if (alvoEhEnderecoWeb(texto)) return abrirAbaWeb(urlDoTexto(texto));
-    return abrirAbaDeFicheiro(relativoAoProjeto(texto));
+    return abrirAbaDeFicheiro(caminhoRelativoAoProjeto(texto, '\\'));
 }
 
 function refletirAlvoDoPreview(url) {
@@ -378,7 +371,7 @@ function refletirAlvoDoPreview(url) {
     if (!alvo) return null;
     if (/^file:/i.test(alvo)) {
         const caminho = caminhoDoUrlDeFicheiro(alvo);
-        return caminho ? ativarAlvoJaCarregado(relativoAoProjeto(caminho), 'ficheiro') : null;
+        return caminho ? ativarAlvoJaCarregado(caminhoRelativoAoProjeto(caminho, '\\'), 'ficheiro') : null;
     }
     if (!ESQUEMA_URL.test(alvo)) return null;
     return ativarAlvoJaCarregado(alvo, 'web');
@@ -420,7 +413,7 @@ function carregarDaBarra() {
     if (!destino) return;
     if (destino.tipo === 'ficheiro') {
         state.previewQuedaHttp = null;
-        abrirAbaDeFicheiro(relativoAoProjeto(destino.alvo));
+        abrirAbaDeFicheiro(caminhoRelativoAoProjeto(destino.alvo, '\\'));
         return;
     }
     state.previewQuedaHttp = quedaHttp(destino);
