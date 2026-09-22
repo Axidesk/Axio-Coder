@@ -196,7 +196,7 @@ function sincronizar() {
     if (!state.previewHost) return;
     const ativa = state.currentView === 'preview';
     const limites = ativa ? limitesDoHost() : null;
-    const quer = !!limites && state.previewTemPagina && !estaTapado(limites);
+    const quer = !!limites && state.previewTemPagina && !state.previewLargado && !estaTapado(limites);
     const estreia = quer && state.previewVisivelEnviado !== true;
     if (estreia) {
         if (!entradaEm) {
@@ -239,8 +239,33 @@ function agendar(duracao) {
 
 function pintarAviso(erro) {
     if (state.previewErro) state.previewErro.classList.toggle('hidden', !erro);
-    if (state.previewVazio) state.previewVazio.classList.toggle('hidden', !!erro || state.previewTemPagina);
+    const mostraPagina = state.previewTemPagina && !state.previewLargado;
+    if (state.previewVazio) state.previewVazio.classList.toggle('hidden', !!erro || mostraPagina);
     if (erro && state.previewErroTexto) state.previewErroTexto.textContent = erro;
+}
+
+function avisarLarguraDoPreview() {
+    window.dispatchEvent(new CustomEvent('axio-preview-largado', {
+        detail: { largado: !!state.previewLargado, alvo: state.previewUltimoAlvo }
+    }));
+}
+
+function largarPreview() {
+    if (!state.previewTemPagina || state.previewLargado) return false;
+    state.previewLargado = true;
+    pintarAviso(null);
+    agendar();
+    avisarLarguraDoPreview();
+    return true;
+}
+
+function retomarPreview() {
+    if (!state.previewLargado) return false;
+    state.previewLargado = false;
+    pintarAviso(null);
+    agendar();
+    avisarLarguraDoPreview();
+    return true;
 }
 
 function pintarEstado(estado) {
@@ -369,6 +394,7 @@ async function abrirAba(aba) {
     atualizarOpcoesDoFicheiro(aba);
     if (!aba) {
         state.previewTemPagina = false;
+        state.previewLargado = false;
         state.previewUltimoAlvo = '';
         state.previewErroAtivo = false;
         pintarAviso(null);
@@ -429,6 +455,10 @@ async function carregarNaVista(destino) {
     }
     state.previewTemPagina = true;
     state.previewUltimoAlvo = destino;
+    if (state.previewLargado) {
+        state.previewLargado = false;
+        avisarLarguraDoPreview();
+    }
     agendar(SEGUIR_LAYOUT_MS);
     return true;
 }
@@ -500,6 +530,14 @@ function ligarEventos() {
     window.addEventListener('axio-preview-open', (e) => {
         const detalhe = e.detail || {};
         if (!detalhe.path) return;
+        const aMostra = state.currentView === 'preview'
+            && !!state.previewUltimoAlvo
+            && mesmaPaginaWeb(detalhe.path, state.previewUltimoAlvo);
+        if (detalhe.alternar && aMostra) {
+            if (state.previewLargado) retomarPreview();
+            else largarPreview();
+            return;
+        }
         if (detalhe.auto && state.currentView === 'preview' && state.previewUltimoAlvo === detalhe.path) return;
         abrirPreviewDoFicheiro(detalhe.path);
     });

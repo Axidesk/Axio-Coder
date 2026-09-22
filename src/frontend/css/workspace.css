@@ -184,6 +184,9 @@
 .term-card-preview {
     color: var(--oliva);
 }
+.term-card-preview-largado {
+    color: var(--text-mutado);
+}
 .term-card-seta {
     flex-shrink: 0;
     display: flex;

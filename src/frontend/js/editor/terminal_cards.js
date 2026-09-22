@@ -444,10 +444,43 @@ export function cardIniciar(data) {
     return _criarCard(data.pid, data.comando);
 }
 
-function _avisarPreview(url, automatico) {
+function _avisarPreview(url, automatico, alternar) {
     window.dispatchEvent(new CustomEvent('axio-preview-open', {
-        detail: { path: url, auto: !!automatico }
+        detail: { path: url, auto: !!automatico, alternar: !!alternar }
     }));
+}
+
+let avisoDeLarguraLigado = false;
+
+function _mesmoEndereco(a, b) {
+    try {
+        const x = new URL(a);
+        const y = new URL(b);
+        return x.origin === y.origin && x.pathname === y.pathname;
+    } catch (erro) {
+        return false;
+    }
+}
+
+function _marcarLargura(detalhe) {
+    const alvo = (detalhe || {}).alvo || '';
+    const largado = !!(detalhe || {}).largado;
+    cards.forEach((card) => {
+        const botao = card.cabeca ? card.cabeca.querySelector('.term-card-preview') : null;
+        if (!botao) return;
+        const meu = !!card.url && !!alvo && _mesmoEndereco(card.url, alvo);
+        botao.classList.toggle('term-card-preview-largado', meu && largado);
+        botao.title = meu
+            ? (largado ? 'Voltar a mostrar no preview: ' + card.url
+                       : 'Libertar o preview (a pagina continua a correr): ' + card.url)
+            : 'Abrir no preview (arranca o processo se estiver parado): ' + card.url;
+    });
+}
+
+function _ligarAvisoDeLargura() {
+    if (avisoDeLarguraLigado) return;
+    avisoDeLarguraLigado = true;
+    window.addEventListener('axio-preview-largado', (e) => _marcarLargura(e.detail));
 }
 
 function _anunciarUrl(card, url) {
@@ -462,11 +495,16 @@ function _anunciarUrl(card, url) {
         botao.innerHTML = SVG_PREVIEW;
         botao.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (!_estaRodando(card)) await _executarNoCard(card);
+            if (_estaRodando(card)) {
+                _avisarPreview(card.url, false, true);
+                return;
+            }
+            await _executarNoCard(card);
             _avisarPreview(card.url, false);
         });
         card.cabeca.insertBefore(botao, card.cabeca.querySelector('.term-card-fechar'));
     }
+    _ligarAvisoDeLargura();
     botao.title = 'Abrir no preview (arranca o processo se estiver parado): ' + url;
     _avisarPreview(url, true);
 }

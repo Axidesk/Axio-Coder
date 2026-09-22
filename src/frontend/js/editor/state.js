@@ -124,6 +124,7 @@ state.pendingSnippet = null;
 state.openTabs = [];
 state.previewTabPath = null;
 state.previewTemPagina = false;
+state.previewLargado = false;
 state.previewFerramentas = false;
 state.previewQuedaHttp = null;
 state.previewUltimoAlvo = '';

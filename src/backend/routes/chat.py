@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify, Response
 
 from src.backend.state import estado, emit_event, caminho_estado_projeto, registrar_subscriber, remover_subscriber, limpar_eventos
 from src.backend.services.process_manager import pty_lock, pty_kill_locked
-from src.backend.tools.process import matar_arvore
+from src.backend.tools.process import parar_processo_reg
 from src.backend.services.session import criar_sessao_vazia, migrar_session_logs_antigos
 from src.backend.services.session_index import preaquecer_indices_de_sessao
 from src.backend.ai.context import medir_contexto, truncar_mensagem_historico
@@ -57,16 +57,19 @@ def set_folder():
         estado["arquivos_tocados"] = set()
         estado["edicoes_rodada"] = []
         estado["compactacoes_contexto"] = 0
+        parados = 0
+        arvore_morta = 0
+        sobreviventes = []
         for pid, reg in list(estado.get("processos", {}).items()):
-            popen = reg.get("popen")
-            if popen is not None:
-                try:
-                    if popen.poll() is None:
-                        matar_arvore(popen)
-                except Exception:
-                    pass
-                reg["status"] = "parado"
-                emit_event("process_finished", pid=pid, exit_code=None, status="parado")
+            try:
+                resultado = parar_processo_reg(pid, reg)
+            except Exception:
+                continue
+            alvos = [item for item in resultado.get("alvos", []) if item.get("existe")]
+            if alvos:
+                parados += 1
+                arvore_morta += len(alvos)
+            sobreviventes.extend(resultado.get("sobraram", []))
         estado["processos"] = {}
         estado["session_id_atual"] = str(int(time.time() * 1000))
         criar_sessao_vazia(pasta, estado["session_id_atual"])
@@ -97,7 +100,8 @@ def set_folder():
         limpar_eventos()
         preaquecer_info_projeto(pasta)
         preaquecer_indices_de_sessao()
-        return jsonify({"folder": pasta, "status": "ready"})
+        return jsonify({"folder": pasta, "status": "ready", "processos_parados": parados,
+                        "arvore_morta": arvore_morta, "sobreviventes": sobreviventes})
     return jsonify({"error": "Nenhuma pasta fornecida"}), 400
 
 def _correr_loop(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model="gemini"):

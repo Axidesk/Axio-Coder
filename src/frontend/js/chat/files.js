@@ -670,9 +670,9 @@ const NL = String.fromCharCode(10);
                     const data = await response.json();
                     if (data.folder) {
                         aplicarPastaSelecionada(data.folder);
-                        lblStatus.textContent = recarregando
+                        lblStatus.textContent = (recarregando
                             ? 'Diretório recarregado.'
-                            : 'Diretório carregado.';
+                            : 'Diretório carregado.') + avisoDeProcessosDaPastaAnterior(data);
                         return true;
                     }
                 }
@@ -684,6 +684,17 @@ const NL = String.fromCharCode(10);
         lblStatus.textContent = 'Erro: Servidor não respondeu.';
         console.error('Erro ao selecionar pasta após várias tentativas.');
         return false;
+    }
+
+    function avisoDeProcessosDaPastaAnterior(data) {
+        const sobreviveram = (data && data.sobreviventes) || [];
+        const parados = Number(data && data.processos_parados) || 0;
+        if (sobreviveram.length) {
+            const nomes = sobreviveram.map(p => `${p.nome} (${p.pid})`).join(', ');
+            return ` ${parados ? parados + ' processo(s) da pasta anterior parado(s), mas ' : ''}${sobreviveram.length} sobreviveu: ${nomes}.`;
+        }
+        if (!parados) return '';
+        return ` ${parados} processo(s) da pasta anterior parado(s).`;
     }
 
     async function selectFolder() {

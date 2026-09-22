@@ -259,10 +259,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1195,
+        "linha": 1199,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -445,8 +445,8 @@
         "arquivo": "src/main.js",
         "linha": 273,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -1533,10 +1533,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1163,
+        "linha": 1167,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -1582,8 +1582,8 @@
         "arquivo": "src/frontend/js/chat/layout.js",
         "linha": 117,
         "conferido": [
-          1790013280.716,
-          9774
+          1790113681.093,
+          9817
         ]
       }
     },
@@ -1886,10 +1886,10 @@
       "descricao": "Icones de copiar ao lado do titulo da coluna 3: #btn-copy-tools-history no historico e #btn-copy-tools na doc (ambos em dom.js). Os dois sao decididos por UMA funcao, layout.js:syncCopyButtons(vista, ativo): mostra so o da vista que tem painel ativo (raciocinio, ferramentas ou pergunta) e esconde os dois quando nao ha painel. E chamada por renderer.js:pintarBotoesCol3(botoes, ativo, vista) - o 3o argumento e a vista e vem de alternarPainelCol3/ligarBotoesCol3/aoFecharCol3 -, por question_panel.js:showQuestionPanel e por setupCol3ForFileView/resetCol3State/files.js:_modoCodigoHistorico. ANTES o icone do historico era escondido num sitio e mostrado noutro (o caminho da PERGUNTA em alternarPainelCol3 devolvia antes dos toggles e deixava-o escondido) e o alternarPainelCol3 nao limpava os isShowing* ao fechar o painel pelo proprio icone, o que estragava a copia (_copiarPainelAtivo escolhe o texto pelo flag). O clique vive em renderer.js:_copiarPainelAtivo.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/layout.js",
-        "linha": 127,
+        "linha": 128,
         "conferido": [
-          1790013280.716,
-          9774
+          1790113681.093,
+          9817
         ]
       }
     },
@@ -2021,8 +2021,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 300,
         "conferido": [
-          1789592848.922,
-          18767
+          1790113694.626,
+          18945
         ]
       }
     },
@@ -2062,8 +2062,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 58,
         "conferido": [
-          1789592848.922,
-          18767
+          1790113694.626,
+          18945
         ]
       }
     },
@@ -2082,10 +2082,10 @@
       "descricao": "Cards PAUSADOS que aparecem sozinhos no TOPO da zona dos cards com os comandos de arranque da pasta que o explorer mostra. Criados por atualizarSugestoes(pastaRel), chamada por explorer.js:renderExplorer a cada navegacao de pasta. Chave sintetica 'sug:<comando>' no Map interno (ainda nao tem pid). A bolinha diz 'Executar' e o rotulo do fim (.term-card-fim) mostra a ORIGEM ('scripts.start', 'ponto de entrada', 'Docker Compose'...). O CLIQUE NO CABECALHO de uma sugestao NAO faz nada - nem abre (nao tem corpo) nem seleciona (nao aceita resposta); so a bolinha (play) e o X respondem. PERSISTENTES: nascem com `card.persistente = true` e essa marca SOBREVIVE ao play, por isso limparCards (a borrachinha e o cls) salta-os - o card do modulo continua a vista mesmo depois de correr e terminar. Quem os leva e: o X do card, o Ctrl+R (nao vem do GET /api/processos) e o MUDAR DE PASTA, por _removerSugestoes (que filtra por `persistente` e nao por `sugerido`, e poupa os que ainda correm). NAO RECONSTROI O QUE NAO MUDOU: o fetch corre ANTES de tocar no DOM e _mesmasSugestoes compara com sugestoesAtuais, saindo cedo quando a lista e igual - sem isso a zona piscava a cada renderExplorer (que corre a cada files_changed).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 555,
+        "linha": 554,
         "conferido": [
-          1789592848.922,
-          18767
+          1790113694.626,
+          18945
         ]
       }
     },
@@ -2257,8 +2257,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 230,
         "conferido": [
-          1789592848.922,
-          18767
+          1790113694.626,
+          18945
         ]
       }
     },
@@ -2276,10 +2276,10 @@
       "descricao": "Tres causas distintas do terminal dos cards piscar, todas corrigidas em 2026-09-16. (1) CARD FANTASMA (a principal, ao mandar comando com um card selecionado): o backend emite `process_started` DENTRO de `iniciar_processo` (tools/process.py:446), logo o SSE chega ANTES de a rota responder com o pid; o `cardIniciar` nao conhecia o pid novo e criava um card do zero, que o `_fundirCard` apagava quando a resposta chegava. Corrigido com o Map `lancamentos` (preenchido em `_lancar`, limpo num finally) e por `_cardEmLancamento(comando)`, que funde o evento no card com um POST em curso em vez de criar outro. (2) CORPO ESVAZIADO no reuso do card (ver 'pilha do card'). (3) SUGESTOES RECRIADAS: `atualizarSugestoes` removia os cards ANTES do fetch e recriava-os depois, com o browser a pintar o vazio no meio - agora o fetch corre primeiro e `_mesmasSugestoes` faz sair cedo quando a lista e a mesma (o explorer e re-renderizado a cada files_changed, ou seja enquanto o agente trabalha).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 425,
+        "linha": 422,
         "conferido": [
-          1789592848.922,
-          18767
+          1790113694.626,
+          18945
         ]
       }
     },
@@ -2452,8 +2452,8 @@
         "arquivo": "src/main.js",
         "linha": 394,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -2493,8 +2493,8 @@
         "arquivo": "src/main.js",
         "linha": 394,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -2530,10 +2530,10 @@
       "descricao": "Quando um comando de card imprime um endereco local, o backend anexa essa URL ao evento process_output (tools/process.py:_emitir_saida_processo, deteccao em services/sugestoes.py:detectar_url_na_saida) e o card ganha um botao de preview no cabecalho e ABRE a janela do preview sozinho, uma vez por URL. O anuncio sai por um CustomEvent 'axio-preview-open' com detail.auto (true = automatico), escutado em preview.js; o clique no botao reabre sem recarregar se aquele endereco ja estiver a mostra.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 456,
+        "linha": 453,
         "conferido": [
-          1789592848.922,
-          18767
+          1790113694.626,
+          18945
         ]
       }
     },
@@ -3301,8 +3301,8 @@
         "arquivo": "src/main.js",
         "linha": 41,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -3380,10 +3380,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 944,
+        "linha": 948,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -3540,10 +3540,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 900,
+        "linha": 904,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -4128,10 +4128,10 @@
       "descricao": "View filha do contentView da janela principal (nao uma janela separada)",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 668,
+        "linha": 672,
         "conferido": [
-          1790035958.587,
-          47323
+          1790113795.668,
+          47491
         ]
       }
     },
@@ -4444,10 +4444,10 @@
       "descricao": "Botao do painel que ENVIA: se houver ficheiros por commitar faz o commit (mensagem do campo, senao a pergunta da tarefa) e depois git push; se nao houver nada a commitar, so faz push. O atributo data-git-acao=\"enviar\" e INTERPOLADO em aviao(acao,...), por isso nao existe como texto fixo no ficheiro. Fica lado a lado com o lapis (.git-lapis) quando o commit da tarefa ainda nao subiu; desativado com o motivo no title quando nao ha remoto ou ja esta tudo no GitHub.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 92,
+        "linha": 91,
         "conferido": [
-          1790038417.706,
-          31221
+          1790113717.895,
+          29286
         ]
       }
     },
@@ -4485,10 +4485,10 @@
       "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 190,
+        "linha": 184,
         "conferido": [
-          1790038417.706,
-          31221
+          1790113717.895,
+          29286
         ]
       }
     },
@@ -4499,10 +4499,10 @@
       "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 152,
+        "linha": 146,
         "conferido": [
-          1790038417.706,
-          31221
+          1790113717.895,
+          29286
         ]
       }
     },
@@ -5034,6 +5034,23 @@
           81114
         ],
         "ausente": true
+      }
+    },
+    {
+      "termo": "largar o preview",
+      "aliases": [
+        "libertar o preview",
+        "desacoplar o preview",
+        "soltar o preview",
+        "preview desacoplado",
+        "preview largado",
+        "icone do preview apagado"
+      ],
+      "identificador": "largarPreview / retomarPreview",
+      "descricao": "O icone do preview no card de terminal e um INTERRUPTOR, nao so um botao de abrir. Com a pagina a mostra no preview, um clique LARGA-a (largarPreview): a vista nativa deixa de ser mostrada (sincronizar passa a exigir !state.previewLargado) e o #preview-vazio volta a aparecer - a pagina NAO e descarregada, o processo continua a correr, so deixa de ser desenhada (e o Chromium abranda-a por backgroundThrottling). Novo clique RETOMA (retomarPreview) e ela volta sem recarregar. O estado vive em state.previewLargado; qualquer carregamento novo limpa-o. O preview avisa os cards por CustomEvent 'axio-preview-largado' (detail largado + alvo) e terminal_cards.js:_marcarLargura pinta o botao com .term-card-preview-largado e muda o titulo. O evento 'axio-preview-open' ganhou o campo 'alternar' (true quando o clique veio do card que JA tem o processo a correr).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/preview.js",
+        "linha": 253
       }
     }
   ]
