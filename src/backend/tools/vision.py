@@ -12,7 +12,7 @@ import os
 import tempfile
 import time
 
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
 
 from src.backend.geometry.vista import EXTENSOES_MODELO, desenhar, desenho_do_ficheiro, vistas_do_pedido
 from src.backend.state import caminho_estado_projeto, emit_event, estado
@@ -20,11 +20,13 @@ from src.backend.tools.registry import register
 from src.backend.services.capturas import fins_do_conteudo, mapa_de_atividade, preparar_captura
 from src.backend.services.file_service import resolver_caminho
 from src.backend.services.imagem import (
+    DPI_PDF,
     TOKENS_POR_IMAGEM,
     codificar_pedaco,
     codificar_para_envio,
     dimensoes_da_imagem,
     lado_a_lado,
+    pagina_do_pdf_em_png,
     registar_imagem_olhada,
     retangulo_da_regiao,
     tiles_da_imagem,
@@ -32,7 +34,7 @@ from src.backend.services.imagem import (
 
 PRINTS_A_GUARDAR = 50
 MAX_TILES = 36
-DPI_PDF = 110
+AMPLIACAO_MAXIMA = 8
 
 
 def _consciencia_de_dpi():
@@ -352,9 +354,20 @@ def tool_capturar_print(regiao="", ecra="principal", detalhe="unico"):
             "desc": "Caminho de uma imagem de referencia (foto, render, prancha). Cada vista sai LADO A LADO com ela, a referencia a esquerda - e a forma de julgar semelhanca sem alternar entre duas imagens. Use sempre que estiver a modelar a partir de uma referencia visual.",
             "padrao": "",
         },
+        "regiao": {
+            "tipo": "STRING",
+            "desc": "Olha so para um recorte: 'x,y,largura,altura' em pixels da imagem (ex: '590,330,220,80'). E o caminho para LER letra pequena: a imagem inteira chega ao modelo dentro de um teto de ~800x800 px equivalentes e um texto de 8 px de altura desaparece la dentro, enquanto o mesmo texto recortado e ampliado fica legivel. Vale para imagem e para pagina de PDF; num modelo 3D e ignorado.",
+            "padrao": "",
+        },
+        "ampliar": {
+            "tipo": "INTEGER",
+            "desc": "Quantas vezes ampliar o recorte (1 a 8). A ampliacao nao inventa detalhe nenhum: torna grande o que ja la esta.",
+            "padrao": 1,
+        },
     },
 )
-def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_com="", cima=""):
+def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_com="", cima="",
+                    regiao="", ampliar=1):
     emit_event("executing", function=f"Abrindo: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -368,6 +381,16 @@ def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_c
         return f"ERRO: {falha}"
     except Exception as falha:
         return f"ERRO: nao foi possivel ler '{caminho_relativo}' ({falha})."
+
+    if extensao not in EXTENSOES_MODELO and (regiao or int(ampliar or 1) > 1):
+        try:
+            desenhos = [
+                (_recorte_ampliado(bruto, regiao, ampliar),
+                 f"{legenda} (recorte ampliado {max(1, min(AMPLIACAO_MAXIMA, int(ampliar or 1)))}x)")
+                for bruto, legenda in desenhos
+            ]
+        except ValueError as falha:
+            return f"ERRO: {falha}"
 
     juntas = ""
     if comparar_com:
@@ -559,28 +582,33 @@ def _bloco_depois(blocos, ponto):
     return None
 
 
+def _recorte_ampliado(bruto, regiao, ampliar):
+    """Bytes do recorte pedido, ampliado - a via para ler letra pequena na imagem inteira."""
+    fator = max(1, min(AMPLIACAO_MAXIMA, int(ampliar or 1)))
+    with Image.open(io.BytesIO(bruto)) as imagem:
+        imagem.load()
+        caixa = retangulo_da_regiao(regiao) if regiao else (0, 0, imagem.width, imagem.height)
+        if not caixa:
+            raise ValueError("'regiao' tem de ser 'x,y,largura,altura' em pixels (ex: '590,330,220,80').")
+        if caixa[0] < 0 or caixa[1] < 0 or caixa[2] > imagem.width or caixa[3] > imagem.height:
+            raise ValueError(f"a regiao {caixa} sai fora da imagem, que tem {imagem.width}x{imagem.height} px.")
+        recorte = imagem.crop(caixa).convert("RGB")
+        if fator > 1:
+            recorte = recorte.resize((recorte.width * fator, recorte.height * fator),
+                                     Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        recorte.save(buffer, format="PNG", optimize=True)
+        return buffer.getvalue()
+
+
 def _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar, cima=""):
     if extensao == ".pdf":
-        return [_pagina_do_pdf(alvo, pagina)]
+        return [pagina_do_pdf_em_png(alvo, pagina, DPI_PDF)]
     if extensao in EXTENSOES_MODELO:
         return _vistas_do_modelo(alvo, vista, focar, cima)
     with open(alvo, "rb") as ficheiro:
         return [(ficheiro.read(), "")]
 
-
-def _pagina_do_pdf(alvo, pagina):
-    import pymupdf
-
-    documento = pymupdf.open(alvo)
-    try:
-        total = documento.page_count
-        numero = int(pagina or 1)
-        if not 1 <= numero <= total:
-            raise ValueError(f"o PDF tem {total} pagina(s); a pagina {numero} nao existe")
-        folha = documento.load_page(numero - 1)
-        return folha.get_pixmap(dpi=DPI_PDF).tobytes("png"), f" (pagina {numero} de {total} do PDF)"
-    finally:
-        documento.close()
 
 
 def _vistas_do_modelo(alvo, vista, focar, cima=""):

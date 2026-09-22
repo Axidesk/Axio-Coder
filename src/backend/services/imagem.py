@@ -33,6 +33,7 @@ SOBREPOSICAO_TILE = 32
 MAX_PEDACOS = 16
 LIMITE_IMAGEM_REDE = 12 * 1024 * 1024
 LIMITE_VISTAS = 400
+DPI_PDF = 110
 
 FORMATOS_ACEITOS = ("image/jpeg", "image/png", "image/gif", "image/webp")
 
@@ -146,6 +147,22 @@ def dimensoes_da_imagem(bruto):
             return imagem.size
     except Exception:
         return None
+
+
+def pagina_do_pdf_em_png(alvo, pagina, dpi=DPI_PDF):
+    """(bytes PNG, legenda) de uma pagina do PDF renderizada a 'dpi'."""
+    import pymupdf
+
+    documento = pymupdf.open(alvo)
+    try:
+        total = documento.page_count
+        numero = int(pagina or 1)
+        if not 1 <= numero <= total:
+            raise ValueError(f"o PDF tem {total} pagina(s); a pagina {numero} nao existe")
+        folha = documento.load_page(numero - 1)
+        return folha.get_pixmap(dpi=dpi).tobytes("png"), f" (pagina {numero} de {total} do PDF)"
+    finally:
+        documento.close()
 
 
 def retangulo_da_regiao(regiao):

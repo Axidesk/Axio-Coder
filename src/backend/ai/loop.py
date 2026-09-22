@@ -41,6 +41,7 @@ from src.backend.tools import (
     malha,
     memory_tools,
     modelagem,
+    ocr,
     paint,
     plan,
     preferencias,

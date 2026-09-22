@@ -1609,8 +1609,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 375,
         "conferido": [
-          1789950759.957,
-          39880
+          1790039930.876,
+          40509
         ]
       }
     },
@@ -1631,8 +1631,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 161,
         "conferido": [
-          1789950759.957,
-          39880
+          1790039930.876,
+          40509
         ]
       }
     },
@@ -1741,8 +1741,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 179,
         "conferido": [
-          1789950759.957,
-          39880
+          1790039930.876,
+          40509
         ]
       }
     },
@@ -3219,10 +3219,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 651,
+        "linha": 661,
         "conferido": [
-          1790036580.98,
-          42068
+          1790039920.389,
+          42557
         ]
       }
     },
@@ -4404,8 +4404,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 380,
         "conferido": [
-          1789950759.957,
-          39880
+          1790039930.876,
+          40509
         ]
       }
     },
@@ -4551,76 +4551,6 @@
       }
     },
     {
-      "termo": "boca do avatar",
-      "aliases": [
-        "boca",
-        "a boca do avatar",
-        "labios",
-        "labios do avatar",
-        "fenda da boca"
-      ],
-      "identificador": "labiosDoRosto",
-      "descricao": "Os labios sao desenhados sobre a superficie do busto (labio de cima com arco de cupido, labio de baixo, fenda e cantos) e abrem com labiosDoRosto(abertura), que interpola entre a boca fechada e aberta segundo os visemas. A malha interna da boca vive escondida em malha_canonica.js:OCULTOS.",
-      "localizacao": {
-        "arquivo": "src/frontend/js/avatar/tracos.js",
-        "linha": 146,
-        "ausente": true
-      }
-    },
-    {
-      "termo": "rosto do agente",
-      "aliases": [
-        "rosto",
-        "rosto do avatar",
-        "face",
-        "cara",
-        "malha da cara",
-        "malha do rosto"
-      ],
-      "identificador": "malhaDoRosto / verticesDoRosto / VERTICES / ARESTAS",
-      "descricao": "A face e a malha canonica do MediaPipe (468 vertices, 1322 arestas) vinda de malha_canonica.js. Nao ha mais superficie de revolucao.",
-      "localizacao": {
-        "arquivo": "src/frontend/js/avatar/rosto.js",
-        "linha": 228,
-        "ausente": true
-      }
-    },
-    {
-      "termo": "malha que acompanha o formato do rosto",
-      "aliases": [
-        "edge loops",
-        "aneis da malha",
-        "linhas que contornam o olho",
-        "fluxo da malha",
-        "malha da cara"
-      ],
-      "identificador": "VERTICES / ARESTAS (malha_canonica.js)",
-      "descricao": "A topologia anatomica ja nao e calculada por campo de fluxo: vem pronta do MediaPipe Face Mesh.",
-      "localizacao": {
-        "arquivo": "src/frontend/js/avatar/malha_canonica.js",
-        "linha": 1,
-        "ausente": true
-      }
-    },
-    {
-      "termo": "olho do rosto",
-      "aliases": [
-        "olho",
-        "os olhos do rosto",
-        "olhos do avatar",
-        "iris",
-        "pupila",
-        "palpebra"
-      ],
-      "identificador": "olhosDoRosto",
-      "descricao": "Cada olho e uma amendoa desenhada sobre a superficie do busto (palpebra de cima mais alta, iris e pupila), centrada nos valores medidos das componentes da malha. Os globos e pestanas do proprio modelo ficam escondidos por malha_canonica.js:OCULTOS e o piscar fecha o grupo em Y em cabeca.js.",
-      "localizacao": {
-        "arquivo": "src/frontend/js/avatar/tracos.js",
-        "linha": 93,
-        "ausente": true
-      }
-    },
-    {
       "termo": "medir uma malha",
       "aliases": [
         "o que e isto que aparece aceso",
@@ -4684,10 +4614,10 @@
       "descricao": "Mede uma imagem de referencia em numeros (silhueta, proporcao, largura por faixas da altura, zonas mais acesas) e entrega o desenho do diagnostico. A medicao de fato vive em src/backend/geometry/referencia.py:medir.",
       "localizacao": {
         "arquivo": "src/backend/tools/referencia.py",
-        "linha": 74,
+        "linha": 77,
         "conferido": [
-          1790039444.168,
-          12341
+          1790040188.766,
+          13185
         ]
       }
     },
@@ -4705,11 +4635,44 @@
       "descricao": "Mede o modelo num render e a referencia pelo mesmo instrumento e devolve as duas lado a lado em numeros, com a diferenca faixa a faixa e um veredicto. O lado a lado SO para os olhos continua em tool_ver_imagem(comparar_com).",
       "localizacao": {
         "arquivo": "src/backend/tools/referencia.py",
-        "linha": 150,
+        "linha": 153,
         "conferido": [
-          1790039444.168,
-          12341
+          1790040188.766,
+          13185
         ]
+      }
+    },
+    {
+      "termo": "ler o texto de uma imagem",
+      "aliases": [
+        "ocr",
+        "as letras da imagem",
+        "texto do print",
+        "cotas da prancha",
+        "o que esta escrito na imagem"
+      ],
+      "identificador": "tool_ler_texto_imagem",
+      "descricao": "Le a escrita de uma imagem ou pagina de PDF (RapidOCR sobre onnxruntime, modelos PP-OCRv6 dentro do pacote) e devolve cada trecho com caixa em % e confianca. E o caminho para tirar as COTAS de uma prancha.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/ocr.py",
+        "linha": 51
+      }
+    },
+    {
+      "termo": "lupa da imagem",
+      "aliases": [
+        "ampliar a imagem",
+        "ver de perto",
+        "zoom na imagem",
+        "ler letra pequena",
+        "recorte ampliado",
+        "ampliar o recorte"
+      ],
+      "identificador": "_recorte_ampliado / parametros regiao e ampliar de tool_ver_imagem",
+      "descricao": "Recorta 'x,y,largura,altura' em pixels e amplia ate 8x: a imagem inteira chega ao modelo num teto de ~800x800 px equivalentes e a letra de 8-10 px desaparece la dentro; recortada e ampliada, fica legivel.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/vision.py",
+        "linha": 585
       }
     }
   ]
