@@ -263,10 +263,15 @@ const { historyLogsWrapper } = dom;
     }
     function nomeDaTarefaDoCommit(hash) {
         if (!hash) return '';
+        const daLista = (lista) => {
+            const achado = (lista || []).find(l => (l.commit || (state.commitsDosTurnos || {})[String(l.id)] || '') === hash);
+            return achado ? (achado.displayName || achado.name || '') : '';
+        };
+        const doTurnoAtual = daLista(state.currentTurnLogs);
+        if (doTurnoAtual) return doTurnoAtual;
         for (const sessao of state.sessionHistoryList) {
-            const logs = state.sessionDetailCache[sessao.filename] || [];
-            const achado = logs.find(l => l.commit === hash);
-            if (achado) return achado.displayName || achado.name || '';
+            const nome = daLista(state.sessionDetailCache[sessao.filename]);
+            if (nome) return nome;
         }
         return '';
     }

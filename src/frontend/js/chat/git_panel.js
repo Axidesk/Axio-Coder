@@ -245,8 +245,11 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const notaDepoisDoPonto = pontoDaTarefa && porCommitar
             ? '<div class="git-nota">Estes ficheiros mudaram depois do ponto: o que esta por commitar e trabalho de outra tarefa.</div>'
             : '';
+        const donoDesteCommit = noutroCommit ? nomeDaTarefaDoCommit(levou.hash) : '';
         const notaNoutroCommit = noutroCommit
-            ? `<div class="git-nota">Estes ficheiros ja foram dentro do commit ${escapeHtml(levou.curto)} · ${escapeHtml(levou.mensagem)}: esta tarefa nao guarda ponto proprio.</div>`
+            ? `<div class="git-nota">Estes ficheiros ja foram dentro do commit ${escapeHtml(levou.curto)}`
+              + ` (${escapeHtml(donoDesteCommit || 'fora do painel')}) · ${escapeHtml(levou.mensagem)}`
+              + ': esta tarefa nao guarda ponto proprio.</div>'
             : '';
         html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto + notaDepoisDoPonto + notaNoutroCommit);
         html += '<div class="git-campo-linha">';
