@@ -21,8 +21,7 @@ LIMIAR_MINIMO = 12.0
 MINIMO_BURACO = 0.004
 MINIMO_OBJETO = 0.0015
 MINIMO_PECA = 0.02
-MINIMO_MARCA = 0.0015
-MAXIMO_MARCA = 0.6
+MINIMO_PIXEIS_MARCA = 4.0
 LIMIAR_COMPACTA = 0.15
 LIMIAR_PECA_SOLTA = 0.5
 PESO_LUZ = (0.299, 0.587, 0.114)
@@ -58,7 +57,8 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS):
     if largura * altura < MINIMO_OBJETO * cheia.size:
         raise ValueError("o objeto encontrado e pequeno demais para medir (menos de 0,15% da imagem)")
     recorte = cheia[y0:y1 + 1, x0:x1 + 1]
-    cinza = _cinza(rgb)[y0:y1 + 1, x0:x1 + 1]
+    cinza_da_imagem = _cinza(rgb)
+    cinza = cinza_da_imagem[y0:y1 + 1, x0:x1 + 1]
     inclinacao, alongamento = _eixos(recorte)
     centro = _centro(recorte)
     medidas = {
@@ -76,7 +76,7 @@ def medir_dados(rgb, alfa=None, faixas=FAIXAS, marcas=MARCAS):
         "eixo": "vertical" if altura >= largura else "horizontal",
         "perfil": _perfil(recorte, faixas),
         "brilho": _brilho_por_faixa(cinza, recorte, faixas),
-        "marcas": _marcas_acesas(cinza, recorte, marcas),
+        "marcas": _marcas_acesas(cinza_da_imagem, (x0, y0, largura, altura), marcas),
         "buracos": _buracos(furada[y0:y1 + 1, x0:x1 + 1], float(recorte.sum())),
         "outras_pecas": outras,
         "toca_a_moldura": _toca_a_moldura(cheia),
@@ -133,18 +133,29 @@ def relato(medidas, caminho=""):
     linhas.append(_leitura_do_perfil(medidas))
     linhas += ["", f"=== ZONAS MAIS ACESAS ({len(medidas['marcas'])}) ==="]
     if not medidas["marcas"]:
-        linhas.append("Nenhuma zona acesa por cima das outras: a imagem e de brilho uniforme.")
+        linhas.append(
+            "Nada na imagem passa o limiar de brilho (85% do pico): e de brilho uniforme, "
+            "logo nao ha marcas a medir."
+        )
     for indice, marca in enumerate(medidas["marcas"], start=1):
         linhas.append(
-            f"{indice}. x {marca['x']:.1%}, y {marca['y']:.1%} da caixa do objeto, "
-            f"brilho medio {marca['brilho']:.0%} (pico {marca['pico']:.0%})."
+            f"{indice}. x {marca['x']:.1%}, y {marca['y']:.1%} da caixa do objeto - "
+            f"{marca['area']:.0f} px, brilho medio {marca['brilho']:.0%} "
+            f"(pico {marca['pico']:.0%}), cheia a {marca['compacidade']:.0%}."
         )
     if medidas["marcas"]:
-        mais_acesa = medidas["marcas"][0]
+        maior = medidas["marcas"][0]
         linhas.append(
-            f"A zona mais acesa esta a {mais_acesa['y']:.0%} da altura do objeto "
-            f"(a partir do topo) e a {mais_acesa['x']:.0%} da largura."
+            f"A maior mancha acesa esta a {maior['y']:.0%} da altura do objeto (a partir do "
+            f"topo) e a {maior['x']:.0%} da largura. Ordenadas por MASSA: as particulas de "
+            f"fundo ficam para o fim e uma mancha grande e vazia (uma rede de fios) le-se "
+            f"pela coluna 'cheia a'."
         )
+        if medidas["toca_a_moldura"]:
+            linhas.append(
+                "Estas marcas foram medidas na IMAGEM inteira, sem depender da silhueta - "
+                "continuam a valer quando a separacao do fundo falha."
+            )
     return "\n".join(linhas)
 
 
@@ -215,9 +226,11 @@ def desenho(medidas, cor=(255, 104, 72), fundo=None):
     for marca in medidas["marcas"]:
         centro_x = x0 + marca["x"] * largura
         centro_y = y0 + marca["y"] * altura
-        raio = max(5, int(min(largura, altura) * 0.02))
+        meia_largura = max(5.0, marca["caixa"][0] * largura / 2)
+        meia_altura = max(5.0, marca["caixa"][1] * altura / 2)
         tinta.ellipse(
-            [centro_x - raio, centro_y - raio, centro_x + raio, centro_y + raio],
+            [centro_x - meia_largura, centro_y - meia_altura,
+             centro_x + meia_largura, centro_y + meia_altura],
             outline=(255, 214, 84),
             width=2,
         )
@@ -400,41 +413,50 @@ def _limites_da_faixa(indice, altura, faixas):
     return topo, base
 
 
-def _marcas_acesas(cinza, recorte, quantas):
-    """Regioes ACESAS de verdade: o que passa do limiar, agrupado - nunca a media de um bloco.
+def _marcas_acesas(cinza, caixa, quantas):
+    """Regioes ACESAS medidas na IMAGEM, por MASSA - nunca presas a mascara do objeto.
 
-    A media de um bloco dilui uma marca pequena no escuro a volta (um disco branco de 25 px
-    num bloco de 17x10 saia a 32% de brilho e a 10 pontos percentuais do sitio certo), por
-    isso a marca e a regiao acima do limiar, medida pelo seu proprio centro.
+    Dois defeitos medidos na mesma imagem (rosto de malha de pontos sobre fundo salpicado
+    de particulas acesas), os dois aqui:
+    1. A procura era DENTRO da mascara do objeto, e a mascara sai errada exactamente quando
+    objeto e fundo partilham a cor - nessa imagem deixava de fora 98% dos pixeis acesos
+    (984 de 47631) e o resultado era ZERO marcas, no momento em que elas mais precisavam de
+    sair. A marca (um olho, um emblema) e um sinal de brilho proprio: nao depende da silhueta.
+    2. A ordem era por BRILHO MEDIO, e num fundo salpicado o mais brilhante e um ponto
+    minusculo e puro, enquanto a marca de verdade e uma mancha com MASSA. Passa a ordenar-se
+    por area - as particulas caem para o fim sozinhas - e cada mancha leva a area e o quanto
+    enche a propria caixa: uma rede de fios enche 5%, um olho cheio enche 30%.
     """
     import cv2
 
-    dentro = cinza[recorte]
-    if dentro.size == 0:
+    if cinza.size == 0:
         return []
-    limiar = max(float(dentro.max()) * LIMIAR_ACIMA, LIMIAR_MINIMO)
-    acima = ((cinza >= limiar) & recorte).astype(np.uint8)
+    limiar = max(float(cinza.max()) * LIMIAR_ACIMA, LIMIAR_MINIMO)
+    acima = (cinza >= limiar).astype(np.uint8)
     if not acima.any():
         return []
     quantos, rotulos, estatisticas, _ = cv2.connectedComponentsWithStats(acima, 8)
-    area_objeto = float(recorte.sum()) or 1.0
-    altura, largura = recorte.shape
+    x0, y0, largura_caixa, altura_caixa = caixa
     achados = []
     for indice in range(1, quantos):
         area = float(estatisticas[indice, cv2.CC_STAT_AREA])
-        if area / area_objeto < MINIMO_MARCA or area / area_objeto > MAXIMO_MARCA:
+        if area < MINIMO_PIXEIS_MARCA:
             continue
         marca = rotulos == indice
         ys, xs = np.nonzero(marca)
         valores = cinza[marca]
+        largura_marca = float(estatisticas[indice, cv2.CC_STAT_WIDTH])
+        altura_marca = float(estatisticas[indice, cv2.CC_STAT_HEIGHT])
         achados.append({
             "brilho": float(valores.mean()) / 255.0,
             "pico": float(valores.max()) / 255.0,
-            "x": float(xs.mean()) / largura,
-            "y": float(ys.mean()) / altura,
-            "area": area / area_objeto,
+            "x": (float(xs.mean()) - x0) / largura_caixa,
+            "y": (float(ys.mean()) - y0) / altura_caixa,
+            "area": area,
+            "caixa": (largura_marca / largura_caixa, altura_marca / altura_caixa),
+            "compacidade": area / max(1.0, largura_marca * altura_marca),
         })
-    achados.sort(key=lambda achado: -achado["brilho"])
+    achados.sort(key=lambda achado: -achado["area"])
     return achados[:max(1, quantas)]
 
 

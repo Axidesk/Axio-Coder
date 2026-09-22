@@ -4446,8 +4446,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 92,
         "conferido": [
-          1790012753.865,
-          30786
+          1790038417.706,
+          31221
         ]
       }
     },
@@ -4487,8 +4487,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 190,
         "conferido": [
-          1790012753.865,
-          30786
+          1790038417.706,
+          31221
         ]
       }
     },
@@ -4508,10 +4508,10 @@
       "descricao": "O lapis so existe quando o commit da tarefa ainda NAO subiu, e fica AO LADO do aviao - o aviao ja nao se esconde atras dele (pedido do utilizador: quem so quer enviar nao deve ter de clicar duas vezes). O campo esta trancado a mostrar a mensagem real do commit; clicar no lapis habilita o campo, mete a mensagem dentro e troca as classes da linha (sai git-trancado-amendavel, entra git-a-editar). O aviao, que ja estava visivel, passa a enviar - emendando a legenda so quando o texto muda. Ja no GitHub, o campo fica trancado para sempre e o lapis nao aparece; o aviao fica desativado com o motivo no title.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 510,
+        "linha": 515,
         "conferido": [
-          1790012753.865,
-          30786
+          1790038417.706,
+          31221
         ]
       }
     },
@@ -4524,8 +4524,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 152,
         "conferido": [
-          1790012753.865,
-          30786
+          1790038417.706,
+          31221
         ]
       }
     },
