@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 
+from src.backend.geometry.inspecao import caixa, convencao_do_ficheiro, de_y_para_z
 from src.backend.geometry.malhas import diferenca, norma, produto_vetorial, unitario
 from src.backend.geometry.raster import Rasterizador
 
@@ -36,12 +37,13 @@ def vistas_do_pedido(texto):
     return [(nome, *_angulos(nome)) for nome in escolhidas]
 
 
-def de_ficheiro(caminho, focar=None):
+def desenho_do_ficheiro(caminho, focar=None, cima=None):
+    """(triangulos, rodape) prontos a desenhar; o rodape diz a convencao de eixos que foi usada."""
     extensao = os.path.splitext(caminho)[1].lower()
     if extensao == ".ifc":
-        return _de_ifc(caminho, focar)
+        return _de_ifc(caminho, focar), ""
     if extensao in EXTENSOES_MALHA:
-        return _de_malha(caminho)
+        return _de_malha(caminho, cima)
     raise ValueError(f"nao sei desenhar '{extensao}'. Aceito: .ifc, {', '.join(EXTENSOES_MALHA)}")
 
 
@@ -318,13 +320,34 @@ def _de_ifc(caminho, focar):
     return triangulos
 
 
-def _de_malha(caminho):
+def _de_malha(caminho, cima=None):
     import trimesh
 
+    convencao, motivo = convencao_do_ficheiro(caminho, cima)
     carregado = trimesh.load(caminho, force="mesh")
-    vertices = [tuple(float(coordenada) for coordenada in ponto) for ponto in carregado.vertices]
     if not len(carregado.faces):
         raise ValueError("o ficheiro nao tem faces (e um conjunto de pontos?)")
+    vertices = np.asarray(carregado.vertices, dtype=float)
+    _, _, medida = caixa(vertices)
+    if convencao == "y":
+        vertices = de_y_para_z(vertices)
+    pontos = [tuple(float(coordenada) for coordenada in ponto) for ponto in vertices]
     nome = os.path.basename(caminho)
     cor = _tom(nome)
-    return [((vertices[a], vertices[b], vertices[c]), cor, nome) for a, b, c in carregado.faces]
+    triangulos = [((pontos[a], pontos[b], pontos[c]), cor, nome) for a, b, c in carregado.faces]
+    return triangulos, _rodape_da_convencao(convencao, motivo, medida)
+
+
+def _rodape_da_convencao(convencao, motivo, medida):
+    caixa_medida = " x ".join(f"{valor:.3f}" for valor in medida)
+    if convencao == "y":
+        return (
+            f"; eixos: Y PARA CIMA ({motivo}); a malha foi RODADA para o desenho sair na vertical, "
+            f"como o three.js a mostra; caixa no ficheiro (x, y, z): {caixa_medida}. "
+            "Se o que ve estiver deitado, repita com cima='z'"
+        )
+    return (
+        f"; eixos: Z PARA CIMA ({motivo}); a malha foi desenhada como esta no ficheiro; "
+        f"caixa no ficheiro (x, y, z): {caixa_medida}. "
+        "Se o que ve estiver deitado, repita com cima='y'"
+    )

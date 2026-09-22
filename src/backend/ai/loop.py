@@ -37,6 +37,7 @@ from src.backend.tools import (
     js_esm,
     js_imports,
     lint,
+    malha,
     memory_tools,
     modelagem,
     paint,

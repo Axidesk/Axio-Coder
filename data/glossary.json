@@ -2894,15 +2894,11 @@
         "olhar para o modelo",
         "vista do modelo"
       ],
-      "identificador": "de_ficheiro / desenhar / vistas_do_pedido",
-      "descricao": "O motor de vista 3D do agente: le um modelo (.ifc pelo ifcopenshell, malhas pelo trimesh) e desenha-o visto de onde se pedir, com z-buffer por pixel em raster.py e filtro por nome ou classe de peca.",
+      "identificador": "desenho_do_ficheiro / desenhar / vistas_do_pedido",
+      "descricao": "Ponto de entrada do desenho de modelos: desenho_do_ficheiro(caminho, focar, cima) devolve (triangulos, rodape) - o rodape diz a convencao de eixos usada; desenhar() rasteriza uma vista; vistas_do_pedido() traduz 'frente;3q' em angulos.",
       "localizacao": {
         "arquivo": "src/backend/geometry/vista.py",
-        "linha": 39,
-        "conferido": [
-          1789701695.959,
-          12324
-        ]
+        "linha": 40
       }
     },
     {
@@ -3849,10 +3845,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 363,
+        "linha": 419,
         "conferido": [
-          1789935678.39,
-          27133
+          1790017611.892,
+          29827
         ]
       }
     },
@@ -3869,10 +3865,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 334,
+        "linha": 388,
         "conferido": [
-          1789935678.39,
-          27133
+          1790017611.892,
+          29827
         ]
       }
     },
@@ -3949,10 +3945,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 617,
+        "linha": 677,
         "conferido": [
-          1789935678.39,
-          27133
+          1790017611.892,
+          29827
         ]
       }
     },
@@ -3969,10 +3965,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 468,
+        "linha": 528,
         "conferido": [
-          1789935678.39,
-          27133
+          1790017611.892,
+          29827
         ]
       }
     },
@@ -3989,10 +3985,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 388,
+        "linha": 446,
         "conferido": [
-          1789935678.39,
-          27133
+          1790017611.892,
+          29827
         ]
       }
     },
@@ -4548,6 +4544,117 @@
           1790013285.558,
           12844
         ]
+      }
+    },
+    {
+      "termo": "boca do avatar",
+      "aliases": [
+        "boca",
+        "a boca do avatar",
+        "labios",
+        "labios do avatar",
+        "fenda da boca"
+      ],
+      "identificador": "labiosDoRosto",
+      "descricao": "Os labios sao desenhados sobre a superficie do busto (labio de cima com arco de cupido, labio de baixo, fenda e cantos) e abrem com labiosDoRosto(abertura), que interpola entre a boca fechada e aberta segundo os visemas. A malha interna da boca vive escondida em malha_canonica.js:OCULTOS.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/tracos.js",
+        "linha": 146,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "rosto do agente",
+      "aliases": [
+        "rosto",
+        "rosto do avatar",
+        "face",
+        "cara",
+        "malha da cara",
+        "malha do rosto"
+      ],
+      "identificador": "malhaDoRosto / verticesDoRosto / VERTICES / ARESTAS",
+      "descricao": "A face e a malha canonica do MediaPipe (468 vertices, 1322 arestas) vinda de malha_canonica.js. Nao ha mais superficie de revolucao.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/rosto.js",
+        "linha": 228,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "malha que acompanha o formato do rosto",
+      "aliases": [
+        "edge loops",
+        "aneis da malha",
+        "linhas que contornam o olho",
+        "fluxo da malha",
+        "malha da cara"
+      ],
+      "identificador": "VERTICES / ARESTAS (malha_canonica.js)",
+      "descricao": "A topologia anatomica ja nao e calculada por campo de fluxo: vem pronta do MediaPipe Face Mesh.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/malha_canonica.js",
+        "linha": 1,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "olho do rosto",
+      "aliases": [
+        "olho",
+        "os olhos do rosto",
+        "olhos do avatar",
+        "iris",
+        "pupila",
+        "palpebra"
+      ],
+      "identificador": "olhosDoRosto",
+      "descricao": "Cada olho e uma amendoa desenhada sobre a superficie do busto (palpebra de cima mais alta, iris e pupila), centrada nos valores medidos das componentes da malha. Os globos e pestanas do proprio modelo ficam escondidos por malha_canonica.js:OCULTOS e o piscar fecha o grupo em Y em cabeca.js.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/avatar/tracos.js",
+        "linha": 93,
+        "ausente": true
+      }
+    },
+    {
+      "termo": "medir uma malha",
+      "aliases": [
+        "o que e isto que aparece aceso",
+        "componentes da malha",
+        "pecas ligadas",
+        "pedacos de um modelo 3d",
+        "quantas pecas tem o modelo",
+        "inspecionar malha",
+        "analise da malha",
+        "partes de um mesh",
+        "o que e este pedaco do modelo"
+      ],
+      "identificador": "tool_medir_malha",
+      "descricao": "Le um .obj/.glb/.gltf/.stl/.ply e devolve a caixa por eixo, o eixo mais longo, as pecas LIGADAS por arestas (tamanho, centro, volume e fatia de faces de cada uma), os eixos principais (PCA) e, com 'rodar', grava uma copia rodada medindo antes e depois. E o que responde 'as duas bolas eram os globos oculares' sem adivinhar por sombra.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/malha.py",
+        "linha": 47
+      }
+    },
+    {
+      "termo": "modelo que aparece deitado",
+      "aliases": [
+        "eixo para cima",
+        "y-up",
+        "z-up",
+        "modelo deitado no visualizador",
+        "busto deitado",
+        "gltf deitado",
+        "three js deitado",
+        "convencao de eixos",
+        "modelo girado 90 graus",
+        "cima do modelo"
+      ],
+      "identificador": "convencao_do_ficheiro",
+      "descricao": "Decide se a malha e lida como Y-para-cima (glTF/GLB, three.js) ou Z-para-cima (IFC, CAD) e devolve o motivo; o desenhador e Z-up, logo um .glb e rodado antes de desenhar. tool_ver_imagem aceita cima='y'/'z' e a legenda diz sempre qual foi usada e a caixa medida no ficheiro.",
+      "localizacao": {
+        "arquivo": "src/backend/geometry/inspecao.py",
+        "linha": 104
       }
     }
   ]

@@ -14,7 +14,7 @@ import time
 
 from PIL import ImageGrab
 
-from src.backend.geometry.vista import EXTENSOES_MODELO, de_ficheiro, desenhar, vistas_do_pedido
+from src.backend.geometry.vista import EXTENSOES_MODELO, desenhar, desenho_do_ficheiro, vistas_do_pedido
 from src.backend.state import caminho_estado_projeto, emit_event, estado
 from src.backend.tools.registry import register
 from src.backend.services.capturas import fins_do_conteudo, mapa_de_atividade, preparar_captura
@@ -329,6 +329,11 @@ def tool_capturar_print(regiao="", ecra="principal", detalhe="unico"):
             "desc": "Isola, num modelo 3D, as pecas cujo nome ou classe contenham este texto (ex: 'estrela', 'IfcPlate').",
             "padrao": "",
         },
+        "cima": {
+            "tipo": "STRING",
+            "desc": "Para modelos 3D: qual o eixo que aponta para CIMA no ficheiro - 'y' ou 'z'. O desenhador e Z-para-cima (IFC, CAD) e o three.js/glTF e Y-para-cima: sem isto um busto .glb sai DEITADO e o julgamento sai ao contrario do verdadeiro. Vazio decide pela extensao (.glb/.gltf -> y) e a legenda diz sempre qual foi usada - se o desenho aparecer deitado, repita com o outro valor.",
+            "padrao": "",
+        },
         "comparar_com": {
             "tipo": "STRING",
             "desc": "Caminho de uma imagem de referencia (foto, render, prancha). Cada vista sai LADO A LADO com ela, a referencia a esquerda - e a forma de julgar semelhanca sem alternar entre duas imagens. Use sempre que estiver a modelar a partir de uma referencia visual.",
@@ -336,7 +341,7 @@ def tool_capturar_print(regiao="", ecra="principal", detalhe="unico"):
         },
     },
 )
-def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_com=""):
+def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_com="", cima=""):
     emit_event("executing", function=f"Abrindo: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -345,7 +350,7 @@ def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_c
         return f"ERRO: ficheiro nao encontrado: {caminho_relativo}"
     extensao = os.path.splitext(alvo)[1].lower()
     try:
-        desenhos = _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar)
+        desenhos = _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar, cima)
     except ValueError as falha:
         return f"ERRO: {falha}"
     except Exception as falha:
@@ -541,11 +546,11 @@ def _bloco_depois(blocos, ponto):
     return None
 
 
-def _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar):
+def _desenhos_do_ficheiro(alvo, extensao, pagina, vista, focar, cima=""):
     if extensao == ".pdf":
         return [_pagina_do_pdf(alvo, pagina)]
     if extensao in EXTENSOES_MODELO:
-        return _vistas_do_modelo(alvo, vista, focar)
+        return _vistas_do_modelo(alvo, vista, focar, cima)
     with open(alvo, "rb") as ficheiro:
         return [(ficheiro.read(), "")]
 
@@ -565,8 +570,8 @@ def _pagina_do_pdf(alvo, pagina):
         documento.close()
 
 
-def _vistas_do_modelo(alvo, vista, focar):
-    triangulos = de_ficheiro(alvo, focar or None)
+def _vistas_do_modelo(alvo, vista, focar, cima=""):
+    triangulos, rodape = desenho_do_ficheiro(alvo, focar or None, cima or None)
     desenhos = []
     for nome, azimute, elevacao in vistas_do_pedido(vista):
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as ficheiro:
@@ -594,7 +599,7 @@ def _vistas_do_modelo(alvo, vista, focar):
             )
         legenda = (
             f" (vista {nome}: azimute {azimute:g}, elevacao {elevacao:g};"
-            f" {resultado['triangulos_pintados']} de {resultado['triangulos_lidos']} triangulos{filtro}{oclusao})"
+            f" {resultado['triangulos_pintados']} de {resultado['triangulos_lidos']} triangulos{filtro}{oclusao}{rodape})"
         )
         desenhos.append((bruto, legenda))
     return desenhos

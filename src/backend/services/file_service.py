@@ -139,7 +139,7 @@ def versao_pacote(nome):
     except Exception:
         return "desconhecida"
 
-PASTAS_FORA_DA_BUSCA = {'.git', '__pycache__', 'node_modules', 'build'}
+PASTAS_FORA_DA_BUSCA = {'.git', '__pycache__', 'node_modules', 'build', 'dist', 'venv'}
 EXT_FORA_DA_BUSCA = ('.exe', '.dll', '.obj', '.o', '.a', '.lib', '.so', '.pyc', '.spv', '.pdb', '.ilk', '.png', '.jpg', '.jpeg', '.ttf', '.bin', '.zip', '.tar')
 
 def raiz_repositorio(caminho):
