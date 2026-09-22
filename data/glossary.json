@@ -4702,7 +4702,30 @@
       "descricao": "Mede a maquina de verdade (WMI + nvidia-smi) e diz o que ela aguenta: CPU com nucleos/threads, RAM com pentes e velocidade, GPU com VRAM total e livre, driver, compute capability, temperatura, discos, e se o Python do Axio tem aceleracao por GPU. resumo_da_maquina() e injetado no contexto a cada rodada (medido no arranque, estatico); relato_maquina() sai em tool_info_ambiente com os valores vivos e o veredito do que cabe na VRAM de agora.",
       "localizacao": {
         "arquivo": "src/backend/services/hardware.py",
-        "linha": 254
+        "linha": 254,
+        "conferido": [
+          1790041407.059,
+          12546
+        ]
+      }
+    },
+    {
+      "termo": "aceleracao por gpu",
+      "aliases": [
+        "aceleracao gpu",
+        "usar a placa",
+        "cuda",
+        "onnxruntime-gpu",
+        "correr na placa de video",
+        "gpu no python",
+        "acelerar o ocr",
+        "usar a gpu"
+      ],
+      "identificador": "preparar / provar",
+      "descricao": "Regista o runtime CUDA do pip e pre-carrega as sub-bibliotecas do cuDNN (que o preload_dlls do onnxruntime nao carrega) e PROVA a GPU com uma inferencia real - a lista de provedores mente, porque sem isto tudo cai para CPU em silencio. Chamado no arranque por app.py e pelo motor do OCR.",
+      "localizacao": {
+        "arquivo": "src/backend/services/aceleracao.py",
+        "linha": 86
       }
     }
   ]

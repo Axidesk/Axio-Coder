@@ -84,14 +84,10 @@ def _gpus_nvidia():
 
 
 def _aceleracao():
-    dados = {"onnxruntime": "", "providers": [], "torch": "", "torch_cuda": False,
-             "cv2": "", "cv2_cuda": 0}
-    try:
-        import onnxruntime
-        dados["onnxruntime"] = getattr(onnxruntime, "__version__", "")
-        dados["providers"] = list(onnxruntime.get_available_providers())
-    except Exception:
-        pass
+    from src.backend.services.aceleracao import provedores, versao_onnxruntime
+
+    dados = {"onnxruntime": versao_onnxruntime(), "providers": provedores(),
+             "torch": "", "torch_cuda": False, "cv2": "", "cv2_cuda": 0}
     if importlib.util.find_spec("torch") is not None:
         try:
             import torch
@@ -232,23 +228,32 @@ def _linhas_adaptadores(dados):
 def _linhas_aceleracao(dados):
     ac = dados.get("aceleracao") or {}
     providers = ac.get("providers") or []
-    com_gpu = any(("CUDA" in p) or ("DmlExecutionProvider" in p) or ("ROCM" in p) for p in providers)
-    if com_gpu or ac.get("torch_cuda") or ac.get("cv2_cuda"):
-        linhas = [f"Aceleracao no Python do Axio: SIM - onnxruntime {ac.get('onnxruntime')} -> {providers}"]
+    gpu, motivo = _veredicto_gpu()
+    linhas = [f"Aceleracao por GPU no Python do Axio: {'SIM' if gpu else 'NAO'} - "
+              f"onnxruntime {ac.get('onnxruntime') or '?'}; {motivo}."]
+    if gpu:
         if ac.get("torch_cuda"):
             linhas.append(f"  torch {ac.get('torch')} com CUDA disponivel")
         if ac.get("cv2_cuda"):
             linhas.append(f"  OpenCV {ac.get('cv2')} com {ac['cv2_cuda']} dispositivo(s) CUDA")
+        linhas.append("  O OCR e a visao que correm por onnxruntime usam a placa; o que nao tiver "
+                      "caminho CUDA continua na CPU.")
         return linhas
-    partes = [f"onnxruntime {ac.get('onnxruntime') or '?'} -> {providers or 'nenhum provider'}",
-              f"torch {ac['torch']}" if ac.get("torch") else "torch ausente",
-              f"OpenCV {ac.get('cv2') or '?'} sem CUDA"]
     threads = (dados.get("cpu") or {}).get("threads", "?")
-    return [
-        "Aceleracao no Python do Axio: NENHUMA - " + "; ".join(partes),
-        f"  Consequencia: qualquer modelo de IA importado aqui (OCR, visao, malhas) corre na CPU ({threads} threads). "
-        "A GPU so serve ao que for compilado com CUDA; instalar isso e uma decisao a parte (onnxruntime-gpu, torch cu12x).",
-    ]
+    linhas.append(f"  Provedores declarados: {providers or 'nenhum'} - a lista NAO e prova: o onnxruntime "
+                  "cai para CPU em silencio quando falta uma DLL do cuDNN.")
+    linhas.append(f"  Consequencia: qualquer modelo de IA importado aqui (OCR, visao, malhas) corre na CPU ({threads} threads).")
+    return linhas
+
+
+def _veredicto_gpu():
+    """O veredicto sai de uma inferencia real (services/aceleracao.provar), nunca da lista de provedores."""
+    try:
+        from src.backend.services.aceleracao import provar
+
+        return provar()
+    except Exception as erro:
+        return False, f"sonda indisponivel ({type(erro).__name__})"
 
 
 def relato_maquina():
@@ -277,8 +282,8 @@ def relato_maquina():
         else:
             veredito = "NAO CABE nesta placa"
         linhas.append(f"  ~{exigido:g} GB de pesos | {rotulo}: {veredito}")
-    linhas.append("  Regra de bolso: so cabe se a VRAM livre for ~1,3x os pesos (somam-se ativacoes e contexto); "
-                  "sem aceleracao no Python, 'caber' na placa nao chega - falta o binario compilado para CUDA.")
+    linhas.append("  Regra de bolso: so cabe se a VRAM livre for ~1,3x os pesos (somam-se ativacoes e contexto). "
+                  "Com a aceleracao por GPU provada acima, 'caber' quer dizer correr na placa; sem ela, nao queria dizer nada.")
     linhas.append("  As exigencias acima vem da documentacao dos projetos e mudam de versao: confirme a versao "
                   "atual antes de instalar (tool_verificar_dependencias).")
     return "\n".join(linhas)

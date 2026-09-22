@@ -77,7 +77,10 @@ def _motor_de_leitura():
     if _motor is None:
         from rapidocr import RapidOCR
 
-        _motor = RapidOCR()
+        from src.backend.services.aceleracao import provar
+
+        com_gpu, _ = provar()
+        _motor = RapidOCR(params={"EngineConfig.onnxruntime.use_cuda": True}) if com_gpu else RapidOCR()
     return _motor
 
 
