@@ -412,6 +412,7 @@ function criarViewDoTipo(tipo) {
         }
   });
   previewViews[tipo] = view;
+  view.__axioAlvo = tipo;
   view.setBackgroundColor('#1e1e1e');
   view.setBounds(previewLimites || limitesDeArranque());
   view.setVisible(false);

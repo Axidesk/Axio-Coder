@@ -629,13 +629,59 @@ def _print_do_preview(seletor, regiao):
     if entregue and tuple(entregue) != tuple(dimensoes):
         aviso = f" A API reduz a imagem a ~800x800 equivalentes, por isso chegou com {entregue[0]}x{entregue[1]} px."
     return {
-        "texto": (
+        "texto": _com_alvo(
             f"Print do preview{alvo}: {dimensoes[0]}x{dimensoes[1]} px."
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
-            f"{aviso}"
+            f"{aviso}",
+            dados,
+            print_em_segundo_plano=True,
         ),
         "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Print do preview{alvo}]"},
     }
+
+
+def _identidade_do_preview(dados):
+    """A aba que respondeu, em texto.
+
+    Com mais de uma vista aberta, o 'estado' e o 'avaliar' podem cair em vistas diferentes -
+    sem dizer QUAL respondeu, o relatorio mistura duas paginas e nao se percebe onde esta o
+    defeito. A identidade vem da ponte (aba, id, url e se estava a vista).
+    """
+    alvo = (dados or {}).get("alvo") or {}
+    if not alvo:
+        return ""
+    partes = [f"aba '{alvo.get('aba') or '?'}' (id {alvo.get('id')})",
+              alvo.get("url") or "(sem endereco)"]
+    if alvo.get("visivel") is False:
+        partes.append("vista ESCONDIDA nesta chamada")
+    return "Aba que respondeu: " + " - ".join(partes) + "."
+
+
+def _com_alvo(texto, dados, print_em_segundo_plano=False):
+    """Antepoe a identidade da aba e os avisos que so fazem sentido com ela.
+
+    As duas mentiras que isto mata: ler uma ABA MORTA (chrome-error://) a pensar que e a
+    pagina carregada, e concluir de um print PRETO tirado a uma vista em segundo plano (o
+    Chromium estrangula o desenho de uma vista escondida).
+    """
+    identidade = _identidade_do_preview(dados)
+    if not identidade:
+        return texto
+    alvo = (dados or {}).get("alvo") or {}
+    avisos = []
+    if str(alvo.get("url") or "").startswith("chrome-error"):
+        avisos.append(
+            "AVISO: esta aba esta numa PAGINA DE ERRO do Chromium (chrome-error://) - o alvo que"
+            " voce carregou nao esta la, e o que se le aqui NAO e o que voce pediu. Recarregue o"
+            " alvo antes de concluir."
+        )
+    elif print_em_segundo_plano and alvo.get("visivel") is False:
+        avisos.append(
+            "AVISO: a aba estava em SEGUNDO PLANO nesta captura - o Chromium estrangula o desenho"
+            " de uma vista escondida, logo um canvas/WebGL pode sair PRETO. Se a imagem vier preta,"
+            " traga a vista a frente com acao='mostrar' e repita."
+        )
+    return "\n".join([identidade] + avisos + [texto])
 
 
 @register(
@@ -718,19 +764,19 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         dados, erro = ponte_preview.pedir("estado")
         if erro:
             return f"ERRO: {erro}."
-        return _texto_do_estado(dados)
+        return _com_alvo(_texto_do_estado(dados), dados)
 
     if pedido == "consola":
         dados, erro = ponte_preview.pedir("consola", nivel=nivel, limite=80)
         if erro:
             return f"ERRO: {erro}."
-        return _texto_da_consola(dados)
+        return _com_alvo(_texto_da_consola(dados), dados)
 
     if pedido == "rede":
         dados, erro = ponte_preview.pedir("rede", nivel=nivel, limite=80)
         if erro:
             return f"ERRO: {erro}."
-        return _texto_da_rede(dados)
+        return _com_alvo(_texto_da_rede(dados), dados)
 
     if pedido == "elemento":
         if not (seletor.strip() or texto.strip()):
@@ -740,7 +786,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'a pagina nao respondeu'}."
-        return _texto_dos_elementos(dados)
+        return _com_alvo(_texto_dos_elementos(dados), dados)
 
     if pedido == "mapa":
         dados, erro = ponte_preview.pedir("mapa", limite=limite)
@@ -748,7 +794,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'a pagina nao respondeu'}."
-        return _texto_do_mapa(dados)
+        return _com_alvo(_texto_do_mapa(dados), dados)
 
     if pedido == "estilo":
         dados, erro = ponte_preview.pedir("estilo", seletor=seletor, limite=limite)
@@ -756,7 +802,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'a pagina nao respondeu'}."
-        return _texto_do_estilo(dados)
+        return _com_alvo(_texto_do_estilo(dados), dados)
 
     if pedido == "avaliar":
         if not js.strip():
@@ -773,11 +819,15 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         if total and isinstance(resultado, list):
             texto = _texto_das_amostras(js, total, resultado)
             aviso = _aviso_de_vista_escondida()
-            return f"{aviso}\n{texto}" if aviso else texto
+            return _com_alvo(f"{aviso}\n{texto}" if aviso else texto, dados)
         if resultado is None:
-            return f"A expressao '{js[:120]}' nao devolveu valor (undefined ou null)."
+            return _com_alvo(
+                f"A expressao '{js[:120]}' nao devolveu valor (undefined ou null).", dados
+            )
         texto_resultado = json.dumps(resultado, ensure_ascii=False, indent=2, default=str)
-        return f"Resultado de '{js[:120]}' (tipo {dados.get('tipo')}):\n{texto_resultado}"
+        return _com_alvo(
+            f"Resultado de '{js[:120]}' (tipo {dados.get('tipo')}):\n{texto_resultado}", dados
+        )
 
     return _print_do_preview(seletor, regiao)
 

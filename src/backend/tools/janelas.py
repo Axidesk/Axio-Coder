@@ -886,6 +886,52 @@ def _escrever(elemento, texto):
         return "", f"nao consegui escrever no elemento ({type(exc).__name__}: {exc})"
 
 
+MODIFICADORES_TECLA = {"ctrl": "^", "control": "^", "alt": "%", "shift": "+"}
+
+NOMES_TECLA = {
+    "enter": "ENTER", "return": "ENTER", "tab": "TAB", "esc": "ESC", "escape": "ESC",
+    "space": "SPACE", "backspace": "BACKSPACE", "delete": "DELETE", "del": "DELETE",
+    "insert": "INSERT", "home": "HOME", "end": "END", "pageup": "PGUP", "pagedown": "PGDN",
+    "up": "UP", "down": "DOWN", "left": "LEFT", "right": "RIGHT",
+}
+
+
+def _normalizar_teclas(tecla):
+    """Traduz 'ctrl+shift+r' para a sintaxe que o pywinauto injecta ('^+r').
+
+    Sem isto o que vai para o ecra e a STRING 'ctrl+shift+r' escrita no campo: o atalho
+    nunca dispara e o campo fica com lixo la dentro. A sintaxe de chaves ('{ENTER}', '^a')
+    passa intacta, como sempre passou.
+    """
+    bruto = str(tecla or "").strip()
+    if not bruto or "{" in bruto:
+        return bruto
+    tokens = [t.strip() for t in bruto.split("+")]
+    modificadores = ""
+    while len(tokens) > 1 and tokens[0].lower() in MODIFICADORES_TECLA:
+        modificadores += MODIFICADORES_TECLA[tokens.pop(0).lower()]
+    if not tokens:
+        return bruto
+    resto = tokens[-1]
+    nome = NOMES_TECLA.get(resto.lower())
+    if nome:
+        return modificadores + "{" + nome + "}"
+    if len(resto) == 1:
+        return modificadores + resto
+    if len(tokens) == 1 and not modificadores:
+        return bruto
+    return modificadores + "{" + resto.upper() + "}"
+
+
+def _teclas_viraram_texto(antes, depois, tecla):
+    """Palavras da tecla que ficaram escritas no campo: prova de que nao foram accionadas."""
+    if depois == antes:
+        return []
+    ganho = depois[len(antes):] if depois.startswith(antes) else depois
+    palavras = [p for p in re.split(r"[^0-9A-Za-z]+", str(tecla or "")) if len(p) > 2]
+    return [p for p in palavras if p.lower() in ganho.lower() and p.lower() not in antes.lower()]
+
+
 def _pontos(pedido):
     """[(x, y), ...] de 'x,y' ou de varios pares seguidos ('x1,y1 x2,y2 ...'), em coordenadas do ecra."""
     numeros = [int(n) for n in re.findall(r"-?\d+", str(pedido or ""))]
@@ -1112,11 +1158,12 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
 
     if acao == "teclas":
         if not tecla:
-            return "ERRO: acao='teclas' precisa de 'tecla' (ex: '{ENTER}')."
+            return "ERRO: acao='teclas' precisa de 'tecla' (ex: 'ctrl+shift+r', 'enter' ou '{ENTER}')."
+        alvo_teclas = _normalizar_teclas(tecla)
         antes = _valor(elemento)
         try:
             elemento.set_focus()
-            elemento.type_keys(tecla, with_spaces=True)
+            elemento.type_keys(alvo_teclas, with_spaces=True)
         except Exception as exc:
             return (
                 f"ERRO: nao consegui enviar as teclas ({type(exc).__name__}: {exc})."
@@ -1124,11 +1171,26 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
             )
         time.sleep(0.3)
         depois = _valor(elemento)
-        efeito = (
-            f" O campo passou de {antes[:60]!r} para {depois[:60]!r}."
-            if antes != depois
-            else " ATENCAO: o campo nao mudou - as teclas podem ter ido para outra janela."
+        virou_texto = _teclas_viraram_texto(antes, depois, tecla)
+        if virou_texto:
+            return (
+                f"ERRO: {_tipo(elemento)} {_texto(elemento)!r} ({nota}) NAO aceita teclas reais:"
+                f" o que enviei entrou como TEXTO no campo (ficou {depois[:60]!r}). Este alvo"
+                " opera pelo padrao UIA de valor, nao por input de teclado - para lhe passar"
+                " texto use acao='escrever', e para um atalho mande as teclas a JANELA (sem"
+                " 'alvo'), que e quem as recebe."
+            )
+        if antes != depois:
+            return (
+                f"Enviei {tecla!r} (injectado como {alvo_teclas!r}) para {_tipo(elemento)}"
+                f" {_texto(elemento)!r} ({nota}); o campo passou de {antes[:60]!r} para"
+                f" {depois[:60]!r}."
+            )
+        return (
+            f"Enviei {tecla!r} (injectado como {alvo_teclas!r}) para {_tipo(elemento)}"
+            f" {_texto(elemento)!r} ({nota}) sem deixar lixo no campo. ATENCAO: um atalho nao"
+            " deixa marca no texto, por isso isto NAO prova que o alvo reagiu - confirme o"
+            " efeito (acao='print' na janela, ou o estado que devia mudar) antes de concluir."
         )
-        return f"Enviei {tecla!r} para {_tipo(elemento)} {_texto(elemento)!r} ({nota}).{efeito}"
 
     return f"ERRO: acao desconhecida: {acao!r}"

@@ -51,7 +51,7 @@ _estado_desatualizados = {"raiz": "", "correndo": False, "ts": 0.0,
 _trava_desatualizados = threading.Lock()
 
 
-def _python_do_projeto(raiz):
+def python_do_projeto(raiz):
     """Interpretador que mede o pip: o venv do projeto, senao o que corre o Axio.
 
     Sem isto, medir outro projeto usava o venv do Axio e listava as dependencias
@@ -92,7 +92,7 @@ def _correr_manifesto(comando, cwd):
 def _pip_desatualizados(raiz):
     """Pacotes Python instalados atras da ultima versao publicada no PyPI."""
     dados, erro = _correr_manifesto(
-        [_python_do_projeto(raiz), "-m", "pip", "list", "--outdated", "--format=json"], raiz)
+        [python_do_projeto(raiz), "-m", "pip", "list", "--outdated", "--format=json"], raiz)
     if erro:
         return {}, "pip: " + erro
     saida = {}
@@ -134,7 +134,7 @@ def _restricoes_instaladas(raiz):
     apresentar como uma atualizacao ao alcance do utilizador.
     """
     dados, erro = _correr_manifesto(
-        [_python_do_projeto(raiz), "-c", _SCRIPT_RESTRICOES], raiz)
+        [python_do_projeto(raiz), "-c", _SCRIPT_RESTRICOES], raiz)
     if erro or not isinstance(dados, dict):
         return {}
     return dados
@@ -303,7 +303,7 @@ def _versao_instalada(raiz):
     que ja nao ha nada a assinalar.
     """
     dados, erro = _correr_manifesto(
-        [_python_do_projeto(raiz), "-m", "pip", "list", "--format=json"], raiz)
+        [python_do_projeto(raiz), "-m", "pip", "list", "--format=json"], raiz)
     if erro:
         return {}, erro
     return {normalizar_pacote(item["name"]): item.get("version") or ""
@@ -608,8 +608,8 @@ def _texto_dependencias(dados, pacote=""):
     pacotes = dados.get("pacotes") or {}
     versoes = dados.get("versoes") or {}
     linhas = ["=== DEPENDENCIAS DO PROJETO (PyPI + npm) ==="]
-    if pacote:
-        linhas.append(_ficha_de_pacote(pacote, pacotes, versoes))
+    for nome in _nomes_pedidos(pacote):
+        linhas.append(_ficha_de_pacote(nome, pacotes, versoes))
     desatualizados = sorted(pacotes.items())
     travados = [(nome, info) for nome, info in desatualizados if info.get("preso")]
     livres = [(nome, info) for nome, info in desatualizados if not info.get("preso")]
@@ -633,6 +633,14 @@ def _texto_dependencias(dados, pacote=""):
     if dados.get("erro"):
         linhas.append(f"Erro da medicao: {dados['erro']}")
     return "\n".join(linhas)
+
+def _nomes_pedidos(texto):
+    """Nomes de pacote pedidos numa chamada: virgula, ponto-e-virgula ou espaco separam."""
+    partes = []
+    for bruto in str(texto or "").replace(";", ",").replace("\n", ",").split(","):
+        partes.extend(bruto.split())
+    return [nome for nome in (p.strip() for p in partes) if nome]
+
 
 def bloco_dependencias():
     """Bloco do prompt com o que esta atras do registo, lido da cache (nunca toca na rede).
@@ -672,7 +680,7 @@ def bloco_dependencias():
     "tool_verificar_dependencias",
     'Lista as dependencias instaladas que estao atras da ultima versao publicada (PyPI/npm), separando as que podem subir agora das que outro pacote trava, e diz a versao instalada de um pacote especifico. Se o pacote pedido AINDA NAO ESTIVER INSTALADO, consulta os registos oficiais e devolve a ultima versao publicada com as exigencias que ela declara (peerDependencies no npm, requires-python no PyPI) - e o caminho para saber a versao a pedir antes de instalar. Use ANTES de instalar, atualizar ou pinar qualquer dependencia (requirements.txt/package.json): a versao a instalar deve ser a mais recente compativel com o que ja existe, nunca uma versao lembrada de memoria.',
     {
-        'pacote': {"tipo": "STRING", "desc": 'Nome de UM pacote para consultar (ex: flask). Vazio devolve a lista completa das dependencias desatualizadas.', "padrao": ""},
+        'pacote': {"tipo": "STRING", "desc": 'Um ou VARIOS pacotes, separados por virgula ou espaco (ex: "mediapipe, three", "flask jwt"). Vazio devolve a lista completa das dependencias desatualizadas.', "padrao": ""},
     },
 )
 def tool_verificar_dependencias(pacote=""):
@@ -688,6 +696,8 @@ def tool_verificar_dependencias(pacote=""):
     return _texto_dependencias(dados, pacote)
 
 LIMITE_API_DEPENDENCIA = 8000
+LIMITE_DECLARACAO_JS = 24 * 1024 * 1024
+LIMITE_LINHAS_FILTRO = 400
 _CAMPOS_DE_API_JS = ("main", "module", "types", "typings", "exports", "bin")
 _DECLARACOES_JS = ("index.d.ts", "types/index.d.ts", "dist/index.d.ts", "lib/index.d.ts")
 _FONTES_JS = (".js", ".mjs", ".cjs")
@@ -706,11 +716,22 @@ def _ler_fonte(caminho, limite=LIMITE_API_DEPENDENCIA):
 
 
 def _filtrar_linhas(texto, filtro):
+    """Linhas com o termo, COM o numero de linha a frente.
+
+    O numero e o que permite voltar ao ficheiro e ver o contexto que a linha sozinha nao
+    da; e o que se diz quando o termo existe mas o chamador nao o encontra.
+    """
     if not filtro:
         return texto
     chave = filtro.lower()
-    guardadas = [linha for linha in texto.splitlines() if chave in linha.lower()]
-    return "\n".join(guardadas) if guardadas else f"(nenhuma linha com '{filtro}')"
+    guardadas = [f"{numero}: {linha}" for numero, linha in enumerate(texto.splitlines(), 1)
+                 if chave in linha.lower()]
+    if not guardadas:
+        return f"(nenhuma linha com '{filtro}')"
+    if len(guardadas) > LIMITE_LINHAS_FILTRO:
+        sobra = len(guardadas) - LIMITE_LINHAS_FILTRO
+        return "\n".join(guardadas[:LIMITE_LINHAS_FILTRO]) + f"\n... (+{sobra} linhas com o termo)"
+    return "\n".join(guardadas)
 
 
 def _declaracao_js(pasta, manifesto):
@@ -739,6 +760,27 @@ def _declaracao_js(pasta, manifesto):
         return ""
     candidatas.sort()
     return candidatas[0][2]
+
+
+def _ler_declaracao(caminho, filtro):
+    """Le a declaracao para procurar um termo.
+
+    Com 'filtro', le o ficheiro INTEIRO: cortar nos primeiros 8000 caracteres fazia a
+    ferramenta jurar que um nome nao existia quando ele estava na linha 729 - era o corte
+    a mentir, nao o ficheiro. Sem filtro mantem o teto curto (o que sai daqui vai para o
+    contexto do modelo) e DIZ que cortou.
+    """
+    if filtro:
+        return _filtrar_linhas(_ler_fonte(caminho, LIMITE_DECLARACAO_JS), filtro)
+    try:
+        tamanho = os.path.getsize(caminho)
+    except OSError:
+        tamanho = 0
+    texto = _ler_fonte(caminho, LIMITE_API_DEPENDENCIA)
+    if tamanho > LIMITE_API_DEPENDENCIA:
+        texto += (f"\n... (ficheiro com {tamanho} caracteres; mostrados so os primeiros "
+                  f"{LIMITE_API_DEPENDENCIA} - passe 'filtro' para achar um nome la dentro)")
+    return texto
 
 
 def _varrer_fontes(pasta, extensoes, pastas_ignoradas):
@@ -847,14 +889,14 @@ def _api_js(raiz, pacote, filtro):
     if declaracao:
         relativo = os.path.relpath(declaracao, raiz).replace(os.sep, "/")
         linhas.append(f"\n--- {relativo} ---")
-        trecho = _filtrar_linhas(_ler_fonte(declaracao), filtro)
+        trecho = _ler_declaracao(declaracao, filtro)
         linhas.append(trecho)
         linhas.extend(_bloco_fonte_js(raiz, pasta, manifesto, filtro, trecho))
         return "\n".join(linhas)
     leia_me = os.path.join(pasta, "README.md")
     if os.path.isfile(leia_me):
         linhas.append("\n(sem ficheiro de declaracoes; trecho do README)")
-        trecho = _filtrar_linhas(_ler_fonte(leia_me), filtro)
+        trecho = _ler_declaracao(leia_me, filtro)
         linhas.append(trecho)
         linhas.extend(_bloco_fonte_js(raiz, pasta, manifesto, filtro, trecho))
         return "\n".join(linhas)

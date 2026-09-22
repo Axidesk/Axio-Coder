@@ -391,9 +391,61 @@ def _monitorar_processo_segundo_plano(pid, popen):
     reg["status"] = "ok" if codigo == 0 else "erro"
     emit_event("process_finished", pid=pid, exit_code=codigo, status=reg["status"])
 
+_JUNTAS_PROCESSO = {}
+
+
+def _juntar_ao_job(popen):
+    """Poe o processo novo numa junta (Job Object) do Windows, com ordem de morrer com ela.
+
+    O Windows nao guarda a relacao pai-filho: o 'taskkill /T' percorre uma fotografia feita
+    na hora e falha quando o pai ja saiu, deixando o neto vivo - foi assim que o Electron
+    sobrevivia ao 'npm start' e ficava a segurar a camara. A junta agrupa-os pelo lado do
+    sistema e morre com o Axio, que e o que impede os fantasmas entre reinicios.
+    """
+    if os.name != "nt":
+        return None
+    try:
+        import win32api
+        import win32con
+        import win32job
+    except ImportError:
+        return None
+    try:
+        junta = win32job.CreateJobObject(None, "")
+        info = win32job.QueryInformationJobObject(junta, win32job.JobObjectExtendedLimitInformation)
+        info["BasicLimitInformation"]["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        win32job.SetInformationJobObject(junta, win32job.JobObjectExtendedLimitInformation, info)
+        alca = win32api.OpenProcess(
+            win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE, False, popen.pid
+        )
+        win32job.AssignProcessToJobObject(junta, alca)
+    except Exception:
+        return None
+    _JUNTAS_PROCESSO[getattr(popen, "pid", None)] = junta
+    return junta
+
+
+def _fechar_junta(pid):
+    """Encerra a junta do processo: mata tudo o que ela agrupa, filhos desligados incluidos."""
+    junta = _JUNTAS_PROCESSO.pop(pid, None)
+    if junta is None:
+        return False
+    try:
+        import win32job
+        win32job.TerminateJobObject(junta, 0)
+    except Exception:
+        pass
+    try:
+        junta.Close()
+    except Exception:
+        pass
+    return True
+
+
 def matar_arvore(popen):
     if popen is None:
         return
+    _fechar_junta(getattr(popen, "pid", None))
     try:
         if popen.poll() is not None:
             return
@@ -575,9 +627,7 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
                 threading.Thread(target=_abrir_quando_pronto, args=(pid, porta_env), daemon=True).start()
             return f"PROCESSO INICIADO EM SEGUNDO PLANO (pid={pid}){nota_porta}. Acompanhe em /api/processos e encerre com /api/processo/{pid}/parar."
 
-        try:
-            popen.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
+        if not _esperar_com_progresso(popen, pid, timeout):
             matar_arvore(popen)
             reg["status"] = "timeout"
             emit_event("process_finished", pid=pid, exit_code=None, status="timeout")
@@ -601,11 +651,7 @@ def parar_processo_reg(pid, reg):
     reg["status"] = "parado"
     popen = reg.get("popen")
     if popen is not None:
-        try:
-            if popen.poll() is None:
-                matar_arvore(popen)
-        except Exception:
-            pass
+        matar_arvore(popen)
     emit_event("process_finished", pid=pid, exit_code=None, status="parado")
 
 def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False):
@@ -616,7 +662,8 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
     Com 'stdin_pipe' a entrada fica aberta para escrever_stdin_processo (cards do terminal)."""
     cwd = cwd or estado.get("pasta_raiz", "") or os.getcwd()
     pid = id_processo()
-    reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": cwd, "popen": None, "stdin": None}
+    reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": cwd,
+           "popen": None, "stdin": None, "modo": modo, "nascimento": time.time()}
     estado["processos"][pid] = reg
     emit_event("process_started", pid=pid, comando=comando, modo=modo)
     kwargs = {
@@ -639,6 +686,7 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
         raise
     reg["popen"] = popen
     reg["stdin"] = popen.stdin
+    reg["junta"] = _juntar_ao_job(popen)
     reg["_leitor"] = threading.Thread(target=ler_saida_stream, args=(pid, popen), daemon=True)
     reg["_leitor"].start()
     if acompanhar:
@@ -720,16 +768,83 @@ def tool_listar_processos():
         return "Nenhum processo em segundo plano nesta sessao."
     linhas = []
     for pid, reg in registros.items():
-        popen = reg.get("popen")
-        rodando = False
-        if popen is not None:
-            try:
-                rodando = popen.poll() is None
-            except Exception:
-                rodando = False
-        estado_txt = "rodando" if rodando else reg.get("status", "parado")
+        estado_txt = "rodando" if _processo_vivo(reg) else reg.get("status", "parado")
         linhas.append(f"{pid}: {reg.get('comando', '(desconhecido)')} [{estado_txt}]")
     return "Processos em segundo plano:\n" + "\n".join(linhas)
+
+
+IDADE_PROCESSO_ANTIGO = 30 * 60
+LIMITE_BLOCO_PROCESSOS = 12
+
+
+def _processo_vivo(reg):
+    """O processo do registo ainda corre? Um popen ja fechado da False, sem levantar."""
+    popen = (reg or {}).get("popen")
+    if popen is None:
+        return False
+    try:
+        return popen.poll() is None
+    except Exception:
+        return False
+
+
+def _idade_texto(segundos):
+    if segundos < 60:
+        return f"{int(segundos)}s"
+    if segundos < 3600:
+        return f"{int(segundos // 60)}min"
+    return f"{segundos / 3600:.1f}h"
+
+
+def limpar_processos_encerrados():
+    """Tira do registo o que ja terminou: a lista e uma so e nao pode crescer a cada rodada."""
+    registros = estado.get("processos", {})
+    mortos = [pid for pid, reg in list(registros.items()) if not _processo_vivo(reg)]
+    for pid in mortos:
+        registros.pop(pid, None)
+        _fechar_junta(pid)
+    return len(mortos)
+
+
+def bloco_processos():
+    """O que continua a correr de rodadas anteriores, dito ao agente no inicio de cada rodada.
+
+    Um servidor esquecido segura portas, ficheiros e a placa de video, e volta como erro que
+    ninguem liga ao processo que o deixou de pe. Com isto o agente sabe o que ficou antes de
+    comecar e limpa o que ja nao serve antes de arrancar outro igual.
+    """
+    limpar_processos_encerrados()
+    agora = time.time()
+    vivos = [(pid, reg) for pid, reg in estado.get("processos", {}).items() if _processo_vivo(reg)]
+    if not vivos:
+        return ""
+    linhas = []
+    antigos = 0
+    for pid, reg in vivos[:LIMITE_BLOCO_PROCESSOS]:
+        idade = agora - float(reg.get("nascimento") or agora)
+        velho = idade > IDADE_PROCESSO_ANTIGO
+        antigos += 1 if velho else 0
+        linhas.append(f"- {pid}: {str(reg.get('comando'))[:90]} "
+                      f"[{reg.get('modo') or '?'}, {_idade_texto(idade)}"
+                      f"{', ANTIGO' if velho else ''}]")
+    if len(vivos) > LIMITE_BLOCO_PROCESSOS:
+        linhas.append(f"- (+{len(vivos) - LIMITE_BLOCO_PROCESSOS} processos; a lista completa esta "
+                      "em /api/processos)")
+    aviso = (
+        f" {antigos} dele(s) corre(m) ha mais de meia hora: pare o que ja nao serve com"
+        " tool_parar_processo ANTES de arrancar outro igual - dois servidores na mesma porta sao"
+        " a origem dos erros que ninguem liga ao processo."
+        if antigos else ""
+    )
+    return (
+        "=== PROCESSOS AINDA A CORRER (de rodadas anteriores) ===\n"
+        f"{len(vivos)} processo(s) em segundo plano continuam vivos nesta sessao.{aviso}\n"
+        + "\n".join(linhas)
+        + "\nIsto e estado, nao instrucao: a tarefa pedida vem primeiro e um processo que serve o"
+        " trabalho em curso nao se para.\n"
+    )
+
+
 def run_com_timeout(cmd, timeout=60):
     """Executa um comando externo com timeout que realmente funciona no Windows.
 
@@ -747,6 +862,7 @@ def run_com_timeout(cmd, timeout=60):
         encoding="utf-8",
         shell=isinstance(cmd, str),
     )
+    _juntar_ao_job(proc)
     try:
         out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -757,5 +873,38 @@ def run_com_timeout(cmd, timeout=60):
             pass
         raise
     return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
+
+
+FATIA_PROGRESSO_PROCESSO = 10.0
+
+
+def _texto_de_progresso(pid, decorrido, timeout):
+    reg = estado.get("processos", {}).get(pid) or {}
+    comando = str(reg.get("comando") or "processo")[:60]
+    log = reg.get("log") or []
+    cauda = f" | ultima linha: {log[-1][:100]}" if log else ""
+    return f"{comando} - {int(decorrido)}s de {int(timeout)}s{cauda}"
+
+
+def _esperar_com_progresso(popen, pid, timeout, fatia=FATIA_PROGRESSO_PROCESSO):
+    """Espera pelo fim em fatias, avisando o ecra do que ja corre.
+
+    Sem isto um passo longo (um pip install de gigabytes, um build) fica minutos calado e
+    nao se sabe se anda ou morreu. Devolve False quando o tempo acaba.
+    """
+    restante = float(timeout)
+    decorrido = 0.0
+    while restante > 0:
+        passo = min(fatia, restante)
+        try:
+            popen.wait(timeout=passo)
+            return True
+        except subprocess.TimeoutExpired:
+            decorrido += passo
+            restante -= passo
+            if restante <= 0:
+                return False
+            emit_event("executing", function=_texto_de_progresso(pid, decorrido, timeout))
+    return False
 
 

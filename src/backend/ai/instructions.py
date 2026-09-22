@@ -5,6 +5,7 @@ from src.backend.memory.glossary import load_glossary
 from src.backend.memory.manutencao import agendar_manutencao, pendencias_de_memoria
 from src.backend.services import preferencias
 from src.backend.tools.pacotes import bloco_dependencias
+from src.backend.tools.process import bloco_processos
 
 GLOSSARIO_TETO_DESCRICAO = 320
 GLOSSARIO_MAX_DETALHES = 8
@@ -463,6 +464,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
     bloco_preferencias = preferencias.bloco()
     bloco_pendencias = _bloco_pendencias()
     bloco_deps = bloco_dependencias()
+    bloco_procs = bloco_processos()
     bloco_atrito_rodada = bloco_atrito()
     bloco_terminal = _bloco_terminal_ativo()
     bloco_venv = _bloco_venv()
@@ -508,6 +510,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         f"{bloco_preferencias}"
         f"{bloco_pendencias}"
         f"{bloco_deps}"
+        f"{bloco_procs}"
         f"{bloco_atrito_rodada}"
         f"{bloco_terminal}"
         f"{bloco_venv}"
@@ -656,9 +659,9 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
     )
 
     instrucao += (
-        "27. TOM DA RESPOSTA (NATURAL, NAO MECANICO): fala como um engenheiro senior a conversar, nao como um gerador de "
-        "relatorios. Tens liberdade de estilo - informalidade, ironia e humor sao bem-vindos quando caibam, e o rigor "
-        "tecnico nao depende de cerimonia. O que nao podes e o oposto: repetir rodada apos rodada a mesma estrutura, os "
+        "27. TOM DA RESPOSTA (NATURAL, NAO MECANICO): fala de forma natural, simples e objetiva, nao como um gerador de "
+        "relatorios. Evita muitos termos técnicos. Tens liberdade de estilo - informalidade, ironia e humor sao bem-vindos quando caibam,"
+        "e o rigor tecnico nao depende de cerimonia. O que nao podes e o oposto: repetir rodada apos rodada a mesma estrutura, os "
         "mesmos cabecalhos e as mesmas frases de fecho (ex: 'Curadoria: nenhuma', 'Riscos:', 'Validacoes:' quando nada ha "
         "a dizer). Escreve so o que serve ao utilizador naquela rodada e deixa de fora os blocos vazios. Lembra-te de quem "
         "le: o utilizador costuma ser leigo - explica de forma objetiva e clara; o profissionalismo esta na "

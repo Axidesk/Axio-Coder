@@ -17,6 +17,7 @@ import tempfile
 
 from src.backend.services.file_service import resolver_caminho
 from src.backend.state import estado, emit_event
+from src.backend.tools.pacotes import python_do_projeto
 from src.backend.tools.process import run_com_timeout
 from src.backend.tools.registry import register
 
@@ -120,12 +121,17 @@ def _extrair(saida):
     return None
 
 
-def _rodar_script(script):
+def _rodar_script(script, python=None):
+    """Corre o script no interpretador do PROJETO aberto, nao no do Axio.
+
+    Com o Python do Axio, auditar outro projeto media o que o Axio tem instalado: quem
+    carrega a app e o venv dela, e e la que o Flask (e a versao dele) vive.
+    """
     fd, caminho = tempfile.mkstemp(prefix="axio_rotas_", suffix=".py")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(script)
-        return run_com_timeout([sys.executable, caminho], timeout=_TIMEOUT_GLOBAL)
+        return run_com_timeout([python or sys.executable, caminho], timeout=_TIMEOUT_GLOBAL)
     finally:
         try:
             os.remove(caminho)
@@ -202,7 +208,7 @@ def tool_auditar_rotas(caminho_app="app.py", timeout=5):
     script = _gerar_script(base, os.path.dirname(ficheiro),
                            os.path.splitext(os.path.basename(ficheiro))[0], limite)
     try:
-        proc = _rodar_script(script)
+        proc = _rodar_script(script, python_do_projeto(base))
     except subprocess.TimeoutExpired:
         return (f"ERRO: a auditoria passou de {_TIMEOUT_GLOBAL}s e foi abortada. O sinal habitual "
                 "e uma rota presa a espera (streaming ou lock) - nada foi alterado.")

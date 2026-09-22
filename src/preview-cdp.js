@@ -1043,6 +1043,18 @@ async function efeitoDoGesto(depurador, marca, seletor) {
   };
 }
 
+function identidadeDaView(view) {
+  if (!view) return null;
+  const wc = view.webContents;
+  let visivel = null;
+  let url = '';
+  let titulo = '';
+  try { visivel = view.getVisible(); } catch (e) { visivel = null; }
+  try { url = wc.getURL(); } catch (e) { url = ''; }
+  try { titulo = wc.getTitle(); } catch (e) { titulo = ''; }
+  return { aba: view.__axioAlvo || '', id: wc.id, url: url, titulo: titulo, visivel: visivel };
+}
+
 function acaoEstado(view) {
   if (!view) return { ok: true, tem_pagina: false };
   const wc = view.webContents;
@@ -1682,7 +1694,11 @@ async function executar(dados) {
     if (aoUsar) {
       try { aoUsar(acao, ACOES_QUE_AGEM.has(acao)); } catch (e) {}
     }
-    return await escolhida(view, params);
+    const resultado = await escolhida(view, params);
+    if (resultado && typeof resultado === 'object' && !resultado.alvo) {
+      resultado.alvo = identidadeDaView(view);
+    }
+    return resultado;
   } catch (e) {
     return { ok: false, erro: 'Falha na acao ' + acao + ': ' + (e && e.message ? e.message : String(e)) };
   }

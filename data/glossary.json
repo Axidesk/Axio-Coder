@@ -959,8 +959,8 @@
         "arquivo": "src/backend/services/file_service.py",
         "linha": 585,
         "conferido": [
-          1789845800.272,
-          31824
+          1790035473.548,
+          31840
         ]
       }
     },
@@ -2365,8 +2365,8 @@
         "arquivo": "src/backend/tools/vision.py",
         "linha": 252,
         "conferido": [
-          1789869099.103,
-          26408
+          1790035370.605,
+          26977
         ]
       }
     },
@@ -2408,10 +2408,10 @@
       "descricao": "Ferramenta que abre uma imagem que esta no projeto (png, jpg, gif, webp, bmp, ico) e a entrega ao agente como imagem, para ele olhar para um icone, um esquema ou um diagrama. Formato que a API nao aceita e convertido automaticamente para PNG (so a fonte que ja e JPEG continua JPEG). NAO confundir com 'print' (tool_capturar_print), que captura o ecra.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 339,
+        "linha": 344,
         "conferido": [
-          1789869099.103,
-          26408
+          1790035370.605,
+          26977
         ]
       }
     },
@@ -2898,7 +2898,11 @@
       "descricao": "Ponto de entrada do desenho de modelos: desenho_do_ficheiro(caminho, focar, cima) devolve (triangulos, rodape) - o rodape diz a convencao de eixos usada; desenhar() rasteriza uma vista; vistas_do_pedido() traduz 'frente;3q' em angulos.",
       "localizacao": {
         "arquivo": "src/backend/geometry/vista.py",
-        "linha": 40
+        "linha": 40,
+        "conferido": [
+          1790035518.004,
+          13500
+        ]
       }
     },
     {
@@ -2995,10 +2999,10 @@
       "descricao": "Parametro da tool_ver_imagem: entrega cada vista do modelo LADO A LADO com a imagem de referencia, na mesma imagem e na mesma altura (a referencia a esquerda). A composicao e a `lado_a_lado` de services/imagem.py. Usar sempre que se modela a partir de uma referencia visual - julgar semelhanca alternando entre duas imagens nao funciona.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 355,
+        "linha": 360,
         "conferido": [
-          1789869099.103,
-          26408
+          1790035370.605,
+          26977
         ]
       }
     },
@@ -3885,10 +3889,10 @@
       "descricao": "Prepara uma captura de ecra para publicar: sem 'destino' devolve o mapa de atividade (grelha que mostra onde esta o conteudo aceso e onde a imagem e lisa), e com 'destino' recorta por 'caixa' (x,y,largura,altura da origem), reduz a 'largura' maxima e grava dentro do projeto. A origem pode estar fora dele (a pasta institucional); a escrita, nao. Servico em src/backend/services/capturas.py.",
       "localizacao": {
         "arquivo": "src/backend/tools/vision.py",
-        "linha": 434,
+        "linha": 439,
         "conferido": [
-          1789869099.103,
-          26408
+          1790035370.605,
+          26977
         ]
       }
     },
@@ -4633,7 +4637,11 @@
       "descricao": "Le um .obj/.glb/.gltf/.stl/.ply e devolve a caixa por eixo, o eixo mais longo, as pecas LIGADAS por arestas (tamanho, centro, volume e fatia de faces de cada uma), os eixos principais (PCA) e, com 'rodar', grava uma copia rodada medindo antes e depois. E o que responde 'as duas bolas eram os globos oculares' sem adivinhar por sombra.",
       "localizacao": {
         "arquivo": "src/backend/tools/malha.py",
-        "linha": 47
+        "linha": 47,
+        "conferido": [
+          1790035340.582,
+          7291
+        ]
       }
     },
     {
@@ -4654,7 +4662,11 @@
       "descricao": "Decide se a malha e lida como Y-para-cima (glTF/GLB, three.js) ou Z-para-cima (IFC, CAD) e devolve o motivo; o desenhador e Z-up, logo um .glb e rodado antes de desenhar. tool_ver_imagem aceita cima='y'/'z' e a legenda diz sempre qual foi usada e a caixa medida no ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/geometry/inspecao.py",
-        "linha": 104
+        "linha": 104,
+        "conferido": [
+          1790035324.16,
+          4668
+        ]
       }
     }
   ]

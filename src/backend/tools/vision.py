@@ -259,10 +259,23 @@ def tool_capturar_print(regiao="", ecra="principal", detalhe="unico"):
     if imagem is None:
         return f"ERRO: {nota}."
 
-    buffer = io.BytesIO()
-    imagem.save(buffer, format="PNG")
-    bruto = buffer.getvalue()
     largura, altura = imagem.size
+    if not largura or not altura:
+        return (
+            "ERRO: o ecra foi lido mas a captura saiu VAZIA (0x0 px) - nao ha imagem nenhuma"
+            " para mostrar nem para guardar."
+            + (f" A regiao {regiao!r} cai toda fora do ecra: confira as coordenadas"
+               " (x,y,largura,altura, em pixeis, a partir do canto superior esquerdo) ou"
+               " capture sem 'regiao'." if str(regiao).strip() else
+               " Confirme que a area de trabalho esta desbloqueada antes de capturar.")
+        )
+
+    buffer = io.BytesIO()
+    try:
+        imagem.save(buffer, format="PNG")
+    except (ValueError, OSError) as e:
+        return f"ERRO: a captura veio com {largura}x{altura} px e nao a consegui codificar ({e})."
+    bruto = buffer.getvalue()
 
     pasta = _pasta_destino()
     try:
