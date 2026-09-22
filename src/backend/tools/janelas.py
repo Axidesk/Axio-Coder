@@ -787,6 +787,9 @@ def _acao_print(janela, regiao):
         "texto": (
             f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.'
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
+            " ATENCAO: numa janela TRANSPARENTE (Electron/app com o fundo ainda por pintar, canvas a carregar) "
+            "a composicao do sistema mostra o que esta ATRAS dela - se a imagem nao bater com o que se esperava "
+            "dessa janela, e disso: traga-a para a frente, de tempo ao desenho e repita."
         ),
         "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Janela nativa: hwnd {janela.handle}]"},
     }

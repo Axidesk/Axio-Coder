@@ -27,6 +27,19 @@ _SEGREDOS = (
     "mempalace.yaml",
 )
 _TEMPLATES_DE_SEGREDO = (".env.example", ".env.sample", ".env.template", ".env.dist", ".env.defaults")
+_LINHAS_DO_GITIGNORE = (
+    ".env",
+    ".env.*",
+    "!.env.example",
+    ".axio/",
+    ".venv/",
+    "venv/",
+    "__pycache__/",
+    "*.pyc",
+    "node_modules/",
+    "dist/",
+    "build/",
+)
 
 
 def _curto(pasta, revisao):
@@ -335,6 +348,11 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
         linhas.append("SEM PUSH (empurrar=false): o commit ficou so no disco local.")
         return linhas
 
+    if not _tem_remoto(raiz):
+        linhas.append("SEM REMOTO: o commit ficou so no disco - este repositorio ainda nao tem 'origin'. "
+                      "Crie o repositorio remoto e ligue-o ('git remote add origin <url>') e repita a publicacao.")
+        return linhas
+
     ramo, _ = git_saida(raiz, "rev-parse", "--abbrev-ref", "HEAD")
     ramo = (ramo or "").strip() or "main"
     _, erro = git_saida(raiz, "push", "origin", ramo)
@@ -365,6 +383,37 @@ def _base_do_repositorio(caminho):
     return raiz, ""
 
 
+def _escrever_gitignore(raiz):
+    caminho = os.path.join(raiz, ".gitignore")
+    if os.path.exists(caminho):
+        return False
+    try:
+        with open(caminho, "w", encoding="utf-8") as f:
+            f.write("\n".join(_LINHAS_DO_GITIGNORE) + "\n")
+    except OSError:
+        return False
+    return True
+
+
+def _criar_repositorio(base):
+    """Cria o repositorio DENTRO da pasta do projeto. Devolve (raiz, linhas) - raiz "" quando falha."""
+    caminho = os.path.abspath(base)
+    if not os.path.isdir(caminho):
+        return "", [f"ERRO: '{base}' nao e uma pasta - nao ha onde criar o repositorio."]
+    existente = raiz_repositorio(caminho)
+    if existente:
+        return existente, [f"REPOSITORIO JA EXISTE: '{existente}' - nao criei nenhum."]
+    _, erro = git_saida(caminho, "init")
+    if erro:
+        return "", [f"ERRO ao criar o repositorio em '{caminho}': {erro}"]
+    git_saida(caminho, "symbolic-ref", "HEAD", "refs/heads/main")
+    linhas = [f"REPOSITORIO NOVO: criei um repositorio git AQUI, na pasta do projeto ('{caminho}', ramo main) - "
+              "nenhum repositorio de fora foi tocado."]
+    if _escrever_gitignore(caminho):
+        linhas.append("GITIGNORE: criei um .gitignore de partida (.env, .venv, node_modules, build, dist).")
+    return caminho, linhas
+
+
 @register(
     "tool_estado_git",
     "Retrato do repositorio git numa so chamada: raiz, branch e relacao com o remoto, ultimo commit, "
@@ -392,7 +441,8 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True)
     raiz = raiz_repositorio(base)
     if not raiz:
         return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
-                "(nenhuma pasta .git a subir a partir dai).")
+                "(nenhuma pasta .git a subir a partir dai). Se for um projeto novo, ainda sem repositorio, "
+                "'tool_publicar_git' com criar=True cria-o nessa pasta.")
     linhas = _linhas_do_repositorio(raiz, tags, diff)
     if vitrine:
         linhas = linhas + _linhas_da_vitrine(raiz)
@@ -407,24 +457,34 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True)
     "acentos e varias linhas passam intactos. RECUSA-SE a publicar quando entre os ficheiros aparece "
     "algum de credencial ou de estado local (.env, data/settings.json, data/cofre.json, "
     "data/vertex_credentials.json, entities.json, mempalace.yaml, .axio/) - e nesse caso nao toca em "
-    "nada, nem no stage. ESCREVE no repositorio: ve o que vai entrar com 'tool_estado_git' antes.",
+    "nada, nem no stage. Quando a pasta do projeto ainda nao tem repositorio, RECUSA - a nao ser que "
+"criar=True, e entao cria um repositorio git ALI, na pasta do projeto (nunca no repositorio de outro "
+"projeto), com um .gitignore de partida; sem remoto o commit fica so no disco, e a resposta di-lo. "
+"ESCREVE no repositorio: ve o que vai entrar com 'tool_estado_git' antes.",
     {
         'mensagem': {"tipo": "STRING", "desc": "Mensagem do commit (a mesma serve de mensagem a etiqueta)"},
         'ficheiros': {"tipo": "STRING", "desc": "Caminhos a publicar, separados por espaco (ou por virgula/ponto-e-virgula quando o caminho tiver espacos) - padrao: tudo o que mudou", "padrao": ""},
         'tag': {"tipo": "STRING", "desc": "Etiqueta anotada a criar neste commit (padrao: nenhuma)", "padrao": ""},
         'empurrar': {"tipo": "BOOLEAN", "desc": "Empurrar o commit (e a etiqueta) para o remoto", "padrao": True},
         'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
+        'criar': {"tipo": "BOOLEAN", "desc": "Criar um repositorio git NA PASTA DO PROJETO quando ela ainda nao tem nenhum (nunca no repositorio de outro projeto)", "padrao": False},
     },
 )
-def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho=""):
+def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="", criar=False):
     base, falta = _base_do_repositorio(caminho)
     if falta:
         return falta
     raiz = raiz_repositorio(base)
+    abertura = []
     if not raiz:
-        return (f"ERRO: '{base}' nao esta dentro de um repositorio git "
-                "(nenhuma pasta .git a subir a partir dai).")
-    return "\n".join(_linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, base))
+        if not criar:
+            return (f"ERRO: '{base}' nao esta dentro de um repositorio git (nenhuma pasta .git a subir a partir "
+                    "dai). Esta pasta ainda nao tem repositorio: repita com criar=True e o repositorio nasce "
+                    "AQUI dentro, na pasta do projeto - o commit nunca cai no repositorio de outro projeto.")
+        raiz, abertura = _criar_repositorio(base)
+        if not raiz:
+            return "\n".join(abertura)
+    return "\n".join(abertura + _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, base))
 
 
 @register(
@@ -495,6 +555,11 @@ def _slug_do_remoto(raiz):
     if not host or "/" not in caminho:
         return "", ""
     return host, caminho
+
+
+def _tem_remoto(raiz):
+    saida, erro = git_saida(raiz, "remote")
+    return bool(not erro and (saida or "").strip())
 
 
 def _base_do_remoto(raiz, ramo):

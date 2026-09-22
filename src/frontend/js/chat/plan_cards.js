@@ -214,6 +214,14 @@ export function _setStepIcon(card, estado) {
     else iconContainer.innerHTML = _iconAguardando();
 }
 
+export function _pararPlanoEmCurso(container) {
+    if (!container) return 0;
+    const icones = Array.from(container.querySelectorAll('.step-status-icon'))
+        .filter((icone) => icone.querySelector('.animate-spin'));
+    icones.forEach((icone) => { icone.innerHTML = _iconAguardando(); });
+    return icones.length;
+}
+
 export function _collapseStep(card) {
     const collapsible = card.querySelector('.card-collapsible');
     const chevron = card.querySelector('.step-chevron');

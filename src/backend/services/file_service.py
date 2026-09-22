@@ -10,6 +10,7 @@ from importlib import metadata
 
 from src.backend.state import estado, MAX_UNDO, caminho_estado_projeto, MSG_SEM_PASTA
 from src.backend.config import APP_ROOT
+from src.backend.services.busca_texto import EXTS_BINARIAS, PASTAS_IGNORADAS
 from src.backend.services.file_watcher import notificar_gravacao
 
 def dirs_leitura_extra():
@@ -139,8 +140,8 @@ def versao_pacote(nome):
     except Exception:
         return "desconhecida"
 
-PASTAS_FORA_DA_BUSCA = {'.git', '__pycache__', 'node_modules', 'build', 'dist', 'venv'}
-EXT_FORA_DA_BUSCA = ('.exe', '.dll', '.obj', '.o', '.a', '.lib', '.so', '.pyc', '.spv', '.pdb', '.ilk', '.png', '.jpg', '.jpeg', '.ttf', '.bin', '.zip', '.tar')
+PASTAS_FORA_DA_BUSCA = PASTAS_IGNORADAS
+EXT_FORA_DA_BUSCA = tuple(sorted(EXTS_BINARIAS))
 
 def raiz_repositorio(caminho):
     """Sobe a partir de `caminho` ate encontrar a pasta .git. Devolve "" se nao houver repo."""

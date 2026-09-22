@@ -132,7 +132,7 @@ def tool_listar_arvore(caminho_relativo="", profundidade_max=4, max_entradas=400
         'termo': {"tipo": "STRING", "obrig": True, "padrao": ""},
         'revisao': {"tipo": "STRING", "padrao": ""},
         'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist). Serve para ler tipagens e codigo das dependencias instaladas. Custa tempo - em pastas enormes o limite de 10s corta a busca."},
-        'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a busca a uma pasta do projeto (ex: node_modules/dxf-viewer). E o caminho para procurar dentro de uma dependencia SEM percorrer as outras todas: sem isto, incluir_ignoradas varre o node_modules inteiro e o limite de 10s devolve resultados parciais (os ficheiros ordenados depois do corte nunca sao vistos)."},
+        'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a busca a uma pasta (ex: node_modules/dxf-viewer) OU a um ficheiro do projeto (procura so dentro dele). E o caminho para procurar dentro de uma dependencia SEM percorrer as outras todas: sem isto, incluir_ignoradas varre o node_modules inteiro e o limite de 10s devolve resultados parciais (os ficheiros ordenados depois do corte nunca sao vistos)."},
     },
 )
 def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: bool = False, pasta: str = ""):
@@ -157,8 +157,19 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         candidata = os.path.abspath(os.path.join(raiz_projeto, pasta.strip().strip("/\\")))
         if not candidata.startswith(os.path.abspath(raiz_projeto)):
             return f"ERRO: '{pasta}' esta fora do projeto."
+        if os.path.isfile(candidata):
+            if os.path.getsize(candidata) > LIMITE_BYTES_LIDOS:
+                return f"ERRO: '{pasta}' tem mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB - nao vale a pena procura-lo como texto."
+            with open(candidata, "r", encoding="utf-8", errors="ignore") as ficheiro:
+                linhas_do_ficheiro = ficheiro.readlines()
+            achadas = [f"{pasta.strip()} (Linha {i + 1}): {linha.strip()}"
+                       for i, linha in enumerate(linhas_do_ficheiro)
+                       if termo_norm in normalizar_unicode(linha)]
+            if not achadas:
+                return f"Nenhuma ocorrencia encontrada para o termo '{termo}' em '{pasta.strip()}'."
+            return "\n".join(achadas[:100])
         if not os.path.isdir(candidata):
-            return f"ERRO: '{pasta}' nao e uma pasta do projeto."
+            return f"ERRO: '{pasta}' nao e uma pasta nem um ficheiro do projeto."
         raiz_busca = candidata
 
     ignorados_por_tamanho = 0

@@ -8,9 +8,15 @@ PASTAS_IGNORADAS = {
 }
 
 EXTS_BINARIAS = {
-    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.exe', '.dll',
-    '.obj', '.lib', '.pdb', '.so', '.dylib', '.zip', '.pdf', '.pyc', '.woff',
-    '.woff2', '.ttf', '.mp3', '.mp4', '.mov', '.svgz',
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.tif', '.tiff',
+    '.psd', '.heic', '.avif', '.exe', '.dll', '.obj', '.o', '.a', '.lib',
+    '.pdb', '.ilk', '.so', '.dylib', '.pyc', '.spv', '.bin', '.zip', '.tar',
+    '.gz', '.7z', '.rar', '.pdf', '.woff', '.woff2', '.ttf', '.otf', '.eot',
+    '.mp3', '.wav', '.ogg', '.oga', '.opus', '.flac', '.m4a', '.aac', '.wma',
+    '.mp4', '.mov', '.avi', '.mkv', '.webm', '.mpg', '.mpeg', '.wmv', '.m4v',
+    '.mid', '.midi', '.wasm', '.svgz', '.db', '.sqlite', '.sqlite3', '.whl',
+    '.msi', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods',
+    '.blend', '.fbx', '.glb', '.frag',
 }
 
 EXTS_TEXTO = {

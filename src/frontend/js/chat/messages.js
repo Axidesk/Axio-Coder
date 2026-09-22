@@ -9,7 +9,7 @@ import { prefetchSessionDetails, preloadSessionHistory } from './historico/paine
 import { activateWorkspaceIcon, escrevendoNoChat, esconderChip, renderCurrentSessionLogs, resetSendButton, resetTurnUI, setLogsLoading, showAlert, showWorkspaceView } from './ui.js';
 import { escapeHtml } from './escape.js';
 import { formatMessage, formatInlineText, formatInline } from './markdown.js';
-import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao } from './plan_cards.js';
+import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao, _pararPlanoEmCurso } from './plan_cards.js';
 import { reavaliarBuscaChat } from './busca_chat.js';
 import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
 
@@ -658,6 +658,7 @@ function restaurarImagensDoTurno() {
 
 async function tratar_cancel() {
     resetTurnUI();
+    _pararPlanoEmCurso(currentPlanContainer);
     restaurarImagensDoTurno();
     currentAIMessageDiv = null;
     currentGroupBalloon = null;
@@ -673,6 +674,7 @@ async function tratar_done() {
     }
     lblExecuting.textContent = '';
     lblExecuting.classList.remove('animate-pulse');
+    _pararPlanoEmCurso(currentPlanContainer);
     state.isGenerating = false;
     state.currentTurnId = null;
     resetSendButton();
