@@ -49,6 +49,7 @@ from src.backend.tools import (
     py_imports,
     read,
     refactor,
+    referencia,
     rotas,
     selfcheck,
     similarity,

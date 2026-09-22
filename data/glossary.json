@@ -957,10 +957,10 @@
       "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
       "localizacao": {
         "arquivo": "src/backend/services/file_service.py",
-        "linha": 585,
+        "linha": 586,
         "conferido": [
-          1790035473.548,
-          31840
+          1790036476.98,
+          31758
         ]
       }
     },
@@ -2297,10 +2297,10 @@
       "descricao": "Busca da arvore de ficheiros: acha um trecho colado mesmo com indentacao, tabs, quebras de linha ou linhas coladas sem separador, porque compara com TODO o espaco em branco removido dos dois lados. Consumida pela rota /api/search_files (src/backend/routes/editor.py) e pelo #explorer-search-input (src/frontend/js/editor/workspace.js:performExplorerSearch).",
       "localizacao": {
         "arquivo": "src/backend/services/busca_texto.py",
-        "linha": 100,
+        "linha": 106,
         "conferido": [
-          1789521393.936,
-          4955
+          1790036472.856,
+          5408
         ]
       }
     },
@@ -2790,10 +2790,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1072,
+        "linha": 1075,
         "conferido": [
-          1790035881.739,
-          51219
+          1790036660.354,
+          51539
         ]
       }
     },
@@ -2811,10 +2811,10 @@
       "descricao": "Lanca um programa nativo pelo nome (ex: 'notepad', 'mspaint') ou pelo caminho completo, e devolve a janela dele ja com as contagens. Resolve pelo PATH e pelos App Paths do registo; NAO passa pela allowlist de _validar_comando_processo, que governa compilacao e nao abrir apps GUI.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 795,
+        "linha": 798,
         "conferido": [
-          1790035881.739,
-          51219
+          1790036660.354,
+          51539
         ]
       }
     },
@@ -2833,10 +2833,10 @@
       "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 990,
+        "linha": 993,
         "conferido": [
-          1790035881.739,
-          51219
+          1790036660.354,
+          51539
         ]
       }
     },
@@ -3221,8 +3221,8 @@
         "arquivo": "src/frontend/js/chat/messages.js",
         "linha": 651,
         "conferido": [
-          1789942923.59,
-          41954
+          1790036580.98,
+          42068
         ]
       }
     },
@@ -3602,8 +3602,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 770,
         "conferido": [
-          1790035881.739,
-          51219
+          1790036660.354,
+          51539
         ]
       }
     },
@@ -3849,10 +3849,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 419,
+        "linha": 473,
         "conferido": [
-          1790017611.892,
-          29827
+          1790036501.879,
+          32744
         ]
       }
     },
@@ -3869,10 +3869,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 388,
+        "linha": 437,
         "conferido": [
-          1790017611.892,
-          29827
+          1790036501.879,
+          32744
         ]
       }
     },
@@ -3949,10 +3949,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 677,
+        "linha": 742,
         "conferido": [
-          1790017611.892,
-          29827
+          1790036501.879,
+          32744
         ]
       }
     },
@@ -3969,10 +3969,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 528,
+        "linha": 593,
         "conferido": [
-          1790017611.892,
-          29827
+          1790036501.879,
+          32744
         ]
       }
     },
@@ -3989,10 +3989,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 446,
+        "linha": 506,
         "conferido": [
-          1790017611.892,
-          29827
+          1790036501.879,
+          32744
         ]
       }
     },
@@ -4667,6 +4667,41 @@
           1790035324.16,
           4668
         ]
+      }
+    },
+    {
+      "termo": "medir a referência",
+      "aliases": [
+        "medir a imagem de referencia",
+        "proporcoes da imagem",
+        "silhueta da foto",
+        "proporcao da referencia",
+        "onde esta o ponto mais brilhante",
+        "altura dos olhos na foto",
+        "medir a prancha"
+      ],
+      "identificador": "tool_medir_referencia",
+      "descricao": "Mede uma imagem de referencia em numeros (silhueta, proporcao, largura por faixas da altura, zonas mais acesas) e entrega o desenho do diagnostico. A medicao de fato vive em src/backend/geometry/referencia.py:medir.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/referencia.py",
+        "linha": 66
+      }
+    },
+    {
+      "termo": "comparar com a referência",
+      "aliases": [
+        "comparar o modelo com a foto",
+        "lado a lado da referencia",
+        "ver as duas juntas",
+        "referencia e modelo em numeros",
+        "desvio da referencia",
+        "quanto falta para a referencia"
+      ],
+      "identificador": "tool_comparar_com_referencia",
+      "descricao": "Mede o modelo num render e a referencia pelo mesmo instrumento e devolve as duas lado a lado em numeros, com a diferenca faixa a faixa e um veredicto. O lado a lado SO para os olhos continua em tool_ver_imagem(comparar_com).",
+      "localizacao": {
+        "arquivo": "src/backend/tools/referencia.py",
+        "linha": 135
       }
     }
   ]
