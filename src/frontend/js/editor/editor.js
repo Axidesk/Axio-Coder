@@ -10,6 +10,10 @@ import { state } from './state.js';
 
 export function loadFileIntoEditor(path, opts) {
     opts = opts || {};
+    if (tabsApagadas.has(path)) {
+        const modelo = state.editorModels[path];
+        if (modelo) return Promise.resolve(_abrirAbaApagada(path, modelo.getValue(), opts));
+    }
     return fetch(state.API + '/api/file_content?caminho=' + encodeURIComponent(path))
         .then(r => r.json())
         .then(data => {
@@ -89,6 +93,41 @@ export function loadFileIntoEditor(path, opts) {
             state.wsStatus.textContent = 'editor: erro';
             return false;
         });
+}
+function _abrirAbaApagada(path, conteudo, opts) {
+    if (!opts.manterVista) setView('editor');
+    ensureEditor();
+    const aplicar = function () {
+        state.suppressAutoSave = true;
+        clearHoverLine();
+        if (state.currentFile && state.editor && !state.currentFileIsImage && !state.logMode && !state.diffMode) {
+            state.editorViewStates[state.currentFile] = state.editor.saveViewState();
+        }
+        state.currentFile = path;
+        state.abaAtiva = path;
+        hideEditorImage();
+        let model = state.editorModels[path];
+        if (!model) {
+            model = state.monaco.editor.createModel(conteudo || '', getLanguage(path));
+            state.editorModels[path] = model;
+        }
+        state.editor.setModel(model);
+        if (state.editorViewStates[path]) {
+            state.editor.restoreViewState(state.editorViewStates[path]);
+        }
+        state.editor.layout();
+        updateEditorWatermark();
+        enterReadonlyLogMode();
+        state.suppressAutoSave = false;
+        updateTabsActive();
+        state.wsStatus.textContent = 'editor: ' + path + ' (apagado, so leitura)';
+    };
+    if (opts.semFade || opts.manterVista || !state.currentFile) {
+        aplicar();
+    } else {
+        fadeEditorSwap(aplicar);
+    }
+    return true;
 }
 function prepareImageHost() {
     if (!state.editorImageHost) return false;

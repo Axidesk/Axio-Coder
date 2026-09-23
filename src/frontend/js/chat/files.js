@@ -681,7 +681,13 @@ const NL = String.fromCharCode(10);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.folder) {
+                        const trocouDeProjeto = !recarregando && !!pastaSelecionada
+                            && normalizeFsPath(pastaSelecionada) !== normalizeFsPath(data.folder);
                         aplicarPastaSelecionada(data.folder);
+                        if (trocouDeProjeto) {
+                            await reiniciarInterfaceDaPasta();
+                            return true;
+                        }
                         lblStatus.textContent = (recarregando
                             ? 'Diretório recarregado.'
                             : 'Diretório carregado.') + avisoDeProcessosDaPastaAnterior(data);
@@ -707,6 +713,25 @@ const NL = String.fromCharCode(10);
         }
         if (!parados) return '';
         return ` ${parados} processo(s) da pasta anterior parado(s).`;
+    }
+
+    async function reiniciarInterfaceDaPasta() {
+        lblStatus.textContent = 'Diretorio trocado: a reiniciar a interface...';
+        try {
+            await ipcRenderer.invoke('preview:descartar');
+        } catch (e) {
+            console.log('Preview nao descartado antes de reiniciar:', e);
+        }
+        try {
+            await fetch('/api/settings/parcial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ preview: { abas_fixadas: [] } })
+            });
+        } catch (e) {
+            console.log('Abas fixadas do preview nao limpas:', e);
+        }
+        window.location.reload();
     }
 
     async function selectFolder() {

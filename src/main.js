@@ -1145,6 +1145,11 @@ app.on('ready', () => {
   ipcMain.handle('preview:acao', (e, acao, valor) => (
     veioDaJanelaPrincipal(e) ? executarAcaoDoPreview(acao, valor) : { ok: false, erro: 'Origem nao autorizada.' }
   ));
+  ipcMain.handle('preview:descartar', (e) => {
+    if (!veioDaJanelaPrincipal(e)) return { ok: false, erro: 'Origem nao autorizada.' };
+    descartarPreviewView();
+    return { ok: true };
+  });
   ipcMain.on('preview:limites', (e, limites) => {
     if (veioDaJanelaPrincipal(e)) aplicarLimitesDoPreview(limites);
   });

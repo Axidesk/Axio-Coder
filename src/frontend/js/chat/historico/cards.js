@@ -213,7 +213,7 @@ const { historyLogsWrapper } = dom;
         row.appendChild(aviao);
     }
     function enviadaParaOServidor(hash) {
-        if (!hash || !state.temRemotoGit) return false;
+        if (!hash || !state.temRemotoGit || !state.porSubirLido) return false;
         return !(state.commitsPorSubir || []).includes(hash);
     }
     function _marcasDoCard(el, grupo) {

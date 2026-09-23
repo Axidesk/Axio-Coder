@@ -553,6 +553,8 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             RASCUNHOS.delete(String(grupo.id));
             guardarRascunhos();
             updateRoundCardCommitByTurnId(grupo.id, resultado.hash || '');
+            state.porSubirLido = false;
+            await carregarPorSubir(true);
         }
         return resultado;
     }
@@ -622,8 +624,8 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             btnGitAutoHistory.classList.toggle('on', ligado);
             btnGitAutoHistory.setAttribute('aria-checked', ligado ? 'true' : 'false');
             btnGitAutoHistory.title = ligado
-                ? 'Publicar no git no fim de cada rodada (ligado - clica para desligar)'
-                : 'Publicar no git no fim de cada rodada (desligado - clica para ligar)';
+                ? 'Publicar no git automaticamente ao fim de cada rodada (ligado)'
+                : 'Publicar no git automaticamente ao fim de cada rodada (desligado)';
             btnGitAutoHistory.onclick = info ? (e) => {
                 e.stopPropagation();
                 alternarAutomatico(vista, btnGitAutoHistory);
