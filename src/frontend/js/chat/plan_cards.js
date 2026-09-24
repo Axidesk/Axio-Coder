@@ -129,7 +129,7 @@ function _linhaDaEtapa(etapa, emCurso) {
         + (!etapa.concluida && emCurso ? ' log-etapa-em-curso' : '');
     const estado = document.createElement('span');
     estado.className = 'log-etapa-estado';
-    estado.innerHTML = etapa.concluida ? _iconConcluido() : (emCurso ? _iconSpinner() : _iconAguardando());
+    estado.innerHTML = etapa.concluida ? _iconConcluido() : _iconAguardando();
     const nome = document.createElement('span');
     nome.className = 'log-etapa-nome';
     nome.textContent = etapa.titulo;

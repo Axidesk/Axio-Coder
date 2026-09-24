@@ -28,22 +28,24 @@ def pasta_do_repositorio(pasta):
     return raiz, ""
 
 
-def _ler_texto(caminho):
-    if not caminho or not os.path.exists(caminho):
-        return None
-    try:
-        with open(caminho, "r", encoding="utf-8") as f:
-            return f.read()
-    except (OSError, UnicodeDecodeError):
-        return None
-
-
 def _sujos(raiz):
-    texto, erro = git_saida(raiz, "status", "--porcelain")
+    retrato, erro = _retrato(raiz)
     if erro:
         return [], [], [], erro
+    return retrato["em_stage"], retrato["fora"], retrato["novos"], ""
+
+
+def _retrato(raiz):
+    """Ramo, frente e ficheiros sujos numa so ida ao git: o `--branch` acrescenta a linha do ramo ao status."""
+    texto, erro = git_saida(raiz, "status", "--porcelain", "--branch")
+    if erro:
+        return None, erro
+    ramo, ahead, behind = "", None, None
     em_stage, fora, novos = [], [], []
     for linha in (texto or "").splitlines():
+        if linha.startswith("## "):
+            ramo, ahead, behind = _ramo_e_frente(linha)
+            continue
         codigo, nome = linha[:2], linha[3:].strip()
         if not nome:
             continue
@@ -55,7 +57,8 @@ def _sujos(raiz):
             em_stage.append(nome)
         if codigo[1] not in " ?":
             fora.append(nome)
-    return em_stage, fora, novos, ""
+    return {"ramo": ramo or "sem ramo", "ahead": ahead, "behind": behind,
+            "em_stage": em_stage, "fora": fora, "novos": novos}, ""
 
 
 def _ramo_atual(raiz):
@@ -66,6 +69,31 @@ def _ramo_atual(raiz):
         return nome
     saida, erro = git_saida(raiz, "symbolic-ref", "--short", "HEAD")
     return (saida or "").strip() or "sem ramo"
+
+
+def _ramo_e_frente(linha):
+    """Separa a linha `## ramo...acima [ahead N, behind N]` que o `--branch` poe a frente do status."""
+    resto = linha[3:].strip()
+    if resto.startswith("No commits yet on "):
+        return resto[len("No commits yet on "):].strip() or "sem ramo", None, None
+    if resto.startswith("HEAD (no branch)"):
+        return "sem ramo", None, None
+    nome = resto
+    marcas = ""
+    if " [" in resto:
+        nome, marcas = resto.split(" [", 1)
+    ramo = nome.split("...")[0].strip() or "sem ramo"
+    ahead = behind = None
+    for parte in marcas.rstrip("]").split(","):
+        parte = parte.strip()
+        if parte.startswith("ahead ") and parte[6:].isdigit():
+            ahead = int(parte[6:])
+        elif parte.startswith("behind ") and parte[7:].isdigit():
+            behind = int(parte[7:])
+    if (ahead is None) != (behind is None):
+        ahead = ahead or 0
+        behind = behind or 0
+    return ramo, ahead, behind
 
 
 def _slug_do_remoto(url):
@@ -91,19 +119,6 @@ def _nomes_dos_ramos(raiz):
     return [l.strip() for l in (saida or "").splitlines() if l.strip()]
 
 
-def _frente(raiz):
-    saida, erro = git_saida(raiz, "rev-list", "--left-right", "--count", "HEAD...@{upstream}")
-    if erro:
-        return None, None
-    partes = (saida or "").split()
-    if len(partes) != 2:
-        return None, None
-    try:
-        return int(partes[0]), int(partes[1])
-    except ValueError:
-        return None, None
-
-
 def _ultimo_commit(raiz, caminhos=None):
     """Commit mais recente do ramo, ou o mais recente que tocou nestes caminhos."""
     formato = "--pretty=format:%H" + _SEPARADOR + "%s" + _SEPARADOR + "%cI"
@@ -117,43 +132,32 @@ def _ultimo_commit(raiz, caminhos=None):
     return {"hash": partes[0], "curto": curto(partes[0]), "mensagem": partes[1], "data": partes[2]}
 
 
-def manifestos_diferentes(raiz, revisao):
-    """Manifestos de dependencias que diferem entre o disco e a revisao indicada."""
-    diferentes = []
-    for rel in _MANIFESTOS:
-        no_disco = _ler_texto(os.path.join(raiz, rel.replace("/", os.sep)))
-        no_commit, erro = git_saida(raiz, "show", f"{revisao}:{rel}")
-        if erro:
-            no_commit = None
-        if no_disco is None and no_commit is None:
-            continue
-        if (no_disco or "") != (no_commit or ""):
-            diferentes.append(rel)
-    return diferentes
-
-
 def estado(pasta):
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:
         return {"repo": False, "motivo": erro}
-    em_stage, fora, novos, erro_status = _sujos(raiz)
-    ahead, behind = _frente(raiz)
+    retrato, erro_status = _retrato(raiz)
+    if erro_status:
+        retrato = {"ramo": _ramo_atual(raiz), "ahead": None, "behind": None,
+                   "em_stage": [], "fora": [], "novos": []}
+    sujos = {*retrato["em_stage"], *retrato["fora"]}
     remoto, _ = git_saida(raiz, "remote", "get-url", "origin")
     remoto = (remoto or "").strip()
     return {
         "repo": True,
         "raiz": raiz,
-        "branch": _ramo_atual(raiz),
+        "branch": retrato["ramo"],
         "ramos": _nomes_dos_ramos(raiz),
         "remoto": remoto,
         "slug": _slug_do_remoto(remoto),
-        "ahead": ahead,
-        "behind": behind,
+        "ahead": retrato["ahead"],
+        "behind": retrato["behind"],
         "ultimo": _ultimo_commit(raiz),
-        "em_stage": em_stage[:_LIMITE_FICHEIROS],
-        "fora": fora[:_LIMITE_FICHEIROS],
-        "novos": novos[:_LIMITE_FICHEIROS],
-        "total_sujos": len({*em_stage, *fora}),
+        "em_stage": retrato["em_stage"][:_LIMITE_FICHEIROS],
+        "fora": retrato["fora"][:_LIMITE_FICHEIROS],
+        "novos": retrato["novos"][:_LIMITE_FICHEIROS],
+        "total_sujos": len(sujos),
+        "manifestos": [m for m in _MANIFESTOS if m in sujos],
         "erro": erro_status,
     }
 
@@ -401,12 +405,13 @@ def pendentes(pasta, caminhos):
     return {"repo": True, "pendentes": nomes, "count": len(nomes)}
 
 
-def por_subir(pasta, limite=_LIMITE_POR_SUBIR):
+def por_subir(pasta, limite=_LIMITE_POR_SUBIR, remoto=None):
     """Commits locais que ainda nao chegaram a nenhum ramo remoto; 'truncado' avisa que a lista saiu cortada."""
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:
         return {"repo": False, "motivo": erro, "remoto": "", "commits": [], "count": 0}
-    remoto, _ = git_saida(raiz, "remote", "get-url", "origin")
+    if remoto is None:
+        remoto, _ = git_saida(raiz, "remote", "get-url", "origin")
     remoto = (remoto or "").strip()
     if not remoto:
         return {"repo": True, "raiz": raiz, "remoto": "", "commits": [], "count": 0}

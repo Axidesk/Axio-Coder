@@ -50,8 +50,7 @@ def git_estado():
     info["commits"] = arvore.get("commits", [])
     info["tags"] = git_repo.tags_com_ponto(pasta)
     info["erro_historico"] = arvore.get("erro", "")
-    info["por_subir"] = git_repo.por_subir(pasta).get("commits", [])
-    info["manifestos"] = git_repo.manifestos_diferentes(info.get("raiz", ""), "HEAD")
+    info["por_subir"] = git_repo.por_subir(pasta, remoto=info.get("remoto")).get("commits", [])
     info["automatico"] = git_automatico()
     return jsonify({"status": "ok", "estado": info})
 
