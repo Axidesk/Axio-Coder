@@ -1,5 +1,5 @@
 import { vistaDe } from './colunas.js';
-import { renderGitPanel } from './git_panel.js';
+import { renderGitPanel, sincronizarBotaoRestauro } from './git_panel.js';
 import {
     chatContainerLeft,
     chatContainerRight,
@@ -88,7 +88,7 @@ import { state } from './state.js';
 import { atualizarBotoesUndoRedo, atualizarIconeOlho, executarUndoRedo, marcarLinhasAlteradas, normalizeFsPath, restaurarPastaSelecionada, rolarParaDestaque, selectFolder } from './files.js';
 import { preloadSessionHistory, toggleSessionHistory } from './historico/painel.js';
 import { toggleHistorySearchInline } from './historico/busca.js';
-import { registrarRepinturaCol3 } from './historico/acoes.js';
+import { registrarRepinturaCol3, registrarSincronizacaoDeRestauro } from './historico/acoes.js';
 import { closeRestoreConfirmPopup, performSessionRestore } from './historico/restauro.js';
 import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderInspectTooltip, executarItemInspect, ligarInspectAoMenu, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
 import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
@@ -296,6 +296,7 @@ import './busca_chat.js';
         if (state.isShowingTools) return renderTools(vista);
     }
     registrarRepinturaCol3(repintarPainelCol3);
+    registrarSincronizacaoDeRestauro(sincronizarBotaoRestauro);
 
     if (btnEyeDiff) {
         btnEyeDiff.addEventListener('click', (e) => {

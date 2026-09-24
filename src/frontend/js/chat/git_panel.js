@@ -397,7 +397,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         }
         ultimoEstadoGit = estado;
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
-        sincronizarBotaoRestauro(alvo, grupo);
+        if (alvo.id === 'historico') sincronizarBotaoRestauro();
         sincronizarCabecalhoGit(alvo, estado);
         ligarAcoes(alvo);
     }
@@ -557,12 +557,11 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     function podeRestaurar(grupo) {
         return !!(grupo && (hashDaTarefa(grupo) || grupo.__session));
     }
-    function sincronizarBotaoRestauro(vista, grupo) {
-        const btn = vista && vista.id === 'historico' ? btnGitRestoreHistory : null;
-        if (!btn) return;
-        const pode = podeRestaurar(grupo);
-        btn.classList.toggle('hidden', !pode);
-        btn.onclick = pode ? (e) => {
+    function sincronizarBotaoRestauro() {
+        if (!btnGitRestoreHistory) return;
+        const pode = podeRestaurar(grupoAtivo());
+        btnGitRestoreHistory.classList.toggle('hidden', !pode);
+        btnGitRestoreHistory.onclick = pode ? (e) => {
             e.stopPropagation();
             restaurarTarefa();
         } : null;
@@ -605,6 +604,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 
 export {
     renderGitPanel,
+    sincronizarBotaoRestauro,
     grupoAtivo,
     ficheirosDaTarefa
 };
