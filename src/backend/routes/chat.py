@@ -12,6 +12,7 @@ from src.backend.services.session import criar_sessao_vazia, migrar_session_logs
 from src.backend.services.session_index import preaquecer_indices_de_sessao
 from src.backend.ai.context import medir_contexto, truncar_mensagem_historico
 from src.backend.ai.loop import loop_raciocinio_ia
+from src.backend.services.envio_automatico import agendar_envio
 from src.backend.services.file_watcher import iniciar_watcher
 from src.backend.services.settings import atualizar_settings, load_settings
 
@@ -46,6 +47,7 @@ def set_folder():
             preaquecer_info_projeto(pasta)
             return jsonify({"folder": pasta, "status": "ready"})
         estado["pasta_raiz"] = pasta
+        agendar_envio()
         migrar_session_logs_antigos()
         estado["cwd_terminal"] = ""
         estado["projeto_planejado"] = False

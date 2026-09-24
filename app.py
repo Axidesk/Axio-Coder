@@ -18,7 +18,9 @@ from flask import cli
 
 from src.backend.memory.vector import preaquecer_mempalace
 from src.backend.services.persistencia import limpar_temporarios_orfaos
+from src.backend.services.envio_automatico import iniciar_vigia_do_envio
 from src.backend.services.session import pasta_session_logs_em
+from src.backend.services.settings import migrar_automatico_padrao
 from src.backend.routes.static import static_bp
 from src.backend.routes.chat import chat_bp
 from src.backend.routes.terminal import terminal_bp
@@ -60,5 +62,7 @@ if __name__ == '__main__':
     recolhidos = limpar_temporarios_orfaos([DATA_DIR, pasta_session_logs_em(APP_ROOT)])
     if recolhidos:
         print(f"[limpeza] {recolhidos} temporario(s) orfao(s) de escrita recolhido(s)")
+    migrar_automatico_padrao()
     preaquecer_mempalace()
+    iniciar_vigia_do_envio()
     socketio.run(app, port=5000, debug=False, allow_unsafe_werkzeug=True)

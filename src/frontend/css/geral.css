@@ -45,7 +45,8 @@
     pointer-events: none;
 }
 
-#glossary-chip {
+#glossary-chip,
+#git-lembrete-chip {
     position: absolute;
     bottom: 100%;
     left: 0;
@@ -59,7 +60,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
-#glossary-chip:hover { background: var(--cinza-escuro); }
+#glossary-chip:hover,
+#git-lembrete-chip:hover { background: var(--cinza-escuro); }
+
+#git-lembrete-chip {
+    white-space: normal;
+    line-height: 1.45;
+    padding: 8px 12px;
+}
 
 .sidebar-btn {
     display: flex;

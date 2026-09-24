@@ -5,6 +5,7 @@ import os
 from flask import Blueprint, jsonify, request
 
 from src.backend.services import git_repo
+from src.backend.services.envio_automatico import enviar_pendentes
 from src.backend.services.git_sugestao import sugerir_mensagem
 from src.backend.services.file_service import mover_para_lixeira, registrar_edicao
 from src.backend.services.session import marcar_commit_no_log
@@ -80,6 +81,12 @@ def git_automatico_rota():
     return jsonify({"status": "ok", "automatico": definir_git_automatico(bool(dados.get("ligado")))})
 
 
+@git_bp.route("/api/git/modo", methods=["GET"])
+def git_modo():
+    """So o interruptor, sem tocar no repositorio: e o que o lembrete de guardar consulta."""
+    return jsonify({"status": "ok", "automatico": git_automatico()})
+
+
 @git_bp.route("/api/git/commit", methods=["POST"])
 def git_commit():
     dados = request.json or {}
@@ -139,9 +146,32 @@ def git_por_subir():
     })
 
 
+@git_bp.route("/api/git/levou", methods=["POST"])
+def git_levou():
+    """Dado o conjunto de ficheiros de cada tarefa, o commit que os levou (agrupa a pilha do dia)."""
+    dados = request.json or {}
+    return jsonify({
+        "status": "ok",
+        "levou": git_repo.ultimo_commit_dos_conjuntos(_pasta(), dados.get("tarefas") or {}),
+    })
+
+
 @git_bp.route("/api/git/enviar", methods=["POST"])
 def git_enviar():
     resultado = git_repo.empurrar(_pasta())
+    if resultado.get("status") == "error":
+        return jsonify(resultado), 400
+    return jsonify(resultado)
+
+
+@git_bp.route("/api/git/enviar_pendentes", methods=["POST"])
+def git_enviar_pendentes():
+    """Envio do fim do dia (virada, abertura ou fecho): so age com o modo automatico ligado."""
+    if not git_automatico():
+        return jsonify({"status": "pulado", "motivo": "O modo automatico esta desligado."})
+    resultado = enviar_pendentes()
+    if resultado is None:
+        return jsonify({"status": "pulado", "motivo": "Nao havia nada por subir."})
     if resultado.get("status") == "error":
         return jsonify(resultado), 400
     return jsonify(resultado)

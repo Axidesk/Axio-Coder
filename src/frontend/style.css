@@ -302,6 +302,47 @@ body {
     text-decoration: line-through;
     opacity: 0.7;
 }
+.history-absorvidos {
+    margin-top: 2px;
+}
+.history-absorvidos-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 2px 0;
+    font-size: 11px;
+    color: var(--text-mutado);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: color var(--dur-1) var(--ease-fluid);
+}
+.history-absorvidos-cabecalho:hover {
+    color: var(--text-code-dark);
+}
+.history-absorvidos-sinal {
+    margin-left: auto;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--text-mutado);
+    transition: color var(--dur-1) var(--ease-fluid);
+}
+.history-absorvidos-cabecalho:hover .history-absorvidos-sinal {
+    color: var(--text-branco);
+}
+.history-absorvidos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0 2px 10px;
+}
+.history-absorvidos-lista .history-round-card {
+    padding: 5px 8px;
+    opacity: 0.8;
+}
 .history-round-tag {
     color: var(--oliva);
     font-size: 10px;

@@ -4,7 +4,8 @@ import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
 import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
-import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
+import { renameRound } from './question_panel.js';
 
 const LIMITE_COMMITS = 20;
 const LIMITE_FICHEIROS = 12;
@@ -249,8 +250,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             ? 'Ficheiros commitados noutra tarefa'
             : rotuloDoCampo(vaiCommitar, !!pontoDaTarefa, jaNoGitHub, ficheiros.length, porCommitar);
         const podeCorrigir = !vaiCommitar && !!pontoDaTarefa && !!grupo.__podeEmendar;
-        const podeSalvar = vaiCommitar || podeCorrigir;
-        const motivo = descricaoDoSalvar(vaiCommitar, pontoDaTarefa, porCommitar, noutroCommit, ficheiros.length, podeCorrigir);
         const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
         let cabecalho = `<span class="projeto-contagem">${rotulo}</span>`;
         if (porCommitar !== null) {
@@ -277,12 +276,10 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
                 + ` value="${escapeHtml(escrito)}"`
                 + ` placeholder="${escapeHtml(textoDoCampo)}">`;
             html += varinha('sugerir', 'Escrever a mensagem com a IA');
+            html += salvar('salvar', descricaoDoSalvar(vaiCommitar), false);
         } else {
-            html += `<input id="git-mensagem" class="git-campo git-campo-trancado" type="text" spellcheck="false" disabled`
-                + ` value="${escapeHtml(mensagemDoPonto)}"`
-                + ` placeholder="${escapeHtml(textoDoCampo)}">`;
+            html += `<div class="git-estado">${escapeHtml(textoDoCampo)}</div>`;
         }
-        html += salvar('salvar', motivo, !podeSalvar);
         html += '</div>';
         html += '</div>';
         return html;
@@ -296,12 +293,9 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         }
         return jaNoGitHub ? 'Ja no GitHub' : 'Ponto so no teu PC, por enviar';
     }
-    function descricaoDoSalvar(vaiCommitar, pontoDaTarefa, porCommitar, noutroCommit, quantos, podeEmendar) {
-        if (vaiCommitar) return 'Guardar o commit desta tarefa (fica so no teu PC)';
-        if (pontoDaTarefa) return podeEmendar ? 'Guardar a mensagem corrigida neste commit' : 'Este commit ja subiu: a mensagem nao se muda';
-        if (noutroCommit) return 'Nao ha nada proprio desta tarefa por commitar';
-        if (porCommitar === 0) return 'Nada por commitar: nenhum ficheiro desta tarefa mudou';
-        return quantos === 0 ? 'Esta tarefa nao tem ficheiros registados' : 'Nada para salvar';
+    function descricaoDoSalvar(vaiCommitar) {
+        if (vaiCommitar) return 'Guardar o ponto desta tarefa (so no PC; o envio e feito no fim do dia)';
+        return 'Guardar a mensagem corrigida neste commit';
     }
     function descricaoDoEnvio(porSubir, vaiCommitar) {
         const commits = porSubir || [];
@@ -549,12 +543,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const resultado = await pedirGit('/api/git/commit', corpo);
         if (resultado && resultado.status === 'ok') {
             grupo.commit = resultado.hash || '';
+            if (grupo.__saved) grupo.__saved.commit = resultado.hash || '';
             state.commitsDosTurnos[String(grupo.id)] = resultado.hash || '';
             RASCUNHOS.delete(String(grupo.id));
             guardarRascunhos();
             updateRoundCardCommitByTurnId(grupo.id, resultado.hash || '');
+            if (corpo.mensagem) await renameRound(grupo, corpo.mensagem.trim());
             state.porSubirLido = false;
             await carregarPorSubir(true);
+            await reagruparPilhaDoDia();
         }
         return resultado;
     }

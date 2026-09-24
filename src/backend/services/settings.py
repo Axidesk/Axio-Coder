@@ -20,7 +20,7 @@ DEFAULT_SETTINGS = {
     "tavily": {"api_key": "", "enabled": False},
     "projeto": {"ultima_pasta": ""},
     "interface": {"zoom": 1},
-    "git": {"automatico": False},
+    "git": {"automatico": True, "automatico_escolhido": False},
     "preview": {"abas_fixadas": []},
 }
 
@@ -58,12 +58,20 @@ def atualizar_settings(parcial):
     return _gravar_settings(dados)
 
 def git_automatico():
-    """Interruptor de fim de rodada: o agente publica no git sem o utilizador pedir."""
+    """Modo automatico: a cada rodada o agente guarda o ponto sem o utilizador pedir."""
     return bool((load_settings().get("git") or {}).get("automatico"))
 
 def definir_git_automatico(ligado):
-    atualizar_settings({"git": {"automatico": bool(ligado)}})
+    atualizar_settings({"git": {"automatico": bool(ligado), "automatico_escolhido": True}})
     return git_automatico()
+
+def migrar_automatico_padrao():
+    """Uma so vez: o interruptor passou a nascer ligado; quem nunca o tocou fica ligado."""
+    git = load_settings().get("git") or {}
+    if git.get("automatico_escolhido"):
+        return False
+    atualizar_settings({"git": {"automatico": True, "automatico_escolhido": True}})
+    return True
 
 def save_settings(dados):
     dados = _deep_merge(load_settings(), dados or {})

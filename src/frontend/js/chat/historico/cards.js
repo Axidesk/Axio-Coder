@@ -85,19 +85,22 @@ const { historyLogsWrapper } = dom;
         const sec = Math.round(ms / 1000);
         return `${Math.max(1, Math.round(sec / 60))}min`;
     }
-    function createHistoryRoundCard(group) {
+    function createHistoryRoundCard(group, opcoes) {
+        const absorvido = !!(opcoes && opcoes.absorvido);
         const sub = document.createElement('div');
-        sub.className = 'history-round-card relative flex flex-col gap-1 w-full text-left px-3.5 py-2.5 rounded-[10px] cursor-pointer text-sm';
+        sub.className = 'history-round-card relative flex flex-col gap-1 w-full text-left px-3.5 py-2.5 rounded-[10px] cursor-pointer text-sm'
+            + (absorvido ? ' history-round-card-absorvido' : '');
         const hora = group.timestamp ? escapeHtml(group.timestamp) : '—';
         const data = group.__date ? ' - ' + escapeHtml(group.__date) : '';
         const nome = escapeHtml(group.displayName || group.name || 'Tarefa');
         const content = document.createElement('div');
         content.className = 'flex-1 min-w-0';
+        const meta = absorvido ? '' : `<div class="text-[11px] text-[var(--text-mutado)] truncate leading-tight">${roundMetaHtml(group)}</div>`;
         content.innerHTML = `
             <div class="text-[13px] leading-tight">
                 <span class="history-round-name font-bold text-[var(--text-code-dark)]">${nome}</span>
             </div>
-            <div class="text-[11px] text-[var(--text-mutado)] truncate leading-tight">${roundMetaHtml(group)}</div>
+            ${meta}
             <div class="text-[11px] text-[var(--text-mutado)] leading-tight">${hora}${data}</div>
         `;
         const row = document.createElement('div');
@@ -105,12 +108,16 @@ const { historyLogsWrapper } = dom;
         row.appendChild(content);
         sub.appendChild(row);
         if (group.commit) _marcasDoCard(sub, group);
+        if (!absorvido && group.absorveu && group.absorveu.length) {
+            sub.appendChild(montarGaveta(group.absorveu));
+        }
         sub.dataset.turnId = group.id;
         group.domElement = sub;
         group.nameEl = sub.querySelector('.history-round-name');
         sub._group = group;
         marcarCheckpoint(sub, group.id);
-        sub.addEventListener('click', async () => {
+        sub.addEventListener('click', async (evento) => {
+            evento.stopPropagation();
             const vista = vistaDe('historico');
             const isSelected = state.currentSelectedHistoryGroup === group;
             if (!isSelected) {
@@ -125,6 +132,33 @@ const { historyLogsWrapper } = dom;
             showQuestionPanel(group, vista);
         });
         return sub;
+    }
+    function montarGaveta(absorbidos) {
+        const gaveta = document.createElement('div');
+        gaveta.className = 'history-absorvidos';
+        const cabecalho = document.createElement('button');
+        cabecalho.type = 'button';
+        cabecalho.className = 'history-absorvidos-cabecalho';
+        const quantas = absorbidos.length === 1 ? '1 tarefa absorvida' : `${absorbidos.length} tarefas absorvidas`;
+        cabecalho.innerHTML = `<span>${quantas}</span><span class="history-absorvidos-sinal">+</span>`;
+        const corpo = document.createElement('div');
+        corpo.className = 'card-collapsible';
+        const clip = document.createElement('div');
+        clip.className = 'card-collapsible-clip';
+        const lista = document.createElement('div');
+        lista.className = 'history-absorvidos-lista';
+        absorbidos.forEach(g => lista.appendChild(createHistoryRoundCard(g, { absorvido: true })));
+        clip.appendChild(lista);
+        corpo.appendChild(clip);
+        gaveta.appendChild(cabecalho);
+        gaveta.appendChild(corpo);
+        const sinal = cabecalho.querySelector('.history-absorvidos-sinal');
+        cabecalho.addEventListener('click', (evento) => {
+            evento.stopPropagation();
+            const aberto = corpo.classList.toggle('card-collapsible-open');
+            sinal.textContent = aberto ? '-' : '+';
+        });
+        return gaveta;
     }
     function setupAccordion(card, header, body, bodyInner, toggleIcon, loadCallback) {
         function collapse() {
@@ -189,7 +223,7 @@ const { historyLogsWrapper } = dom;
 
     const SVG_SALVAR_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`;
 
-    function _injectMarcas(el, titulo, tag, enviada) {
+    function _injectMarcas(el, titulo, tag) {
         el.querySelectorAll('.history-round-saved-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
@@ -205,12 +239,6 @@ const { historyLogsWrapper } = dom;
         salvo.title = titulo;
         salvo.innerHTML = SVG_SALVAR_CARD;
         row.appendChild(salvo);
-        if (!enviada) return;
-        const aviao = document.createElement('span');
-        aviao.className = 'shrink-0 mt-0.5 history-round-saved-icon';
-        aviao.title = 'Enviada para o GitHub';
-        aviao.innerHTML = SVG_AVIAO_CARD;
-        row.appendChild(aviao);
     }
     function enviadaParaOServidor(hash) {
         if (!hash || !state.temRemotoGit || !state.porSubirLido) return false;
@@ -219,21 +247,32 @@ const { historyLogsWrapper } = dom;
     function _marcasDoCard(el, grupo) {
         const commit = grupo && grupo.commit ? grupo.commit : '';
         if (!commit) {
-            _injectMarcas(el, '', '', false);
+            _injectMarcas(el, '', '');
             return;
         }
-        const tag = tagDoCommit(commit);
         const curto = String(commit).slice(0, 7);
-        if (!enviadaParaOServidor(commit)) {
-            _injectMarcas(el, 'Guardada no PC (' + curto + '), por enviar', tag, false);
-            return;
-        }
-        _injectMarcas(el, 'Guardada e enviada para o GitHub (' + curto + ')', tag, true);
+        const onde = enviadaParaOServidor(commit) ? ', na nuvem' : ', por enviar';
+        _injectMarcas(el, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit));
+    }
+    function _marcasDoDia(el) {
+        const anterior = el.querySelector('.history-day-saved-icon');
+        if (anterior) anterior.remove();
+        const doDia = turnosComCommit().filter(t => t.__date === (el.dataset.dia || ''));
+        if (!doDia.length) return;
+        if (doDia.some(t => !enviadaParaOServidor(t.commit))) return;
+        const row = el.firstElementChild;
+        if (!row) return;
+        const aviao = document.createElement('span');
+        aviao.className = 'shrink-0 mt-0.5 history-day-saved-icon';
+        aviao.title = 'Salvo na nuvem';
+        aviao.innerHTML = SVG_AVIAO_CARD;
+        row.appendChild(aviao);
     }
     function atualizarMarcasDosCards() {
         document.querySelectorAll('.history-round-card').forEach(el => {
             if (el._group) _marcasDoCard(el, el._group);
         });
+        document.querySelectorAll('.session-history-card[data-dia]').forEach(_marcasDoDia);
     }
     function updateRoundCardNameByTurnId(turnId, novoNome) {
         document.querySelectorAll('.history-round-card').forEach(el => {
@@ -255,6 +294,46 @@ const { historyLogsWrapper } = dom;
             if (g) _marcasDoCard(el, g);
         });
     }
+    const CHAVE_LEMBRETE = 'axio.git.lembrete-visto';
+
+    function turnosSemCommit() {
+        const todos = [];
+        state.sessionHistoryList.forEach(sessao => {
+            todos.push(...(state.sessionDetailCache[sessao.filename] || []));
+        });
+        todos.sort((a, b) => epochDeId(a.id) - epochDeId(b.id));
+        let semPonto = 0;
+        for (let i = todos.length - 1; i >= 0 && !todos[i].commit; i--) semPonto++;
+        return semPonto;
+    }
+
+    async function talvezLembrarDeGuardar() {
+        const balao = document.getElementById('git-lembrete-chip');
+        if (!balao || localStorage.getItem(CHAVE_LEMBRETE)) return;
+        const semPonto = turnosSemCommit();
+        if (semPonto < 3) {
+            balao.classList.remove('balao-visible');
+            return;
+        }
+        let modo = null;
+        try {
+            modo = await (await fetch('/api/git/modo')).json();
+        } catch (e) {
+            return;
+        }
+        if (!modo || modo.automatico) return;
+        balao.textContent = `${semPonto} tarefas ficaram sem ponto de salvamento. Clica para as guardar.`;
+        balao.classList.add('balao-visible');
+        if (balao.dataset.ligado) return;
+        balao.dataset.ligado = 'true';
+        balao.addEventListener('click', () => {
+            balao.classList.remove('balao-visible');
+            localStorage.setItem(CHAVE_LEMBRETE, '1');
+            const botao = document.getElementById('btn-show-git-history');
+            if (botao) botao.click();
+        });
+    }
+
     function turnosComCommit() {
         const turnos = [];
         for (const sessao of state.sessionHistoryList) {
@@ -527,7 +606,42 @@ const { historyLogsWrapper } = dom;
         }
         return null;
     }
-    function renderDayRoundCards(savedLogs, body) {
+    async function aplicarAbsorvidos(groups) {
+        const semPonto = groups.filter(g => !g.commit && (g.files || []).some(f => f.name));
+        if (!semPonto.length) return groups;
+        const tarefas = {};
+        semPonto.forEach(g => { tarefas[g.id] = (g.files || []).map(f => f.name).filter(Boolean); });
+        let levou = {};
+        try {
+            const resp = await fetch('/api/git/levou', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tarefas })
+            });
+            const dados = await resp.json();
+            if (!dados || dados.status !== 'ok') return groups;
+            levou = dados.levou || {};
+        } catch (e) {
+            return groups;
+        }
+        const donos = new Map();
+        groups.forEach(g => { if (g.commit) donos.set(g.commit, g); });
+        const recolhidos = new Set();
+        semPonto.forEach(g => {
+            const achado = levou[String(g.id)];
+            const dono = achado && achado.hash ? donos.get(achado.hash) : null;
+            if (!dono || epochDeId(g.id) >= epochDeId(dono.id)) return;
+            if (!dono.absorveu) dono.absorveu = [];
+            dono.absorveu.push(g);
+            recolhidos.add(g.id);
+        });
+        if (!recolhidos.size) return groups;
+        groups.forEach(g => {
+            if (g.absorveu) g.absorveu.sort((a, b) => epochDeId(a.id) - epochDeId(b.id));
+        });
+        return groups.filter(g => !recolhidos.has(g.id));
+    }
+    async function renderDayRoundCards(savedLogs, body) {
         if (!savedLogs || savedLogs.length === 0) {
             body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nenhuma rodada de edição neste dia.</div>';
             return;
@@ -538,16 +652,33 @@ const { historyLogsWrapper } = dom;
             g.displayName = g.name || ('Tarefa ' + (idx + 1));
         });
         groups.sort((a, b) => epochDeId(b.id) - epochDeId(a.id));
+        const visiveis = await aplicarAbsorvidos(groups);
         body.innerHTML = '';
-        groups.forEach(group => body.appendChild(createHistoryRoundCard(group)));
+        visiveis.forEach(group => body.appendChild(createHistoryRoundCard(group)));
     }
     async function loadDayRoundCards(sessoes, body) {
         await ensureSessionDetailsLoaded();
+        body.classList.add('history-day-rounds');
+        body.__sessoes = sessoes;
         const savedLogs = [];
         sessoes.forEach(sessao => {
             savedLogs.push(...(state.sessionDetailCache[sessao.filename] || []));
         });
-        renderDayRoundCards(savedLogs, body);
+        await renderDayRoundCards(savedLogs, body);
+        talvezLembrarDeGuardar();
+    }
+    async function reagruparPilhaDoDia() {
+        const selecionado = state.currentSelectedHistoryGroup ? String(state.currentSelectedHistoryGroup.id) : '';
+        for (const body of Array.from(document.querySelectorAll('.history-day-rounds'))) {
+            if (body.__sessoes) await loadDayRoundCards(body.__sessoes, body);
+        }
+        if (!selecionado) return;
+        const card = Array.from(document.querySelectorAll('.history-round-card'))
+            .find(el => String(el.dataset.turnId) === selecionado);
+        if (!card) return;
+        card.classList.add('history-round-selected');
+        state.currentSelectedHistoryEl = card;
+        state.currentSelectedHistoryGroup = card._group || state.currentSelectedHistoryGroup;
     }
 
 
@@ -567,5 +698,7 @@ export {
     updateRoundCardNameByTurnId,
     carregarPorSubir,
     atualizarMarcasDosCards,
-    enviadaParaOServidor
+    enviadaParaOServidor,
+    talvezLembrarDeGuardar,
+    reagruparPilhaDoDia
 };

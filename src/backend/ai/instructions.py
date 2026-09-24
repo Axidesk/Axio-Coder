@@ -349,7 +349,7 @@ def _bloco_venv():
     return "\n".join(linhas) + "\n"
 
 def _bloco_git_automatico():
-    """Publicacao de fim de rodada: vazio enquanto o interruptor do utilizador estiver desligado."""
+    """Guarda o ponto no fim da rodada sem empurrar: vazio enquanto o interruptor estiver desligado."""
     from src.backend.services.settings import git_automatico
     try:
         ligado = git_automatico()
@@ -358,11 +358,13 @@ def _bloco_git_automatico():
     if not ligado:
         return ""
     return (
-        "=== PUBLICACAO NO GIT NO FIM DA RODADA (INTERRUPTOR LIGADO PELO UTILIZADOR) ===\n"
-        "No FIM de cada rodada que mexa em ficheiros, publica o trabalho com tool_publicar_git: a mensagem "
-        "e escrita por TI (nunca a pergunta do utilizador), curta e a dizer o que mudou. Isso da ao card da "
-        "rodada o ponto de restauro dele - sem esta publicacao o card fica sem ponto no git.\n"
-        "Se a rodada nao mexeu em nenhum ficheiro, nao publiques nada. Se a rodada mexeu so em parte do que "
+        "=== MODO AUTOMATICO DE GIT (INTERRUPTOR LIGADO PELO UTILIZADOR) ===\n"
+        "No FIM de cada rodada que mexa em ficheiros, guarda o ponto do trabalho com tool_publicar_git e "
+        "empurrar=False: a mensagem e escrita por TI (nunca a pergunta do utilizador), curta e a dizer o "
+        "que mudou. Isso da ao card da rodada o ponto de restauro dele, ja seguro no disco.\n"
+        "NAO empurres para o remoto. O envio e feito pela propria aplicacao no fim do dia e nunca depende "
+        "de ti: uma rodada que empurre a meio do dia atropela esse desenho.\n"
+        "Se a rodada nao mexeu em nenhum ficheiro, nao guardes nada. Se a rodada mexeu so em parte do que "
         "esta alterado no disco (ficou trabalho de outra tarefa por commitar), passa 'ficheiros' com os "
         "caminhos desta rodada. Se a publicacao falhar, diz numa linha e segue - nunca afirmes que correu.\n"
     )

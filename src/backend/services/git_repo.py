@@ -365,6 +365,11 @@ def caminhos_do_repo(pasta, caminhos):
     raiz, _ = pasta_do_repositorio(pasta)
     if not raiz:
         return list(caminhos or [])
+    return _converter_caminhos(pasta, raiz, caminhos)
+
+
+def _converter_caminhos(pasta, raiz, caminhos):
+    """Caminhos relativos a pasta do projeto vistos desde a raiz do repositorio."""
     convertidos = []
     for rel in caminhos or []:
         alvo = os.path.abspath(os.path.join(pasta, str(rel).replace("/", os.sep)))
@@ -394,6 +399,22 @@ def pendentes(pasta, caminhos):
     if not nomes:
         return {"repo": True, "pendentes": [], "count": 0, "levou": _ultimo_commit(raiz, caminhos)}
     return {"repo": True, "pendentes": nomes, "count": len(nomes)}
+
+
+def ultimo_commit_dos_conjuntos(pasta, conjuntos):
+    """Para cada conjunto de caminhos, o commit mais recente que o levou; uma so leitura da raiz."""
+    raiz, erro = pasta_do_repositorio(pasta)
+    if erro or not raiz:
+        return {}
+    achados = {}
+    for chave, caminhos in (conjuntos or {}).items():
+        relativos = _converter_caminhos(pasta, raiz, caminhos)
+        if not relativos:
+            continue
+        commit = _ultimo_commit(raiz, relativos)
+        if commit:
+            achados[str(chave)] = commit
+    return achados
 
 
 def por_subir(pasta, limite=_LIMITE_POR_SUBIR):

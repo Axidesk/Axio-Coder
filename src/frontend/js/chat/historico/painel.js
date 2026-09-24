@@ -5,7 +5,7 @@ import { escapeHtml } from '../messages.js';
 import { syncMenuIcons } from '../ui.js';
 import { setHistoryActionButtonsVisible, updateActionButtons } from './acoes.js';
 import { abrirColunasDoHistorico } from './busca.js';
-import { ensureSessionDetailsLoaded, loadDayRoundCards, mountCollapsibleCard, renderVersoesCards } from './cards.js';
+import { ensureSessionDetailsLoaded, loadDayRoundCards, mountCollapsibleCard, renderVersoesCards, talvezLembrarDeGuardar } from './cards.js';
 import { fetchSessionHistoryData } from './estado.js';
 
 const { historyLogsWrapper, panelTitle } = dom;
@@ -71,6 +71,7 @@ const { historyLogsWrapper, panelTitle } = dom;
     async function prefetchSessionDetails() {
         await ensureSessionDetailsLoaded();
         renderVersoesCards();
+        talvezLembrarDeGuardar();
     }
     async function toggleSessionHistory() {
         if (isHistoryOpen()) {
