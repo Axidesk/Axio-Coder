@@ -760,7 +760,7 @@ def marcar_deletado_logs(rel):
         return False
     _aplicar_nos_logs(pasta_session_logs(), _aplicar)
 
-def marcar_commit_no_log(nome_log, turn_id, hash_commit):
+def marcar_commit_no_log(nome_log, turn_id, hash_commit, mensagem=""):
     """Grava o hash do commit do git no turno do log, para o card saber o ponto exato."""
     pasta_logs = pasta_session_logs()
     if not pasta_logs:
@@ -776,6 +776,7 @@ def marcar_commit_no_log(nome_log, turn_id, hash_commit):
         if str(grupo.get("id")) != str(turn_id):
             continue
         grupo["commit"] = hash_commit or ""
+        grupo["commit_nome"] = (mensagem or "").strip()
         try:
             gravar_log_sessao(caminho, payload)
         except OSError:

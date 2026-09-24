@@ -5,7 +5,7 @@ import time
 
 from src.backend.services.session import ler_log_sessao, pasta_session_logs, ts_de_arquivo_log
 
-CAMPOS_LEVES = ("id", "name", "title", "timestamp", "duration", "salvo", "commit", "questions", "aiResponse")
+CAMPOS_LEVES = ("id", "name", "title", "timestamp", "duration", "salvo", "commit", "commit_nome", "questions", "aiResponse")
 VERSAO_INDICE = 3
 
 _guarda_dos_bloqueios = threading.Lock()

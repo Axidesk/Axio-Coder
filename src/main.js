@@ -28,7 +28,6 @@ let flaskProcess;
 let temaAtual = 'dark';
 let inspectAtivo = false;
 let quitting = false;
-let envioDeSaidaFeito = false;
 let flaskRestarts = 0;
 let reiniciandoBackend = false;
 let previewViews = { node: null, web: null };
@@ -322,23 +321,6 @@ function enviarEstadoDoPreview() {
   const view = previewVivo();
   if (!view) return;
   avisarPreview('preview:estado', estadoDoPreview(view));
-}
-
-async function enviarPendentesAoFechar() {
-  const controlo = new AbortController();
-  const relogio = setTimeout(() => controlo.abort(), 6000);
-  try {
-    await fetch('http://127.0.0.1:5000/api/git/enviar_pendentes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-      signal: controlo.signal
-    });
-  } catch (e) {
-    console.log(`[main] envio do fim do dia ao fechar: ${e.message}`);
-  } finally {
-    clearTimeout(relogio);
-  }
 }
 
 function ligarEventosDoPreview(view, precisaNode) {
@@ -1308,14 +1290,6 @@ app.on('ready', () => {
     startFlask();
     waitForFlask('http://127.0.0.1:5000/', createWindow);
   });
-});
-
-app.on('before-quit', (evento) => {
-  if (envioDeSaidaFeito) return;
-  envioDeSaidaFeito = true;
-  evento.preventDefault();
-  console.log('[main] fecho: a pedir o envio do fim do dia ao backend...');
-  enviarPendentesAoFechar().finally(() => app.quit());
 });
 
 app.on('window-all-closed', function () {

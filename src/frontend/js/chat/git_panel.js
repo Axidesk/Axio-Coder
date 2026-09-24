@@ -5,7 +5,6 @@ import { escapeHtml } from './messages.js';
 import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
-import { renameRound } from './question_panel.js';
 
 const LIMITE_COMMITS = 20;
 const LIMITE_FICHEIROS = 12;
@@ -543,12 +542,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const resultado = await pedirGit('/api/git/commit', corpo);
         if (resultado && resultado.status === 'ok') {
             grupo.commit = resultado.hash || '';
-            if (grupo.__saved) grupo.__saved.commit = resultado.hash || '';
+            grupo.commitNome = (corpo.mensagem || '').trim();
+            if (grupo.__saved) {
+                grupo.__saved.commit = resultado.hash || '';
+                grupo.__saved.commit_nome = grupo.commitNome;
+            }
             state.commitsDosTurnos[String(grupo.id)] = resultado.hash || '';
             RASCUNHOS.delete(String(grupo.id));
             guardarRascunhos();
             updateRoundCardCommitByTurnId(grupo.id, resultado.hash || '');
-            if (corpo.mensagem) await renameRound(grupo, corpo.mensagem.trim());
             state.porSubirLido = false;
             await carregarPorSubir(true);
             await reagruparPilhaDoDia();

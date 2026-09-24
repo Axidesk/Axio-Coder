@@ -37,6 +37,7 @@ def stream():
 @chat_bp.route('/api/set_folder', methods=['POST'])
 def set_folder():
     from google.genai import types
+    from src.backend.services.git_projeto import preparar_ao_abrir
     from src.backend.tools.projeto_info import preaquecer_info_projeto
     data = request.json
     pasta = data.get("folder")
@@ -47,6 +48,8 @@ def set_folder():
             preaquecer_info_projeto(pasta)
             return jsonify({"folder": pasta, "status": "ready"})
         estado["pasta_raiz"] = pasta
+        for linha in preparar_ao_abrir(pasta):
+            print(f"[projeto] {linha}")
         agendar_envio()
         migrar_session_logs_antigos()
         estado["cwd_terminal"] = ""

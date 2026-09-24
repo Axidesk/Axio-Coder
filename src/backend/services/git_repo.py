@@ -401,22 +401,6 @@ def pendentes(pasta, caminhos):
     return {"repo": True, "pendentes": nomes, "count": len(nomes)}
 
 
-def ultimo_commit_dos_conjuntos(pasta, conjuntos):
-    """Para cada conjunto de caminhos, o commit mais recente que o levou; uma so leitura da raiz."""
-    raiz, erro = pasta_do_repositorio(pasta)
-    if erro or not raiz:
-        return {}
-    achados = {}
-    for chave, caminhos in (conjuntos or {}).items():
-        relativos = _converter_caminhos(pasta, raiz, caminhos)
-        if not relativos:
-            continue
-        commit = _ultimo_commit(raiz, relativos)
-        if commit:
-            achados[str(chave)] = commit
-    return achados
-
-
 def por_subir(pasta, limite=_LIMITE_POR_SUBIR):
     """Commits locais que ainda nao chegaram a nenhum ramo remoto."""
     raiz, erro = pasta_do_repositorio(pasta)

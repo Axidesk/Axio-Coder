@@ -18,7 +18,7 @@ def enviar_pendentes():
     pasta = estado.get("pasta_raiz", "") or ""
     if not pasta:
         return None
-    if not git_repo.por_subir(pasta).get("count"):
+    if not _tem_commit_de_dia_anterior(git_repo.por_subir(pasta).get("commits") or []):
         return None
     with _trava:
         return git_repo.empurrar(pasta)
@@ -42,6 +42,16 @@ def _vigia_da_virada_do_dia():
             enviar_pendentes()
         except Exception:
             continue
+
+
+def _tem_commit_de_dia_anterior(commits):
+    """O envio e do dia seguinte ao commit: so empurra o que ja nao e de hoje."""
+    hoje = date.today().isoformat()
+    for commit in commits:
+        dia = str(commit.get("data") or "")[:10]
+        if dia and dia < hoje:
+            return True
+    return False
 
 
 def iniciar_vigia_do_envio():

@@ -121,6 +121,7 @@ def _marcar_commit_do_agente(logs):
     if not achado or int(achado.group(1)) > int(pendente.get("quando") or 0):
         return False
     grupo["commit"] = pendente.get("hash") or ""
+    grupo["commit_nome"] = (pendente.get("mensagem") or "").strip()
     return True
 
 

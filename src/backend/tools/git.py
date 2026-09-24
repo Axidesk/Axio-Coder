@@ -13,6 +13,7 @@ from PIL import Image
 
 from src.backend.services import cofre, github
 from src.backend.services.file_service import git_saida, raiz_repositorio
+from src.backend.services.git_projeto import criar_repositorio
 from src.backend.state import estado
 from src.backend.tools.registry import register
 
@@ -28,19 +29,6 @@ _SEGREDOS = (
     "mempalace.yaml",
 )
 _TEMPLATES_DE_SEGREDO = (".env.example", ".env.sample", ".env.template", ".env.dist", ".env.defaults")
-_LINHAS_DO_GITIGNORE = (
-    ".env",
-    ".env.*",
-    "!.env.example",
-    ".axio/",
-    ".venv/",
-    "venv/",
-    "__pycache__/",
-    "*.pyc",
-    "node_modules/",
-    "dist/",
-    "build/",
-)
 
 
 def _curto(pasta, revisao):
@@ -342,7 +330,11 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
 
         hash_novo, _ = git_saida(raiz, "rev-parse", "HEAD")
         if hash_novo:
-            estado["commit_do_agente"] = {"hash": hash_novo.strip(), "quando": int(time.time() * 1000)}
+            estado["commit_do_agente"] = {
+                "hash": hash_novo.strip(),
+                "quando": int(time.time() * 1000),
+                "mensagem": (mensagem or "").strip(),
+            }
     finally:
         try:
             os.remove(caminho_msg)
@@ -388,18 +380,6 @@ def _base_do_repositorio(caminho):
     return raiz, ""
 
 
-def _escrever_gitignore(raiz):
-    caminho = os.path.join(raiz, ".gitignore")
-    if os.path.exists(caminho):
-        return False
-    try:
-        with open(caminho, "w", encoding="utf-8") as f:
-            f.write("\n".join(_LINHAS_DO_GITIGNORE) + "\n")
-    except OSError:
-        return False
-    return True
-
-
 def _criar_repositorio(base):
     """Cria o repositorio DENTRO da pasta do projeto. Devolve (raiz, linhas) - raiz "" quando falha."""
     caminho = os.path.abspath(base)
@@ -408,13 +388,12 @@ def _criar_repositorio(base):
     existente = raiz_repositorio(caminho)
     if existente:
         return existente, [f"REPOSITORIO JA EXISTE: '{existente}' - nao criei nenhum."]
-    _, erro = git_saida(caminho, "init")
-    if erro:
-        return "", [f"ERRO ao criar o repositorio em '{caminho}': {erro}"]
-    git_saida(caminho, "symbolic-ref", "HEAD", "refs/heads/main")
+    resultado = criar_repositorio(caminho)
+    if resultado["erro"]:
+        return "", [f"ERRO ao criar o repositorio em '{caminho}': {resultado['erro']}"]
     linhas = [f"REPOSITORIO NOVO: criei um repositorio git AQUI, na pasta do projeto ('{caminho}', ramo main) - "
               "nenhum repositorio de fora foi tocado."]
-    if _escrever_gitignore(caminho):
+    if resultado["gitignore"]:
         linhas.append("GITIGNORE: criei um .gitignore de partida (.env, .venv, node_modules, build, dist).")
     return caminho, linhas
 

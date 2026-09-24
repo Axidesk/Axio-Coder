@@ -8,6 +8,8 @@ import { epochDeId, marcarCheckpoint } from './checkpoint.js';
 
 const { historyLogsWrapper } = dom;
 
+const LIMITE_COMMIT_CARD = 48;
+
     function rebuildGroupFromSaved(saved) {
         return {
             id: saved.id,
@@ -22,6 +24,7 @@ const { historyLogsWrapper } = dom;
             aiResponse: saved.aiResponse || '',
             salvo: !!saved.salvo,
             commit: saved.commit || '',
+            commitNome: saved.commit_nome || '',
             duration: saved.duration || 0,
             nFerramentas: saved.nFerramentas,
             tools: saved.tools || [],
@@ -92,7 +95,7 @@ const { historyLogsWrapper } = dom;
             + (absorvido ? ' history-round-card-absorvido' : '');
         const hora = group.timestamp ? escapeHtml(group.timestamp) : '—';
         const data = group.__date ? ' - ' + escapeHtml(group.__date) : '';
-        const nome = escapeHtml(group.displayName || group.name || 'Tarefa');
+        const nome = escapeHtml(tituloDaTarefa(group));
         const content = document.createElement('div');
         content.className = 'flex-1 min-w-0';
         const meta = absorvido ? '' : `<div class="text-[11px] text-[var(--text-mutado)] truncate leading-tight">${roundMetaHtml(group)}</div>`;
@@ -270,7 +273,9 @@ const { historyLogsWrapper } = dom;
     }
     function atualizarMarcasDosCards() {
         document.querySelectorAll('.history-round-card').forEach(el => {
-            if (el._group) _marcasDoCard(el, el._group);
+            if (!el._group) return;
+            _marcasDoCard(el, el._group);
+            if (el.nameEl) el.nameEl.textContent = tituloDaTarefa(el._group);
         });
         document.querySelectorAll('.session-history-card[data-dia]').forEach(_marcasDoDia);
     }
@@ -292,6 +297,7 @@ const { historyLogsWrapper } = dom;
             const g = el._group;
             if (g) g.commit = hash || '';
             if (g) _marcasDoCard(el, g);
+            if (g && el.nameEl) el.nameEl.textContent = tituloDaTarefa(g);
         });
     }
     const CHAVE_LEMBRETE = 'axio.git.lembrete-visto';
@@ -362,6 +368,16 @@ const { historyLogsWrapper } = dom;
             if (nome) return nome;
         }
         return '';
+    }
+    function resumoDoCommit(texto) {
+        const linha = String(texto || '').trim().split('\n')[0].trim();
+        if (linha.length <= LIMITE_COMMIT_CARD) return linha;
+        return linha.slice(0, LIMITE_COMMIT_CARD - 1).trimEnd() + '…';
+    }
+    function tituloDaTarefa(group) {
+        const base = (group && (group.displayName || group.name)) || 'Tarefa';
+        const resumo = resumoDoCommit(group && group.commitNome);
+        return resumo ? `${base} - ${resumo}` : base;
     }
     function tagDoCommit(hash) {
         if (!hash || !state.versoesGit) return '';
@@ -606,39 +622,22 @@ const { historyLogsWrapper } = dom;
         }
         return null;
     }
-    async function aplicarAbsorvidos(groups) {
-        const semPonto = groups.filter(g => !g.commit && (g.files || []).some(f => f.name));
-        if (!semPonto.length) return groups;
-        const tarefas = {};
-        semPonto.forEach(g => { tarefas[g.id] = (g.files || []).map(f => f.name).filter(Boolean); });
-        let levou = {};
-        try {
-            const resp = await fetch('/api/git/levou', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tarefas })
-            });
-            const dados = await resp.json();
-            if (!dados || dados.status !== 'ok') return groups;
-            levou = dados.levou || {};
-        } catch (e) {
-            return groups;
-        }
-        const donos = new Map();
-        groups.forEach(g => { if (g.commit) donos.set(g.commit, g); });
+    function aplicarAbsorvidos(groups) {
+        const cronologico = [...groups].sort((a, b) => epochDeId(a.id) - epochDeId(b.id));
+        let dono = null;
         const recolhidos = new Set();
-        semPonto.forEach(g => {
-            const achado = levou[String(g.id)];
-            const dono = achado && achado.hash ? donos.get(achado.hash) : null;
-            if (!dono || epochDeId(g.id) >= epochDeId(dono.id)) return;
+        for (let i = cronologico.length - 1; i >= 0; i--) {
+            const g = cronologico[i];
+            if (g.commit) {
+                dono = g;
+                continue;
+            }
+            if (!dono) continue;
             if (!dono.absorveu) dono.absorveu = [];
-            dono.absorveu.push(g);
+            dono.absorveu.unshift(g);
             recolhidos.add(g.id);
-        });
+        }
         if (!recolhidos.size) return groups;
-        groups.forEach(g => {
-            if (g.absorveu) g.absorveu.sort((a, b) => epochDeId(a.id) - epochDeId(b.id));
-        });
         return groups.filter(g => !recolhidos.has(g.id));
     }
     async function renderDayRoundCards(savedLogs, body) {
@@ -652,7 +651,7 @@ const { historyLogsWrapper } = dom;
             g.displayName = g.name || ('Tarefa ' + (idx + 1));
         });
         groups.sort((a, b) => epochDeId(b.id) - epochDeId(a.id));
-        const visiveis = await aplicarAbsorvidos(groups);
+        const visiveis = aplicarAbsorvidos(groups);
         body.innerHTML = '';
         visiveis.forEach(group => body.appendChild(createHistoryRoundCard(group)));
     }
