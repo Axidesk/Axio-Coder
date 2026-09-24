@@ -5,10 +5,12 @@ import { vistaDe } from '../colunas.js';
 import { escapeHtml, showQuestionPanel } from '../messages.js';
 import { openFilesPanel, selectHistoryTask, updateActionButtons } from './acoes.js';
 import { epochDeId, marcarCheckpoint } from './checkpoint.js';
+import { svgDoPonto, svgDoAviao, svgDoRestauro } from '../icones.js';
 
 const { historyLogsWrapper } = dom;
 
 let sincronizacaoDoEnvio = null;
+let apiDeRestauro = null;
 
     function rebuildGroupFromSaved(saved) {
         return {
@@ -110,7 +112,7 @@ let sincronizacaoDoEnvio = null;
         row.className = 'flex items-start gap-2';
         row.appendChild(content);
         sub.appendChild(row);
-        if (group.commit) _marcasDoCard(sub, group);
+        _marcasDoCard(sub, group);
         if (!absorvido && group.absorveu && group.absorveu.length) {
             sub.appendChild(montarGaveta(group.absorveu));
         }
@@ -222,12 +224,8 @@ let sincronizacaoDoEnvio = null;
         card.appendChild(body);
         historyLogsWrapper.appendChild(card);
     }
-    const SVG_AVIAO_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--oliva)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`;
-
-    const SVG_SALVAR_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`;
-
-    function _injectMarcas(el, titulo, tag, enviado) {
-        el.querySelectorAll('.history-round-saved-icon, .history-round-enviado-icon, .history-round-tag').forEach(m => m.remove());
+    function _injectMarcas(el, grupo, titulo, tag, enviado) {
+        el.querySelectorAll('.history-round-saved-icon, .history-round-enviado-icon, .history-round-restore-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
         if (tag) {
@@ -236,17 +234,30 @@ let sincronizacaoDoEnvio = null;
             chip.textContent = tag;
             row.appendChild(chip);
         }
-        if (!titulo) return;
-        const salvo = document.createElement('span');
-        salvo.className = 'shrink-0 mt-0.5 history-round-saved-icon';
-        salvo.title = titulo;
-        salvo.innerHTML = SVG_SALVAR_CARD;
-        row.appendChild(salvo);
-        if (!enviado) return;
+        if (titulo) {
+            const salvo = document.createElement('span');
+            salvo.className = 'shrink-0 mt-0.5 history-round-saved-icon';
+            salvo.title = titulo;
+            salvo.innerHTML = svgDoPonto('h-3.5 w-3.5 text-[var(--text-suave)]');
+            row.appendChild(salvo);
+        }
+        if (apiDeRestauro && apiDeRestauro.pode(grupo)) {
+            const restaurar = document.createElement('button');
+            restaurar.type = 'button';
+            restaurar.className = 'shrink-0 mt-0.5 history-round-restore-icon cursor-pointer text-[var(--text-mutado)] hover:text-[var(--oliva)] transition-colors focus:outline-none';
+            restaurar.title = 'Restaurar esta tarefa';
+            restaurar.innerHTML = svgDoRestauro('h-3.5 w-3.5');
+            restaurar.addEventListener('click', (evento) => {
+                evento.stopPropagation();
+                apiDeRestauro.restaurar(grupo);
+            });
+            row.appendChild(restaurar);
+        }
+        if (!titulo || !enviado) return;
         const naNuvem = document.createElement('span');
         naNuvem.className = 'shrink-0 mt-0.5 history-round-enviado-icon';
         naNuvem.title = 'Ponto no GitHub';
-        naNuvem.innerHTML = SVG_AVIAO_CARD;
+        naNuvem.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
         row.appendChild(naNuvem);
     }
     function enviadaParaOServidor(hash) {
@@ -257,13 +268,13 @@ let sincronizacaoDoEnvio = null;
     function _marcasDoCard(el, grupo) {
         const commit = grupo && grupo.commit ? grupo.commit : '';
         if (!commit) {
-            _injectMarcas(el, '', '');
+            _injectMarcas(el, grupo, '', '');
             return;
         }
         const curto = String(commit).slice(0, 7);
         const naNuvem = enviadaParaOServidor(commit);
         const onde = naNuvem ? ', na nuvem' : ', por enviar';
-        _injectMarcas(el, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), naNuvem);
+        _injectMarcas(el, grupo, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), naNuvem);
     }
     function _marcasDoDia(el) {
         const anterior = el.querySelector('.history-day-saved-icon');
@@ -276,7 +287,7 @@ let sincronizacaoDoEnvio = null;
         const aviao = document.createElement('span');
         aviao.className = 'shrink-0 mt-0.5 history-day-saved-icon';
         aviao.title = 'Salvo na nuvem';
-        aviao.innerHTML = SVG_AVIAO_CARD;
+        aviao.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
         row.appendChild(aviao);
     }
     function atualizarMarcasDosCards() {
@@ -290,6 +301,9 @@ let sincronizacaoDoEnvio = null;
     }
     function registrarSincronizacaoDoEnvio(fn) {
         sincronizacaoDoEnvio = fn;
+    }
+    function registrarRestauroDaTarefa(api) {
+        apiDeRestauro = api;
     }
     function updateRoundCardCommitByTurnId(turnId, hash) {
         document.querySelectorAll('.history-round-card').forEach(el => {
@@ -609,6 +623,7 @@ export {
     carregarPorSubir,
     atualizarMarcasDosCards,
     registrarSincronizacaoDoEnvio,
+    registrarRestauroDaTarefa,
     enviadaParaOServidor,
     talvezLembrarDeGuardar,
     reagruparPilhaDoDia

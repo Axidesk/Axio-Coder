@@ -7,7 +7,6 @@ import { isHistoryOpen } from '../layout.js';
 const { btnHistorySearch, btnShowQuestion, btnShowThoughts, btnShowTools } = dom;
 
 let repinturaCol3 = null;
-let sincronizacaoDeRestauro = null;
 
     function openFilesPanel(group, vista) {
         const alvo = vista || vistaDe('dock');
@@ -32,9 +31,6 @@ let sincronizacaoDeRestauro = null;
     function registrarRepinturaCol3(fn) {
         repinturaCol3 = fn;
     }
-    function registrarSincronizacaoDeRestauro(fn) {
-        sincronizacaoDeRestauro = fn;
-    }
     function updateActionButtons() {
         const enabled = isHistoryOpen()
             ? !!state.currentSelectedHistoryGroup
@@ -49,7 +45,6 @@ let sincronizacaoDeRestauro = null;
                 btn.classList.add('text-[var(--text-mutado)]');
             }
         });
-        if (sincronizacaoDeRestauro) sincronizacaoDeRestauro();
     }
     function setHistoryActionButtonsVisible(show) {
         if (btnHistorySearch) btnHistorySearch.classList.toggle('hidden', !show);
@@ -66,7 +61,6 @@ let sincronizacaoDeRestauro = null;
 export {
     openFilesPanel,
     registrarRepinturaCol3,
-    registrarSincronizacaoDeRestauro,
     updateActionButtons,
     setHistoryActionButtonsVisible,
     selectHistoryTask

@@ -1,5 +1,5 @@
 import { vistaDe } from './colunas.js';
-import { renderGitPanel, sincronizarBotaoRestauro, sincronizarBotaoEnvio } from './git_panel.js';
+import { renderGitPanel, sincronizarBotaoEnvio, podeRestaurar, restaurarTarefa } from './git_panel.js';
 import {
     chatContainerLeft,
     chatContainerRight,
@@ -35,6 +35,7 @@ import {
     btnShowQuestionHistory,
     btnShowGit,
     btnShowGitHistory,
+    btnGitEnviarHistory,
     btnWorkspace,
     btnEditor,
     terminalMode,
@@ -85,11 +86,12 @@ import {
     btnVertexClear
 } from './dom.js';
 import { state } from './state.js';
+import { svgDoPonto, svgDoAviao } from './icones.js';
 import { atualizarBotoesUndoRedo, atualizarIconeOlho, executarUndoRedo, marcarLinhasAlteradas, normalizeFsPath, restaurarPastaSelecionada, rolarParaDestaque, selectFolder } from './files.js';
 import { preloadSessionHistory, toggleSessionHistory } from './historico/painel.js';
 import { toggleHistorySearchInline } from './historico/busca.js';
-import { registrarRepinturaCol3, registrarSincronizacaoDeRestauro } from './historico/acoes.js';
-import { registrarSincronizacaoDoEnvio } from './historico/cards.js';
+import { registrarRepinturaCol3 } from './historico/acoes.js';
+import { registrarRestauroDaTarefa, registrarSincronizacaoDoEnvio } from './historico/cards.js';
 import { closeRestoreConfirmPopup, performSessionRestore } from './historico/restauro.js';
 import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderInspectTooltip, executarItemInspect, ligarInspectAoMenu, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
 import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
@@ -286,6 +288,8 @@ import './busca_chat.js';
             });
         });
     }
+    btnShowGitHistory.innerHTML = svgDoPonto('h-5 w-5 icon-header-action');
+    btnGitEnviarHistory.innerHTML = svgDoAviao('h-5 w-5 icon-header-action');
     ligarBotoesCol3({ question: btnShowQuestion, thoughts: btnShowThoughts, tools: btnShowTools, git: btnShowGit }, 'dock');
 
     ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory, git: btnShowGitHistory }, 'historico');
@@ -297,7 +301,7 @@ import './busca_chat.js';
         if (state.isShowingTools) return renderTools(vista);
     }
     registrarRepinturaCol3(repintarPainelCol3);
-    registrarSincronizacaoDeRestauro(sincronizarBotaoRestauro);
+    registrarRestauroDaTarefa({ pode: podeRestaurar, restaurar: restaurarTarefa });
     registrarSincronizacaoDoEnvio(sincronizarBotaoEnvio);
 
     if (btnEyeDiff) {

@@ -69,7 +69,6 @@ export const btnRedo = document.getElementById("btn-redo");
 export const lblUndoCount = document.getElementById("lbl-undo-count");
 export const lblRedoCount = document.getElementById("lbl-redo-count");
 export const btnEyeDiff = document.getElementById("btn-eye-diff");
-export const btnGitRestoreHistory = document.getElementById("btn-git-restore-history");
 export const btnGitEnviarHistory = document.getElementById("btn-git-enviar-history");
 export const btnGitAutoHistory = document.getElementById("btn-git-auto-history");
 export const restoreConfirmPopup = document.getElementById("restore-confirm-popup");

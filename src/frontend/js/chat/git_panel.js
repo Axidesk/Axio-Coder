@@ -2,7 +2,8 @@ import { state } from './state.js';
 import { vistaDe } from './colunas.js';
 import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
-import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
+import { btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
+import { svgDoPonto } from './icones.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, reagruparPilhaDoDia } from './historico/cards.js';
 
@@ -22,7 +23,6 @@ const COMANDO_DE_DEPENDENCIA = {
 
 const SVG_VARINHA = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>';
 const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg>';
-const SVG_SALVAR = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>';
 const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
 const SVG_RAMO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>';
 const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>';
@@ -113,7 +113,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     }
     function salvar(acao, titulo, extra) {
         return `<button class="projeto-notas-acao git-salvar${extra ? ' ' + extra : ''}" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}">`
-            + `<span class="projeto-icone-wand">${SVG_SALVAR}</span>`
+            + `<span class="projeto-icone-wand">${svgDoPonto('h-4 w-4')}</span>`
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
             + '</button>';
     }
@@ -426,7 +426,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         }
         ultimoEstadoGit = estado;
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
-        if (alvo.id === 'historico') sincronizarBotaoRestauro();
         sincronizarCabecalhoGit(alvo, estado);
         ligarAcoes(alvo);
     }
@@ -580,27 +579,18 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             }
         });
     }
-    async function restaurarTarefa() {
-        const grupo = grupoAtivo();
-        if (!grupo) return;
-        const hash = hashDaTarefa(grupo);
+    async function restaurarTarefa(grupo) {
+        const alvo = grupo || grupoAtivo();
+        if (!alvo) return;
+        const hash = hashDaTarefa(alvo);
         if (hash) {
-            await requestGitRestore(hash, nomeDaTarefa(grupo) || 'esta tarefa', grupo.id || '');
+            await requestGitRestore(hash, nomeDaTarefa(alvo) || 'esta tarefa', alvo.id || '');
             return;
         }
-        if (grupo.__session) await requestRestoreTask(grupo);
+        if (alvo.__session) await requestRestoreTask(alvo);
     }
     function podeRestaurar(grupo) {
         return !!(grupo && (hashDaTarefa(grupo) || grupo.__session));
-    }
-    function sincronizarBotaoRestauro() {
-        if (!btnGitRestoreHistory) return;
-        const pode = podeRestaurar(grupoAtivo());
-        btnGitRestoreHistory.classList.toggle('hidden', !pode);
-        btnGitRestoreHistory.onclick = pode ? (e) => {
-            e.stopPropagation();
-            restaurarTarefa();
-        } : null;
     }
     function sincronizarCabecalhoGit(vista, estado) {
         const info = estado && estado.repo ? estado : null;
@@ -657,8 +647,9 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 
 export {
     renderGitPanel,
-    sincronizarBotaoRestauro,
     sincronizarBotaoEnvio,
+    restaurarTarefa,
+    podeRestaurar,
     grupoAtivo,
     ficheirosDaTarefa
 };

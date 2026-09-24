@@ -392,6 +392,15 @@ body {
 .history-round-card.history-round-selected:hover {
     background: var(--bg-selecao);
 }
+.history-round-restore-icon {
+    display: none;
+}
+.history-round-card.history-round-selected .history-round-saved-icon {
+    display: none;
+}
+.history-round-card.history-round-selected .history-round-restore-icon {
+    display: flex;
+}
 .history-round-card.history-round-ahead {
     opacity: 0.3;
 }
