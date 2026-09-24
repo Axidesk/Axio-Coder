@@ -11,6 +11,8 @@ const { historyLogsWrapper } = dom;
 
 let sincronizacaoDoEnvio = null;
 let apiDeRestauro = null;
+let cacheDoUltimoEnviado = '';
+let cacheDoUltimoEnviadoValida = false;
 
     function rebuildGroupFromSaved(saved) {
         return {
@@ -224,7 +226,7 @@ let apiDeRestauro = null;
         card.appendChild(body);
         historyLogsWrapper.appendChild(card);
     }
-    function _injectMarcas(el, grupo, titulo, tag, enviado) {
+    function _injectMarcas(el, grupo, titulo, tag, ultimo) {
         el.querySelectorAll('.history-round-saved-icon, .history-round-enviado-icon, .history-round-restore-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
@@ -234,7 +236,7 @@ let apiDeRestauro = null;
             chip.textContent = tag;
             row.appendChild(chip);
         }
-        if (titulo) {
+        if (titulo && !ultimo) {
             const salvo = document.createElement('span');
             salvo.className = 'shrink-0 mt-0.5 history-round-saved-icon';
             salvo.title = titulo;
@@ -253,10 +255,10 @@ let apiDeRestauro = null;
             });
             row.appendChild(restaurar);
         }
-        if (!titulo || !enviado) return;
+        if (!ultimo) return;
         const naNuvem = document.createElement('span');
         naNuvem.className = 'shrink-0 mt-0.5 history-round-enviado-icon';
-        naNuvem.title = 'Ponto no GitHub';
+        naNuvem.title = 'Enviado para o GitHub (' + String((grupo && grupo.commit) || '').slice(0, 7) + ')';
         naNuvem.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
         row.appendChild(naNuvem);
     }
@@ -265,16 +267,35 @@ let apiDeRestauro = null;
         if (state.porSubirTruncado) return false;
         return !(state.commitsPorSubir || []).includes(hash);
     }
+    function _esquecerUltimoEnviado() {
+        cacheDoUltimoEnviadoValida = false;
+    }
+    function ultimoEnviadoParaOServidor() {
+        if (cacheDoUltimoEnviadoValida) return cacheDoUltimoEnviado;
+        let melhor = '';
+        let melhorEpoch = -1;
+        turnosComCommit().forEach(turno => {
+            if (!turno.commit || !enviadaParaOServidor(turno.commit)) return;
+            const epoch = epochDeId(turno.id);
+            if (epoch < melhorEpoch) return;
+            melhorEpoch = epoch;
+            melhor = turno.commit;
+        });
+        cacheDoUltimoEnviado = melhor;
+        cacheDoUltimoEnviadoValida = true;
+        return melhor;
+    }
     function _marcasDoCard(el, grupo) {
         const commit = grupo && grupo.commit ? grupo.commit : '';
         if (!commit) {
-            _injectMarcas(el, grupo, '', '');
+            _injectMarcas(el, grupo, '', '', false);
             return;
         }
         const curto = String(commit).slice(0, 7);
         const naNuvem = enviadaParaOServidor(commit);
+        const ultimo = naNuvem && commit === ultimoEnviadoParaOServidor();
         const onde = naNuvem ? ', na nuvem' : ', por enviar';
-        _injectMarcas(el, grupo, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), naNuvem);
+        _injectMarcas(el, grupo, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), ultimo);
     }
     function _marcasDoDia(el) {
         const anterior = el.querySelector('.history-day-saved-icon');
@@ -291,6 +312,7 @@ let apiDeRestauro = null;
         row.appendChild(aviao);
     }
     function atualizarMarcasDosCards() {
+        _esquecerUltimoEnviado();
         document.querySelectorAll('.history-round-card').forEach(el => {
             if (!el._group) return;
             _marcasDoCard(el, el._group);
@@ -306,6 +328,7 @@ let apiDeRestauro = null;
         apiDeRestauro = api;
     }
     function updateRoundCardCommitByTurnId(turnId, hash) {
+        _esquecerUltimoEnviado();
         document.querySelectorAll('.history-round-card').forEach(el => {
             if (String(el.dataset.turnId) !== String(turnId)) return;
             const g = el._group;
@@ -566,6 +589,7 @@ let apiDeRestauro = null;
         return groups.filter(g => !recolhidos.has(g.id));
     }
     async function renderDayRoundCards(savedLogs, body) {
+        _esquecerUltimoEnviado();
         if (!savedLogs || savedLogs.length === 0) {
             body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nenhuma rodada de edição neste dia.</div>';
             return;

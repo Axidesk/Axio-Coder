@@ -277,16 +277,13 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const notaTemDepois = pontoDaTarefa && ponta && ponta !== pontoDaTarefa
             ? '<div class="git-nota">Ha commits depois deste: a mensagem dele ja nao se muda.</div>'
             : '';
-        const notaDepoisDoPonto = pontoDaTarefa && porCommitar
-            ? '<div class="git-nota">Estes ficheiros mudaram depois do ponto: o que esta por commitar e trabalho de outra tarefa.</div>'
-            : '';
         const donoDesteCommit = noutroCommit ? nomeDaTarefaDoCommit(levou.hash) : '';
         const notaNoutroCommit = noutroCommit
             ? `<div class="git-nota">Estes ficheiros ja foram dentro do commit ${escapeHtml(levou.curto)}`
               + ` (${escapeHtml(donoDesteCommit || 'fora do painel')}) · ${escapeHtml(levou.mensagem)}`
               + ': esta tarefa nao guarda ponto proprio.</div>'
             : '';
-        html += notaTemDepois + notaDepoisDoPonto + notaNoutroCommit;
+        html += notaTemDepois + notaNoutroCommit;
         if (vaiCommitar || podeCorrigir) {
             const rascunho = valorDoCampo(grupo);
             const editando = vaiCommitar || !!rascunho;
