@@ -73,6 +73,84 @@ export function createPlanStepCard(step, ativo = false, expandido = true) {
     return card;
 }
 
+export function criarBlocoEtapas() {
+    const bloco = document.createElement('div');
+    bloco.className = 'log-etapas';
+
+    const cabecalho = document.createElement('button');
+    cabecalho.type = 'button';
+    cabecalho.className = 'log-etapas-cabecalho';
+    cabecalho.innerHTML = '<span class="log-etapas-titulo">Etapas</span>'
+        + '<span class="log-etapas-conta"></span>'
+        + '<span class="log-etapas-sinal">+</span>';
+
+    const corpo = document.createElement('div');
+    corpo.className = 'card-collapsible';
+    const clip = document.createElement('div');
+    clip.className = 'card-collapsible-clip';
+    const lista = document.createElement('div');
+    lista.className = 'log-etapas-lista';
+    clip.appendChild(lista);
+    corpo.appendChild(clip);
+    bloco.appendChild(cabecalho);
+    bloco.appendChild(corpo);
+
+    bloco.addEventListener('click', (evento) => evento.stopPropagation());
+    cabecalho.addEventListener('click', () => {
+        const aberto = corpo.classList.toggle('card-collapsible-open');
+        cabecalho.querySelector('.log-etapas-sinal').textContent = aberto ? '-' : '+';
+    });
+    return bloco;
+}
+
+export function pintarBlocoEtapas(bloco, etapas, total) {
+    const lista = bloco.querySelector('.log-etapas-lista');
+    if (!lista) return;
+    while (lista.firstChild) lista.removeChild(lista.firstChild);
+
+    const conta = bloco.querySelector('.log-etapas-conta');
+    if (conta) {
+        const concluidas = etapas.filter((etapa) => etapa.concluida).length;
+        conta.textContent = `${concluidas} de ${Math.max(total || 0, etapas.length)}`;
+    }
+
+    let ultimaEmCurso = -1;
+    etapas.forEach((etapa, i) => { if (!etapa.concluida) ultimaEmCurso = i; });
+    etapas.forEach((etapa, i) => {
+        lista.appendChild(_linhaDaEtapa(etapa, i === ultimaEmCurso));
+        (etapa.tarefas || []).forEach((tarefa) => lista.appendChild(_linhaDaTarefa(tarefa)));
+    });
+}
+
+function _linhaDaEtapa(etapa, emCurso) {
+    const linha = document.createElement('div');
+    linha.className = 'log-etapa'
+        + (etapa.concluida ? ' log-etapa-concluida' : '')
+        + (!etapa.concluida && emCurso ? ' log-etapa-em-curso' : '');
+    const estado = document.createElement('span');
+    estado.className = 'log-etapa-estado';
+    estado.innerHTML = etapa.concluida ? _iconConcluido() : (emCurso ? _iconSpinner() : _iconAguardando());
+    const nome = document.createElement('span');
+    nome.className = 'log-etapa-nome';
+    nome.textContent = etapa.titulo;
+    linha.appendChild(estado);
+    linha.appendChild(nome);
+    return linha;
+}
+
+function _linhaDaTarefa(tarefa) {
+    const linha = document.createElement('div');
+    linha.className = 'log-etapa-tarefa' + (tarefa.feita ? ' log-etapa-tarefa-feita' : '');
+    const marca = document.createElement('span');
+    marca.className = 'log-etapa-marca';
+    const nome = document.createElement('span');
+    nome.className = 'log-etapa-tarefa-nome';
+    nome.textContent = tarefa.nome;
+    linha.appendChild(marca);
+    linha.appendChild(nome);
+    return linha;
+}
+
 export function _createStackCard(stack) {
     const card = document.createElement('div');
     card.className = 'plan-card-in stack-card bg-[var(--bg-panel)] border border-[var(--border)] rounded-xl overflow-hidden transition-colors duration-300';
@@ -227,6 +305,29 @@ export function _collapseStep(card) {
     const chevron = card.querySelector('.step-chevron');
     if (collapsible) collapsible.classList.remove('card-collapsible-open');
     if (chevron) chevron.style.transform = 'rotate(0deg)';
+}
+
+export function etapaDePlano(etapa) {
+    return {
+        id: etapa.id,
+        titulo: etapa.titulo || '',
+        concluida: false,
+        tarefas: (etapa.tarefas || []).map((nome) => ({ nome, feita: false }))
+    };
+}
+
+export function marcarEtapaDoPlano(etapas, idEtapa, tarefaConcluida, etapaConcluida) {
+    const etapa = etapas.find((alvo) => alvo.id === idEtapa);
+    if (!etapa) return false;
+    if (etapaConcluida) {
+        etapa.concluida = true;
+        etapa.tarefas.forEach((tarefa) => { tarefa.feita = true; });
+        return true;
+    }
+    const tarefa = etapa.tarefas.find((alvo) => alvo.nome === tarefaConcluida);
+    if (!tarefa) return false;
+    tarefa.feita = true;
+    return true;
 }
 
 const _statusFilePrefixes = [

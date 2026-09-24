@@ -9,7 +9,7 @@ import { prefetchSessionDetails, preloadSessionHistory } from './historico/paine
 import { activateWorkspaceIcon, escrevendoNoChat, esconderChip, renderCurrentSessionLogs, resetSendButton, resetTurnUI, setLogsLoading, showAlert, showWorkspaceView } from './ui.js';
 import { escapeHtml } from './escape.js';
 import { formatMessage, formatInlineText, formatInline } from './markdown.js';
-import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao, _pararPlanoEmCurso } from './plan_cards.js';
+import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao, _pararPlanoEmCurso, criarBlocoEtapas, pintarBlocoEtapas, etapaDePlano, marcarEtapaDoPlano } from './plan_cards.js';
 import { reavaliarBuscaChat } from './busca_chat.js';
 import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
 
@@ -213,6 +213,8 @@ let currentSessionTools = [];
 let currentSessionThoughts = [];
 let currentSessionQuestions = [];
 let currentSessionAiResponse = '';
+let currentSessionPlano = [];
+let currentSessionPlanoTotal = 0;
 const wsProcessosIA = new Set();
 let wsAutoMostrado = false;
 
@@ -478,6 +480,9 @@ async function tratar_plan_started(data) {
     (data.plan || []).forEach((step, i) => {
         currentPlanContainer.appendChild(createPlanStepCard(step, i === 0, i === 0));
     });
+    currentSessionPlano = (data.plan || []).map(etapaDePlano);
+    currentSessionPlanoTotal = data.total || currentSessionPlano.length;
+    _sincronizarEtapasDoLog();
     chatContainerRight.scrollTop = chatContainerRight.scrollHeight;
 }
 async function tratar_plan_updated(data) {
@@ -505,13 +510,30 @@ async function tratar_plan_updated(data) {
             }
         }
     }
+    if (marcarEtapaDoPlano(currentSessionPlano, data.id_etapa, data.tarefa_concluida, data.etapa_concluida)) {
+        _sincronizarEtapasDoLog();
+    }
 }
 async function tratar_plan_step_added(data) {
-    if (currentPlanContainer && data.step) {
+    if (!data.step) return;
+    if (currentPlanContainer) {
         Array.from(currentPlanContainer.querySelectorAll('[data-step-id]')).forEach(_collapseStep);
         currentPlanContainer.appendChild(createPlanStepCard(data.step, true, true));
         chatContainerRight.scrollTop = chatContainerRight.scrollHeight;
     }
+    currentSessionPlano.push(etapaDePlano(data.step));
+    currentSessionPlanoTotal = data.total || currentSessionPlanoTotal;
+    _sincronizarEtapasDoLog();
+}
+
+function _sincronizarEtapasDoLog() {
+    if (!currentGroupBalloon || !currentGroupBalloon.domElement) return;
+    let bloco = currentGroupBalloon.domElement.querySelector('.log-etapas');
+    if (!bloco) {
+        bloco = criarBlocoEtapas();
+        currentGroupBalloon.domElement.appendChild(bloco);
+    }
+    pintarBlocoEtapas(bloco, currentSessionPlano, currentSessionPlanoTotal);
 }
 async function tratar_ai_response(data) {
     currentSessionAiResponse = data.message;
@@ -677,6 +699,8 @@ async function tratar_cancel() {
     currentSessionThoughts = [];
     currentSessionQuestions = [];
     currentSessionAiResponse = '';
+    currentSessionPlano = [];
+    currentSessionPlanoTotal = 0;
 }
 async function tratar_done() {
     if (!window.lastStatusError) {
@@ -721,6 +745,8 @@ async function tratar_done() {
     currentSessionThoughts = [];
     currentSessionQuestions = [];
     currentSessionAiResponse = '';
+    currentSessionPlano = [];
+    currentSessionPlanoTotal = 0;
     window.pendingUserQuestion = null;
     window.currentAIMessageDiv = null;
     window.currentGroupBalloon = null;
@@ -758,6 +784,8 @@ function resetEstadoDoTurno() {
     currentSessionThoughts = [];
     currentSessionQuestions = [];
     currentSessionAiResponse = '';
+    currentSessionPlano = [];
+    currentSessionPlanoTotal = 0;
     wsProcessosIA.clear();
     wsAutoMostrado = false;
 }

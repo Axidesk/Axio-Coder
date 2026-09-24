@@ -79,7 +79,7 @@ def tool_iniciar_plano(plano_json: str):
         estado["plano_atual"] = plano
         primeira = plano[0] if plano else None
         emit_event("executing", function="Iniciando plano de execução")
-        emit_event("plan_started", plan=[primeira] if primeira else [], stack=estado.get("plano_stack"))
+        emit_event("plan_started", plan=[primeira] if primeira else [], stack=estado.get("plano_stack"), total=len(plano))
         return "SUCESSO: Plano iniciado e exibido na interface."
     except Exception as e:
         return f"ERRO ao iniciar plano: {str(e)}"
@@ -116,7 +116,7 @@ def tool_atualizar_plano(id_etapa: str, tarefa_concluida: str, etapa_concluida: 
     emit_event("executing", function="Concluindo etapa do plano" if etapa_concluida else f"Atualizando plano: {tarefa_concluida}")
     emit_event("plan_updated", id_etapa=id_etapa, tarefa_concluida=tarefa_concluida, etapa_concluida=etapa_concluida)
     if proxima:
-        emit_event("plan_step_added", step=proxima)
+        emit_event("plan_step_added", step=proxima, total=len(plano))
     return "SUCESSO: Plano atualizado na interface."
 
 
@@ -131,8 +131,13 @@ def tool_atualizar_plano(id_etapa: str, tarefa_concluida: str, etapa_concluida: 
 def tool_adicionar_etapa_plano(nova_etapa_json: str):
     try:
         etapa = json.loads(nova_etapa_json)
+        etapa["tarefas_concluidas"] = []
+        etapa["revelada"] = True
+        plano = estado.get("plano_atual")
+        if isinstance(plano, list):
+            plano.append(etapa)
         emit_event("executing", function="Adicionando etapa ao plano")
-        emit_event("plan_step_added", step=etapa)
+        emit_event("plan_step_added", step=etapa, total=len(plano) if isinstance(plano, list) else 0)
         return "SUCESSO: Nova etapa adicionada ao plano na interface."
     except Exception as e:
         return f"ERRO ao adicionar etapa: {str(e)}"
