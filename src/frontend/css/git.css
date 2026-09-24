@@ -200,6 +200,34 @@
     margin-top: 0;
 }
 
+.git-campo-linha .git-editavel {
+    display: none;
+}
+
+.git-campo-linha.git-editando .git-editavel {
+    display: flex;
+}
+
+.git-campo-trancado {
+    background: transparent;
+    color: var(--text-suave);
+    padding-left: 0;
+    padding-right: 0;
+    cursor: default;
+}
+
+.git-lapis {
+    color: var(--text-mutado);
+}
+
+.git-lapis:hover {
+    color: var(--text-branco);
+}
+
+.git-lapis.git-acesa {
+    color: var(--oliva);
+}
+
 
 
 .git-salvar {

@@ -334,46 +334,6 @@ def _gravar_payload(caminho, payload):
     atualizar_indice_de_payload(caminho, payload)
     return None
 
-@session_bp.route('/api/session_log/rename', methods=['POST'])
-def session_log_rename():
-    """Renomeia uma rodada (card de log) pelo id, persistindo o nome personalizado."""
-    pasta_logs = pasta_session_logs()
-    if not pasta_logs or not os.path.exists(pasta_logs):
-        return jsonify({"status": "error", "message": "Nenhum log para renomear"}), 400
-
-    data = request.json or {}
-    round_id = str(data.get("round_id") or "")
-    name = (data.get("name") or "").strip()
-    if not round_id or not name:
-        return jsonify({"status": "error", "message": "round_id e name são obrigatórios"}), 400
-
-    try:
-        arquivos = [f for f in os.listdir(pasta_logs) if f.startswith("sessionlog_") and f.endswith(".json")]
-    except OSError as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-    for arq in arquivos:
-        caminho = os.path.join(pasta_logs, arq)
-        try:
-            payload = ler_log_sessao(caminho)
-        except Exception:
-            continue
-
-        logs = payload.get("logs", [])
-        alterado = False
-        for grupo in logs:
-            if str(grupo.get("id")) == round_id:
-                grupo["name"] = name
-                alterado = True
-
-        if alterado:
-            erro = _gravar_payload(caminho, payload)
-            if erro:
-                return erro
-            return jsonify({"status": "ok", "name": name})
-
-    return jsonify({"status": "error", "message": "Tarefa não encontrada"}), 404
-
 def _ts_do_ponto(data):
     """Epoch (ms) do ponto a restaurar: o do `round_id`, com recuo para o timestamp.
 

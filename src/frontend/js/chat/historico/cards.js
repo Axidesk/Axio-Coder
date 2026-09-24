@@ -278,18 +278,6 @@ const { historyLogsWrapper } = dom;
         });
         document.querySelectorAll('.session-history-card[data-dia]').forEach(_marcasDoDia);
     }
-    function updateRoundCardNameByTurnId(turnId, novoNome) {
-        document.querySelectorAll('.history-round-card').forEach(el => {
-            if (String(el.dataset.turnId) !== String(turnId)) return;
-            const g = el._group;
-            if (g) {
-                g.name = novoNome;
-                g.displayName = novoNome;
-            }
-            const nameEl = el.querySelector('.history-round-name');
-            if (nameEl) nameEl.textContent = novoNome;
-        });
-    }
     function updateRoundCardCommitByTurnId(turnId, hash) {
         document.querySelectorAll('.history-round-card').forEach(el => {
             if (String(el.dataset.turnId) !== String(turnId)) return;
@@ -349,11 +337,6 @@ const { historyLogsWrapper } = dom;
         }
         return turnos;
     }
-    function tarefasDaTag(tag) {
-        const alvo = new Set((tag && tag.commits) || []);
-        if (!alvo.size) return [];
-        return turnosComCommit().filter(l => alvo.has(l.commit)).map(rebuildGroupFromSaved);
-    }
     function nomeDaTarefaDoCommit(hash) {
         if (!hash) return '';
         const daLista = (lista) => {
@@ -381,23 +364,6 @@ const { historyLogsWrapper } = dom;
         const tag = (state.versoesGit.tags || []).find(t => t.ponto === hash);
         return tag ? tag.nome : '';
     }
-    function dataKey(d) {
-        const p = (d || '').split('/');
-        return p.length === 3 ? `${p[2]}${p[1]}${p[0]}` : '';
-    }
-    function ordenarPorTempo(groups) {
-        return groups.sort((a, b) => {
-            const ka = dataKey(a.__date) + (a.timestamp || '');
-            const kb = dataKey(b.__date) + (b.timestamp || '');
-            return kb.localeCompare(ka);
-        });
-    }
-    function formatarData(iso) {
-        const dia = String(iso || '').slice(0, 10);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return '';
-        const [a, m, d] = dia.split('-');
-        return `${d}/${m}/${a}`;
-    }
     function assignDisplayNamesByDay() {
         const logsPorDia = new Map();
         for (const sessao of state.sessionHistoryList) {
@@ -413,91 +379,16 @@ const { historyLogsWrapper } = dom;
             });
         });
     }
-    function criarCardDePilha(titulo, subtitulo, marca, loadCallback) {
-        const card = document.createElement('div');
-        card.className = 'session-history-card session-history-versoes';
-        card.dataset[marca] = 'true';
-        const header = document.createElement('div');
-        header.className = 'session-history-header relative flex flex-col gap-1 justify-center w-full text-left px-3.5 py-2.5 cursor-pointer min-h-[54px]';
-        header.innerHTML = `
-            <span class="block text-[13px] font-semibold text-[var(--oliva)] leading-tight pr-6">${escapeHtml(titulo)}</span>
-            ${subtitulo ? `<span class="block text-[11px] text-[var(--text-mutado)] leading-tight pr-6">${escapeHtml(subtitulo)}</span>` : ''}
-            <span class="session-history-toggle-icon absolute top-2.5 right-3 text-[var(--text-mutado)] text-lg font-mono leading-none cursor-pointer hover:text-[var(--text-branco)] transition-colors select-none">+</span>
-        `;
-        mountCollapsibleCard(card, header, loadCallback);
-        return card;
-    }
-    function subtituloDaTag(tag) {
-        const partes = [];
-        const tarefas = tarefasDaTag(tag).length;
-        if (tag.fora) partes.push('ponto fora da historia atual');
-        else if (tarefas) partes.push(tarefas === 1 ? '1 tarefa' : `${tarefas} tarefas`);
-        else if (tag.truncado) partes.push(`${(tag.commits || []).length}+ commits`);
-        else partes.push(`${(tag.commits || []).length} commits`);
-        const data = formatarData(tag.data);
-        if (data) partes.push(data);
-        return partes.join(' · ');
-    }
-    function subtituloDoRamo(ramo) {
-        const partes = [ramo.atual ? 'em uso' : ramo.nome];
-        partes.push(ramo.por_publicar
-            ? (ramo.por_publicar === 1 ? '1 por publicar' : `${ramo.por_publicar} por publicar`)
-            : 'tudo publicado');
-        return partes.join(' · ');
-    }
-    let versoesGeracao = 0;
-    async function renderVersoesCards() {
-        const geracao = ++versoesGeracao;
-        const versoes = await carregarVersoes();
-        if (geracao !== versoesGeracao || !historyLogsWrapper) return;
-        historyLogsWrapper.querySelectorAll('.session-history-versoes').forEach(el => el.remove());
-        (versoes.ramos || []).forEach(ramo => {
-            const card = criarCardDePilha(
-                ramo.atual ? `Ramo ${ramo.nome}` : ramo.nome,
-                subtituloDoRamo(ramo),
-                'ramo',
-                body => loadRamoCards(ramo, body)
-            );
-            historyLogsWrapper.appendChild(card);
-        });
-        (versoes.tags || []).forEach(tag => {
-            const card = criarCardDePilha(tag.nome, subtituloDaTag(tag), 'versoes', body => loadVersaoCards(tag, body));
-            historyLogsWrapper.appendChild(card);
-        });
-        marcarTagsNosCards();
-    }
-    async function loadVersaoCards(tag, body) {
-        await ensureSessionDetailsLoaded();
-        assignDisplayNamesByDay();
-        const grupos = tarefasDaTag(tag);
-        if (!grupos.length) {
-            const aviso = tag.fora
-                ? 'O ponto desta etiqueta nao esta na historia atual.'
-                : 'Nenhuma tarefa do historico foi commitada neste intervalo.';
-            body.innerHTML = `<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">${aviso}</div>`;
-            return;
-        }
-        body.innerHTML = '';
-        ordenarPorTempo(grupos).forEach(g => body.appendChild(createHistoryRoundCard(g)));
-    }
-    async function loadRamoCards(ramo, body) {
-        await ensureSessionDetailsLoaded();
-        assignDisplayNamesByDay();
-        const alvo = new Set(ramo.todos && ramo.todos.length ? ramo.todos : ramo.commits || []);
-        const grupos = turnosComCommit().filter(l => alvo.has(l.commit)).map(rebuildGroupFromSaved);
-        if (!grupos.length) {
-            body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nenhuma tarefa commitada neste ramo.</div>';
-            return;
-        }
-        body.innerHTML = '';
-        ordenarPorTempo(grupos).forEach(g => body.appendChild(createHistoryRoundCard(g)));
-    }
     function marcarTagsNosCards() {
         document.querySelectorAll('.history-round-card').forEach(el => {
             const grupo = el._group;
             if (!grupo || !grupo.commit) return;
             _marcasDoCard(el, grupo);
         });
+    }
+    async function sincronizarEtiquetasNosCards() {
+        await carregarVersoes();
+        marcarTagsNosCards();
     }
     async function ensureSessionDetailsLoaded() {
         await carregarPorSubir();
@@ -684,7 +575,7 @@ export {
     roundMetaHtml,
     loadDayRoundCards,
     mountCollapsibleCard,
-    renderVersoesCards,
+    sincronizarEtiquetasNosCards,
     nomeDaTarefaDoCommit,
     assignDisplayNamesByDay,
     ensureSessionDetailsLoaded,
@@ -692,7 +583,6 @@ export {
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
     updateRoundCardCommitByTurnId,
-    updateRoundCardNameByTurnId,
     carregarPorSubir,
     atualizarMarcasDosCards,
     enviadaParaOServidor,

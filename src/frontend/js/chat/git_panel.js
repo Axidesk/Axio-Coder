@@ -23,6 +23,7 @@ const COMANDO_DE_DEPENDENCIA = {
 const SVG_VARINHA = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>';
 const SVG_SPINNER = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="42 15"/></svg>';
 const SVG_SALVAR = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>';
+const SVG_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
 const SVG_RAMO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>';
 const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>';
 
@@ -110,10 +111,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
             + '</button>';
     }
-    function salvar(acao, titulo, desativado) {
-        return `<button class="projeto-notas-acao git-salvar" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}"${desativado ? ' disabled' : ''}>`
+    function salvar(acao, titulo, extra) {
+        return `<button class="projeto-notas-acao git-salvar${extra ? ' ' + extra : ''}" type="button" data-git-acao="${acao}" title="${escapeHtml(titulo)}">`
             + `<span class="projeto-icone-wand">${SVG_SALVAR}</span>`
             + `<span class="projeto-icone-spinner">${SVG_SPINNER}</span>`
+            + '</button>';
+    }
+    function lapis() {
+        return '<button class="projeto-notas-acao git-lapis" type="button" data-git-acao="lapis" title="Corrigir a mensagem deste ponto">'
+            + `<span class="projeto-icone-wand">${SVG_LAPIS}</span>`
             + '</button>';
     }
     function recolhivel(cabecalho, corpo, aberta, extra) {
@@ -160,6 +166,27 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const aberto = bloco.classList.toggle('projeto-aberto');
         const mais = cabecalho.querySelector('.projeto-mais');
         if (mais) mais.textContent = aberto ? '−' : '+';
+    }
+    function alternarEdicao(botao, forcar) {
+        const linha = botao.closest('.git-campo-linha');
+        if (!linha) return;
+        const editando = typeof forcar === 'boolean' ? forcar : !linha.classList.contains('git-editando');
+        linha.classList.toggle('git-editando', editando);
+        botao.classList.toggle('git-acesa', editando);
+        const campo = linha.querySelector('#git-mensagem');
+        if (!campo) return;
+        campo.readOnly = !editando;
+        campo.classList.toggle('git-campo-trancado', !editando);
+        if (editando) {
+            campo.focus();
+            campo.select();
+            return;
+        }
+        const grupo = grupoAtivo();
+        if (!grupo) return;
+        campo.value = grupo.__mensagemDoPonto || '';
+        RASCUNHOS.delete(String(grupo.id));
+        guardarRascunhos();
     }
     function htmlSemRepo(motivo) {
         return `<div class="git-painel">
@@ -262,13 +289,16 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             : '';
         html += notaTemDepois + notaDepoisDoPonto + notaNoutroCommit;
         if (vaiCommitar || podeCorrigir) {
-            const escrito = valorDoCampo(grupo) || (vaiCommitar ? '' : mensagemDoPonto);
-            html += '<div class="git-campo-linha">'
-                + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`
-                + ` value="${escapeHtml(escrito)}"`
+            const rascunho = valorDoCampo(grupo);
+            const editando = vaiCommitar || !!rascunho;
+            const escrito = rascunho || (vaiCommitar ? '' : mensagemDoPonto);
+            html += `<div class="git-campo-linha${editando ? ' git-editando' : ''}">`
+                + `<input id="git-mensagem" class="git-campo${editando ? '' : ' git-campo-trancado'}" type="text" spellcheck="false"`
+                + ` value="${escapeHtml(escrito)}"${editando ? '' : ' readonly'}`
                 + ' placeholder="Mensagem do commit">'
-                + varinha('sugerir', 'Escrever a mensagem com a IA')
-                + salvar('salvar', descricaoDoSalvar(vaiCommitar), false)
+                + varinha('sugerir', 'Escrever a mensagem com a IA', 'git-editavel')
+                + salvar('salvar', descricaoDoSalvar(vaiCommitar), 'git-editavel')
+                + (podeCorrigir ? lapis() : '')
                 + '</div>';
         }
         html += '</div>';
@@ -411,6 +441,12 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             RASCUNHOS.set(String(grupo.id), e.target.value);
             guardarRascunhos();
         });
+        painel.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || !e.target || e.target.id !== 'git-mensagem') return;
+            const linha = e.target.closest('.git-campo-linha');
+            const botao = linha ? linha.querySelector('[data-git-acao="lapis"]') : null;
+            if (botao && linha.classList.contains('git-editando')) alternarEdicao(botao, false);
+        });
         painel.addEventListener('click', async (e) => {
             const botao = e.target.closest('[data-git-acao]');
             if (!botao) return;
@@ -421,6 +457,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             if (acao === 'deps') return mostrarComandoDeps(vista);
             if (acao === 'mais-commits') return mostrarMaisCommits(botao);
             if (acao === 'salvar') return salvarTarefa(vista);
+            if (acao === 'lapis') return alternarEdicao(botao);
         });
     }
     async function salvarTarefa(vista) {

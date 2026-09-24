@@ -55,7 +55,7 @@ export {
 };
 
 export { renderThoughts, applyThoughtClamp, renderQuestions, renderTools, sortToolArgsKeys } from './col3_views.js';
-export { showQuestionPanel, beginRenameRound, renameRound } from './question_panel.js';
+export { showQuestionPanel } from './question_panel.js';
 export { renderImagePreviews, addImage } from './attach.js';
     
 async function sendMessage() {
