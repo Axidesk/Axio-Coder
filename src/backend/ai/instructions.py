@@ -360,8 +360,10 @@ def _bloco_git_automatico():
     return (
         "=== MODO AUTOMATICO DE GIT (INTERRUPTOR LIGADO PELO UTILIZADOR) ===\n"
         "No FIM de cada rodada que mexa em ficheiros, guarda o ponto do trabalho com tool_publicar_git e "
-        "empurrar=False: a mensagem e escrita por TI (nunca a pergunta do utilizador), curta e a dizer o "
-        "que mudou. Isso da ao card da rodada o ponto de restauro dele, ja seguro no disco.\n"
+        "empurrar=False. A mensagem e escrita por TI, nunca a pergunta do utilizador: UMA linha curta e "
+        "objetiva (ate ~60 caracteres), a dizer o que mudou - e ela que vira o nome do card desta tarefa "
+        "no historico, por isso escreve-a como titulo, sem corpo nem lista de ficheiros. Isso da ao card "
+        "da rodada o ponto de restauro dele, ja seguro no disco.\n"
         "NAO empurres para o remoto. O envio e feito pela propria aplicacao no fim do dia e nunca depende "
         "de ti: uma rodada que empurre a meio do dia atropela esse desenho.\n"
         "Se a rodada nao mexeu em nenhum ficheiro, nao guardes nada. Se a rodada mexeu so em parte do que "

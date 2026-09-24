@@ -173,9 +173,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<span class="git-chip-rotulo">${escapeHtml(estado.branch || 'sem ramo')}</span></span>`;
         html += '</div>';
         html += blocoDeEtiquetas(estado, grupo, versaoDaTarefa);
-        if (estado.automatico) {
-            html += '<div class="git-nota">Interruptor ligado: o agente publica no git no fim de cada rodada.</div>';
-        }
         html += '</div>';
         return html;
     }
@@ -622,9 +619,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             btnGitAutoHistory.classList.toggle('hidden', !info);
             btnGitAutoHistory.classList.toggle('on', ligado);
             btnGitAutoHistory.setAttribute('aria-checked', ligado ? 'true' : 'false');
-            btnGitAutoHistory.title = ligado
-                ? 'Publicar no git automaticamente ao fim de cada rodada (ligado)'
-                : 'Publicar no git automaticamente ao fim de cada rodada (desligado)';
             btnGitAutoHistory.onclick = info ? (e) => {
                 e.stopPropagation();
                 alternarAutomatico(vista, btnGitAutoHistory);

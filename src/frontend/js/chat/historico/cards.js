@@ -8,8 +8,6 @@ import { epochDeId, marcarCheckpoint } from './checkpoint.js';
 
 const { historyLogsWrapper } = dom;
 
-const LIMITE_COMMIT_CARD = 48;
-
     function rebuildGroupFromSaved(saved) {
         return {
             id: saved.id,
@@ -370,9 +368,7 @@ const LIMITE_COMMIT_CARD = 48;
         return '';
     }
     function resumoDoCommit(texto) {
-        const linha = String(texto || '').trim().split('\n')[0].trim();
-        if (linha.length <= LIMITE_COMMIT_CARD) return linha;
-        return linha.slice(0, LIMITE_COMMIT_CARD - 1).trimEnd() + '…';
+        return String(texto || '').trim().split(/\s+/).join(' ');
     }
     function tituloDaTarefa(group) {
         const base = (group && (group.displayName || group.name)) || 'Tarefa';
