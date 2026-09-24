@@ -5,6 +5,8 @@ import ast
 import json
 import subprocess
 
+from html.parser import HTMLParser
+
 from src.backend.state import emit_event
 from src.backend.tools.js_lexico import contar_simbolo, limpar
 from src.backend.tools.registry import register
@@ -20,6 +22,8 @@ EXTENSOES = {
     ".tsx": "typescript",
     ".json": "json",
     ".css": "css",
+    ".html": "html",
+    ".htm": "html",
 }
 
 def _detectar_linguagem(caminho, linguagem):
@@ -122,6 +126,17 @@ def _parser_typescript(abs_path):
     except Exception as e:
         return None, f"ERRO: falha ao iniciar o parser de TypeScript (tree-sitter): {e}"
 
+def _parser_html():
+    try:
+        from tree_sitter import Language, Parser
+        import tree_sitter_html
+    except ImportError:
+        return None, "ERRO: tree-sitter ou tree-sitter-html nao instalados (necessarios para validar HTML)."
+    try:
+        return Parser(Language(tree_sitter_html.language())), None
+    except Exception as e:
+        return None, f"ERRO: falha ao iniciar o parser de HTML (tree-sitter): {e}"
+
 def _coletar_erros(raiz, limite=5):
     achados = []
     total = 0
@@ -172,12 +187,87 @@ def _validar_css(conteudo):
         return erro
     return _validar_com_tree_sitter(conteudo, parser)
 
+TAGS_VAZIAS_HTML = {
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+    "source", "track", "wbr", "path", "circle", "rect", "line", "polyline", "polygon",
+    "ellipse", "stop", "use", "animate",
+}
+
+class _BalancoHtml(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.pilha = []
+        self.ids = {}
+        self.erros = []
+
+    def handle_starttag(self, tag, attrs):
+        ident = dict(attrs).get("id")
+        if ident:
+            anterior = self.ids.get(ident)
+            if anterior:
+                self.erros.append(f'linha {self.getpos()[0]}: id "{ident}" repetido (ja usado na linha {anterior})')
+            else:
+                self.ids[ident] = self.getpos()[0]
+        if tag in TAGS_VAZIAS_HTML:
+            return
+        self.pilha.append((tag, self.getpos()[0]))
+
+    def handle_endtag(self, tag):
+        if tag in TAGS_VAZIAS_HTML:
+            return
+        if self.pilha and self.pilha[-1][0] == tag:
+            self.pilha.pop()
+            return
+        for i in range(len(self.pilha) - 1, -1, -1):
+            if self.pilha[i][0] == tag:
+                if i + 1 < len(self.pilha):
+                    fora = self.pilha[i + 1]
+                    self.erros.append(f'linha {self.getpos()[0]}: </{tag}> fecha antes de </{fora[0]}> (aberto na linha {fora[1]})')
+                del self.pilha[i:]
+                return
+        self.erros.append(f"linha {self.getpos()[0]}: </{tag}> sem abertura correspondente")
+
+def _erros_de_estrutura_html(conteudo):
+    balanco = _BalancoHtml()
+    balanco.feed(conteudo)
+    balanco.close()
+    erros = list(balanco.erros)
+    if balanco.pilha:
+        tag, linha = balanco.pilha[-1]
+        erros.append(f"linha {linha}: <{tag}> ficou por fechar")
+    return erros
+
+def _erros_finos_html(conteudo):
+    parser, erro = _parser_html()
+    if erro:
+        return []
+    try:
+        arvore = parser.parse(conteudo.encode("utf-8"))
+    except Exception:
+        return []
+    raiz = arvore.root_node
+    if not raiz.has_error:
+        return []
+    erros, _ = _coletar_erros(raiz)
+    erros = [no for no in erros if no.text.strip() != b">"]
+    if not erros:
+        return []
+    return _erros_como_texto(erros, len(erros), conteudo).splitlines()
+
+def _validar_html(conteudo):
+    erros = _erros_de_estrutura_html(conteudo) + _erros_finos_html(conteudo)
+    if not erros:
+        return None
+    if len(erros) > 8:
+        return "\n".join(erros[:8]) + f"\n... e mais {len(erros) - 8} erro(s) nao listado(s)."
+    return "\n".join(erros)
+
 @register(
     "tool_validar_sintaxe",
-    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, JSON ou CSS) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. Retorna OK ou o erro com linha/coluna.',
+    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, JSON, CSS ou HTML) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Retorna OK ou o erro com linha/coluna.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'json', 'css'], "padrao": ""},
+        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'json', 'css', 'html'], "padrao": ""},
     },
 )
 def tool_validar_sintaxe(caminho_relativo, linguagem=""):
@@ -210,6 +300,12 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
         except OSError as e:
             return f"ERRO ao ler o arquivo: {e}"
         erro_msg = _validar_css(conteudo)
+    elif lang == "html":
+        try:
+            conteudo = _ler_texto(abs_path)
+        except OSError as e:
+            return f"ERRO ao ler o arquivo: {e}"
+        erro_msg = _validar_html(conteudo)
     elif lang == "javascript":
         erro_msg = _validar_javascript(abs_path)
     elif lang == "typescript":
@@ -227,10 +323,10 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
 def validar_texto(caminho_relativo, conteudo):
     """Valida a sintaxe de um conteudo EM MEMORIA, sem gravar nada.
 
-    Cobre python, css e json - as linguagens cujo validador nao depende de um
-    interpretador externo. Devolve a mensagem de erro ou None (ok / nao
-    aplicavel). JS, TS e HTML devolvem None: nao sao validaveis em memoria,
-    logo quem edita deve validar DEPOIS de gravar com
+    Cobre python, css, json e html - as linguagens cujo validador nao depende de
+    um interpretador externo. Devolve a mensagem de erro ou None (ok / nao
+    aplicavel). JS e TS devolvem None: nao sao validaveis em memoria, logo quem
+    edita deve validar DEPOIS de gravar com
     `validar_arquivo_apos_edicao` e reverter se houver erro.
     """
     lang = _detectar_linguagem(caminho_relativo, "")
@@ -241,13 +337,15 @@ def validar_texto(caminho_relativo, conteudo):
             return _validar_css(conteudo)
         if lang == "json":
             return _validar_json(conteudo)
+        if lang == "html":
+            return _validar_html(conteudo)
     except Exception as e:
         return f"falha ao validar: {e}"
     return None
 
 def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
     lang = _detectar_linguagem(caminho_relativo, "")
-    if lang not in ("python", "javascript", "json", "css"):
+    if lang not in ("python", "javascript", "json", "css", "html"):
         return ""
     if caminho_absoluto is None:
         caminho_absoluto, erro = resolver_caminho(caminho_relativo)
@@ -260,6 +358,8 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
             erro = _validar_python(_ler_texto(caminho_absoluto), caminho_relativo)
         elif lang == "css":
             erro = _validar_css(_ler_texto(caminho_absoluto))
+        elif lang == "html":
+            erro = _validar_html(_ler_texto(caminho_absoluto))
         else:
             erro = _validar_javascript(caminho_absoluto)
     except OSError:

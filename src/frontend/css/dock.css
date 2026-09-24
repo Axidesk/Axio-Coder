@@ -25,6 +25,13 @@
     width: calc(100vw - 3.5rem);
     min-width: 20rem;
 }
+#panel-title {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 #col1-stack {
     display: grid;
     grid-template-areas: "stack";
@@ -54,6 +61,7 @@
 }
 #btn-history-search {
     width: 20px;
+    flex-shrink: 0;
     overflow: hidden;
     transition: width var(--dur-7) var(--ease-fluid), opacity var(--dur-3) ease,
         transform var(--dur-7) var(--ease-fluid), color var(--dur-3) ease, background-color var(--dur-3) ease;
