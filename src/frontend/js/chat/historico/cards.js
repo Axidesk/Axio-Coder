@@ -224,8 +224,8 @@ const { historyLogsWrapper } = dom;
 
     const SVG_SALVAR_CARD = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--text-suave)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`;
 
-    function _injectMarcas(el, titulo, tag) {
-        el.querySelectorAll('.history-round-saved-icon, .history-round-tag').forEach(m => m.remove());
+    function _injectMarcas(el, titulo, tag, enviado) {
+        el.querySelectorAll('.history-round-saved-icon, .history-round-enviado-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
         if (tag) {
@@ -240,6 +240,12 @@ const { historyLogsWrapper } = dom;
         salvo.title = titulo;
         salvo.innerHTML = SVG_SALVAR_CARD;
         row.appendChild(salvo);
+        if (!enviado) return;
+        const naNuvem = document.createElement('span');
+        naNuvem.className = 'shrink-0 mt-0.5 history-round-enviado-icon';
+        naNuvem.title = 'Ponto no GitHub';
+        naNuvem.innerHTML = SVG_AVIAO_CARD;
+        row.appendChild(naNuvem);
     }
     function enviadaParaOServidor(hash) {
         if (!hash || !state.temRemotoGit || !state.porSubirLido) return false;
@@ -253,8 +259,9 @@ const { historyLogsWrapper } = dom;
             return;
         }
         const curto = String(commit).slice(0, 7);
-        const onde = enviadaParaOServidor(commit) ? ', na nuvem' : ', por enviar';
-        _injectMarcas(el, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit));
+        const naNuvem = enviadaParaOServidor(commit);
+        const onde = naNuvem ? ', na nuvem' : ', por enviar';
+        _injectMarcas(el, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), naNuvem);
     }
     function _marcasDoDia(el) {
         const anterior = el.querySelector('.history-day-saved-icon');

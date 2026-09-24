@@ -4060,10 +4060,10 @@
       "descricao": "Logos da Axidesk para cabecalhos, capas, citacoes e avatar. O ORIGINAL vive FORA do repositorio, em D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos, e a tabela do que cada ficheiro e - com as copias ja tratadas e publicaveis - esta no fim de docs/material-institucional.md (seccao \"As logos da marca\"). Dentro do repositorio: docs/interface/axidesk-logo.jpg (1408x640, monograma AD + AXIDESK, sem a marca de agua do gerador, para cabecalhos e capas) e docs/interface/axidesk-avatar.png (512x512, sem a moldura, e o avatar do perfil). O cartaz.png NAO se usa: e o cartaz da marca Axidesk (limpeza de desktop, cloud e IA) e fala de outro produto. Toda imagem so se publica depois de OLHADA com tool_ver_imagem.",
       "localizacao": {
         "arquivo": "docs/material-institucional.md",
-        "linha": 51,
+        "linha": 53,
         "conferido": [
-          1789872302.398,
-          5865
+          1790289128.55,
+          6556
         ]
       }
     },
@@ -5130,6 +5130,23 @@
           1790288308.317,
           34457
         ]
+      }
+    },
+    {
+      "termo": "aviao do ponto no card",
+      "aliases": [
+        "aviao no card da tarefa",
+        "icone de push no card",
+        "marca de enviado no card",
+        "aviao verde do card",
+        "aviao do card do historico",
+        "indicador de push do historico"
+      ],
+      "identificador": ".history-round-enviado-icon",
+      "descricao": "Aviao oliva ao lado do disquete no card da tarefa quando aquele commit ja esta no GitHub. Quem decide e enviadaParaOServidor(hash). Distinto do aviao do DIA (history-day-saved-icon), que acende quando TODOS os commits do dia subiram.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/historico/cards.js",
+        "linha": 228
       }
     }
   ]
