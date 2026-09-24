@@ -131,17 +131,48 @@ def tool_ler_arquivo(caminho_relativo: str):
     except Exception as e: return f"ERRO: {str(e)}"
 
 
+def _intervalos_pedidos(texto, total):
+    intervalos = []
+    for pedaco in re.split(r"[;,]", texto or ""):
+        pedaco = pedaco.strip()
+        if not pedaco:
+            continue
+        partes = re.split(r"\s*[-:]\s*", pedaco, 1)
+        try:
+            inicio = int(partes[0])
+            fim = int(partes[1]) if len(partes) > 1 else inicio
+        except ValueError:
+            return [], f"ERRO: intervalo invalido em 'trechos': {pedaco}"
+        if inicio < 1 or inicio > total:
+            return [], f"ERRO: intervalo fora do ficheiro (tem {total} linhas): {pedaco}"
+        intervalos.append((inicio, min(total, max(inicio, fim))))
+    return intervalos, ""
+
+
+def _ler_varios_trechos(caminho_relativo, linhas, trechos):
+    intervalos, erro = _intervalos_pedidos(trechos, len(linhas))
+    if erro:
+        return erro
+    if not intervalos:
+        return "ERRO: nenhum intervalo utilizavel em 'trechos'."
+    blocos = []
+    for inicio, fim in intervalos:
+        blocos.append(f"--- Trecho de {caminho_relativo} (Linhas {inicio} a {fim}) ---\n" + "".join(linhas[inicio - 1:fim]))
+    return "\n\n".join(blocos)
+
+
 @register(
     "tool_ler_trecho_arquivo",
-    'Lê linhas específicas de um arquivo. Passa o parametro revisao (ex: HEAD) para ler a versao do git em vez do disco.',
+    'Lê linhas específicas de um arquivo. Aceita VARIOS intervalos numa so chamada no campo trechos (ex: "12-60;210-320;1180-1240"): o ficheiro e lido uma vez e cada intervalo sai com o seu cabecalho - use-o em vez de repetir a chamada por bloco. Passa o parametro revisao (ex: HEAD) para ler a versao do git em vez do disco.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'linha_inicio': {"tipo": "INTEGER", "obrig": True, "padrao": 1},
-        'linha_fim': {"tipo": "INTEGER", "obrig": True, "padrao": lambda a: int(a.get("linha_inicio", 1)) + 400},
+        'linha_inicio': {"tipo": "INTEGER", "padrao": 1},
+        'linha_fim': {"tipo": "INTEGER", "padrao": lambda a: int(a.get("linha_inicio", 1)) + 400},
         'revisao': {"tipo": "STRING", "padrao": ""},
+        'trechos': {"tipo": "STRING", "padrao": ""},
     },
 )
-def tool_ler_trecho_arquivo(caminho_relativo: str, linha_inicio: int, linha_fim: int, revisao: str = ""):
+def tool_ler_trecho_arquivo(caminho_relativo: str, linha_inicio: int = 1, linha_fim: int = 0, revisao: str = "", trechos: str = ""):
     emit_event("executing", function=f"Lendo trecho: {caminho_relativo}")
     if revisao:
         conteudo, erro = conteudo_de_revisao(caminho_relativo, revisao)
@@ -155,11 +186,14 @@ def tool_ler_trecho_arquivo(caminho_relativo: str, linha_inicio: int, linha_fim:
             with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
                 linhas = f.readlines()
         except Exception as e: return f"ERRO: {str(e)}"
+    if trechos:
+        return _ler_varios_trechos(caminho_relativo, linhas, trechos)
+    if not linha_fim: linha_fim = linha_inicio + 400
     inicio = max(0, linha_inicio - 1)
     fim = min(len(linhas), linha_fim)
     if inicio >= fim: return "ERRO: Intervalo inválido."
     trecho = "".join(linhas[inicio:fim])
-    return f"--- Trecho de {caminho_relativo} (Linhas {linha_inicio} a {linha_fim}) ---\\n{trecho}"
+    return f"--- Trecho de {caminho_relativo} (Linhas {linha_inicio} a {linha_fim}) ---\n{trecho}"
 
 
 @register(
