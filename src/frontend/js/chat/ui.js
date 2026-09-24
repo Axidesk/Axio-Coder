@@ -453,6 +453,34 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         if (dom.lblAlertMessage) dom.lblAlertMessage.textContent = message;
         _openAlertPopup();
     }
+    let aoConfirmarPopup = null;
+    function fecharConfirmPopup() {
+        if (!dom.confirmPopup) return;
+        aoConfirmarPopup = null;
+        dom.confirmPopup.classList.remove('opacity-100', 'pointer-events-auto');
+        dom.confirmPopup.classList.add('opacity-0', 'pointer-events-none');
+        if (dom.confirmPopupContent) {
+            dom.confirmPopupContent.classList.remove('scale-100');
+            dom.confirmPopupContent.classList.add('scale-95');
+        }
+    }
+    function showConfirm(mensagem, rotulo, aoConfirmarEscolha) {
+        if (!dom.confirmPopup) return;
+        if (dom.lblConfirmMessage) dom.lblConfirmMessage.textContent = mensagem || '';
+        if (dom.btnConfirmOk) dom.btnConfirmOk.textContent = rotulo || 'Confirmar';
+        aoConfirmarPopup = typeof aoConfirmarEscolha === 'function' ? aoConfirmarEscolha : null;
+        dom.confirmPopup.classList.remove('opacity-0', 'pointer-events-none');
+        dom.confirmPopup.classList.add('opacity-100', 'pointer-events-auto');
+        if (dom.confirmPopupContent) {
+            dom.confirmPopupContent.classList.remove('scale-95');
+            dom.confirmPopupContent.classList.add('scale-100');
+        }
+    }
+    function confirmarEscolha() {
+        const escolha = aoConfirmarPopup;
+        fecharConfirmPopup();
+        if (escolha) escolha();
+    }
 export {
     recolherContextPopup,
     openClearContextPopup,
@@ -482,6 +510,9 @@ export {
     renderCurrentSessionLogs,
     syncWorkspaceTopBar,
     showAlert,
+    showConfirm,
+    fecharConfirmPopup,
+    confirmarEscolha,
     _openAlertPopup,
     resetWorkspaceUI,
     selectFirstSessionLogCard,

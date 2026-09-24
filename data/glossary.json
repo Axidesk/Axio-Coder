@@ -4296,19 +4296,17 @@
       "aliases": [
         "painel de git",
         "botao do git",
-        "icone da branch",
         "icone de git do historico",
-        "icone de salvar do git"
+        "icone de salvar do git",
+        "icone do git na arvore",
+        "atalho do git da arvore",
+        "icone do git do explorer"
       ],
-      "identificador": "btn-show-git-history",
-      "descricao": "Botao do cabecalho da coluna 1 do historico. A ORDEM do cabecalho a 2026-10 e: Historico | lupa #btn-history-search | ESTE | enviar #btn-git-enviar-history | caixa de busca (o restaurar saiu para o card). Apesar do id, o que faz e ABRIR o painel de git na coluna 3 (estado, esta tarefa, dependencias); ligado em renderer.js:ligarBotoesCol3 com o idVista historico, e o gemeo #btn-show-git vive no cabecalho da coluna 2 do dock. O SVG NAO esta mais no HTML: o botao nasce VAZIO em index.html e o icone e injetado no arranque por renderer.js, que o tira do TEMPLATE UNICO src/frontend/js/chat/icones.js:svgDoPonto - o mesmo que pinta os marcadores dos cards (svgDoPonto) e o aviao (svgDoAviao), para trocar o desenho num sitio so. O desenho e o bookmark do Lucide desde 2026-10 (era o disquete), com a classe .icon-header-action (scale 0.8): pinta 12x12. MEDIDO a 2026-10 numa coluna de 320px com a busca ABERTA: restaurar e enviar saem do cabecalho, sobram lupa (colapsa a 0), este e o aviao - o campo de busca ganha os 32px que o restaurar ocupava.",
+      "identificador": "#btn-show-git-history / #btn-git-doc",
+      "descricao": "Botao que ABRE o painel de git (estado, esta tarefa, dependencias) na coluna 3. Tem DOIS sitios desde 2026-10-05: #btn-show-git-history no cabecalho da coluna 1 do historico e #btn-git-doc no cabecalho da ARVORE de ficheiros do explorer, logo depois de #btn-line-numbers. O terceiro (#btn-show-git, no cabecalho da coluna 2 do dock, com o disquete antigo) foi REMOVIDO - com ele saiu o dom.js:btnShowGit e a entrada git do mapa do dock. Os DOIS que ficam abrem a MESMA vista (vistaDe('historico')) e entram no MESMO mapa de renderer.js:ligarBotoesCol3, com o valor do tipo em LISTA - git: [btnShowGitHistory, btnGitDoc] -, o que faz pintarBotoesCol3 acender e apagar os dois juntos (renderer.js:_botoesDoTipo aceita botao solto ou lista; o unico estado e o tipo ativo). MEDIDO na arvore a 420px (tool_medir_pintura, CSS real): cada icone custa 24px ao caminho (16 do icone + 8 do gap), que passa de 288 para 264.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 90,
-        "conferido": [
-          1790290523.189,
-          80578
-        ]
+        "linha": 100
       }
     },
     {
@@ -4344,10 +4342,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 418,
+        "linha": 441,
         "conferido": [
-          1790290539.603,
-          29060
+          1790290942.662,
+          30066
         ]
       }
     },
@@ -4405,10 +4403,10 @@
       "descricao": "Botao que vive NO CARD da pilha (2026-10): cards.js:_injectMarcas cria-o ao lado do marcador do ponto sempre que git_panel.js:podeRestaurar(grupo) deixa (commit OU __session), e o CSS troca-o pelo marcador quando o card esta selecionado - por isso ele aparece APENAS no card selecionado. A troca e PURA CSS em style.css: .history-round-restore-icon nasce display:none, .history-round-card.history-round-selected esconde o .history-round-saved-icon e mostra o restaurar. Nao ha repintura por JS na selecao. O clique faz stopPropagation (para nao cair no clique do card, que seleciona/abre) e chama a API registada em cards.js:registrarRestauroDaTarefa, ligada em renderer.js a git_panel.js:restaurarTarefa(grupo) - que escolhe o MOTOR: com commit -> requestGitRestore (previa + modal), sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o #btn-git-restore-history do cabecalho da coluna 1, REMOVIDO a 2026-10; com ele sairam sincronizarBotaoRestauro (git_panel.js), btnGitRestoreHistory (dom.js) e o registo registrarSincronizacaoDeRestauro (acoes.js). O registo novo existe pelo ciclo de imports: git_panel importa cards, logo cards nao pode importar git_panel. MEDIDO (tool_medir_pintura, CSS real): card fechado pinta o marcador 14x14 e o restaurar 0x0; selecionado, o marcador vai a 0x0 e o restaurar pinta 14x14 na MESMA posicao - o icone nao salta.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 228,
+        "linha": 230,
         "conferido": [
-          1790290539.603,
-          29060
+          1790290942.662,
+          30066
         ]
       }
     },
@@ -4427,8 +4425,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 249,
         "conferido": [
-          1790290555.353,
-          34563
+          1790290945.407,
+          34322
         ]
       }
     },
@@ -4441,8 +4439,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 211,
         "conferido": [
-          1790290555.353,
-          34563
+          1790290945.407,
+          34322
         ]
       }
     },
@@ -4806,17 +4804,14 @@
         "botao de enviar o commit",
         "mandar o commit pro git",
         "enviar para o github",
-        "aviao do painel de git"
+        "aviao do painel de git",
+        "aviao do cabecalho do historico"
       ],
       "identificador": "#btn-git-enviar-history",
-      "descricao": "Aviao do cabecalho da COLUNA 1 do historico, DEPOIS do botao do git: a ordem a 2026-10 e Historico | lupa #btn-history-search | #btn-show-git-history | ESTE | caixa de busca (o restaurar saiu para o card). Empurra para o remoto TUDO o que esta commitado, de qualquer tarefa: nao commita nada e nao e por card. O SVG nao esta no HTML: o botao nasce VAZIO e o icone e injetado no arranque por renderer.js a partir do template unico src/frontend/js/chat/icones.js:svgDoAviao (o mesmo que pinta o aviao do card e o do dia). Quem o pinta e git_panel.js:pintarBotaoEnvio(remoto, hashes): esconde sem remoto, apaga (disabled) sem nada por subir e escreve o titulo com descricaoDoEnvio, nomeando as tarefas pelo hash. Duas fontes o alimentam, as duas do MESMO dado (/api/git/por_subir): git_panel.js:sincronizarCabecalhoGit (o estado que o painel leu) e o registo registrarSincronizacaoDoEnvio, ligado em renderer.js e chamado no fim de cards.js:atualizarMarcasDosCards - e por isso que o botao acende sem o painel de git alguma vez ter sido aberto. O clique chama enviarRepositorio(vistaDe('historico')); se a coluna 3 nao estiver aberta NO git, o aviso de falha sai na barra de estado (avisarNoPainel -> avisarNaBarraDeEstado), nunca num painel invisivel. layout.js:syncCopyButtons JA NAO o esconde quando se troca de camada - so esconde btnGitAutoHistory, que continua na coluna 3.",
+      "descricao": "Aviao do cabecalho da COLUNA 1 do historico, DEPOIS do botao do git: a ordem a 2026-10 e Historico | lupa #btn-history-search | #btn-show-git-history | ESTE | caixa de busca (o restaurar saiu para o card). Empurra para o remoto TUDO o que esta commitado, de qualquer tarefa: nao commita nada e nao e por card. O SVG nao esta no HTML: o botao nasce VAZIO e o icone e injetado no arranque por renderer.js a partir do template unico icones.js:svgDoAviao (o mesmo que pinta o aviao do card e o do dia). Quem o pinta e git_panel.js:pintarBotaoEnvio(remoto, hashes): esconde sem remoto, apaga (disabled) sem nada por subir e escreve o titulo com descricaoDoEnvio, nomeando as tarefas pelo hash. Duas fontes o alimentam, as duas do MESMO dado (/api/git/por_subir): git_panel.js:sincronizarCabecalhoGit (o estado que o painel leu) e o registo registrarSincronizacaoDoEnvio, ligado em renderer.js e chamado no fim de cards.js:atualizarMarcasDosCards - e por isso que o botao acende sem o painel de git alguma vez ter sido aberto. O CLIQUE PEDE CONFIRMACAO desde 2026-10-05: ui.js:showConfirm com a pergunta montada a partir da MESMA descricaoDoEnvio do tooltip ('Deseja enviar 3 commits para o GitHub (Tarefa 17, ...)?') e o botao 'Enviar'; so ao confirmar corre enviarRepositorio(vistaDe('historico')). Se a coluna 3 nao estiver aberta NO git, o aviso de falha sai na barra de estado (avisarNoPainel -> avisarNaBarraDeEstado), nunca num painel invisivel.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 91,
-        "conferido": [
-          1790290523.189,
-          80578
-        ]
+        "linha": 101
       }
     },
     {
@@ -4831,7 +4826,11 @@
       "descricao": "Botao que grava o ponto da tarefa, ao lado do campo da mensagem do commit (varinha e marcador trocam de lugar conforme o campo esta trancado ou destrancado - ver o lapis). O DESENHO muda a 2026-10: era o disquete, passou a ser o bookmark do Lucide, e vive num TEMPLATE UNICO em src/frontend/js/chat/icones.js:svgDoPonto(classe) - a classe entra por parametro porque o mesmo icone pinta em tres sitios com tamanhos diferentes: aqui h-4 w-4 (git_panel.js:salvar), no cabecalho da coluna 1 h-5 w-5 icon-header-action (injetado por renderer.js) e no card da pilha h-3.5 w-3.5 (cards.js:_injectMarcas). Trocar o desenho passa a ser mudar UM caminho em icones.js. NO CARD o marcador cede o lugar a dois vizinhos, nunca por repintura de JS: ao restaurar quando o card esta selecionado (troca PURA CSS, ver .history-round-restore-icon) e ao AVIAO quando aquele e o ultimo ponto enviado (cards.js:_marcasDoCard:289).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 115
+        "linha": 115,
+        "conferido": [
+          1790290945.407,
+          34322
+        ]
       }
     },
     {
@@ -4867,10 +4866,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 558,
+        "linha": 555,
         "conferido": [
-          1790290555.353,
-          34563
+          1790290945.407,
+          34322
         ]
       }
     },
@@ -4888,10 +4887,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 550,
+        "linha": 573,
         "conferido": [
-          1790290539.603,
-          29060
+          1790290942.662,
+          30066
         ]
       }
     },
@@ -4926,8 +4925,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 120,
         "conferido": [
-          1790290555.353,
-          34563
+          1790290945.407,
+          34322
         ]
       }
     },
@@ -4944,7 +4943,27 @@
       "descricao": "O aviao oliva vive num TEMPLATE UNICO em src/frontend/js/chat/icones.js:svgDoAviao(classe) e e injetado por cards.js:_injectMarcas:227. REGRA (2026-10-05, reescrita a pedido): na pilha ele marca O ULTIMO PONTO ENVIADO - um so cartao o traz. Quem decide e cards.js:ultimoEnviadoParaOServidor:273, que percorre turnosComCommit() e escolhe o de MAIOR epochDeId entre os que enviadaParaOServidor:263 deixa passar (falso sem remoto, com a lista por subir ainda nao lida, ou truncada - o erro seguro e nunca afirmar). A cache de modulo e invalidada por _esquecerUltimoEnviado, chamada no inicio de atualizarMarcasDosCards, de updateRoundCardCommitByTurnId e de renderDayRoundCards. NESSE cartao o marcador do ponto NAO aparece: o aviao toma-lhe o lugar (cards.js:_marcasDoCard:289 passa ultimo=true e _injectMarcas salta o disquete). O aviao do DIA e outro: cards.js:_marcasDoDia:302, classe .history-day-saved-icon, acende quando TODOS os commits daquele dia subiram. O push manual acende-o na hora porque enviarRepositorio (git_panel.js:491) refaz carregarPorSubir(true) e volta a pintar.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 230
+        "linha": 230,
+        "conferido": [
+          1790290942.662,
+          30066
+        ]
+      }
+    },
+    {
+      "termo": "popup de confirmacao",
+      "aliases": [
+        "confirmar antes de enviar",
+        "deseja enviar para o github",
+        "aviso de confirmacao",
+        "popup de sim ou nao",
+        "confirmacao do envio"
+      ],
+      "identificador": "showConfirm (src/frontend/js/chat/ui.js:467)",
+      "descricao": "Popup de sim/nao reutilizavel, ao lado do showAlert do qual herda o desenho (#confirm-popup no index.html, aberto por opacity). ui.js:showConfirm(mensagem, rotulo, aoConfirmar) escreve a pergunta, o texto do botao de confirmar e guarda o callback; ui.js:confirmarEscolha corre o callback DEPOIS de fechar (nunca durante, para o popup nao ficar preso se o callback falhar) e ui.js:fecharConfirmPopup limpa a escolha pendente. Os botoes sao ligados em renderer.js junto dos outros modais e #confirm-popup entrou na lista de hit(clickedOnModal) do clique-fora. Quem o usa hoje: git_panel.js:pintarBotaoEnvio, com a pergunta montada a partir de descricaoDoEnvio (a MESMA do tooltip do aviao) e o botao 'Enviar'. NAO confundir com #fs-confirm-popup (editor.js:openFsConfirm), que e do sistema de ficheiros e tem o botao fixo 'Excluir' - sao dois dialogos de confirmacao no projeto, candidatos a fusao num so.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/ui.js",
+        "linha": 467
       }
     }
   ]

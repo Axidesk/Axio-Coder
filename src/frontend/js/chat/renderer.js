@@ -33,8 +33,8 @@ import {
     btnShowToolsHistory,
     btnShowThoughtsHistory,
     btnShowQuestionHistory,
-    btnShowGit,
     btnShowGitHistory,
+    btnGitDoc,
     btnGitEnviarHistory,
     btnWorkspace,
     btnEditor,
@@ -60,6 +60,9 @@ import {
     alertPopup,
     alertPopupContent,
     btnCloseAlert,
+    confirmPopup,
+    btnConfirmOk,
+    btnConfirmCancel,
     editorView,
     wrap,
     settingsModal,
@@ -97,7 +100,7 @@ import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderIns
 import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
 import { renderThoughts, renderTools, sendMessage, showQuestionPanel, sortToolArgsKeys, startSSE } from './messages.js';
 import { aplicarEstadoReveal, aplicarEstadoToggleDeepseek, aplicarEstadoToggleGemini, aplicarEstadoToggleNav, aplicarEstadoToggleVertex, atualizarBotaoLimparVertex, closeSettingsModal, limparErroDeepseek, limparErroGemini, mostrarErroDeepseek, mostrarErroGemini, mostrarErroTavily, openSettingsModal, salvarConfiguracoes, validarChaveDeepseek, validarChaveStudio, validarChaveTavily } from './settings.js';
-import { applyGlossaryChip, clearContextMemory, closeClearContextPopup, contextPopupVisivel, esconderChip, esconderIconTooltip, loadGlossary, mostrarIconTooltip, openClearContextPopup, posicionarContextUsageUI, posicionarIconTooltip, recolherContextPopup, renderCurrentSessionLogs, resizeChatInput, showAlert, showGlossaryChip, syncMenuIcons, syncWorkspaceTopBar, toggleWorkspaceView } from './ui.js';
+import { applyGlossaryChip, clearContextMemory, closeClearContextPopup, confirmarEscolha, contextPopupVisivel, esconderChip, esconderIconTooltip, fecharConfirmPopup, loadGlossary, mostrarIconTooltip, openClearContextPopup, posicionarContextUsageUI, posicionarIconTooltip, recolherContextPopup, renderCurrentSessionLogs, resizeChatInput, showAlert, showGlossaryChip, syncMenuIcons, syncWorkspaceTopBar, toggleWorkspaceView } from './ui.js';
 import { copiarTexto } from './clipboard.js';
 import { abrirProjetoInfo, fecharProjetoInfo, projetoInfoAberto } from './projeto.js';
 import { alternarCamadaNotas, criarNota, traduzirNota } from './projeto_notas.js';
@@ -219,12 +222,15 @@ import './busca_chat.js';
 
     function pintarBotoesCol3(botoes, ativo, vista) {
         Object.keys(botoes).forEach(tipo => {
-            const b = botoes[tipo];
-            if (!b) return;
-            b.classList.toggle('text-[var(--oliva)]', tipo === ativo);
-            b.classList.toggle('text-[var(--text-mutado)]', tipo !== ativo);
+            _botoesDoTipo(botoes[tipo]).forEach(b => {
+                b.classList.toggle('text-[var(--oliva)]', tipo === ativo);
+                b.classList.toggle('text-[var(--text-mutado)]', tipo !== ativo);
+            });
         });
         syncCopyButtons(vista, ativo);
+    }
+    function _botoesDoTipo(valor) {
+        return (Array.isArray(valor) ? valor : [valor]).filter(Boolean);
     }
     function alternarPainelCol3(tipo, vista, botoes) {
         if (!vista) return;
@@ -277,22 +283,23 @@ import './busca_chat.js';
 
     function ligarBotoesCol3(botoes, idVista) {
         Object.keys(botoes).forEach(tipo => {
-            const b = botoes[tipo];
-            if (!b) return;
-            b.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const vista = vistaDe(idVista);
+            _botoesDoTipo(botoes[tipo]).forEach(b => {
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const vista = vistaDe(idVista);
 
-                if (vista) vista.aoFecharCol3 = () => pintarBotoesCol3(botoes, null, vista);
-                alternarPainelCol3(tipo, vista, botoes);
+                    if (vista) vista.aoFecharCol3 = () => pintarBotoesCol3(botoes, null, vista);
+                    alternarPainelCol3(tipo, vista, botoes);
+                });
             });
         });
     }
     btnShowGitHistory.innerHTML = svgDoPonto('h-5 w-5 icon-header-action');
+    btnGitDoc.innerHTML = svgDoPonto('h-4 w-4');
     btnGitEnviarHistory.innerHTML = svgDoAviao('h-5 w-5 icon-header-action');
-    ligarBotoesCol3({ question: btnShowQuestion, thoughts: btnShowThoughts, tools: btnShowTools, git: btnShowGit }, 'dock');
+    ligarBotoesCol3({ question: btnShowQuestion, thoughts: btnShowThoughts, tools: btnShowTools }, 'dock');
 
-    ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory, git: btnShowGitHistory }, 'historico');
+    ligarBotoesCol3({ question: btnShowQuestionHistory, thoughts: btnShowThoughtsHistory, tools: btnShowToolsHistory, git: [btnShowGitHistory, btnGitDoc] }, 'historico');
 
     function repintarPainelCol3(vista, grupo) {
         if (state.isShowingGit) return renderGitPanel(vista);
@@ -423,6 +430,20 @@ import './busca_chat.js';
         alertPopupContent.classList.add('scale-95');
     });
 
+    if (btnConfirmOk) {
+        btnConfirmOk.addEventListener('click', (e) => {
+            e.stopPropagation();
+            confirmarEscolha();
+        });
+    }
+    if (btnConfirmCancel) {
+        btnConfirmCancel.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fecharConfirmPopup();
+        });
+    }
+    if (confirmPopup) confirmPopup.addEventListener('click', (e) => e.stopPropagation());
+
     if (btnClearContext) {
         btnClearContext.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -491,7 +512,7 @@ import './busca_chat.js';
 
         const path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
         const hit = (el) => !!el && path.includes(el);
-        const clickedOnModal = hit(restoreConfirmPopup) || hit(confirmClearContextPopup) ||
+        const clickedOnModal = hit(restoreConfirmPopup) || hit(confirmClearContextPopup) || hit(confirmPopup) ||
                                hit(alertPopup) || hit(settingsModal);
         if (clickedOnModal) return;
         const clickedLeftColumn = hit(chatMode) || hit(terminalMode);

@@ -4,8 +4,9 @@ import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
 import { btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
 import { svgDoPonto } from './icones.js';
+import { showConfirm } from './ui.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
-import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, reagruparPilhaDoDia } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
 
 const LIMITE_COMMITS = 20;
 
@@ -277,13 +278,21 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const notaTemDepois = pontoDaTarefa && ponta && ponta !== pontoDaTarefa
             ? '<div class="git-nota">Ha commits depois deste: a mensagem dele ja nao se muda.</div>'
             : '';
+        const commitDeOutroJaEnviado = noutroCommit && enviadaParaOServidor(levou.hash);
         const donoDesteCommit = noutroCommit ? nomeDaTarefaDoCommit(levou.hash) : '';
-        const notaNoutroCommit = noutroCommit
+        const notaNoutroCommit = noutroCommit && !commitDeOutroJaEnviado
             ? `<div class="git-nota">Estes ficheiros ja foram dentro do commit ${escapeHtml(levou.curto)}`
               + ` (${escapeHtml(donoDesteCommit || 'fora do painel')}) · ${escapeHtml(levou.mensagem)}`
               + ': esta tarefa nao guarda ponto proprio.</div>'
             : '';
-        html += notaTemDepois + notaNoutroCommit;
+        const pontoDaTarefaEnviado = enviadaParaOServidor(pontoDaTarefa);
+        const etiquetaDeEnvio = (pontoDaTarefaEnviado || commitDeOutroJaEnviado)
+            ? linhaComTitulo('Ja enviada para o GitHub',
+                pontoDaTarefaEnviado
+                    ? tituloDaTarefaDoCommit(pontoDaTarefa, mensagemDoPonto)
+                    : tituloDaTarefaDoCommit(levou.hash, levou.mensagem))
+            : '';
+        html += notaTemDepois + notaNoutroCommit + etiquetaDeEnvio;
         if (vaiCommitar || podeCorrigir) {
             const rascunho = valorDoCampo(grupo);
             const editando = vaiCommitar || !!rascunho;
@@ -608,14 +617,14 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (!btnGitEnviarHistory) return;
         const lista = hashes || [];
         const pode = !!remoto && lista.length > 0;
+        const descricao = pode ? descricaoDoEnvio(lista.map(hash => ({ hash })), false) : '';
         btnGitEnviarHistory.classList.toggle('hidden', !remoto);
         btnGitEnviarHistory.disabled = !pode;
-        btnGitEnviarHistory.title = pode
-            ? descricaoDoEnvio(lista.map(hash => ({ hash })), false)
-            : 'Tudo o que esta commitado ja subiu';
+        btnGitEnviarHistory.title = pode ? descricao : 'Tudo o que esta commitado ja subiu';
         btnGitEnviarHistory.onclick = pode ? (e) => {
             e.stopPropagation();
-            enviarRepositorio(vistaDe('historico'), btnGitEnviarHistory);
+            showConfirm('Deseja ' + descricao.charAt(0).toLowerCase() + descricao.slice(1) + '?', 'Enviar',
+                () => enviarRepositorio(vistaDe('historico'), btnGitEnviarHistory));
         } : null;
     }
     function sincronizarBotaoEnvio() {

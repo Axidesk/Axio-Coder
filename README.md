@@ -30,6 +30,8 @@ O envio é do dia seguinte. O que guardaste hoje fica no teu disco e sobe na vir
 
 ![O painel de git: os pontos por subir do dia, a mensagem do ponto desta tarefa e o histórico do repositório](docs/interface/backup-git.jpg)
 
+O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. E quando o ponto de uma tarefa já está no GitHub, o cartão di-lo pelo nome do commit, em vez de ficar com o campo vazio.
+
 ## Refatorações grandes com margem de erro praticamente nula.
 
 Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio.
