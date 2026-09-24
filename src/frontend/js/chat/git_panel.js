@@ -63,9 +63,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (!grupo) return '';
         return grupo.commit || (state.commitsDosTurnos || {})[String(grupo.id)] || '';
     }
+    function _pontaDoRamo(estado) {
+        const ponta = ((estado && estado.commits) || []).find(c => c.head);
+        return ponta ? ponta.hash : '';
+    }
     function _podeEmendar(grupo, estado) {
         const hash = hashDaTarefa(grupo);
         if (!hash || !estado || !estado.repo) return false;
+        const ponta = _pontaDoRamo(estado);
+        if (ponta && ponta !== hash) return false;
         return (estado.por_subir || []).map(c => c.hash).includes(hash);
     }
     function mensagemDoPontoDaTarefa(estado, hash) {
@@ -246,14 +252,11 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             ? 'Ficheiros commitados noutra tarefa'
             : rotuloDoCampo(vaiCommitar, !!pontoDaTarefa, jaNoGitHub, ficheiros.length, porCommitar);
         const podeCorrigir = !vaiCommitar && !!pontoDaTarefa && !!grupo.__podeEmendar;
-        const rotulo = ficheiros.length === 1 ? '1 ficheiro tocado' : `${ficheiros.length} ficheiros tocados`;
-        let cabecalho = `<span class="projeto-contagem">${rotulo}</span>`;
-        if (porCommitar !== null) {
-            cabecalho += '<span class="projeto-secao-sep">|</span>'
-                + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
-        }
-        const notaPonto = pontoDaTarefa
-            ? `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(pontoDaTarefa.slice(0, 7))}${enviadaParaOServidor(pontoDaTarefa) ? ' (no GitHub)' : ' (so no PC, por enviar)'}</div>`
+        const cabecalho = cabecalhoDaTarefa(ficheiros.length, porCommitar);
+        const notaPonto = notaDoPonto(pontoDaTarefa, !!pontoDaTarefa && enviadaParaOServidor(pontoDaTarefa));
+        const ponta = _pontaDoRamo(estado);
+        const notaTemDepois = pontoDaTarefa && ponta && ponta !== pontoDaTarefa
+            ? '<div class="git-nota">Ha commits depois deste: a mensagem dele ja nao se muda.</div>'
             : '';
         const notaDepoisDoPonto = pontoDaTarefa && porCommitar
             ? '<div class="git-nota">Estes ficheiros mudaram depois do ponto: o que esta por commitar e trabalho de outra tarefa.</div>'
@@ -264,7 +267,10 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
               + ` (${escapeHtml(donoDesteCommit || 'fora do painel')}) · ${escapeHtml(levou.mensagem)}`
               + ': esta tarefa nao guarda ponto proprio.</div>'
             : '';
-        html += recolhivel(cabecalho, corpoDaTarefa(grupo, pendentes) + notaPonto + notaDepoisDoPonto + notaNoutroCommit);
+        html += recolhivel(
+            cabecalho,
+            corpoDaTarefa(grupo, pendentes) + notaPonto + notaTemDepois + notaDepoisDoPonto + notaNoutroCommit
+        );
         html += '<div class="git-campo-linha">';
         if (vaiCommitar || podeCorrigir) {
             const escrito = valorDoCampo(grupo) || (vaiCommitar ? '' : mensagemDoPonto);
@@ -280,6 +286,22 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         html += '</div>';
         return html;
     }
+    function cabecalhoDaTarefa(quantosFicheiros, porCommitar) {
+        const rotulo = quantosFicheiros === 1 ? '1 ficheiro tocado' : `${quantosFicheiros} ficheiros tocados`;
+        let html = `<span class="projeto-contagem">${rotulo}</span>`;
+        if (porCommitar > 0) {
+            html += '<span class="projeto-secao-sep">|</span>'
+                + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
+        }
+        return html;
+    }
+    function notaDoPonto(hash, jaNoGitHub) {
+        if (!hash) return '';
+        const onde = jaNoGitHub
+            ? 'salvo no PC e no GitHub'
+            : 'salvo no teu PC (o envio e feito no fim do dia)';
+        return `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(String(hash).slice(0, 7))} · ${onde}</div>`;
+    }
     function rotuloDoCampo(vaiCommitar, temPonto, jaNoGitHub, ficheirosTocados, porCommitar) {
         if (vaiCommitar) return 'Mensagem do commit';
         if (!temPonto) {
@@ -287,7 +309,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             if (porCommitar === 0) return 'Nada para salvar: nenhum ficheiro mudou';
             return 'Sem ponto registado nesta tarefa';
         }
-        return jaNoGitHub ? 'Ja no GitHub' : 'Ponto so no teu PC, por enviar';
+        return jaNoGitHub ? 'Salvo no PC e no GitHub' : 'Salvo no teu PC, por enviar';
     }
     function descricaoDoSalvar(vaiCommitar) {
         if (vaiCommitar) return 'Guardar o ponto desta tarefa (so no PC; o envio e feito no fim do dia)';
@@ -317,7 +339,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             return '<div class="git-nota">Nao consegui confirmar o que falta commitar nesta tarefa. O botao de commit continua disponivel.</div>';
         }
         if (porCommitar === 0) {
-            return '<div class="git-nota">Nada por commitar: nenhum ficheiro desta tarefa mudou desde o ultimo commit.</div>';
+            return '<div class="git-nota">Nada mudou desde o ultimo commit.</div>';
         }
         return lista(ficheiros);
     }

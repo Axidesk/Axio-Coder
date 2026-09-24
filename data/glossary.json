@@ -19,8 +19,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 409,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -39,8 +39,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 456,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -58,8 +58,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 444,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -76,8 +76,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 443,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -95,8 +95,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 179,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -116,8 +116,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 219,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -135,8 +135,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 80,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -154,8 +154,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 377,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -175,8 +175,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 359,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -194,8 +194,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 498,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -221,8 +221,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 488,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -240,8 +240,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 245,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -260,10 +260,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1222,
+        "linha": 1204,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -282,8 +282,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 430,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -303,8 +303,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 85,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -323,8 +323,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 369,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -346,8 +346,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 360,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -366,8 +366,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 671,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -386,8 +386,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 282,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -424,8 +424,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 185,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -444,10 +444,10 @@
       "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 274,
+        "linha": 273,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -486,8 +486,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 272,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -507,8 +507,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 398,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -627,8 +627,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 441,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -666,8 +666,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 194,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -684,8 +684,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 208,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -723,8 +723,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 292,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -743,8 +743,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 260,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -762,8 +762,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 182,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -979,8 +979,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 254,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1000,8 +1000,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 620,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1086,8 +1086,8 @@
         "arquivo": "src/backend/routes/chat.py",
         "linha": 38,
         "conferido": [
-          1790281291.242,
-          7458
+          1790284025.377,
+          7615
         ]
       }
     },
@@ -1371,8 +1371,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 427,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1391,8 +1391,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 248,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1411,8 +1411,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 279,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1431,8 +1431,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 124,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1453,8 +1453,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 149,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1473,8 +1473,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 93,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1534,10 +1534,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js:254 - reconstruido sempre que o tema ou o modo inspecionar mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar). As antigas 'Ferramentas de Desenvolvedor' sairam do Exibir. ALINHAMENTO DOS ROTULOS: um popup nativo do Windows reserva a coluna do visto a esquerda se contiver qualquer item checkbox/radio, empurrando todos os rotulos para a direita; por isso o menu Ferramentas nao pode ter itens marcaveis (o estado do modo inspecionar vai no texto do rotulo). O submenu \"Tema do Dock\" tem itens radio, mas isso vive num popup proprio e nao afeta o Exibir. Nota: alterar o main.js exige FECHAR E REABRIR o Axio - Ctrl+R/Ctrl+Shift+B nao releem o processo principal.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1190,
+        "linha": 1172,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -1680,8 +1680,8 @@
         "arquivo": "src/frontend/style.css",
         "linha": 220,
         "conferido": [
-          1790282846.77,
-          10449
+          1790285133.221,
+          12634
         ]
       }
     },
@@ -1765,8 +1765,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 625,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1786,8 +1786,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 655,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1807,8 +1807,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 643,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1829,8 +1829,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 653,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1849,8 +1849,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 649,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1911,8 +1911,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 639,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -1931,8 +1931,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 575,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -2001,8 +2001,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 390,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -2044,8 +2044,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 386,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -2217,8 +2217,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 381,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -2453,10 +2453,10 @@
       "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 412,
+        "linha": 394,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -2476,8 +2476,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 520,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -2494,10 +2494,10 @@
       "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 412,
+        "linha": 394,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -2688,8 +2688,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 509,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -2858,8 +2858,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 506,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3143,8 +3143,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 482,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3222,10 +3222,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 661,
+        "linha": 683,
         "conferido": [
-          1790117394.897,
-          42236
+          1790285016.409,
+          43468
         ]
       }
     },
@@ -3244,8 +3244,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 28,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3263,8 +3263,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 604,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3302,10 +3302,10 @@
       "descricao": "Zoom global do Axio (0.5 a 2), aplicado por main.js:definirZoomDaInterface com webContents.setZoomFactor na janela principal E na vista do preview. O slider vive no menu Exibir (titulo.js:construirZoom) e manda menu:acao 'zoom'. Persiste em data/settings.json na chave interface.zoom (escrita atómica por gravarZoom, leitura no arranque por lerZoomPersistido). ARMADILHA: o zoom do Chromium e SAME-ORIGIN (doc oficial) - janela principal e preview estao os dois em 127.0.0.1:5000, logo um zoom num propaga-se ao outro; e por isso que existe um so zoom. ARMADILHA 2: getBoundingClientRect devolve CSS px mas WebContentsView.setBounds espera DIP - com zoom != 1 os dois divergem pelo fator, e main.js:escalarLimites corrige (sem isso o preview desloca-se e sobra espaco na lateral). Atalhos: Ctrl+= / Ctrl+- / Ctrl+0.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 42,
+        "linha": 41,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -3383,10 +3383,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 966,
+        "linha": 948,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -3503,8 +3503,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 522,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3543,10 +3543,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 922,
+        "linha": 904,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -3852,10 +3852,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 478,
+        "linha": 457,
         "conferido": [
-          1790119667.2,
-          32948
+          1790284025.436,
+          32536
         ]
       }
     },
@@ -3872,10 +3872,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 442,
+        "linha": 421,
         "conferido": [
-          1790119667.2,
-          32948
+          1790284025.436,
+          32536
         ]
       }
     },
@@ -3914,8 +3914,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 660,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3933,8 +3933,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 597,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -3952,10 +3952,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 747,
+        "linha": 726,
         "conferido": [
-          1790119667.2,
-          32948
+          1790284025.436,
+          32536
         ]
       }
     },
@@ -3972,10 +3972,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 598,
+        "linha": 577,
         "conferido": [
-          1790119667.2,
-          32948
+          1790284025.436,
+          32536
         ]
       }
     },
@@ -3992,10 +3992,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 511,
+        "linha": 490,
         "conferido": [
-          1790119667.2,
-          32948
+          1790284025.436,
+          32536
         ]
       }
     },
@@ -4131,10 +4131,10 @@
       "descricao": "View filha do contentView da janela principal (nao uma janela separada)",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 690,
+        "linha": 672,
         "conferido": [
-          1790281306.747,
-          48497
+          1790284025.543,
+          47691
         ]
       }
     },
@@ -4155,8 +4155,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 116,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -4306,8 +4306,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 136,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -4324,10 +4324,10 @@
       "descricao": "Grava um commit LOCAL (sem push) com os ficheiros daquela tarefa e devolve o hash; com filename+round_id grava o hash no turno do log (services/session.py:marcar_commit_no_log), o que faz o card ganhar o pino com o hash no tooltip. Lista de ficheiros VAZIA e recusada - um commit do painel nunca leva tudo o que estiver sujo.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 90,
+        "linha": 89,
         "conferido": [
-          1790282812.333,
-          9677
+          1790283970.457,
+          8727
         ]
       }
     },
@@ -4345,10 +4345,10 @@
       "descricao": "Cards das etiquetas e do ramo no fim do historico (substituiu a pilha dos salvos); cada etiqueta abre as tarefas do seu intervalo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 436,
+        "linha": 448,
         "conferido": [
-          1790282837.729,
-          33267
+          1790284557.904,
+          32942
         ]
       }
     },
@@ -4365,10 +4365,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 482,
+        "linha": 494,
         "conferido": [
-          1790282837.729,
-          33267
+          1790284557.904,
+          32942
         ]
       }
     },
@@ -4385,10 +4385,10 @@
       "descricao": "Estado do que falta commitar numa tarefa. A rota POST /api/git/pendentes recebe os ficheiros da tarefa e devolve o subconjunto com alteracoes no disco (git status --porcelain -- <paths>); o painel cruza-o com group.files e, com count==0, TIRA o botao Commit desta tarefa e explica \"Nada por commitar\". Leitura falhada (null) mantem o botao: a falta de dado nunca tira a capacidade.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 109,
+        "linha": 110,
         "conferido": [
-          1790282812.333,
-          9677
+          1790283970.457,
+          8727
         ]
       }
     },
@@ -4428,8 +4428,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 156,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -4446,10 +4446,10 @@
       "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 221,
+        "linha": 217,
         "conferido": [
-          1790282858.922,
-          35039
+          1790284558.136,
+          34683
         ]
       }
     },
@@ -4460,10 +4460,10 @@
       "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 183,
+        "linha": 179,
         "conferido": [
-          1790282858.922,
-          35039
+          1790284558.136,
+          34683
         ]
       }
     },
@@ -4977,27 +4977,6 @@
       }
     },
     {
-      "termo": "campo onde escrevo a mensagem",
-      "aliases": [
-        "input do chat",
-        "caixa de texto do axio",
-        "campo de mensagem",
-        "escrever a mensagem",
-        "campo do rodape"
-      ],
-      "identificador": "#linha",
-      "descricao": "Campo de texto do Axio Assistant onde se escreve a mensagem (o input do rodape). O Axio pode le-lo e envia-lo com a ferramenta usar_a_minha_interface.",
-      "localizacao": {
-        "arquivo": "src/frontend/index.html",
-        "linha": 26,
-        "conferido": [
-          1790281432.021,
-          81993
-        ],
-        "ausente": true
-      }
-    },
-    {
       "termo": "largar o preview",
       "aliases": [
         "libertar o preview",
@@ -5055,8 +5034,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 161,
         "conferido": [
-          1790281432.021,
-          81993
+          1790284558.361,
+          81987
         ]
       }
     },
@@ -5070,10 +5049,10 @@
       "descricao": "Botão do corpo do card de tarefa (onde antes vivia o avião): grava um commit LOCAL com os ficheiros daquela tarefa e a mensagem escrita no campo - nunca empurra. Com commit já feito, o mesmo botão corrige a mensagem do ponto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 110,
+        "linha": 109,
         "conferido": [
-          1790282858.922,
-          35039
+          1790284558.136,
+          34683
         ]
       }
     },
@@ -5089,7 +5068,11 @@
       "descricao": "Interruptor no cabecalho da coluna 3 do historico, ao lado do aviao. NASCE LIGADO (data/settings.json git.automatico; migrar_automatico_padrao em services/settings.py converte uma vez as instalacoes antigas). Ligado, o AGENTE guarda o ponto no fim de cada rodada com mensagem escrita por ele e empurrar=False: o commit da ponto ao card daquela rodada (hash e o resumo da mensagem ficam no log) e NAO sobe. O envio para a nuvem e do DIA SEGUINTE ao commit, nunca da rodada nem do fecho do programa: quem empurra e services/envio_automatico.py:enviar_pendentes, que so age quando ha commit de dia anterior, e e chamado na abertura da pasta (routes/chat.py:set_folder) e na virada do dia (vigia de 60s arrancada em app.py). Desligado, nada disto acontece e o utilizador guarda e envia a mao.",
       "localizacao": {
         "arquivo": "src/backend/services/envio_automatico.py",
-        "linha": 6
+        "linha": 6,
+        "conferido": [
+          1790284041.563,
+          1983
+        ]
       }
     },
     {
@@ -5106,10 +5089,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 558,
+        "linha": 557,
         "conferido": [
-          1790282858.922,
-          35039
+          1790284558.136,
+          34683
         ]
       }
     },
@@ -5127,7 +5110,31 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 625
+        "linha": 621,
+        "conferido": [
+          1790284557.904,
+          32942
+        ]
+      }
+    },
+    {
+      "termo": "etapas no card do log da sessao",
+      "aliases": [
+        "etapas",
+        "plano no log da sessao",
+        "acompanhar as etapas pelo editor",
+        "etapas riscadas no card",
+        "plano de execucao no card"
+      ],
+      "identificador": "criarBlocoEtapas / pintarBlocoEtapas",
+      "descricao": "Bloco recolhivel \"Etapas\" no card do log da sessao (coluna 1 do dock), por baixo da meta \"N arquivos - N ferramentas - Xmin\": nasce fechado, o + vira -, a conta diz \"concluidas de total\" e a lista mostra cada etapa com o icone de estado (spinner/aguardando/check) e as suas tarefas riscadas com a bolinha oliva. Espelha o plano do chat: quem alimenta e messages.js (_sincronizarEtapasDoLog, chamada nos handlers plan_started / plan_updated / plan_step_added) a partir de currentSessionPlano e currentSessionPlanoTotal. O total viaja no campo \"total\" dos eventos plan_started e plan_step_added (src/backend/tools/plan.py). O clique dentro do bloco NAO abre o painel de ficheiros do card (stopPropagation no bloco; o cabecalho faz o toggle).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/plan_cards.js",
+        "linha": 76,
+        "conferido": [
+          1790285133.14,
+          17521
+        ]
       }
     }
   ]

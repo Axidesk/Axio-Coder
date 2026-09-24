@@ -144,6 +144,7 @@ def git_por_subir():
         "remoto": info.get("remoto", ""),
         "commits": info.get("commits", []),
         "count": info.get("count", 0),
+        "truncado": info.get("truncado", False),
     })
 
 

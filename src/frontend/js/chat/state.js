@@ -34,6 +34,7 @@ export const state = {
     sessionHistoryLoaded: false,
     commitsDosTurnos: {},
     commitsPorSubir: [],
+    porSubirTruncado: false,
     porSubirLido: false,
     porSubirEmCurso: null,
     temRemotoGit: false,

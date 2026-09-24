@@ -9,7 +9,7 @@ _MANIFESTOS = ("requirements.txt", "package.json")
 _LIMITE_HISTORICO = 200
 _LIMITE_FICHEIROS = 80
 _LIMITE_TAGS = 24
-_LIMITE_POR_SUBIR = 20
+_LIMITE_POR_SUBIR = 200
 _LIMITE_INTERVALO = 200
 _LIMITE_HISTORIA = 500
 _SEPARADOR = "\x1f"
@@ -402,7 +402,7 @@ def pendentes(pasta, caminhos):
 
 
 def por_subir(pasta, limite=_LIMITE_POR_SUBIR):
-    """Commits locais que ainda nao chegaram a nenhum ramo remoto."""
+    """Commits locais que ainda nao chegaram a nenhum ramo remoto; 'truncado' avisa que a lista saiu cortada."""
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:
         return {"repo": False, "motivo": erro, "remoto": "", "commits": [], "count": 0}
@@ -412,7 +412,7 @@ def por_subir(pasta, limite=_LIMITE_POR_SUBIR):
         return {"repo": True, "raiz": raiz, "remoto": "", "commits": [], "count": 0}
     formato = _SEPARADOR.join(["%H", "%h", "%s", "%cI"])
     saida, erro_log = git_saida(
-        raiz, "log", f"--max-count={int(limite)}", "HEAD", "--not", "--remotes", f"--pretty=format:{formato}"
+        raiz, "log", f"--max-count={int(limite) + 1}", "HEAD", "--not", "--remotes", f"--pretty=format:{formato}"
     )
     commits = []
     for linha in (saida or "").splitlines():
@@ -420,7 +420,16 @@ def por_subir(pasta, limite=_LIMITE_POR_SUBIR):
         if len(partes) < 4:
             continue
         commits.append({"hash": partes[0], "curto": partes[1], "mensagem": partes[2], "data": partes[3]})
-    return {"repo": True, "raiz": raiz, "remoto": remoto, "commits": commits, "count": len(commits), "erro": erro_log}
+    truncado = len(commits) > int(limite)
+    return {
+        "repo": True,
+        "raiz": raiz,
+        "remoto": remoto,
+        "commits": commits[:int(limite)],
+        "count": min(len(commits), int(limite)),
+        "truncado": truncado,
+        "erro": erro_log,
+    }
 
 
 def empurrar(pasta):

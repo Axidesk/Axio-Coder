@@ -243,6 +243,7 @@ const { historyLogsWrapper } = dom;
     }
     function enviadaParaOServidor(hash) {
         if (!hash || !state.temRemotoGit || !state.porSubirLido) return false;
+        if (state.porSubirTruncado) return false;
         return !(state.commitsPorSubir || []).includes(hash);
     }
     function _marcasDoCard(el, grupo) {
@@ -542,6 +543,7 @@ const { historyLogsWrapper } = dom;
                 if (!d || d.status !== 'ok') return;
                 state.temRemotoGit = !!d.remoto;
                 state.commitsPorSubir = (d.commits ? d.commits : []).map(c => c.hash);
+                state.porSubirTruncado = !!d.truncado;
                 state.porSubirLido = true;
                 atualizarMarcasDosCards();
             })
