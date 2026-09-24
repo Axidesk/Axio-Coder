@@ -18,6 +18,18 @@ Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o q
 
 ![Histórico das sessões, com o ficheiro editado aberto no diff lado a lado](docs/interface/historico.jpg)
 
+## Cada tarefa deixa um ponto a que podes voltar.
+
+Trabalho terminado não fica à espera de te lembrares de o guardar. Cada rodada que mexe em ficheiros fecha com um **ponto** no git, com uma mensagem de uma linha escrita pelo próprio agente — o interruptor no alto do painel decide se isto acontece. O cartão daquela tarefa no histórico passa a mostrar o resumo do commit ao lado do nome, e o painel diz de imediato quantos pontos ainda estão só no disco e quantos tem o repositório.
+
+Voltar atrás é um clique no **restaurar** do cartão. Antes de tocar em nada, ele diz o que vai repor e o que vai apagar — e **recusa** quando a reposição deixaria o código a chamar funções que já não existem. É a mesma regra do resto da casa: o que não encaixa não é gravado.
+
+A mensagem do ponto nasce **trancada**, e por boa razão: mexer nela não é preencher um campo, é reescrever um commit. Enquanto o ponto não subiu e é a ponta do ramo, o **lápis** destranca o campo e gravar ali é uma emenda — o ponto ganha outro hash e o cartão segue-o sozinho. Depois de estar no GitHub não há lápis nenhum: mudar história publicada é o que o painel recusa, para não partir os pontos de quem já a tem.
+
+O envio é do dia seguinte. O que guardaste hoje fica no teu disco e sobe na virada do dia — ou na próxima vez que abrires o projeto. A publicação nunca acontece a meio de uma rodada, para um envio não atropelar trabalho que ainda está a decorrer.
+
+![O painel de git: os pontos por subir do dia, a mensagem do ponto desta tarefa e o histórico do repositório](docs/interface/backup-git.jpg)
+
 ## Refatorações grandes com margem de erro praticamente nula.
 
 Edições por âncora de texto (nunca por linha fixa), com desfazer e refazer, deteção de código duplicado, auditoria de imports órfãos e um checklist estrutural que avisa quando uma edição cria funções que já existem noutro sítio.

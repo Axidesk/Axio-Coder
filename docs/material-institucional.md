@@ -15,8 +15,9 @@ As descrições de cada vídeo foram confirmadas por um fotograma tirado a 60% d
 | `foguete paint.mp4` | 2,3 min | 56,6 MB | O agente a desenhar um foguete no Paint por coordenadas, através da camada de acessibilidade |
 | `mexendo no paint.mp4` | 1,3 min | 26,5 MB | Círculo e traços desenhados no Paint, com o raciocínio a explicar as armadilhas encontradas |
 | `criando desenho gimp.mp4` | 1,9 min | 65,2 MB | A montagem de uma cena no GIMP por script, com o agente a ler a imagem de volta para conferir |
+| `configurando git.mp4` | 10,8 min | 1009,0 MB | O agente a configurar a vitrine do repositório no GitHub — nome, ramo `main`, Releases e o cartão de partilha com a árvore — com a conversa a explicar cada passo |
 
-Total: cerca de 598 MB.
+Total: cerca de 1,6 GB (o `configurando git.mp4` sozinho é 1,0 GB).
 
 ## Capturas
 
@@ -25,6 +26,7 @@ O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a i
 | Ficheiro | O que mostra | Usada no README do projeto como |
 |---|---|---|
 | `historico.jpg` | O histórico das sessões com o diff lado a lado e o log em baixo | `historico.jpg` (capa) |
+| `backup git.jpg` | O painel de git: os pontos por subir do dia, a mensagem do ponto da tarefa aberta e o histórico do repositório, com o histórico das sessões ao lado | `backup-git.jpg` |
 | `plano.jpg` | O plano da tarefa em curso, com as etapas a serem riscadas | `plano-visual.jpg` |
 | `interface.jpg` | A janela de trabalho inteira e vazia, com o chat à direita e a saudação do agente — a apresentação da interface | `interface.jpg` |
 | `config.jpg` | A janela de Configurações aberta na aba **Cofre**: identidade, emails e a lista das contas de sites, cada uma com a sua chave | `config.jpg` |
@@ -40,7 +42,7 @@ O conjunto de setembro/2026 substituiu as capturas antigas: as que mostravam a i
 | `eureca!.jpg` | O raciocínio do agente a chegar a uma conclusão | — |
 | `Captura de tela 2026-09-01 024505.jpg`, `terminal dinamico.jpg` | Interface antiga, de setembro | substituídas pelas novas |
 
-As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos) e reduzidas a 1920 px de largura, **sem recorte** — todas a janela inteira. O `navegador no preview` foi a exceção: chegou a ser recortado para o cartão do inspetor se ler, e depois reposto inteiro. Ao repor, a imagem pareceu continuar recortada no GitHub mesmo com o ficheiro certo — medido, o que estava publicado era a janela inteira, byte a byte. A explicação é a cache: aquele endereço já tinha sido servido com a versão antiga. O remédio fiável é mudar o nome do ficheiro, porque um endereço novo não tem versão antiga para devolver: foi `preview-navegador.jpg`, depois `preview-navegador-inspecionar.jpg`, agora `navegador-no-preview-inspecionar.jpg`. O texto do cartão do modo inspecionar fica pequeno a essa largura, e é por isso que o original também existe aqui, para quem precisar de o ler. Um recorte apertado chega a cortar listas a meio, e a leitura passa a ser a de um fragmento em vez da de um ecrã. Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.
+As capturas usadas no README estão copiadas para `coder/docs/interface/` (nomes em minúsculas, sem acentos) e reduzidas a 1920 px de largura, **sem recorte** — todas a janela inteira. Duas exceções: o `navegador no preview`, que chegou a ser recortado para o cartão do inspetor se ler e depois foi reposto inteiro, e o `backup-git.jpg` (2026-09-24), aparado só no vazio medido — o screenshot tem 3837x2097 e a última linha com conteúdo é a ~1199, logo ficou 3837x1200 reduzido a 1920x600, sem cortar nada que estivesse desenhado. Ao repor, a imagem pareceu continuar recortada no GitHub mesmo com o ficheiro certo — medido, o que estava publicado era a janela inteira, byte a byte. A explicação é a cache: aquele endereço já tinha sido servido com a versão antiga. O remédio fiável é mudar o nome do ficheiro, porque um endereço novo não tem versão antiga para devolver: foi `preview-navegador.jpg`, depois `preview-navegador-inspecionar.jpg`, agora `navegador-no-preview-inspecionar.jpg`. O texto do cartão do modo inspecionar fica pequeno a essa largura, e é por isso que o original também existe aqui, para quem precisar de o ler. Um recorte apertado chega a cortar listas a meio, e a leitura passa a ser a de um fragmento em vez da de um ecrã. Os originais ficam aqui, com o nome de origem. O `gimp.jpg` do README não vem daqui: é um fotograma do vídeo `criando desenho gimp.mp4`, porque a cena montada por script só aparece em movimento.
 
 ## As logos da marca
 

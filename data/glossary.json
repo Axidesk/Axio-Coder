@@ -19,8 +19,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 409,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -39,8 +39,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 456,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -58,8 +58,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 444,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -76,8 +76,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 443,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -95,8 +95,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 179,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -116,8 +116,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 219,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -135,8 +135,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 80,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -154,8 +154,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 377,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -175,8 +175,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 359,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -194,8 +194,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 498,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -221,8 +221,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 488,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -240,8 +240,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 245,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -282,8 +282,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 430,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -303,8 +303,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 85,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -323,8 +323,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 369,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -346,8 +346,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 360,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -364,10 +364,10 @@
       "descricao": "Botao com icone de olho nas Configuracoes que alterna entre mostrar (olho aberto) e ocultar (olho riscado) as chaves de API dos inputs",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 671,
+        "linha": 670,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -386,8 +386,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 282,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -424,8 +424,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 185,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -464,10 +464,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 411,
+        "linha": 511,
         "conferido": [
-          1790042814.202,
-          22671
+          1790286463.481,
+          26345
         ]
       }
     },
@@ -486,8 +486,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 272,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -507,8 +507,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 398,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -627,8 +627,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 441,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -666,8 +666,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 194,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -684,8 +684,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 208,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -723,8 +723,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 292,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -743,8 +743,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 260,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -762,8 +762,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 182,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -823,10 +823,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 490,
+        "linha": 590,
         "conferido": [
-          1790042814.202,
-          22671
+          1790286463.481,
+          26345
         ]
       }
     },
@@ -979,8 +979,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 254,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -998,10 +998,10 @@
       "descricao": "Painel (nao modal) que desliza da esquerda como o historico, com a largura das colunas 1+2 (35vw): Stack, Linguagens (nome completo + contagem entre parenteses, sem recolher), Dependencias (declaradas + 'usado no codigo', expandiveis com +) e Estrutura (arvore classica com guias continuas, pastas amarelas var(--alerta), contagem apos o nome). Secoes com o resumo ao lado do titulo (ex: 'Estrutura | 108 arquivos, 13 pastas'). Sem icone de recarregar: a medicao e automatica em abrirProjetoInfo. Corpo renderizado por chat/projeto.js, estilo em css/projeto.css.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 620,
+        "linha": 619,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1371,8 +1371,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 427,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1391,8 +1391,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 248,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1411,8 +1411,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 279,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1429,10 +1429,10 @@
       "descricao": "Colunas 2 e 3 PROPRIAS do historico, dentro do #sliding-panel-container: nao sao as mesmas da doc. A coluna 2 desliza ao lado da lista quando se clica numa tarefa do #history-logs-wrapper. A vista e registada/criada em src/frontend/js/chat/colunas.js + files.js (vistaDe('dock') / vistaDe('historico'))",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 124,
+        "linha": 132,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1451,10 +1451,10 @@
       "descricao": "Camada do HISTORICO que abre POR CIMA da area do editor (o lugar do Monaco), com o code view, as ferramentas e o raciocinio da tarefa selecionada no historico. Nao e uma coluna do painel que desliza: nasce no HTML dentro do #sliding-panel-container e e montada em #editor-host-wrap no arranque por mountLogDockIntoWorkspace (js/editor/workspace.js), no MESMO ponto que monta a gemea #panel-col-3 (docs). Abre/fecha por opacity (position absolute, inset 0, z-index 6 - fica por cima da camada da doc, que e 5), e a vista do historico chama WorkspaceView.showEditor() antes de a mostrar. Os botoes que a abrem sao #btn-show-question-history/#btn-show-thoughts-history/#btn-show-tools-history no header da #panel-col-2-history, ligados em js/chat/renderer.js por ligarBotoesCol3.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 149,
+        "linha": 154,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1471,10 +1471,10 @@
       "descricao": "REESCRITO A 2026-10 (o campo mudou de casa). O campo da busca do historico vive NO CABECALHO da coluna 1 - dentro de #history-search-box, IRMAO do botao #btn-history-search (index.html, o mesmo cabecalho que tem \"Historico\"). NAO esta mais embaixo: o painel #history-search-panel passou a ter SO as duas colunas de resultados. O efeito e o do chat: o botao encolhe e some (.hide: width 20px -> 0, opacity 0, scale 0.4) enquanto #history-search-box cresce em largura (.aberta: flex 0 1 0 -> 1 1 0) e, ao contrario da lupa do chat (absoluta), EMPURRA os icones ao lado ate ao limite - o grupo do cabecalho precisa de flex: 1 1 auto (dock.css) senao nada cresce. O campo e a pilula PARTILHADA .busca-campo / .busca-campo-lupa / .busca-campo-input de src/frontend/css/busca.css (a mesma do chat). Fecha pelo clique na lupa de dentro do campo (historySearchLupa -> collapseHistorySearchInline) ou pelo botao. Componente de busca: busca.css; posicao e animacao: dock.css; abrir/fechar: src/frontend/js/chat/historico/busca.js:abrirBuscaInline. ACRESCENTADO A 2026-10: as colunas ja nao tem texto de espera nenhum (os MSG_BUSCA_INICIAL/MSG_BUSCA_RESPOSTAS foram apagados) - sem termo ficam so os rotulos Perguntas/Respostas; com termo e sem resultado fica a mensagem \"Nenhuma pergunta/resposta encontrada com esse termo.\". CLICAR NUM RESULTADO FECHA A BUSCA primeiro (collapseHistorySearchInline) e SO DEPOIS seleciona o card da tarefa na pilha (selectHistoryTaskInPile(r.dia, r.saved.id)) e abre os ficheiros - a ordem importa, porque a pilha esta com opacity 0 enquanto a busca esta aberta. LIMITE CONHECIDO: selectHistoryTaskInPile so encontra o card de um dia que esteja na pilha (renderHistoryCards faz dias.slice(0, 3)), logo um resultado de um dia mais antigo fecha a busca mas nao seleciona card nenhum. CORRIGIDO A 2026-10: este cabecalho deixou de ter os botoes restaurar/salvar/excluir (a lixeira e o salvar morreram e o restaurar subiu para o cabecalho da coluna 3) - dos icones so ficou a lupa, portanto #btn-history-search e o campo sao os unicos vizinhos e o grupo do cabecalho ficou mais largo.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 93,
+        "linha": 101,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1585,8 +1585,8 @@
         "arquivo": "src/frontend/js/chat/layout.js",
         "linha": 114,
         "conferido": [
-          1790119720.988,
-          9785
+          1790286995.895,
+          9741
         ]
       }
     },
@@ -1680,8 +1680,8 @@
         "arquivo": "src/frontend/style.css",
         "linha": 220,
         "conferido": [
-          1790285133.221,
-          12634
+          1790285858.704,
+          12692
         ]
       }
     },
@@ -1722,10 +1722,10 @@
       "descricao": "Scrollbar das DUAS vistas de codigo do code view E das COLUNAS do diff (.diff-col, as duas metades do Codigo Substituido - cada uma tem a sua rolagem horizontal e por isso tinha a barra do desenho global). Em css/dock.css, com um seletor :is(#code-view-container, #code-view-container-history) que cobre o contentor e as colunas de uma so vez (as regras das colunas sao as mesmas, com ' .diff-col' no meio). Desenhada igual a que o Monaco pinta no #editor-host: vertical 14px e horizontal 12px, slider a ocupar a barra TODA (sem inset) e QUADRADO (border-radius 0), track transparente e slider que so aparece com o rato por cima. CORES das predefinicoes do tema dark do proprio Monaco (miscColors.js): slider #797979 a 40% (#79797966), hover #646464 a 70% (#646464b3); o track do Monaco e null, logo transparente - era aqui que estava o fundo preto. E O RECUO: o padding esquerdo do contentor e uma BORDER (padding-left 0 + border-left 16 transparente) para a barra horizontal comecar a 16 e nao a 0 - a barra e pintada dentro da padding-box, logo a border empurra-a e o padding nao. MEDIDO no contentor real com o CSS do projeto: barra horizontal x 16..385, vertical 14px em x 386..399, texto a x=16 (400 exatos). LIMITE: a barra horizontal de cada .diff-col vive na base da COLUNA (fim do conteudo), nao no fundo da janela. As restantes barras da interface continuam com o desenho global (style.css: 8px, thumb arredondado a 4px).",
       "localizacao": {
         "arquivo": "src/frontend/css/dock.css",
-        "linha": 408,
+        "linha": 416,
         "conferido": [
-          1790013285.558,
-          12844
+          1790286381.363,
+          13003
         ]
       }
     },
@@ -1763,10 +1763,10 @@
       "descricao": "Icone ao lado do titulo do painel de informacoes do projeto que ABRE E FECHA (toggle) a camada de notas por cima da area do Monaco: js/chat/projeto_notas.js:alternarCamadaNotas. Deixou de ser o toggle de uma pagina dentro do painel em 2026-09-15 - o painel fica SEMPRE na pagina de informacoes e o #project-panel-title nunca muda de texto. Acende (classe .ativo) enquanto a camada esta aberta e, nesse estado, so muda a COR do icone para --oliva: o fundo --bg-hover-suave foi retirado de .projeto-icon-btn.ativo (css/projeto.css) para ficar igual ao hover dos botoes do historico.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 625,
+        "linha": 624,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1784,10 +1784,10 @@
       "descricao": "Campo de escrita da camada de notas: Monaco sem enfeites (markdown, Ctrl+Z/Ctrl+Y, copia com indentacao preservada), flutuante - sem caixa nem contorno, porque o fundo do tema axio-editor (#1e1e1e) e o mesmo do painel. Grava sozinho em .axio/notas.json, por projeto, com varias abas (a versao antiga era uma nota so em .axio/notas.md, migrada na primeira leitura). O recuo de 16px e MARGEM (o Monaco mede clientWidth, que inclui padding). Desde 2026-09-15 vive na camada #panel-col-3-notes, em cima da area do Monaco, e nao dentro do painel de informacoes.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 655,
+        "linha": 654,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1805,10 +1805,10 @@
       "descricao": "Botao do CABECALHO da camada de notas (#project-notes-header, index.html:555), encostado a direita do titulo 'Notas' - deixou de viver na barra das abas em 2026-09-15 (era o que punha titulo e varinha na mesma linha das abas). Traduz o trecho selecionado (ou a nota toda, sem selecao) para o vocabulario tecnico do projeto: o agente casa o glossario, consulta os identificadores reais no codigo e reescreve o texto, sempre com um aviso no fim de que foi reescrito pelo agente e pode conter erros. Enquanto corre, o PROPRIO botao fica desativado com o spinner (.a-trabalhar troca o SVG da varinha pelo .projeto-icone-spinner) e o chat NAO e bloqueado - a traducao corre em paralelo, numa thread propria, com a barra de status silenciada.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 643,
+        "linha": 642,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1827,10 +1827,10 @@
       "descricao": "Barra das abas do caderno dentro do #project-notes-bar (index.html:564), LOGO ABAIXO do cabecalho com o titulo 'Notas': desde 2026-09-15 as abas ja nao partilham a linha com o titulo nem com a varinha. Cada aba e uma nota (titulo + texto) e usa as MESMAS classes das abas do editor de codigo (.editor-tab), de proposito. O titulo renomeia-se no clique duplo; o X fecha e a ultima nunca desaparece (fica uma Nota 1 nova). CLIQUE DIREITO numa aba abre o #notes-context-menu com 'Voltar a abrir a nota fechada': as notas fechadas vao para uma pilha (notasFechadas, em js/chat/projeto_notas.js) e reabrem uma a uma na ordem INVERSA a que foram fechadas (LIFO), sem limite de abas. Ao fechar uma nota o texto e lido do modelo ANTES de o descartar (projeto_notas.js:_guardarFechada chamada dentro de _fecharAba) - a leitura depois do dispose traria texto vazio.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 653,
+        "linha": 652,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1847,10 +1847,10 @@
       "descricao": "Barra das ABAS da camada de notas, com 34px (variavel --projeto-notas-altura, definida em #panel-col-3-notes no css/dock.css): da esquerda para a direita tem o + (#btn-notes-add) e as abas (#project-notes-tabs). Desde 2026-09-15 o titulo 'Notas' e a varinha JA NAO vivem aqui: subiram para o cabecalho de 60px #project-notes-header (index.html:555), que fica LOGO ACIMA desta barra. Geometria medida com o CSS real: cabecalho y 0..60, barra y 60..94, editor a partir de 94, aviso de campo vazio a 110.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 649,
+        "linha": 648,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1891,8 +1891,8 @@
         "arquivo": "src/frontend/js/chat/layout.js",
         "linha": 125,
         "conferido": [
-          1790119720.988,
-          9785
+          1790286995.895,
+          9741
         ]
       }
     },
@@ -1909,10 +1909,10 @@
       "descricao": "Terceira camada que abre POR CIMA da area do Monaco, gemea de #panel-col-3 (doc) e #panel-col-3-history (historico): nasce no #sliding-panel-container e e montada em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace, que tem as tres no MESMO array. Abre/fecha por opacity (position absolute, inset 0, z-index 7) com a classe .panel-col-closed, e a vista (id 'notas', criada em js/chat/projeto_notas.js) entra no mapa de colunas.js - por isso as tres camadas sao EXCLUSIVAS: abrir qualquer uma fecha as outras por colunas.js:fecharOutrasCamadas, e abrir um FICHEIRO pela arvore tambem as fecha (o listener axio-editor-file-open do renderer.js percorre ['dock','historico','notas']), senao o ficheiro recem-aberto ficava tapado por elas. Por dentro, de cima para baixo: cabecalho de 60px com o titulo 'Notas' e a varinha (#project-notes-header), barra das abas de 34px (#project-notes-bar), o Monaco das notas (#project-notes-editor) e o aviso de campo vazio (#project-notes-placeholder). ABRIR a camada RECOLHE a barra de abas do doc (layout.js:syncDocTopBar, parcela camadaNotasAberta). A camada mantem o #project-panel-container visivel e fecha quando o painel de informacoes fecha (js/chat/projeto.js:fecharProjetoInfo chama projeto_notas.js:fecharCamadaNotas).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 639,
+        "linha": 638,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -1929,10 +1929,10 @@
       "descricao": "Balao de contexto que abre no CLIQUE DIREITO de uma aba de nota, com uma unica opcao: 'Voltar a abrir a nota fechada'. Mesmo desenho e mesmo mecanismo do #fs-context-menu (classe .balao + .menu-open, css/workspace.css); a logica vive em js/chat/projeto_notas.js (_abrirMenuNotas/_fecharMenuNotas) e o item desativa-se (disabled) quando a pilha de notas fechadas esta vazia. Fecha com um clique em qualquer lado, com Escape ou quando a camada de notas fecha. O item reabre a ULTIMA nota fechada, com o titulo e o texto originais, e a nova aba fica ativa.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 575,
+        "linha": 574,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -2001,8 +2001,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 390,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -2044,8 +2044,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 386,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -2217,8 +2217,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 381,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -2476,8 +2476,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 520,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -2688,8 +2688,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 509,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -2858,8 +2858,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 506,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -3143,8 +3143,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 482,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -3224,8 +3224,8 @@
         "arquivo": "src/frontend/js/chat/messages.js",
         "linha": 683,
         "conferido": [
-          1790285016.409,
-          43468
+          1790288362.87,
+          43437
         ]
       }
     },
@@ -3244,8 +3244,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 28,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -3261,10 +3261,10 @@
       "descricao": "Balão fixo que serve de dropdown dos botões #title-bar-exibir e #title-bar-ferramentas. Abre pela classe .menu-open (opacity/visibility/pointer-events em workspace.css). O conteúdo é construído por titulo.js:construirItem a partir das listas itensExibir/itensFerramentas e cada clique manda menu:acao por IPC ao main (filtrado por sender). O menu nativo do Electron continua a ser construído (montarMenu) mas está escondido: existe pelos aceleradores. ATENÇÃO: é position:fixed, logo conta como camada flutuante que esconde a vista nativa do preview (preview.js:camadaFlutuante).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 604,
+        "linha": 603,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -3503,8 +3503,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 522,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -3912,10 +3912,10 @@
       "descricao": "A janela de Configurações (APIs, Cofre): overlay #settings-modal com o painel #settings-modal-content dentro, aberto pelo #btn-settings. As medidas (90vw ate 1200px, 85vh ate 900px) vivem em src/frontend/css/geral.css.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 660,
+        "linha": 659,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -3931,10 +3931,10 @@
       "descricao": "Balao do botao direito sobre qualquer uma das duas colunas do chat: o item limpa AS DUAS colunas de uma vez e apaga so o que esta pintado - a memoria da rodada no backend fica intacta (quem a zera e o X do anel de tokens).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 597,
+        "linha": 596,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -4153,10 +4153,10 @@
       "descricao": "CORRIGIDO A 2026-10: o traco VERTICAL esta DE VOLTA a pedido dele (\"coloca de volta um separador vertical entre eles dois\"). E a classe .busca-coluna, posta na coluna da ESQUERDA de #history-search-cols (o div das Perguntas em index.html), com border-right: 1px solid var(--border-suave) em dock.css. Medido na pintura com o CSS do produto: uma linha de 1px de #444 a correr de ponta a ponta da altura das duas colunas. O traco HORIZONTAL por baixo dos rotulos continua FORA (era o border-bottom de .busca-coluna-topo) - nao o repor. A coluna da direita e #history-search-respostas; a da esquerda #history-search-results-inline.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 116,
+        "linha": 124,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -4296,18 +4296,18 @@
       "aliases": [
         "painel de git",
         "botao do git",
-        "comandos do git",
-        "comit pelo painel",
-        "icone de git do historico"
+        "icone da branch",
+        "icone de git do historico",
+        "icone de salvar do git"
       ],
       "identificador": "btn-show-git-history",
-      "descricao": "Botao do cabecalho da coluna 2 do historico (e o gemeo btn-show-git no dock) que abre o painel de git na coluna 3: estado do repositorio, \"Commit desta tarefa\" (local, so os ficheiros da tarefa), \"Sugerir com IA\" (escreve a mensagem), \"Restaurar esta tarefa\" (modal com a lista de ficheiros) e \"Preparar as dependencias\". Renderizado por git_panel.js:renderGitPanel, ligado ao tipo 'git' de alternarPainelCol3.",
+      "descricao": "Botao do cabecalho da coluna 1 do historico, agora DEPOIS da lupa #btn-history-search (nasceu na coluna 2 e mudou-se). A ordem do cabecalho ficou: Historico | lupa | este botao | restaurar #btn-git-restore-history | caixa de busca. Apesar do id, o que faz e ABRIR o painel de git na coluna 3 (estado, commit desta tarefa, restaurar, preparar dependencias); ligado em renderer.js:ligarBotoesCol3 com o idVista historico/dock. O gemeo #btn-show-git vive no cabecalho da coluna 2 do dock. Leva o MESMO icone de disquete do botao de salvar do painel de git (SVG_SALVAR em git_panel.js) - padronizado de proposito - e passou a levar tambem a classe .icon-header-action (scale 0.8): medido a 2026-10, o disquete pintava 15x15 px contra os 14x14 da lupa e agora pinta 12x12, igual ao restaurar. CONSEQUENCIA medida de estar depois da lupa: quando a busca abre, a lupa colapsa (width 20px -> 0) e este botao (com o restaurar) anda 20px para a esquerda - a caixa #history-search-box cresce depois deles e nao os empurra.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 136,
+        "linha": 90,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -4324,31 +4324,10 @@
       "descricao": "Grava um commit LOCAL (sem push) com os ficheiros daquela tarefa e devolve o hash; com filename+round_id grava o hash no turno do log (services/session.py:marcar_commit_no_log), o que faz o card ganhar o pino com o hash no tooltip. Lista de ficheiros VAZIA e recusada - um commit do painel nunca leva tudo o que estiver sujo.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 89,
+        "linha": 88,
         "conferido": [
-          1790283970.457,
-          8727
-        ]
-      }
-    },
-    {
-      "termo": "pilha das versões",
-      "aliases": [
-        "cards das tags",
-        "pilha das tags",
-        "cards dos ramos",
-        "versões no histórico",
-        "ramos na pilha",
-        "em curso"
-      ],
-      "identificador": "renderVersoesCards",
-      "descricao": "Cards das etiquetas e do ramo no fim do historico (substituiu a pilha dos salvos); cada etiqueta abre as tarefas do seu intervalo",
-      "localizacao": {
-        "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 448,
-        "conferido": [
-          1790284557.904,
-          32942
+          1790285969.813,
+          8717
         ]
       }
     },
@@ -4365,10 +4344,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 494,
+        "linha": 382,
         "conferido": [
-          1790284557.904,
-          32942
+          1790288444.996,
+          27551
         ]
       }
     },
@@ -4385,10 +4364,10 @@
       "descricao": "Estado do que falta commitar numa tarefa. A rota POST /api/git/pendentes recebe os ficheiros da tarefa e devolve o subconjunto com alteracoes no disco (git status --porcelain -- <paths>); o painel cruza-o com group.files e, com count==0, TIRA o botao Commit desta tarefa e explica \"Nada por commitar\". Leitura falhada (null) mantem o botao: a falta de dado nunca tira a capacidade.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 110,
+        "linha": 109,
         "conferido": [
-          1790283970.457,
-          8727
+          1790285969.813,
+          8717
         ]
       }
     },
@@ -4423,13 +4402,13 @@
         "voltar ao ponto da tarefa"
       ],
       "identificador": "#btn-git-restore-history",
-      "descricao": "Icone de restaurar do painel de git (o unico restauro do historico desde 2026-10): vive no cabecalho da coluna 3, encostado ao titulo do painel, e NAO tem id nos botoes do painel - e independente do html do painel. Quem o mostra/esconde e git_panel.js:sincronizarBotaoRestauro(vista, grupo), chamado no fim de renderGitPanel e so quando vista.id === 'historico' (o painel de git do dock nao tem este botao); o onclick e reatribuido a cada render, para nao acumular listeners. layout.js:syncCopyButtons esconde-o sempre que o painel ativo nao e 'git'. restaurarTarefa escolhe o MOTOR: com commit -> requestGitRestore(hash) (previa + modal do historico, state.pendingRestore.tipo==='git'); sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca das tarefas sem ponto no git). Substituiu o icone que vivia na coluna 1 do historico e a pill \"Restaurar esta tarefa\".",
+      "descricao": "Icone de restaurar (o unico restauro do historico desde 2026-10): MUDOU-SE do cabecalho da coluna 3 para o CABECALHO DA COLUNA 1, encostado ao botao do git #btn-show-git-history. Quem o mostra/esconde e git_panel.js:sincronizarBotaoRestauro(), agora SEM argumentos: le grupoAtivo() (state.currentSelectedHistoryGroup || window.currentActiveLogGroup) e decide por podeRestaurar (commit OU __session) - o clique continua a chamar restaurarTarefa(), que resolve o grupo na hora. Como a coluna 1 nao sabe de git, a sincronizacao chega por REGISTO: acoes.js:registrarSincronizacaoDeRestauro(fn) guarda o callback e updateActionButtons chama-o no fim (que corre a cada selecao de card: openFilesPanel, selectHistoryTask, cards e painel), e renderer.js:299 liga as duas pontas. Esse registo existe para nao criar ciclo de imports (acoes -> git_panel -> cards -> acoes). git_panel.js chama-o no fim de renderGitPanel SO quando a vista e 'historico' (o painel de git do dock nao tem este botao). layout.js:syncCopyButtons JA NAO o esconde fora do git - passou a esconder so btnGitEnviarHistory e btnGitAutoHistory. restaurarTarefa escolhe o MOTOR: com commit -> requestGitRestore(hash) (previa + modal, state.pendingRestore.tipo==='git'); sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o icone que vivia na coluna 1 do historico e a pill 'Restaurar esta tarefa'.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 156,
+        "linha": 93,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -4443,13 +4422,13 @@
         "onde vejo o commit que nao subiu"
       ],
       "identificador": "htmlPorSubir / git_repo.por_subir",
-      "descricao": "Secção recolhível do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". A nota \"Ponto desta tarefa\" diz \"(no GitHub)\" ou \"(so no PC, por enviar)\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado; o mesmo dados alimenta o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit).",
+      "descricao": "Seccao recolhivel do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), que le UM A MAIS que o limite e devolve truncado quando a lista sai cortada; exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado. O mesmo dado decide o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit + state.porSubirTruncado): quando truncado, nada e afirmado como enviado. A nota \"Ponto desta tarefa\" que citava este estado ja nao existe no cartao da tarefa - quem diz onde o ponto esta e o icone do cartao no historico.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 217,
+        "linha": 249,
         "conferido": [
-          1790284558.136,
-          34683
+          1790288308.317,
+          34457
         ]
       }
     },
@@ -4460,10 +4439,10 @@
       "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 179,
+        "linha": 211,
         "conferido": [
-          1790284558.136,
-          34683
+          1790288308.317,
+          34457
         ]
       }
     },
@@ -4481,10 +4460,10 @@
       "descricao": "Altura do cabecalho das colunas do dock e do historico. As regras de 60px vivem no dock.css (grupo `#panel-col-1`, `#panel-col-2`, `#panel-log-session`; e cada `#panel-col-2-history`, `#panel-col-3`, `#panel-col-3-history`). A coluna 3 NAO esta no painel que desliza: e montada em #editor-host-wrap, logo o topo dela depende do #editor-view, que desce 40px quando a barra de abas do doc esta visivel - quem a recolhe e layout.js:syncDocTopBar via camadaCol3MostraPaineis, onde cada painel novo tem de entrar.",
       "localizacao": {
         "arquivo": "src/frontend/css/dock.css",
-        "linha": 115,
+        "linha": 123,
         "conferido": [
-          1790013285.558,
-          12844
+          1790286381.363,
+          13003
         ]
       }
     },
@@ -5032,10 +5011,10 @@
       "descricao": "Avião do cabeçalho da coluna 3 do histórico, ao lado do restaurar: empurra para o remoto TUDO o que está commitado, de qualquer tarefa - não commita nada e não é por card. Desativado quando não há commits por subir.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 161,
+        "linha": 164,
         "conferido": [
-          1790284558.361,
-          81987
+          1790286987.018,
+          81868
         ]
       }
     },
@@ -5049,10 +5028,10 @@
       "descricao": "Botão do corpo do card de tarefa (onde antes vivia o avião): grava um commit LOCAL com os ficheiros daquela tarefa e a mensagem escrita no campo - nunca empurra. Com commit já feito, o mesmo botão corrige a mensagem do ponto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 109,
+        "linha": 115,
         "conferido": [
-          1790284558.136,
-          34683
+          1790288308.317,
+          34457
         ]
       }
     },
@@ -5089,10 +5068,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 557,
+        "linha": 560,
         "conferido": [
-          1790284558.136,
-          34683
+          1790288308.317,
+          34457
         ]
       }
     },
@@ -5110,10 +5089,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 621,
+        "linha": 514,
         "conferido": [
-          1790284557.904,
-          32942
+          1790288444.996,
+          27551
         ]
       }
     },
@@ -5132,8 +5111,24 @@
         "arquivo": "src/frontend/js/chat/plan_cards.js",
         "linha": 76,
         "conferido": [
-          1790285133.14,
-          17521
+          1790285858.566,
+          17492
+        ]
+      }
+    },
+    {
+      "termo": "lapis do commit",
+      "aliases": [
+        "lapis do painel de git|destrancar o campo da mensagem|corrigir a mensagem do ponto|editar o commit|lapis de editar o comit"
+      ],
+      "identificador": "lapis / alternarEdicao",
+      "descricao": "Botao de lapis no cartao da tarefa que destranca a mensagem do ponto. O campo nasce TRANCADO (readonly + .git-campo-trancado: fundo transparente e texto em --text-suave) e a varinha e o disquete ficam escondidos por .git-editavel; o lapis destranca (classe .git-editando na linha, .git-acesa no botao), e clicar outra vez ou Esc tranca e repoe a mensagem do ponto, descartando o rascunho. So existe quando o commit e a ponta do ramo e ainda esta por subir (grupo.__podeEmendar) - e a unica janela em que a emenda e segura.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/git_panel.js",
+        "linha": 120,
+        "conferido": [
+          1790288308.317,
+          34457
         ]
       }
     }
