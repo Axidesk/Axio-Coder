@@ -127,26 +127,30 @@ def tool_listar_arvore(caminho_relativo="", profundidade_max=4, max_entradas=400
 
 @register(
     "tool_pesquisar_no_projeto",
-    'Busca ocorrências de string no código (compara com normalização Unicode NFC — acentos compostos e decompostos casam automaticamente). PROIBIDO pesquisar termos de leigo passados pelo humano (Ex: porta, alisar, camera, parede etc). Se o usuário citar, primeiro mapeie o código ou leia as assinaturas para descobrir o nome correto e evitar perder tempo. Passa o parametro revisao (ex: HEAD) para procurar na versao do git em vez do disco. Ignora por predefinicao node_modules, .venv, .git e pastas afins: ligue incluir_ignoradas para procurar tambem la dentro (tipagens e codigo das dependencias instaladas).',
+    'Busca ocorrências de string no código (compara com normalização Unicode NFC — acentos compostos e decompostos casam automaticamente). PROIBIDO pesquisar termos de leigo passados pelo humano (Ex: porta, alisar, camera, parede etc). Se o usuário citar, primeiro mapeie o código ou leia as assinaturas para descobrir o nome correto e evitar perder tempo. Passa o parametro revisao (ex: HEAD) para procurar na versao do git em vez do disco. Ignora por predefinicao node_modules, .venv, .git e pastas afins: ligue incluir_ignoradas para procurar tambem la dentro (tipagens e codigo das dependencias instaladas). Aceita VARIOS termos de uma vez, um por linha no campo termo: o projeto e varrido UMA so vez e a resposta sai agrupada por termo - use-o para investigar varios nomes correlacionados sem repetir a varredura.',
     {
-        'termo': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'termo': {"tipo": "STRING", "obrig": True, "padrao": "", "desc": "Um termo, ou varios separados por quebra de linha (ex: 'nome1\\nnome2'). Com varios, o projeto e varrido uma so vez e cada termo sai com o seu bloco."},
         'revisao': {"tipo": "STRING", "padrao": ""},
         'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist). Serve para ler tipagens e codigo das dependencias instaladas. Custa tempo - em pastas enormes o limite de 10s corta a busca."},
         'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a busca a uma pasta (ex: node_modules/dxf-viewer) OU a um ficheiro do projeto (procura so dentro dele). E o caminho para procurar dentro de uma dependencia SEM percorrer as outras todas: sem isto, incluir_ignoradas varre o node_modules inteiro e o limite de 10s devolve resultados parciais (os ficheiros ordenados depois do corte nunca sao vistos)."},
     },
 )
 def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: bool = False, pasta: str = ""):
-    emit_event("executing", function=f"Pesquisando: {termo}")
+    termos = [t.strip() for t in str(termo).split("\n") if t.strip()]
+    if not termos:
+        return "ERRO: indique pelo menos um termo para procurar."
+    padroes = [normalizar_unicode(t) for t in termos]
+    emit_event("executing", function="Pesquisando: " + ", ".join(termos))
     if revisao:
-        resultados, erro = buscar_em_revisao(termo, revisao, estado["pasta_raiz"])
-        if erro:
-            return erro
-        if not resultados:
-            return f"Nenhuma ocorrência encontrada para o termo '{termo}' na revisao {revisao}."
-        saida = "\\n".join(resultados)
-        return saida[:10000] + "\\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
-    termo_norm = normalizar_unicode(termo)
-    resultados = []
+        achados = []
+        for t in termos:
+            resultados, erro = buscar_em_revisao(t, revisao, estado["pasta_raiz"])
+            if erro:
+                return erro
+            achados.append(resultados or [])
+        saida = _formatar_busca(termos, achados, f" na revisao {revisao}")
+        return saida[:10000] + "\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
+    resultados = [[] for _ in termos]
     tempo_inicio = time.time()
     pastas_ignoradas = PASTAS_FORA_DA_BUSCA
     extensoes_ignoradas = EXT_FORA_DA_BUSCA
@@ -162,12 +166,10 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
                 return f"ERRO: '{pasta}' tem mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB - nao vale a pena procura-lo como texto."
             with open(candidata, "r", encoding="utf-8", errors="ignore") as ficheiro:
                 linhas_do_ficheiro = ficheiro.readlines()
-            achadas = [f"{pasta.strip()} (Linha {i + 1}): {linha.strip()}"
-                       for i, linha in enumerate(linhas_do_ficheiro)
-                       if termo_norm in normalizar_unicode(linha)]
-            if not achadas:
-                return f"Nenhuma ocorrencia encontrada para o termo '{termo}' em '{pasta.strip()}'."
-            return "\n".join(achadas[:100])
+            achados = [[f"{pasta.strip()} (Linha {i + 1}): {linha.strip()}"
+                        for i, linha in enumerate(linhas_do_ficheiro)
+                        if p in normalizar_unicode(linha)][:100] for p in padroes]
+            return _formatar_busca(termos, achados, f" em '{pasta.strip()}'")[:10000]
         if not os.path.isdir(candidata):
             return f"ERRO: '{pasta}' nao e uma pasta nem um ficheiro do projeto."
         raiz_busca = candidata
@@ -182,9 +184,8 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         
         for name in files:
             if time.time() - tempo_inicio > 10:
-                resultados.append(f"[AVISO] Timeout de 10s atingido em '{root}'. Resultados parciais - restrinja com 'pasta' para varrer uma subpasta de cada vez.")
-                saida = "\\n".join(resultados)
-                return saida[:10000] + "\\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
+                saida = _formatar_busca(termos, resultados) + f"\n[AVISO] Timeout de 10s atingido em '{root}'. Resultados parciais - restrinja com 'pasta' para varrer uma subpasta de cada vez."
+                return saida[:10000] + "\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
 
             if name.endswith(extensoes_ignoradas): continue
             caminho_absoluto = os.path.join(root, name)
@@ -197,15 +198,30 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
                 
                 with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
                     for i, linha in enumerate(f):
-                        if termo_norm in normalizar_unicode(linha):
-                            resultados.append(f"{caminho_relativo} (Linha {i+1}): {linha.strip()}")
+                        alvo = normalizar_unicode(linha)
+                        for indice, p in enumerate(padroes):
+                            if p in alvo:
+                                resultados[indice].append(f"{caminho_relativo} (Linha {i+1}): {linha.strip()}")
             except Exception: pass
             
     aviso = ""
     if ignorados_por_tamanho:
         aviso = (f" [{ignorados_por_tamanho} ficheiro(s) com mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB"
                  f" nao foram lidos nesta busca; os bundles em dist/ ficam sempre de fora.]")
-    if not resultados: return f"Nenhuma ocorrência encontrada para o termo '{termo}'." + aviso
-    saida = "\\n".join(resultados)
-    if len(saida) > 10000: return saida[:10000] + "\\n... [RESULTADO TRUNCADO]"
+    if not any(resultados): return _formatar_busca(termos, resultados) + aviso
+    saida = _formatar_busca(termos, resultados)
+    if len(saida) > 10000: return saida[:10000] + "\n... [RESULTADO TRUNCADO]"
     return saida
+
+
+def _formatar_busca(termos, achados, sufixo=""):
+    if len(termos) == 1:
+        if not achados[0]:
+            return f"Nenhuma ocorrência encontrada para o termo '{termos[0]}'{sufixo}."
+        return "\n".join(achados[0])
+    linhas = []
+    for termo, achadas in zip(termos, achados):
+        linhas.append(f"=== {termo} ===")
+        linhas.extend(achadas or ["(nenhuma ocorrência)"])
+        linhas.append("")
+    return "\n".join(linhas).rstrip()
