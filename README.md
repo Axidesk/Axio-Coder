@@ -28,7 +28,7 @@ A mensagem do ponto nasce **trancada**, e por boa razão: mexer nela não é pre
 
 O envio é do dia seguinte. O que guardaste hoje fica no teu disco e sobe na virada do dia — ou na próxima vez que abrires o projeto. A publicação nunca acontece a meio de uma rodada, para um envio não atropelar trabalho que ainda está a decorrer.
 
-![O painel de git: os pontos por subir do dia, a mensagem do ponto desta tarefa e o histórico do repositório](docs/interface/backup-git.jpg)
+![O painel de git: os pontos por subir do dia, a mensagem do ponto desta tarefa e o histórico do repositório](docs/interface/painel-de-git.jpg)
 
 O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. E quando o ponto de uma tarefa já está no GitHub, o cartão di-lo pelo nome do commit, em vez de ficar com o campo vazio.
 
