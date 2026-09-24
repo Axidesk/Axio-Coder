@@ -5,6 +5,7 @@ import { escapeHtml } from '../messages.js';
 import { syncMenuIcons } from '../ui.js';
 import { setHistoryActionButtonsVisible, updateActionButtons } from './acoes.js';
 import { abrirColunasDoHistorico } from './busca.js';
+import { carregarRepositorio, montarHistoricoAntigo } from './antigos.js';
 import { ensureSessionDetailsLoaded, loadDayRoundCards, mountCollapsibleCard, sincronizarEtiquetasNosCards, talvezLembrarDeGuardar } from './cards.js';
 import { fetchSessionHistoryData } from './estado.js';
 
@@ -35,6 +36,7 @@ const { historyLogsWrapper, panelTitle } = dom;
             empty.className = 'p-4 text-sm text-[var(--text-mutado)] font-mono';
             empty.textContent = 'Nenhuma sessão anterior encontrada.';
             historyLogsWrapper.appendChild(empty);
+            montarHistoricoAntigo(historyLogsWrapper, []);
             return;
         }
         const sessoesPorDia = new Map();
@@ -48,7 +50,8 @@ const { historyLogsWrapper, panelTitle } = dom;
             const tb = Math.max(...sessoesPorDia.get(b).map(s => s.timestamp || 0));
             return tb - ta;
         });
-        dias.slice(0, 3).forEach(dia => {
+        const tresDias = dias.slice(0, 3);
+        tresDias.forEach(dia => {
             const sessoes = sessoesPorDia.get(dia);
             const card = document.createElement('div');
             card.className = 'session-history-card';
@@ -66,9 +69,11 @@ const { historyLogsWrapper, panelTitle } = dom;
             `;
             mountCollapsibleCard(card, header, (bodyInner) => loadDayRoundCards(sessoes, bodyInner));
         });
+        montarHistoricoAntigo(historyLogsWrapper, tresDias);
         sincronizarEtiquetasNosCards();
     }
     async function prefetchSessionDetails() {
+        carregarRepositorio();
         await ensureSessionDetailsLoaded();
         sincronizarEtiquetasNosCards();
         talvezLembrarDeGuardar();

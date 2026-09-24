@@ -38,6 +38,7 @@ export const state = {
     porSubirLido: false,
     porSubirEmCurso: null,
     temRemotoGit: false,
+    gitRemoto: '',
     currentTurnLogs: [],
     currentTurnSummary: '',
     currentViewingAiResponse: '',

@@ -6,16 +6,12 @@ import { btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
 import { svgDoPonto } from './icones.js';
 import { showConfirm } from './ui.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
-import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
-
-const LIMITE_COMMITS = 20;
+import { esquecerIntencaoManual, marcarProximoComoManual } from './historico/marcas_envio.js';
+import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
 
 const CHAVE_RASCUNHOS = 'axio.git.rascunhos';
 
 const RASCUNHOS = new Map(Object.entries(rascunhosGuardados()));
-
-let commitsAMostrar = LIMITE_COMMITS;
-let ultimoEstadoGit = null;
 
 const COMANDO_DE_DEPENDENCIA = {
     'requirements.txt': 'python -m pip install -r requirements.txt',
@@ -260,11 +256,13 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         }
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo, '', commits.length > 0);
     }
+    function linhaDoPontoEnviado(hash, mensagem) {
+        return [String(hash || '').slice(0, 7), tituloDaTarefaDoCommit(hash, mensagem)].filter(Boolean).join(' ');
+    }
     function htmlDaTarefa(grupo, pendentes, estado) {
-        let html = `<div class="git-seccao">${linhaComTitulo('Esta tarefa', grupo ? nomeDaTarefa(grupo) : '')}`;
         if (!grupo) {
-            html += '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
-            return html;
+            return `<div class="git-seccao">${linhaComTitulo('Esta tarefa', '')}`
+                + '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
         }
         const ficheiros = ficheirosDaTarefa(grupo);
         const pontoDaTarefa = hashDaTarefa(grupo);
@@ -286,13 +284,14 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
               + ': esta tarefa nao guarda ponto proprio.</div>'
             : '';
         const pontoDaTarefaEnviado = enviadaParaOServidor(pontoDaTarefa);
-        const etiquetaDeEnvio = (pontoDaTarefaEnviado || commitDeOutroJaEnviado)
-            ? linhaComTitulo('Ja enviada para o GitHub',
-                pontoDaTarefaEnviado
-                    ? tituloDaTarefaDoCommit(pontoDaTarefa, mensagemDoPonto)
-                    : tituloDaTarefaDoCommit(levou.hash, levou.mensagem))
-            : '';
-        html += notaTemDepois + notaNoutroCommit + etiquetaDeEnvio;
+        const enviado = pontoDaTarefaEnviado
+            ? { hash: pontoDaTarefa, mensagem: mensagemDoPonto }
+            : (commitDeOutroJaEnviado ? { hash: levou.hash, mensagem: levou.mensagem } : null);
+        const cabecalho = enviado
+            ? linhaComTitulo('Ja enviada para o GitHub', linhaDoPontoEnviado(enviado.hash, enviado.mensagem))
+            : linhaComTitulo('Esta tarefa', nomeDaTarefa(grupo));
+        let html = `<div class="git-seccao">${cabecalho}`;
+        html += notaTemDepois + notaNoutroCommit;
         if (vaiCommitar || podeCorrigir) {
             const rascunho = valorDoCampo(grupo);
             const editando = vaiCommitar || !!rascunho;
@@ -322,39 +321,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (!nomes.length) return `${acao} ${quantos} commits para o GitHub`;
         return `${acao} ${quantos} commits para o GitHub (${nomes.join(', ')}${nomes.length < quantos ? ', ...' : ''})`;
     }
-    function linhaCommit(commit, acesa) {
-        const marcas = (commit.tags || []).map(t => `<span class="git-tag${acesa ? ' git-tag-acesa' : ''}">${escapeHtml(t)}</span>`).join('');
-        return `<div class="git-commit${commit.head ? ' git-commit-head' : ''}${acesa ? ' git-commit-da-tarefa' : ''}">`
-            + `<span class="git-hash">${escapeHtml(commit.curto)}</span>`
-            + `<span class="git-commit-msg">${escapeHtml(commit.mensagem)}</span>`
-            + marcas
-            + '</div>';
-    }
-    function htmlHistorico(estado, grupo) {
-        const todos = estado.commits || [];
-        if (!todos.length) return '';
-        commitsAMostrar = LIMITE_COMMITS;
-        return seccaoRecolhivel('Historico do repositorio', String(todos.length), corpoDoHistorico(estado, grupo), 'historico');
-    }
-    function corpoDoHistorico(estado, grupo) {
-        const todos = estado.commits || [];
-        const pontoDaTarefa = hashDaTarefa(grupo);
-        const visiveis = todos.slice(0, commitsAMostrar);
-        const daTarefa = pontoDaTarefa ? todos.find(c => c.hash === pontoDaTarefa) : null;
-        let corpo = '';
-        visiveis.forEach(c => { corpo += linhaCommit(c, !!daTarefa && c.hash === pontoDaTarefa); });
-        if (daTarefa && !visiveis.includes(daTarefa)) {
-            corpo += `<div class="git-nota">e mais ${todos.indexOf(daTarefa) - visiveis.length} commit(s) ate ao desta tarefa</div>`;
-            corpo += linhaCommit(daTarefa, true);
-        }
-        const restantes = todos.length - visiveis.length;
-        if (restantes > 0) {
-            corpo += '<div class="git-acoes">'
-                + pill('mais-commits', `Ver mais ${Math.min(restantes, LIMITE_COMMITS)} de ${restantes}`)
-                + '</div>';
-        }
-        return corpo;
-    }
     function htmlDependencias(estado) {
         const manifestos = estado.manifestos || [];
         if (!manifestos.length) return '';
@@ -382,20 +348,12 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         caixa.innerHTML = comandos.map(c => `<div class="git-comando">${escapeHtml(c)}</div>`).join('')
             + '<div class="git-nota">Corre este comando no terminal do Axio: a instalacao e longa e queres ver a saida. O ambiente virtual desta pasta fica pronto para a versao antiga do codigo.</div>';
     }
-    function mostrarMaisCommits(botao) {
-        const bloco = botao.closest('[data-git-seccao="historico"]');
-        if (!bloco || !ultimoEstadoGit) return;
-        commitsAMostrar += LIMITE_COMMITS;
-        const clip = bloco.querySelector('.card-collapsible-clip');
-        if (clip) clip.innerHTML = corpoDoHistorico(ultimoEstadoGit, grupoAtivo());
-    }
     function montarPainel(estado, grupo, pendentes, versaoDaTarefa) {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado, grupo, versaoDaTarefa);
         html += htmlPorSubir(estado);
         html += htmlDaTarefa(grupo, pendentes, estado);
-        html += htmlHistorico(estado, grupo);
         html += htmlDependencias(estado);
         html += '</div>';
         return html;
@@ -430,7 +388,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             grupo.__podeEmendar = _podeEmendar(grupo, estado);
             grupo.__mensagemDoPonto = mensagemDoPontoDaTarefa(estado, hashDaTarefa(grupo));
         }
-        ultimoEstadoGit = estado;
         setCodeViewContent(montarPainel(estado, grupo, pendentes, versaoDaTarefa), false, alvo);
         sincronizarCabecalhoGit(alvo, estado);
         ligarAcoes(alvo);
@@ -459,7 +416,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             if (acao === 'recolher') return alternarRecolhido(botao);
             if (acao === 'sugerir') return sugerirMensagem(vista);
             if (acao === 'deps') return mostrarComandoDeps(vista);
-            if (acao === 'mais-commits') return mostrarMaisCommits(botao);
             if (acao === 'salvar') return salvarTarefa(vista);
             if (acao === 'lapis') return alternarEdicao(botao);
         });
@@ -499,16 +455,19 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             try {
                 const enviado = await pedirGit('/api/git/enviar', {});
                 if (!enviado || enviado.status !== 'ok') {
+                    esquecerIntencaoManual();
                     avisarNoPainel(vista, (enviado && enviado.message) || 'Nao foi possivel enviar para o GitHub.');
                     return;
                 }
+                marcarProximoComoManual();
                 state.porSubirLido = false;
-                state.commitsPorSubir = [];
                 await carregarPorSubir(true);
-                atualizarMarcasDosCards();
                 const quantos = enviado.enviados || 0;
                 await renderGitPanel(vista);
-                if (!quantos) avisarNoPainel(vista, 'O remoto ja tinha tudo: nada foi enviado.');
+                if (!quantos) {
+                    esquecerIntencaoManual();
+                    avisarNoPainel(vista, 'O remoto ja tinha tudo: nada foi enviado.');
+                }
             } catch (e) {
                 console.error('Erro ao enviar para o git:', e);
                 avisarNoPainel(vista, `Nao consegui falar com o servidor: ${e && e.message ? e.message : e}`);

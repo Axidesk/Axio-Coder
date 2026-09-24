@@ -20,17 +20,21 @@ Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o q
 
 ## Cada tarefa deixa um ponto a que podes voltar.
 
-Trabalho terminado não fica à espera de te lembrares de o guardar. Cada rodada que mexe em ficheiros fecha com um **ponto** no git, com uma mensagem de uma linha escrita pelo próprio agente — o interruptor no alto do painel decide se isto acontece. O cartão daquela tarefa no histórico passa a mostrar o resumo do commit ao lado do nome, e o **marcador** diz, no *tooltip*, se aquele ponto já subiu. Um só cartão traz **avião**: o do último ponto que foi para o GitHub, que é onde o envio parou — e nesse o marcador dá-lhe lugar. Não é o mesmo avião que aparece no cartão do dia — esse acende quando *todos* os pontos daquele dia estão lá em cima. E o painel abre logo a lista dos pontos que ainda estão só no disco, cada um com o nome da tarefa, pela ordem em que foram guardados. O **avião** no alto do histórico empurra-os para o GitHub quando quiseres — não é preciso esperar pelo envio automático.
+Trabalho terminado não fica à espera de te lembrares de o guardar. Cada rodada que mexe em ficheiros fecha com um **ponto** no git, com uma mensagem de uma linha escrita pelo próprio agente — o interruptor no alto do painel decide se isto acontece. O cartão daquela tarefa no histórico passa a mostrar o resumo do commit ao lado do nome, e o **marcador** diz, no *tooltip*, se aquele ponto já subiu.
 
-Voltar atrás é um clique no cartão: ao selecionares a tarefa, o **marcador** dá lugar ao **restaurar**, ali mesmo. Antes de tocar em nada, ele diz o que vai repor e o que vai apagar — e **recusa** quando a reposição deixaria o código a chamar funções que já não existem. É a mesma regra do resto da casa: o que não encaixa não é gravado.
+O **avião** é um marco de envio e fica onde o envio aconteceu: um envio à mão marca o cartão daquele ponto (e nesse o marcador dá-lhe lugar), um envio automático marca o cartão do dia que subiu. Os marcos ficam — deixam de ser só «onde o envio parou» e passam a ser o registo de tudo o que já foi para o GitHub.
+
+E o painel abre logo a lista dos pontos que ainda estão só no disco, cada um com o nome da tarefa, pela ordem em que foram guardados. O **avião** no alto do histórico empurra-os para o GitHub quando quiseres — não é preciso esperar pelo envio automático.
+
+Voltar atrás é um clique no cartão: ao selecionares a tarefa, o **marcador** dá lugar ao **restaurar**, ali mesmo. Antes de tocar em nada, ele diz o que vai repor e o que vai apagar — e **recusa** quando a reposição deixaria o código a chamar funções que já não existem. É a mesma regra do resto da casa: o que não encaixa não é gravado. E vale também para o que é mais antigo que o histórico: por baixo dos três dias, a coluna continua até onde o repositório vai, numa lista **recolhida** de commits já sem cartão — agrupados por dia e com o mesmo nome de tarefa — onde cada linha se restaura ao passar o rato.
 
 A mensagem do ponto nasce **trancada**, e por boa razão: mexer nela não é preencher um campo, é reescrever um commit. Enquanto o ponto não subiu e é a ponta do ramo, o **lápis** destranca o campo e gravar ali é uma emenda — o ponto ganha outro hash e o cartão segue-o sozinho. Depois de estar no GitHub não há lápis nenhum: mudar história publicada é o que o painel recusa, para não partir os pontos de quem já a tem.
 
 O envio é do dia seguinte. O que guardaste hoje fica no teu disco e sobe na virada do dia — ou na próxima vez que abrires o projeto. A publicação nunca acontece a meio de uma rodada, para um envio não atropelar trabalho que ainda está a decorrer.
 
-![O painel de git: os pontos por subir do dia, a mensagem do ponto desta tarefa e o histórico do repositório](docs/interface/painel-de-git.jpg)
+![O painel de git: os pontos por subir do dia e a mensagem do ponto desta tarefa](docs/interface/painel-de-git.jpg)
 
-O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. E quando o ponto de uma tarefa já está no GitHub, o cartão di-lo pelo nome do commit, em vez de ficar com o campo vazio.
+O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. E quando o ponto de uma tarefa já está no GitHub, o painel troca tudo por uma linha só — *Já enviada para o GitHub*, com o hash e o nome da tarefa — em vez de manter um campo para escrever numa mensagem que já ninguém pode mudar.
 
 ## Refatorações grandes com margem de erro praticamente nula.
 

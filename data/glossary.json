@@ -4060,10 +4060,10 @@
       "descricao": "Logos da Axidesk para cabecalhos, capas, citacoes e avatar. O ORIGINAL vive FORA do repositorio, em D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos, e a tabela do que cada ficheiro e - com as copias ja tratadas e publicaveis - esta no fim de docs/material-institucional.md (seccao \"As logos da marca\"). Dentro do repositorio: docs/interface/axidesk-logo.jpg (1408x640, monograma AD + AXIDESK, sem a marca de agua do gerador, para cabecalhos e capas) e docs/interface/axidesk-avatar.png (512x512, sem a moldura, e o avatar do perfil). O cartaz.png NAO se usa: e o cartaz da marca Axidesk (limpeza de desktop, cloud e IA) e fala de outro produto. Toda imagem so se publica depois de OLHADA com tool_ver_imagem.",
       "localizacao": {
         "arquivo": "docs/material-institucional.md",
-        "linha": 53,
+        "linha": 57,
         "conferido": [
-          1790289128.55,
-          6556
+          1790292513.616,
+          7147
         ]
       }
     },
@@ -4947,15 +4947,11 @@
         "indicador de push do historico",
         "aviao do ultimo envio"
       ],
-      "identificador": "cards.js:ultimoEnviadoParaOServidor / .history-round-enviado-icon",
-      "descricao": "O aviao oliva vive num TEMPLATE UNICO em src/frontend/js/chat/icones.js:svgDoAviao(classe) e e injetado por cards.js:_injectMarcas:227. REGRA (2026-10-05, reescrita a pedido): na pilha ele marca O ULTIMO PONTO ENVIADO - um so cartao o traz. Quem decide e cards.js:ultimoEnviadoParaOServidor:273, que percorre turnosComCommit() e escolhe o de MAIOR epochDeId entre os que enviadaParaOServidor:263 deixa passar (falso sem remoto, com a lista por subir ainda nao lida, ou truncada - o erro seguro e nunca afirmar). A cache de modulo e invalidada por _esquecerUltimoEnviado, chamada no inicio de atualizarMarcasDosCards, de updateRoundCardCommitByTurnId e de renderDayRoundCards. NESSE cartao o marcador do ponto NAO aparece: o aviao toma-lhe o lugar (cards.js:_marcasDoCard:289 passa ultimo=true e _injectMarcas salta o disquete). O aviao do DIA e outro: cards.js:_marcasDoDia:302, classe .history-day-saved-icon, acende quando TODOS os commits daquele dia subiram. O push manual acende-o na hora porque enviarRepositorio (git_panel.js:491) refaz carregarPorSubir(true) e volta a pintar.",
+      "identificador": "cards.js:_marcasDoCard / .history-round-enviado-icon",
+      "descricao": "O aviao oliva vive num TEMPLATE UNICO em src/frontend/js/chat/icones.js:svgDoAviao(classe) e e injetado por cards.js:_injectMarcas. REGRA (2026-10, reescrita): o aviao e um MARCO DE ENVIO e fica ONDE O ENVIO ACONTECEU, acumulando - ja nao marca \"o ultimo ponto enviado\". Quem decide e o armazem historico/marcas_envio.js (localStorage axio.git.envios, chaveado pelo URL do remoto): a cada leitura de /api/git/por_subir, cards.js:carregarPorSubir compara a lista de pendentes com a anterior e regista um marco no commit mais recente que saiu da lista. TIPO: 'manual' quando git_panel.js:enviarRepositorio chamou marcarProximoComoManual antes do refetch - o aviao vai para o CARTAO daquele commit (marcasDeEnvio().porCommit) e o marcador do ponto cede-lhe o lugar; 'auto' quando o envio veio de outro caminho (virada do dia, empurrao pelo terminal) - o aviao vai para o CARTAO DO DIA daquele commit (marcasDeEnvio().porDia contra o dataset.dia dos cards de dia). Os marcos PERSISTEM: o card de ontem mantem o seu. cards.js:ultimoEnviadoParaOServidor passou a ser so a SEMENTE (semearSeVazio: um marco unico por projeto quando o armazem esta vazio, para a primeira abertura nao ficar sem aviao nenhum). NUNCA afirma sem remoto nem com a lista por subir truncada: leitura truncada SALTA a deteccao (uma lista cortada nao prova nada).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 230,
-        "conferido": [
-          1790290942.662,
-          30066
-        ]
+        "linha": 231
       }
     },
     {
@@ -4976,6 +4972,38 @@
           1790291727.522,
           22560
         ]
+      }
+    },
+    {
+      "termo": "historico mais antigo",
+      "aliases": [
+        "historico do repositorio",
+        "commits antigos",
+        "ver mais commits",
+        "lista antiga do historico",
+        "continuacao do historico"
+      ],
+      "identificador": "historico/antigos.js:montarHistoricoAntigo / .history-antigos",
+      "descricao": "Seccao da COLUNA 1 do historico, por baixo dos tres cards de dia: a continuacao do historico ate onde o repositorio vai. A 2026-10 mudou de casa - vivia no painel de git (git_panel.js:htmlHistorico, com \"Ver mais\" e linhaCommit) e esse bloco foi REMOVIDO do painel. FILTRO: nao e por posicao, e por \"este commit tem card?\" - saem os hashes dos turnos com commit dos TRES dias a vista (cards.js:turnosComCommit filtrado por dia, mais state.commitsDosTurnos e state.currentTurnLogs), fica todo o resto. Cortar por posicao esconderia um commit sem card mais recente que o card mais antigo. DADOS: /api/git/estado (estado.commits e tags), carregado em segundo plano por historico/antigos.js:carregarRepositorio - disparado em painel.js:prefetchSessionDetails, logo o painel abre com a lista ja em cache e o corpo so se constroi quando o usuario expande. LAYOUT: cabecalho recolhido (.projeto-cabecalho + .projeto-secao-titulo + .projeto-secao-resumo + .projeto-mais, com o + empurrado para a direita por margin-left auto) e corpo com grid 0fr->1fr (card-collapsible). Cada linha e hash curto + tituloDaTarefaDoCommit (o MESMO compositor do card, logo le-se \"Tarefa N - resumo\"), agrupada por dia com a data em dd/mm/yyyy (marcas_envio.diaDoCommit), mensagem a quebrar ate 3 linhas (-webkit-line-clamp) e o texto inteiro no balao do painel (mostrarIconTooltip via data-info, nao title). O restaurar aparece SO no hover (.history-antigo-linha:hover .history-round-restore-icon) e usa o MESMO motor dos cards, requestGitRestore(hash, titulo, '') - aceita qualquer hash. MEDIDO (tool_medir_pintura, CSS real, coluna 340px): cabecalho 324 de largura com o + a x=312, linha 324 de largura, restaurar 0x0 em repouso e 14x14 a x=312 no hover, sem mexer na altura da linha.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/historico/antigos.js",
+        "linha": 105
+      }
+    },
+    {
+      "termo": "marcas de envio",
+      "aliases": [
+        "marcas de envio",
+        "checkpoints de push",
+        "registo dos envios",
+        "memoria dos envios",
+        "onde foi cada push"
+      ],
+      "identificador": "historico/marcas_envio.js:registarLeitura / marcasDeEnvio",
+      "descricao": "Armazem dos marcos de envio do aviao, em localStorage (chave axio.git.envios), um registo por PROJETO com a chave do URL do remoto (sem remoto nao ha nada a registar). Cada projeto guarda duas listas: 'pendentes' (os commits da ultima leitura de /api/git/por_subir, com hash e dia) e 'marcas' (hash + dia + tipo 'manual'/'auto', ate 80, as mais antigas caem). O fluxo: cards.js:carregarPorSubir entrega a lista nova a registarLeitura, que compara com a anterior e, se algum hash saiu da lista, regista UMA marca no mais recente que saiu (a lista vem do git do mais novo para o mais antigo) - um empurrao de varios commits deixa um marco so, no topo. O tipo sai de um sinalizador de intencao: git_panel.js:enviarRepositorio chama marcarProximoComoManual depois do envio correr bem e esquecerIntencaoManual quando falha ou quando o remoto ja tinha tudo; o sinalizador so e consumido quando uma marca e de facto gravada. diaDoCommit converte o ISO do commit para dd/mm/yyyy, o MESMO formato do dataset.dia dos cards de dia. marcasDeEnvio() devolve Sets prontos a consultar (porCommit, porDia) e fica em cache ate esquecerCache() - chamado por cards.js:atualizarMarcasDosCards e renderDayRoundCards. PROVADO com o disco (harness): envio nao pedido pelo painel cria marca de DIA, envio pedido cria marca de CARTAO e mantem as anteriores, leitura truncada e sem remoto nao criam nada, e a semente so entra uma vez por projeto.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/historico/marcas_envio.js",
+        "linha": 80
       }
     }
   ]

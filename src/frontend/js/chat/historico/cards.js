@@ -5,6 +5,7 @@ import { vistaDe } from '../colunas.js';
 import { escapeHtml, showQuestionPanel } from '../messages.js';
 import { openFilesPanel, selectHistoryTask, updateActionButtons } from './acoes.js';
 import { epochDeId, marcarCheckpoint } from './checkpoint.js';
+import { esquecerCache as esquecerMarcasDeEnvio, marcasDeEnvio, registarLeitura, semearSeVazio } from './marcas_envio.js';
 import { svgDoPonto, svgDoAviao, svgDoRestauro } from '../icones.js';
 
 const { historyLogsWrapper } = dom;
@@ -285,6 +286,13 @@ let cacheDoUltimoEnviadoValida = false;
         cacheDoUltimoEnviadoValida = true;
         return melhor;
     }
+    function _semearMarcaDeEnvio() {
+        if (!state.gitRemoto) return;
+        const hash = ultimoEnviadoParaOServidor();
+        if (!hash) return;
+        const turno = turnosComCommit().find(t => t.commit === hash);
+        semearSeVazio(state.gitRemoto, hash, turno ? turno.__date : '');
+    }
     function _marcasDoCard(el, grupo) {
         const commit = grupo && grupo.commit ? grupo.commit : '';
         if (!commit) {
@@ -293,32 +301,32 @@ let cacheDoUltimoEnviadoValida = false;
         }
         const curto = String(commit).slice(0, 7);
         const naNuvem = enviadaParaOServidor(commit);
-        const ultimo = naNuvem && commit === ultimoEnviadoParaOServidor();
+        const ultimo = marcasDeEnvio().porCommit.has(commit);
         const onde = naNuvem ? ', na nuvem' : ', por enviar';
         _injectMarcas(el, grupo, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), ultimo);
     }
     function _marcasDoDia(el) {
         const anterior = el.querySelector('.history-day-saved-icon');
         if (anterior) anterior.remove();
-        const doDia = turnosComCommit().filter(t => t.__date === (el.dataset.dia || ''));
-        if (!doDia.length) return;
-        if (doDia.some(t => !enviadaParaOServidor(t.commit))) return;
+        if (!marcasDeEnvio().porDia.has(el.dataset.dia || '')) return;
         const row = el.firstElementChild;
         if (!row) return;
         const aviao = document.createElement('span');
         aviao.className = 'shrink-0 mt-0.5 history-day-saved-icon';
-        aviao.title = 'Salvo na nuvem';
+        aviao.title = 'O envio automatico levou o trabalho deste dia';
         aviao.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
         row.appendChild(aviao);
     }
     function atualizarMarcasDosCards() {
         _esquecerUltimoEnviado();
+        esquecerMarcasDeEnvio();
         document.querySelectorAll('.history-round-card').forEach(el => {
             if (!el._group) return;
             _marcasDoCard(el, el._group);
             if (el.nameEl) el.nameEl.textContent = tituloDaTarefa(el._group);
         });
         document.querySelectorAll('.session-history-card[data-dia]').forEach(_marcasDoDia);
+        _semearMarcaDeEnvio();
         if (sincronizacaoDoEnvio) sincronizacaoDoEnvio();
     }
     function registrarSincronizacaoDoEnvio(fn) {
@@ -492,9 +500,11 @@ let cacheDoUltimoEnviadoValida = false;
             .then(d => {
                 if (!d || d.status !== 'ok') return;
                 state.temRemotoGit = !!d.remoto;
+                state.gitRemoto = d.remoto || '';
                 state.commitsPorSubir = (d.commits ? d.commits : []).map(c => c.hash);
                 state.porSubirTruncado = !!d.truncado;
                 state.porSubirLido = true;
+                registarLeitura(d.remoto, d.commits || [], !!d.truncado);
                 atualizarMarcasDosCards();
             })
             .catch(() => {})
@@ -590,6 +600,7 @@ let cacheDoUltimoEnviadoValida = false;
     }
     async function renderDayRoundCards(savedLogs, body) {
         _esquecerUltimoEnviado();
+        esquecerMarcasDeEnvio();
         if (!savedLogs || savedLogs.length === 0) {
             body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nenhuma rodada de edição neste dia.</div>';
             return;
@@ -649,6 +660,7 @@ export {
     registrarSincronizacaoDoEnvio,
     registrarRestauroDaTarefa,
     enviadaParaOServidor,
+    turnosComCommit,
     talvezLembrarDeGuardar,
     reagruparPilhaDoDia
 };
