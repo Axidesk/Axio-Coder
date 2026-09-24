@@ -2,9 +2,9 @@ import { state } from './state.js';
 import { vistaDe } from './colunas.js';
 import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
-import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory } from './dom.js';
+import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
-import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, reagruparPilhaDoDia } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, reagruparPilhaDoDia } from './historico/cards.js';
 
 const LIMITE_COMMITS = 20;
 
@@ -128,14 +128,14 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
     }
-    function seccaoRecolhivel(titulo, resumo, corpo, chave) {
+    function seccaoRecolhivel(titulo, resumo, corpo, chave, aberta) {
         let cabecalho = `<span class="projeto-secao-titulo">${escapeHtml(titulo)}</span>`;
         if (resumo) {
             cabecalho += '<span class="projeto-secao-sep">|</span>'
                 + `<span class="projeto-secao-resumo">${escapeHtml(resumo)}</span>`;
         }
-        return `<div class="projeto-grupo git-recolhivel"${chave ? ` data-git-seccao="${chave}"` : ''}>`
-            + `<div class="projeto-cabecalho git-cabecalho-clicavel" data-git-acao="recolher">${cabecalho}<span class="projeto-mais">+</span></div>`
+        return `<div class="projeto-grupo git-recolhivel${aberta ? ' projeto-aberto' : ''}"${chave ? ` data-git-seccao="${chave}"` : ''}>`
+            + `<div class="projeto-cabecalho git-cabecalho-clicavel" data-git-acao="recolher">${cabecalho}<span class="projeto-mais">${aberta ? '−' : '+'}</span></div>`
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
     }
@@ -254,11 +254,10 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             corpo = '<div class="git-nota">Tudo o que esta commitado ja subiu para o remoto.</div>';
         } else {
             corpo = '<div class="git-lista">' + commits.map(c => {
-                const dono = nomeDaTarefaDoCommit(c.hash);
-                return `• ${escapeHtml(c.curto)} ${escapeHtml(c.mensagem)}${dono ? ` · ${escapeHtml(dono)}` : ''}`;
+                return `• ${escapeHtml(c.curto)} ${escapeHtml(tituloDaTarefaDoCommit(c.hash, c.mensagem))}`;
             }).join('<br>') + '</div>';
         }
-        return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo);
+        return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo, '', commits.length > 0);
     }
     function htmlDaTarefa(grupo, pendentes, estado) {
         let html = `<div class="git-seccao">${linhaComTitulo('Esta tarefa', grupo ? nomeDaTarefa(grupo) : '')}`;
@@ -606,16 +605,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     function sincronizarCabecalhoGit(vista, estado) {
         const info = estado && estado.repo ? estado : null;
         const porSubir = (info && info.por_subir) || [];
-        if (btnGitEnviarHistory) {
-            const pode = !!(info && info.remoto && porSubir.length);
-            btnGitEnviarHistory.classList.toggle('hidden', !info || !info.remoto);
-            btnGitEnviarHistory.disabled = !pode;
-            btnGitEnviarHistory.title = pode ? descricaoDoEnvio(porSubir, false) : 'Tudo o que esta commitado ja subiu';
-            btnGitEnviarHistory.onclick = pode ? (e) => {
-                e.stopPropagation();
-                enviarRepositorio(vista, btnGitEnviarHistory);
-            } : null;
-        }
+        pintarBotaoEnvio(info && info.remoto, porSubir.map(c => c.hash));
         if (btnGitAutoHistory) {
             const ligado = !!(info && info.automatico);
             btnGitAutoHistory.classList.toggle('hidden', !info);
@@ -627,9 +617,30 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             } : null;
         }
     }
+    function pintarBotaoEnvio(remoto, hashes) {
+        if (!btnGitEnviarHistory) return;
+        const lista = hashes || [];
+        const pode = !!remoto && lista.length > 0;
+        btnGitEnviarHistory.classList.toggle('hidden', !remoto);
+        btnGitEnviarHistory.disabled = !pode;
+        btnGitEnviarHistory.title = pode
+            ? descricaoDoEnvio(lista.map(hash => ({ hash })), false)
+            : 'Tudo o que esta commitado ja subiu';
+        btnGitEnviarHistory.onclick = pode ? (e) => {
+            e.stopPropagation();
+            enviarRepositorio(vistaDe('historico'), btnGitEnviarHistory);
+        } : null;
+    }
+    function sincronizarBotaoEnvio() {
+        pintarBotaoEnvio(state.temRemotoGit, state.commitsPorSubir || []);
+    }
     function avisarNoPainel(vista, texto) {
         const painel = vista && vista.codigo ? vista.codigo.querySelector('.git-painel') : null;
-        if (!painel) return;
+        const visivel = painel && state.isShowingGit && typeof vista.col3Aberta === 'function' && vista.col3Aberta();
+        if (!visivel) {
+            avisarNaBarraDeEstado(texto);
+            return;
+        }
         const antigo = painel.querySelector('.git-erro');
         if (antigo) antigo.remove();
         const div = document.createElement('div');
@@ -637,11 +648,17 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         div.textContent = texto;
         painel.prepend(div);
     }
+    function avisarNaBarraDeEstado(texto) {
+        if (!lblStatus) return;
+        lblStatus.innerHTML = `<span class="text-red-400 font-bold">${escapeHtml(texto)}</span>`;
+        window.lastStatusError = true;
+    }
 
 
 export {
     renderGitPanel,
     sincronizarBotaoRestauro,
+    sincronizarBotaoEnvio,
     grupoAtivo,
     ficheirosDaTarefa
 };

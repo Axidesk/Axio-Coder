@@ -8,6 +8,8 @@ import { epochDeId, marcarCheckpoint } from './checkpoint.js';
 
 const { historyLogsWrapper } = dom;
 
+let sincronizacaoDoEnvio = null;
+
     function rebuildGroupFromSaved(saved) {
         return {
             id: saved.id,
@@ -284,6 +286,10 @@ const { historyLogsWrapper } = dom;
             if (el.nameEl) el.nameEl.textContent = tituloDaTarefa(el._group);
         });
         document.querySelectorAll('.session-history-card[data-dia]').forEach(_marcasDoDia);
+        if (sincronizacaoDoEnvio) sincronizacaoDoEnvio();
+    }
+    function registrarSincronizacaoDoEnvio(fn) {
+        sincronizacaoDoEnvio = fn;
     }
     function updateRoundCardCommitByTurnId(turnId, hash) {
         document.querySelectorAll('.history-round-card').forEach(el => {
@@ -344,27 +350,36 @@ const { historyLogsWrapper } = dom;
         }
         return turnos;
     }
-    function nomeDaTarefaDoCommit(hash) {
-        if (!hash) return '';
-        const daLista = (lista) => {
-            const achado = (lista || []).find(l => (l.commit || (state.commitsDosTurnos || {})[String(l.id)] || '') === hash);
-            return achado ? (achado.displayName || achado.name || '') : '';
-        };
+    function turnoDoCommit(hash) {
+        if (!hash) return null;
+        const daLista = (lista) => (lista || []).find(l => (l.commit || (state.commitsDosTurnos || {})[String(l.id)] || '') === hash) || null;
         const doTurnoAtual = daLista(state.currentTurnLogs);
         if (doTurnoAtual) return doTurnoAtual;
         for (const sessao of state.sessionHistoryList) {
-            const nome = daLista(state.sessionDetailCache[sessao.filename]);
-            if (nome) return nome;
+            const achado = daLista(state.sessionDetailCache[sessao.filename]);
+            if (achado) return achado;
         }
-        return '';
+        return null;
+    }
+    function nomeDaTarefaDoCommit(hash) {
+        const turno = turnoDoCommit(hash);
+        return turno ? (turno.displayName || turno.name || '') : '';
     }
     function resumoDoCommit(texto) {
         return String(texto || '').trim().split(/\s+/).join(' ');
     }
     function tituloDaTarefa(group) {
         const base = (group && (group.displayName || group.name)) || 'Tarefa';
-        const resumo = resumoDoCommit(group && group.commitNome);
-        return resumo ? `${base} - ${resumo}` : base;
+        return comporTitulo(base, resumoDoCommit(group && group.commitNome));
+    }
+    function tituloDaTarefaDoCommit(hash, resumoDoPonto) {
+        const turno = turnoDoCommit(hash);
+        const base = turno ? (turno.displayName || turno.name || '') : '';
+        const resumo = resumoDoCommit(resumoDoPonto) || (turno ? resumoDoCommit(turno.commitNome) : '');
+        return comporTitulo(base, resumo);
+    }
+    function comporTitulo(base, resumo) {
+        return [base, resumo].filter(Boolean).join(' - ');
     }
     function tagDoCommit(hash) {
         if (!hash || !state.versoesGit) return '';
@@ -584,6 +599,7 @@ export {
     mountCollapsibleCard,
     sincronizarEtiquetasNosCards,
     nomeDaTarefaDoCommit,
+    tituloDaTarefaDoCommit,
     assignDisplayNamesByDay,
     ensureSessionDetailsLoaded,
     hidratarGroup,
@@ -592,6 +608,7 @@ export {
     updateRoundCardCommitByTurnId,
     carregarPorSubir,
     atualizarMarcasDosCards,
+    registrarSincronizacaoDoEnvio,
     enviadaParaOServidor,
     talvezLembrarDeGuardar,
     reagruparPilhaDoDia

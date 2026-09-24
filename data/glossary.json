@@ -4301,14 +4301,10 @@
         "icone de salvar do git"
       ],
       "identificador": "btn-show-git-history",
-      "descricao": "Botao do cabecalho da coluna 1 do historico, agora DEPOIS da lupa #btn-history-search (nasceu na coluna 2 e mudou-se). A ordem do cabecalho ficou: Historico | lupa | este botao | restaurar #btn-git-restore-history | caixa de busca. Apesar do id, o que faz e ABRIR o painel de git na coluna 3 (estado, commit desta tarefa, restaurar, preparar dependencias); ligado em renderer.js:ligarBotoesCol3 com o idVista historico/dock. O gemeo #btn-show-git vive no cabecalho da coluna 2 do dock. Leva o MESMO icone de disquete do botao de salvar do painel de git (SVG_SALVAR em git_panel.js) - padronizado de proposito - e passou a levar tambem a classe .icon-header-action (scale 0.8): medido a 2026-10, o disquete pintava 15x15 px contra os 14x14 da lupa e agora pinta 12x12, igual ao restaurar. CONSEQUENCIA medida de estar depois da lupa: quando a busca abre, a lupa colapsa (width 20px -> 0) e este botao (com o restaurar) anda 20px para a esquerda - a caixa #history-search-box cresce depois deles e nao os empurra.",
+      "descricao": "Botao do cabecalho da coluna 1 do historico. A ORDEM do cabecalho a 2026-10 e: Historico | lupa #btn-history-search | restaurar #btn-git-restore-history | ESTE | enviar #btn-git-enviar-history | caixa de busca. Apesar do id, o que faz e ABRIR o painel de git na coluna 3 (estado, esta tarefa, restaurar, dependencias); ligado em renderer.js:ligarBotoesCol3 com o idVista historico/dock, e o gemeo #btn-show-git vive no cabecalho da coluna 2 do dock. Leva o MESMO icone de disquete do botao de salvar do painel de git (SVG_SALVAR em git_panel.js) e a classe .icon-header-action (scale 0.8, src/frontend/style.css): pinta 12x12, igual ao restaurar e ao enviar. MEDIDO a 2026-10 numa coluna de 320px com a busca ABERTA (tool_medir_pintura): a lupa colapsa a 0, restaurar x=113, este x=145, enviar x=177, campo x=197 com 106px - a pagina continua com 320, nada transborda. O campo perde 32px (20 do icone do aviao + 12 do gap) por haver agora DOIS icones depois da lupa; a caixa #history-search-box (dock.css: flex 0 1 0 fechada, 1 1 0 com .aberta) e que cede, nunca os icones.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 90,
-        "conferido": [
-          1790286987.018,
-          81868
-        ]
+        "linha": 95
       }
     },
     {
@@ -4344,10 +4340,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 382,
+        "linha": 389,
         "conferido": [
-          1790288444.996,
-          27551
+          1790289475.513,
+          27919
         ]
       }
     },
@@ -4402,14 +4398,10 @@
         "voltar ao ponto da tarefa"
       ],
       "identificador": "#btn-git-restore-history",
-      "descricao": "Icone de restaurar (o unico restauro do historico desde 2026-10): MUDOU-SE do cabecalho da coluna 3 para o CABECALHO DA COLUNA 1, encostado ao botao do git #btn-show-git-history. Quem o mostra/esconde e git_panel.js:sincronizarBotaoRestauro(), agora SEM argumentos: le grupoAtivo() (state.currentSelectedHistoryGroup || window.currentActiveLogGroup) e decide por podeRestaurar (commit OU __session) - o clique continua a chamar restaurarTarefa(), que resolve o grupo na hora. Como a coluna 1 nao sabe de git, a sincronizacao chega por REGISTO: acoes.js:registrarSincronizacaoDeRestauro(fn) guarda o callback e updateActionButtons chama-o no fim (que corre a cada selecao de card: openFilesPanel, selectHistoryTask, cards e painel), e renderer.js:299 liga as duas pontas. Esse registo existe para nao criar ciclo de imports (acoes -> git_panel -> cards -> acoes). git_panel.js chama-o no fim de renderGitPanel SO quando a vista e 'historico' (o painel de git do dock nao tem este botao). layout.js:syncCopyButtons JA NAO o esconde fora do git - passou a esconder so btnGitEnviarHistory e btnGitAutoHistory. restaurarTarefa escolhe o MOTOR: com commit -> requestGitRestore(hash) (previa + modal, state.pendingRestore.tipo==='git'); sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o icone que vivia na coluna 1 do historico e a pill 'Restaurar esta tarefa'.",
+      "descricao": "Icone de restaurar (o unico restauro do historico desde 2026-10): vive no CABECALHO DA COLUNA 1, entre a lupa #btn-history-search e o botao do git #btn-show-git-history (nasceu na coluna 2, passou pela 3 e subiu a coluna 1). Quem o mostra/esconde e git_panel.js:sincronizarBotaoRestauro(), SEM argumentos: le grupoAtivo() (state.currentSelectedHistoryGroup || window.currentActiveLogGroup) e decide por podeRestaurar (commit OU __session) - o clique chama restaurarTarefa(), que resolve o grupo na hora. Como a coluna 1 nao sabe de git, a sincronizacao chega por REGISTO: acoes.js:registrarSincronizacaoDeRestauro(fn) guarda o callback e updateActionButtons chama-o no fim (corre a cada selecao de card: openFilesPanel, selectHistoryTask, cards e painel), e renderer.js liga as duas pontas. O registo existe para nao criar ciclo de imports (acoes -> git_panel -> cards -> acoes). git_panel.js chama-o no fim de renderGitPanel SO quando a vista e 'historico' (o painel de git do dock nao tem este botao). layout.js:syncCopyButtons NAO o esconde fora do git - nem a ele nem ao aviao, que tambem vive na coluna 1 desde 2026-10; dos botoes do git so esconde btnGitAutoHistory, que ficou na coluna 3. restaurarTarefa escolhe o MOTOR: com commit -> requestGitRestore(hash) (previa + modal, state.pendingRestore.tipo==='git'); sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o icone que vivia na coluna 1 do historico e a pill 'Restaurar esta tarefa'.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 93,
-        "conferido": [
-          1790286987.018,
-          81868
-        ]
+        "linha": 90
       }
     },
     {
@@ -4422,14 +4414,10 @@
         "onde vejo o commit que nao subiu"
       ],
       "identificador": "htmlPorSubir / git_repo.por_subir",
-      "descricao": "Seccao recolhivel do painel de git que lista os commits LOCAIS que ainda nao chegaram a nenhum ramo remoto - e a resposta a \"onde vejo o commit que ficou so no PC?\". Fonte: git log HEAD --not --remotes (git_repo.por_subir), que le UM A MAIS que o limite e devolve truncado quando a lista sai cortada; exposta por GET /api/git/por_subir e incluida no retrato de /api/git/estado. O mesmo dado decide o aviaozinho dos cards (state.commitsPorSubir + state.temRemotoGit + state.porSubirTruncado): quando truncado, nada e afirmado como enviado. A nota \"Ponto desta tarefa\" que citava este estado ja nao existe no cartao da tarefa - quem diz onde o ponto esta e o icone do cartao no historico.",
+      "descricao": "Seccao do painel de git que lista os commits que ainda estao so no disco. NASCE ABERTA quando ha o que subir (a 2026-10 passou a abrir por padrao: antes era sempre recolhida) e RECOLHIDA quando nao ha nada - nesse caso o corpo traz so a nota 'Tudo o que esta commitado ja subiu para o remoto.' e o estado ja e dito pelo aviao do dia, por isso nao vale ocupar espaco. Cada linha e 'bullet + hash curto + titulo do card', montado por cards.js:tituloDaTarefaDoCommit(hash, mensagem) - o MESMO compositor do titulo da coluna 1 (cards.js:comporTitulo), logo le-se igual a lista do historico: 'Tarefa 17 - resumo da mensagem'. Commit que nao pertence a nenhuma tarefa conhecida aparece so com a mensagem. O cabecalho mostra o titulo e a contagem. O corpo vem de git_repo.por_subir via /api/git/por_subir (com truncado a partir de um teto, que enviadaParaOServidor respeita).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 249,
-        "conferido": [
-          1790288308.317,
-          34457
-        ]
+        "linha": 249
       }
     },
     {
@@ -5008,14 +4996,10 @@
         "aviao do painel de git"
       ],
       "identificador": "#btn-git-enviar-history",
-      "descricao": "Avião do cabeçalho da coluna 3 do histórico, ao lado do restaurar: empurra para o remoto TUDO o que está commitado, de qualquer tarefa - não commita nada e não é por card. Desativado quando não há commits por subir.",
+      "descricao": "Aviao do cabecalho da COLUNA 1 do historico, DEPOIS do botao de salvar: a ordem do cabecalho e Historico | lupa #btn-history-search | restaurar #btn-git-restore-history | salvar #btn-show-git-history | ESTE | caixa de busca. Mudou-se da coluna 3 a 2026-10 - e na coluna 3 ficou SO o interruptor do automatico. Empurra para o remoto TUDO o que esta commitado, de qualquer tarefa: nao commita nada e nao e por card. Quem o pinta e git_panel.js:pintarBotaoEnvio(remoto, hashes): esconde sem remoto, apaga (disabled) sem nada por subir e escreve o titulo com descricaoDoEnvio, nomeando as tarefas pelo hash. Duas fontes o alimentam, as duas do MESMO dado (/api/git/por_subir): git_panel.js:sincronizarCabecalhoGit (o estado que o painel leu) e o registo registrarSincronizacaoDoEnvio, ligado em renderer.js e chamado no fim de cards.js:atualizarMarcasDosCards - e por isso que o botao acende sem o painel de git alguma vez ter sido aberto. O clique chama enviarRepositorio(vistaDe('historico')); se a coluna 3 nao estiver aberta NO git, o aviso de falha sai na barra de estado (avisarNoPainel -> avisarNaBarraDeEstado, com a guarda state.isShowingGit + vista.col3Aberta), nunca num painel invisivel. layout.js:syncCopyButtons JA NAO o esconde quando se troca de camada (escondia, e apagava o botao a meio) - so esconde btnGitAutoHistory, que continua na coluna 3.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 164,
-        "conferido": [
-          1790286987.018,
-          81868
-        ]
+        "linha": 98
       }
     },
     {
@@ -5044,14 +5028,10 @@
         "interruptor do git"
       ],
       "identificador": "#btn-git-auto-history / git_automatico / enviar_pendentes",
-      "descricao": "Interruptor no cabecalho da coluna 3 do historico, ao lado do aviao. NASCE LIGADO (data/settings.json git.automatico; migrar_automatico_padrao em services/settings.py converte uma vez as instalacoes antigas). Ligado, o AGENTE guarda o ponto no fim de cada rodada com mensagem escrita por ele e empurrar=False: o commit da ponto ao card daquela rodada (hash e o resumo da mensagem ficam no log) e NAO sobe. O envio para a nuvem e do DIA SEGUINTE ao commit, nunca da rodada nem do fecho do programa: quem empurra e services/envio_automatico.py:enviar_pendentes, que so age quando ha commit de dia anterior, e e chamado na abertura da pasta (routes/chat.py:set_folder) e na virada do dia (vigia de 60s arrancada em app.py). Desligado, nada disto acontece e o utilizador guarda e envia a mao.",
+      "descricao": "Interruptor no cabecalho da COLUNA 3 do historico, agora SOZINHO: o aviao #btn-git-enviar-history e o restaurar #btn-git-restore-history sairam para o cabecalho da coluna 1 a 2026-10, e o unico vizinho que lhe resta e o titulo da coluna. layout.js:syncCopyButtons esconde-o sempre que a camada da coluna 3 nao e o git (e o unico destes botoes que continua a ser escondido por la). NASCE LIGADO (data/settings.json git.automatico; migrar_automatico_padrao em services/settings.py converte uma vez as instalacoes antigas). Ligado, o AGENTE guarda o ponto no fim de cada rodada com mensagem escrita por ele e empurrar=False: o commit da ponto ao card daquela rodada (hash e o resumo da mensagem ficam no log) e NAO sobe. O envio para a nuvem e do DIA SEGUINTE ao commit, nunca da rodada nem do fecho do programa: quem empurra e services/envio_automatico.py:enviar_pendentes, que so age quando ha commit de dia anterior, e e chamado na abertura da pasta (routes/chat.py:set_folder) e na virada do dia (vigia de 60s arrancada em app.py). Desligado, nada disto acontece e o utilizador guarda e envia a mao pelo aviao da coluna 1.",
       "localizacao": {
         "arquivo": "src/backend/services/envio_automatico.py",
-        "linha": 6,
-        "conferido": [
-          1790284041.563,
-          1983
-        ]
+        "linha": 6
       }
     },
     {
@@ -5089,10 +5069,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 514,
+        "linha": 521,
         "conferido": [
-          1790288444.996,
-          27551
+          1790289475.513,
+          27919
         ]
       }
     },
@@ -5146,7 +5126,11 @@
       "descricao": "Aviao oliva ao lado do disquete no card da tarefa quando aquele commit ja esta no GitHub. Quem decide e enviadaParaOServidor(hash). Distinto do aviao do DIA (history-day-saved-icon), que acende quando TODOS os commits do dia subiram.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 228
+        "linha": 228,
+        "conferido": [
+          1790289475.513,
+          27919
+        ]
       }
     }
   ]
