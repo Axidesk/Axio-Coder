@@ -4,10 +4,9 @@ import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
 import { btnGitRestoreHistory, btnGitEnviarHistory, btnGitAutoHistory } from './dom.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
-import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, atualizarMarcasDosCards, reagruparPilhaDoDia } from './historico/cards.js';
 
 const LIMITE_COMMITS = 20;
-const LIMITE_FICHEIROS = 12;
 
 const CHAVE_RASCUNHOS = 'axio.git.rascunhos';
 
@@ -247,13 +246,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const noutroCommit = !pontoDaTarefa && porCommitar === 0 && !!levou;
         const vaiCommitar = !pontoDaTarefa && ficheiros.length > 0 && porCommitar !== 0;
         const mensagemDoPonto = mensagemDoPontoDaTarefa(estado, pontoDaTarefa);
-        const jaNoGitHub = !!pontoDaTarefa && !!estado && enviadaParaOServidor(pontoDaTarefa);
-        const textoDoCampo = noutroCommit
-            ? 'Ficheiros commitados noutra tarefa'
-            : rotuloDoCampo(vaiCommitar, !!pontoDaTarefa, jaNoGitHub, ficheiros.length, porCommitar);
         const podeCorrigir = !vaiCommitar && !!pontoDaTarefa && !!grupo.__podeEmendar;
-        const cabecalho = cabecalhoDaTarefa(ficheiros.length, porCommitar);
-        const notaPonto = notaDoPonto(pontoDaTarefa, !!pontoDaTarefa && enviadaParaOServidor(pontoDaTarefa));
         const ponta = _pontaDoRamo(estado);
         const notaTemDepois = pontoDaTarefa && ponta && ponta !== pontoDaTarefa
             ? '<div class="git-nota">Ha commits depois deste: a mensagem dele ja nao se muda.</div>'
@@ -267,49 +260,19 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
               + ` (${escapeHtml(donoDesteCommit || 'fora do painel')}) · ${escapeHtml(levou.mensagem)}`
               + ': esta tarefa nao guarda ponto proprio.</div>'
             : '';
-        html += recolhivel(
-            cabecalho,
-            corpoDaTarefa(grupo, pendentes) + notaPonto + notaTemDepois + notaDepoisDoPonto + notaNoutroCommit
-        );
-        html += '<div class="git-campo-linha">';
+        html += notaTemDepois + notaDepoisDoPonto + notaNoutroCommit;
         if (vaiCommitar || podeCorrigir) {
             const escrito = valorDoCampo(grupo) || (vaiCommitar ? '' : mensagemDoPonto);
-            html += `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`
+            html += '<div class="git-campo-linha">'
+                + `<input id="git-mensagem" class="git-campo" type="text" spellcheck="false"`
                 + ` value="${escapeHtml(escrito)}"`
-                + ` placeholder="${escapeHtml(textoDoCampo)}">`;
-            html += varinha('sugerir', 'Escrever a mensagem com a IA');
-            html += salvar('salvar', descricaoDoSalvar(vaiCommitar), false);
-        } else {
-            html += `<div class="git-estado">${escapeHtml(textoDoCampo)}</div>`;
+                + ' placeholder="Mensagem do commit">'
+                + varinha('sugerir', 'Escrever a mensagem com a IA')
+                + salvar('salvar', descricaoDoSalvar(vaiCommitar), false)
+                + '</div>';
         }
         html += '</div>';
-        html += '</div>';
         return html;
-    }
-    function cabecalhoDaTarefa(quantosFicheiros, porCommitar) {
-        const rotulo = quantosFicheiros === 1 ? '1 ficheiro tocado' : `${quantosFicheiros} ficheiros tocados`;
-        let html = `<span class="projeto-contagem">${rotulo}</span>`;
-        if (porCommitar > 0) {
-            html += '<span class="projeto-secao-sep">|</span>'
-                + `<span class="projeto-contagem">${porCommitar} por commitar</span>`;
-        }
-        return html;
-    }
-    function notaDoPonto(hash, jaNoGitHub) {
-        if (!hash) return '';
-        const onde = jaNoGitHub
-            ? 'salvo no PC e no GitHub'
-            : 'salvo no teu PC (o envio e feito no fim do dia)';
-        return `<div class="git-nota">Ponto desta tarefa: ${escapeHtml(String(hash).slice(0, 7))} · ${onde}</div>`;
-    }
-    function rotuloDoCampo(vaiCommitar, temPonto, jaNoGitHub, ficheirosTocados, porCommitar) {
-        if (vaiCommitar) return 'Mensagem do commit';
-        if (!temPonto) {
-            if (ficheirosTocados === 0) return 'Nada para salvar: esta tarefa nao tocou ficheiros';
-            if (porCommitar === 0) return 'Nada para salvar: nenhum ficheiro mudou';
-            return 'Sem ponto registado nesta tarefa';
-        }
-        return jaNoGitHub ? 'Salvo no PC e no GitHub' : 'Salvo no teu PC, por enviar';
     }
     function descricaoDoSalvar(vaiCommitar) {
         if (vaiCommitar) return 'Guardar o ponto desta tarefa (so no PC; o envio e feito no fim do dia)';
@@ -323,25 +286,6 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const nomes = commits.map(c => nomeDaTarefaDoCommit(c.hash)).filter(Boolean).slice(0, 3);
         if (!nomes.length) return `${acao} ${quantos} commits para o GitHub`;
         return `${acao} ${quantos} commits para o GitHub (${nomes.join(', ')}${nomes.length < quantos ? ', ...' : ''})`;
-    }
-    function corpoDaTarefa(grupo, pendentes) {
-        const ficheiros = ficheirosDaTarefa(grupo);
-        if (!ficheiros.length) return '<div class="git-vazio">Esta tarefa nao tem ficheiros registados.</div>';
-        const porCommitar = pendentes && typeof pendentes.count === 'number' ? pendentes.count : null;
-        const emFalta = (pendentes && pendentes.pendentes) || [];
-        const lista = (nomes) => {
-            const visiveis = nomes.slice(0, LIMITE_FICHEIROS).map(f => `• ${escapeHtml(f)}`).join('<br>');
-            const restantes = nomes.length - Math.min(nomes.length, LIMITE_FICHEIROS);
-            return `<div class="git-lista">${visiveis}${restantes > 0 ? `<br>• e mais ${restantes}…` : ''}</div>`;
-        };
-        if (emFalta.length) return lista(emFalta);
-        if (porCommitar === null) {
-            return '<div class="git-nota">Nao consegui confirmar o que falta commitar nesta tarefa. O botao de commit continua disponivel.</div>';
-        }
-        if (porCommitar === 0) {
-            return '<div class="git-nota">Nada mudou desde o ultimo commit.</div>';
-        }
-        return lista(ficheiros);
     }
     function linhaCommit(commit, acesa) {
         const marcas = (commit.tags || []).map(t => `<span class="git-tag${acesa ? ' git-tag-acesa' : ''}">${escapeHtml(t)}</span>`).join('');

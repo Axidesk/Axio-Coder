@@ -132,6 +132,10 @@
     margin-top: 6px;
 }
 
+.git-seccao > .git-nota {
+    margin-top: 0;
+}
+
 .git-aviso {
     color: var(--alerta);
     font-size: 12px;
@@ -196,13 +200,6 @@
     margin-top: 0;
 }
 
-.git-estado {
-    flex: 1 1 auto;
-    min-width: 0;
-    color: var(--text-suave);
-    font-size: 12.5px;
-    padding: 10px 0;
-}
 
 
 .git-salvar {
