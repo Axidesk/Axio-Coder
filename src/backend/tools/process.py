@@ -21,9 +21,11 @@ from src.backend.tools.registry import register
     'Executa COMPILAÇÃO real (cmake --build build, make, g++, etc.). PROIBIDO usar para ler/editar/buscar/validar sintaxe (Python, sed, awk, grep, cat, echo, mkdir, type, node --check) — para isso use as ferramentas nativas: tool_ler_arquivo, tool_substituir_texto, tool_pesquisar_no_projeto, tool_validar_sintaxe. Use apenas para compilação que não tenha ferramenta nativa correspondente.',
     {
         'comando': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'cwd': {"tipo": "STRING", "desc": "Pasta onde o comando corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
+        'tempo': {"tipo": "INTEGER", "desc": "Segundos antes de abortar (padrao 30). Compilar um projeto inteiro pede varios minutos.", "padrao": None},
     },
 )
-def tool_executar_comando(comando: str):
+def tool_executar_comando(comando: str, cwd: str = "", tempo=None):
     emit_event("executing", function=f"Executando: {comando}")
     partes = (comando or "").strip().split()
     if not partes:
@@ -32,7 +34,7 @@ def tool_executar_comando(comando: str):
     if cmd_base in COMANDOS_PROIBIDOS:
         sugestao = FERRAMENTA_NATIVA.get(cmd_base, "as ferramentas nativas correspondentes")
         return f"ERRO: O comando '{cmd_base}' é proibido. Motivo: existe ferramenta nativa mais segura e rastreável para isso. Use: {sugestao}."
-    return tool_executar_processo(comando, modo="aguardar", timeout=30)
+    return tool_executar_processo(comando, modo="aguardar", timeout=tempo or 30, cwd=cwd)
 
 def id_processo():
     n = estado.setdefault("_contador_processo", 0) + 1
@@ -165,6 +167,17 @@ def _normalizar_exe(token):
     for sufixo in SUFIXOS_DE_EXECUTAVEL:
         exe = exe.removesuffix(sufixo)
     return exe
+
+def _pasta_de_trabalho(cwd):
+    """Pasta onde o processo corre: a indicada, ou a do projeto aberto. Sem nenhuma, nao adivinha."""
+    alvo = (cwd or "").strip() or estado.get("pasta_raiz") or ""
+    if not alvo:
+        return "", ""
+    alvo = os.path.abspath(alvo)
+    if not os.path.isdir(alvo):
+        return "", f"ERRO: '{cwd}' nao e uma pasta - o comando nao corre num sitio que nao existe."
+    return alvo, ""
+
 
 def _validar_comando_processo(comando):
     cmd = (comando or "").strip()
@@ -600,10 +613,14 @@ def _abrir_quando_pronto(pid, porta):
         'comando': {"tipo": "STRING", "obrig": True, "padrao": ""},
         'modo': {"tipo": "STRING", "enum": ['aguardar', 'segundo_plano'], "padrao": "aguardar"},
         'timeout': {"tipo": "INTEGER", "padrao": None},
+        'cwd': {"tipo": "STRING", "desc": "Pasta onde o processo corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
     },
     disponivel="edicao",
 )
-def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
+def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, cwd: str = ""):
+    pasta_de_trabalho, erro_pasta = _pasta_de_trabalho(cwd)
+    if erro_pasta:
+        return erro_pasta
     try:
         timeout = int(timeout) if timeout is not None else 300
     except (TypeError, ValueError):
@@ -629,7 +646,8 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None):
 
     emit_event("executing", function=f"Executando: {comando}")
     try:
-        reg = iniciar_processo(comando, porta_env=porta_env, modo=modo, acompanhar=(modo == "segundo_plano"))
+        reg = iniciar_processo(comando, cwd=pasta_de_trabalho, porta_env=porta_env, modo=modo,
+                               acompanhar=(modo == "segundo_plano"))
     except OSError as e:
         return f"ERRO: nao consegui iniciar o processo ({e})."
     pid = reg["id"]
@@ -712,7 +730,8 @@ def _encerrar_sobreviventes(alvos):
         _matar_pid(item["pid"])
     return _esperar_morrer([item["pid"] for item in sobraram])
 
-def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False):
+def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False,
+                     caminhos_extra=None):
     """Abre o comando, registra-o em estado['processos'] e liga o leitor da saida.
     Devolve o registo (com a thread leitora em '_leitor'). Com 'acompanhar' liga tambem o
     monitor que fecha o processo nos eventos quando ele terminar sozinho; quem espera pela
@@ -730,7 +749,7 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
         "stdout": subprocess.PIPE,
         "stderr": subprocess.STDOUT,
         "stdin": subprocess.PIPE if stdin_pipe else subprocess.DEVNULL,
-        "env": montar_env_processo(comando, porta_env),
+        "env": montar_env_processo(comando, porta_env, caminhos_extra),
     }
     if os.name == "nt":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -925,7 +944,7 @@ def bloco_processos():
     )
 
 
-def run_com_timeout(cmd, timeout=60):
+def run_com_timeout(cmd, timeout=60, cwd=None):
     """Executa um comando externo com timeout que realmente funciona no Windows.
 
     subprocess.run(..., shell=True, timeout=...) mata apenas o shell; o processo
@@ -939,6 +958,7 @@ def run_com_timeout(cmd, timeout=60):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         shell=isinstance(cmd, str),
+        cwd=cwd or None,
     )
     _juntar_ao_job(proc)
     try:

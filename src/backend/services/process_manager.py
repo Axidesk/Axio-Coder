@@ -269,7 +269,12 @@ def _pty_on_replay():
     with pty_lock:
         texto = _pty_hist_texto()
     socketio.emit('pty:replay', {'data': texto}, to=request.sid)
-def montar_env_processo(comando, porta_env=None):
+def montar_env_processo(comando, porta_env=None, caminhos_extra=None):
+    """Ambiente do processo: o venv do projeto mais as pastas que tenham de vir a frente.
+
+    'caminhos_extra' existe para programas FORA do Python que precisam das suas proprias
+    bibliotecas no PATH para arrancar (um executavel de Qt precisa do <kit>/bin).
+    """
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
@@ -278,8 +283,12 @@ def montar_env_processo(comando, porta_env=None):
         env["FLASK_RUN_PORT"] = str(porta_env)
     venv = venv_projeto()
     if venv:
-        scripts = venv["scripts"]
-        path_atual = env.get("PATH", "")
-        env["PATH"] = scripts + os.pathsep + path_atual if path_atual else scripts
         env["VIRTUAL_ENV"] = venv["dir"]
+    caminhos = [c for c in (caminhos_extra or []) if c and os.path.isdir(c)]
+    if venv:
+        caminhos.append(venv["scripts"])
+    if caminhos:
+        atual = env.get("PATH", "")
+        novo = os.pathsep.join(caminhos)
+        env["PATH"] = novo + os.pathsep + atual if atual else novo
     return env
