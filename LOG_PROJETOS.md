@@ -81,6 +81,9 @@ assuntos: um lê UM ficheiro, o outro julga o PROJETO inteiro. (Ver a secção s
 - [ ] **Fase 4** — o `.sln` do Tibia: leitura das **flags** por `msbuild -getItem` e o retarget
       2015→2022 numa cópia, provado a compilar.
 - [ ] **Fase 5** — clangd (opcional): ir à definição, erro enquanto se escreve.
+- [ ] **Fase 6** — depurador, com o mínimo de interface nova: C++ pelo `cdb` que JÁ está na máquina,
+      depois o Monaco ligado ao motor, e Python/JS pelos adaptadores oficiais. Ver a secção própria
+      ("O depurador e o resto do que um expert usa").
 - [ ] **Criar do zero** — esqueleto de projeto novo (CMake/Qt/Python) escolhido pelo tipo de
       programa que o utilizador pedir.
 - [ ] **Captura ao vivo da janela no preview** (WGC, já pendente no plano).
@@ -637,8 +640,65 @@ Fontes: [CMake projects in Visual Studio](https://learn.microsoft.com/en-us/cpp/
 [CMake presets no VS](https://learn.microsoft.com/en-us/cpp/build/cmake-presets-vs) e
 [Install the MSVC Build Tools](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc).
 
+## O depurador e o resto do que um expert usa — medido na máquina (2026-10-06)
+
+Pedido do utilizador: *"põe isso no plano e tudo o que for necessário para que um utilizador experiente
+consiga fazer aqui qualquer coisa que faria lá, seja depurar ou qualquer coisa, levando em consideração
+a não utilização ou a mínima de novas janelas ou botões."*
+
+**O que existe nesta máquina** (procurado, não suposto):
+
+| procurado | resultado |
+| --- | --- |
+| `OpenDebugAD7.exe`, `vsdbg.exe`, `gdb.exe`, `lldb-dap.exe`, `cppvsdbg.exe` | **zero**, em todas as pastas onde se costumam procurar |
+| `cdb.exe` + `dbgeng.dll` | **existe** — `C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\` (Windows SDK) |
+| motor do Visual Studio | `vsdebugeng.dll` em Community 2022/2019 e Build Tools; `msvsmon.exe` para remoto |
+| Qt Creator | `qtcdebugger.exe` — observador de crashes do próprio Qt, **não** é um depurador |
+| Python | 3.14.2; `debugpy` **ausente** (última publicada 1.8.22, exige >=3.10 — instala-se) |
+| Node | v24.13.0 — traz `--inspect` e fala **CDP**, o mesmo protocolo que já falamos no preview |
+
+Ou seja: **para C++ não é preciso instalar depurador nenhum**. O `cdb` é o motor de depuração da
+Microsoft em modo consola — breakpoint por ficheiro:linha, passo-a-passo, call stack, variáveis,
+attach a um processo, dump — e é o mesmo motor que o VS usa por baixo. O que não existe é a
+INTERFACE. (Precisa dos `.pdb`, que a configuração Debug do build já produz.)
+
+**O depurador não se inventa, escolhe-se.** A lista oficial de adaptadores DAP
+(https://microsoft.github.io/debug-adapter-protocol/implementors/adapters/) tem C/C++
+(`vscode-cpptools`), `lldb-dap` (LLVM, servidor DAP autónomo), Python (`vscode-python`) e JavaScript
+(`vscode-js-debug`). O protocolo é standard: o trabalho é **ligarmo-nos** a ele, nunca escrever um
+motor de depuração.
+
+**O desenho, com o mínimo de interface nova** — cada peça reusa o que já existe:
+
+| peça do depurador | onde vive | o que é novo |
+| --- | --- | --- |
+| pôr/tirar breakpoint | **margem do Monaco** (a dos números de linha) | nada — é o gesto que o editor já tem |
+| continuar / passo / entrar / sair | **a barra flutuante do find** (`findbar.js`), no topo do código | uma barra fina, com o padrão já feito |
+| linha actual acesa | a marca de linha que o log e o diff já usam (`revelarLinhaComRolagem`) | nada |
+| call stack + variáveis | **coluna 3**, na camada que já mostra código/histórico/git | a camada já existe |
+| qual programa depurar | a deteção que os cards de sugestão já usam (escolhe o `DraftCAD.exe`, não o `dwg2dxf`) | nada |
+
+**As fases** (a ordem não é arbitrária — cada uma prova o motor antes de lhe dar ecrã):
+
+- [ ] **Fase 6a — C++ por consola.** Correr o alvo sob `cdb` num **card do terminal** (o mecanismo do
+      build), com os breakpoints por `ficheiro:linha` e uma lista de comandos. Não é gráfico: é
+      depuração a sério, com zero janela nova, e serve primeiro para MIM, que sou quem procura o
+      crash. Prova a exigir: parar no breakpoint, ler a stack, ler o valor de uma variável.
+- [ ] **Fase 6b — ligar o Monaco ao motor.** O clique na margem vira breakpoint, a barra de controlo
+      entra, a linha actual acende e a stack/variáveis aparecem na coluna 3 — tudo por cima do motor
+      que a 6a provou.
+- [ ] **Fase 6c — Python e JS pelos adaptadores.** `debugpy` para Python e o inspector do Node
+      (CDP); aqui o adaptador faz o trabalho todo e o frontend é o MESMO da 6b. É esta fase que prova
+      que o ecrã não se repete por linguagem — e é a razão de o desenho ser este.
+- [ ] **Fase 5 (clangd)** é o par natural disto: sem índice não há "ir à definição" nem erro
+      enquanto se escreve.
+- Fora do plano, dito em voz alta: **profiler** (VTune/perf), **depuração remota** (`msvsmon` existe,
+      mas é outro desenho) e time-travel. Não se constroem a reboque.
+
 ## O que falta (medido, não suposto)
 
+- **Depurador:** zero linhas no Axio. Na máquina há o `cdb` (Windows SDK) e o desenho das Fases 6a/6b/6c
+  está na secção anterior — escrito para ser executado, não para ficar bonito.
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
