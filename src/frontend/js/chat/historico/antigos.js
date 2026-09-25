@@ -72,6 +72,8 @@ let alvoComBalao = null;
     function _linha(commit) {
         const linha = document.createElement('div');
         linha.className = 'history-antigo-linha';
+        const topo = document.createElement('div');
+        topo.className = 'history-antigo-topo';
         const hash = document.createElement('span');
         hash.className = 'history-antigo-hash';
         hash.textContent = commit.curto || String(commit.hash).slice(0, 7);
@@ -92,16 +94,17 @@ let alvoComBalao = null;
             evento.stopPropagation();
             requestGitRestore(commit.hash, _tituloDoCommit(commit) || hash.textContent, '');
         });
-        linha.appendChild(hash);
-        if (partes.base) linha.appendChild(tarefa);
-        linha.appendChild(mensagem);
+        topo.appendChild(hash);
+        if (partes.base) topo.appendChild(tarefa);
         _tagsDoCommit(commit.hash).forEach(nome => {
             const chip = document.createElement('span');
             chip.className = 'history-antigo-tag';
             chip.textContent = nome;
-            linha.appendChild(chip);
+            topo.appendChild(chip);
         });
-        linha.appendChild(restaurar);
+        topo.appendChild(restaurar);
+        linha.appendChild(topo);
+        linha.appendChild(mensagem);
         return linha;
     }
     function _ligarBaloes(raiz) {
@@ -110,7 +113,7 @@ let alvoComBalao = null;
         raiz.addEventListener('mouseover', (evento) => {
             const alvo = evento.target && evento.target.closest ? evento.target.closest('[data-info]') : null;
             if (!alvo || alvo === alvoComBalao) return;
-            if (alvo.classList.contains('history-antigo-msg') && alvo.scrollHeight <= alvo.clientHeight + 1) return;
+            if (alvo.classList.contains('history-antigo-msg') && alvo.scrollWidth <= alvo.clientWidth + 1) return;
             alvoComBalao = alvo;
             mostrarIconTooltip(alvo, alvo.dataset.info);
         });

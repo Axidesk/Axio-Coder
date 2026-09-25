@@ -268,7 +268,7 @@ import './busca_chat.js';
         }
         const titulo = vista.titulo;
         if (titulo) {
-            titulo.textContent = tipo === 'thoughts' ? 'Raciocínio do Coder' : tipo === 'git' ? 'Git' : 'Ferramentas Usadas';
+            titulo.textContent = tipo === 'thoughts' ? 'Raciocínio do Coder' : tipo === 'git' ? 'GitHub' : 'Ferramentas Usadas';
             titulo.onclick = null;
             titulo.ondblclick = null;
             titulo.title = '';

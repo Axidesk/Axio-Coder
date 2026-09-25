@@ -310,6 +310,15 @@
     font-weight: 700;
 }
 
+.git-hash-acesa {
+    color: var(--oliva);
+}
+
+.git-ponto-enviado .git-hash,
+.git-grupo-tarefa .git-hash {
+    margin-left: 11px;
+}
+
 .git-commit-msg {
     color: var(--text-claro);
     overflow: hidden;

@@ -4305,14 +4305,10 @@
         "icone do git do explorer"
       ],
       "identificador": "#btn-show-git-history / #btn-git-doc",
-      "descricao": "Botao que ABRE o painel de git (estado, esta tarefa, dependencias) na coluna 3. Tem DOIS sitios desde 2026-10-05: #btn-show-git-history no cabecalho da coluna 1 do historico e #btn-git-doc no cabecalho da ARVORE de ficheiros do explorer, logo depois de #btn-line-numbers. O terceiro (#btn-show-git, no cabecalho da coluna 2 do dock, com o disquete antigo) foi REMOVIDO - com ele saiu o dom.js:btnShowGit e a entrada git do mapa do dock. Os DOIS que ficam abrem a MESMA vista (vistaDe('historico')) e entram no MESMO mapa de renderer.js:ligarBotoesCol3, com o valor do tipo em LISTA - git: [btnShowGitHistory, btnGitDoc] -, o que faz pintarBotoesCol3 acender e apagar os dois juntos (renderer.js:_botoesDoTipo aceita botao solto ou lista; o unico estado e o tipo ativo). MEDIDO na arvore a 420px (tool_medir_pintura, CSS real): cada icone custa 24px ao caminho (16 do icone + 8 do gap), que passa de 288 para 264.",
+      "descricao": "Botao que ABRE o painel de git (estado, esta tarefa, dependencias) na coluna 3. Tem DOIS sitios: #btn-show-git-history no cabecalho da coluna 1 do historico e #btn-git-doc no cabecalho da ARVORE de ficheiros do explorer, logo depois de #btn-line-numbers. Os DOIS abrem a MESMA vista (vistaDe('historico')) e entram no MESMO mapa de renderer.js:ligarBotoesCol3 com o valor do tipo em LISTA - git: [btnShowGitHistory, btnGitDoc] -, logo acendem e apagam juntos. MEDIDO na arvore a 420px: cada icone custa 24px ao caminho (16 do icone + 8 do gap), que passa de 288 para 264.\n\nO POPUP (title) mudou a 2026-10-06, a pedido: era \"Git: estado, commit e restauro\" nos DOIS botoes e passou a \"Salvar localmente | GitHub\" - as duas acoes que o painel serve (guardar o ponto no PC e empurrar para a nuvem), com a mesma barra vertical a separar, no desenho das outras labels do painel. Vive escrito no HTML dos dois botoes (index.html), nao no JS.\n\nO TITULO DA PAGINA do painel mudou na mesma rodada: renderer.js:_textoDoTipo (a linha do titulo.textContent com o teste tipo === 'git') escrevia 'Git' e passou a escrever 'GitHub'. E o rotulo da coluna 3 quando a camada e o git.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 100,
-        "conferido": [
-          1790300091.696,
-          81169
-        ]
+        "linha": 100
       }
     },
     {
@@ -4814,14 +4810,10 @@
         "aviao do cabecalho do historico"
       ],
       "identificador": "#btn-git-enviar-history",
-      "descricao": "Aviao do cabecalho da COLUNA 1 do historico, DEPOIS do botao do git: a ordem a 2026-10 e Historico | lupa #btn-history-search | #btn-show-git-history | ESTE | caixa de busca (o restaurar saiu para o card). Empurra para o remoto TUDO o que esta commitado, de qualquer tarefa: nao commita nada e nao e por card. O SVG nao esta no HTML: o botao nasce VAZIO e o icone e injetado no arranque por renderer.js a partir do template unico icones.js:svgDoAviao (o mesmo que pinta o aviao do card e o do dia). Quem o pinta e git_panel.js:pintarBotaoEnvio(remoto, hashes): esconde sem remoto, apaga (disabled) sem nada por subir e escreve o titulo com descricaoDoEnvio, nomeando as tarefas pelo hash. Duas fontes o alimentam, as duas do MESMO dado (/api/git/por_subir): git_panel.js:sincronizarCabecalhoGit (o estado que o painel leu) e o registo registrarSincronizacaoDoEnvio, ligado em renderer.js e chamado no fim de cards.js:atualizarMarcasDosCards - e por isso que o botao acende sem o painel de git alguma vez ter sido aberto. O CLIQUE PEDE CONFIRMACAO desde 2026-10-05: ui.js:showConfirm com a pergunta montada a partir da MESMA descricaoDoEnvio do tooltip ('Deseja enviar 3 commits para o GitHub (Tarefa 17, ...)?') e o botao 'Enviar'; so ao confirmar corre enviarRepositorio(vistaDe('historico')). Se a coluna 3 nao estiver aberta NO git, o aviso de falha sai na barra de estado (avisarNoPainel -> avisarNaBarraDeEstado), nunca num painel invisivel.",
+      "descricao": "Aviao do cabecalho da COLUNA 1 do historico, DEPOIS do botao do git: a ordem e Historico | lupa #btn-history-search | #btn-show-git-history | ESTE | caixa de busca. Empurra para o remoto TUDO o que esta commitado, de qualquer tarefa: nao commita nada e nao e por card. O SVG nao esta no HTML: o botao nasce VAZIO e o icone e injetado no arranque por renderer.js a partir de icones.js:svgDoAviao. Quem o pinta e git_panel.js:pintarBotaoEnvio(remoto, hashes): esconde sem remoto, apaga (disabled) sem nada por subir e escreve o titulo com descricaoDoEnvio.\n\nA FRASE DO POPUP (tooltip e confirmacao, a mesma) mudou a 2026-10-06, a pedido: era \"Enviar 3 commits para o GitHub (Tarefa 17, ...)\" - numerava e NOMEAVA as tarefas - e passou a \"Enviar 3 commits para a nuvem | GitHub | Push\", sem lista de nomes. Com uma tarefa por commitar passa a \"Salvar esta tarefa e enviar N commits para a nuvem | GitHub | Push\"; sem nada conta \"Enviar para a nuvem | GitHub | Push\" (so acontece se for chamada fora do fluxo, porque o botao fica disabled sem nada por subir). A CONFIRMACAO no clique usa a MESMA descricaoDoEnvio com a primeira letra em minuscula (\"Deseja enviar 3 commits para a nuvem | GitHub | Push?\") e o botao 'Enviar' - ui.js:showConfirm.\n\nDuas fontes o alimentam, as duas do MESMO dado (/api/git/por_subir): git_panel.js:sincronizarCabecalhoGit (o estado que o painel leu) e o registo registrarSincronizacaoDoEnvio, ligado em renderer.js e chamado no fim de cards.js:atualizarMarcasDosCards - e por isso que o botao acende sem o painel de git alguma vez ter sido aberto. Durante a busca do historico ele e escondido com .busca-oculta (o 'hidden' de cada botao nao e tocado).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 101,
-        "conferido": [
-          1790300091.696,
-          81169
-        ]
+        "linha": 101
       }
     },
     {
@@ -4989,15 +4981,11 @@
         "continuacao do historico",
         "mais antigo"
       ],
-      "identificador": "historico/antigos.js:commitsAntigos / .history-antigos",
-      "descricao": "Seccao da COLUNA 1 do historico, por baixo dos cards de dia: a continuacao do historico ate onde o repositorio vai. FILTRO (reescrito a 2026-09-25): saem (a) os commits cujo DIA esta entre os dias com cards a vista (antigos.js:commitsAntigos cruza diaDoCommit(c.data) com diasVisiveis, os 3 dias de painel.js:renderHistoryCards) e (b) os hashes com card (antigos.js:_hashesComCard, via cards.js:turnosComCommit filtrado por dia, state.commitsDosTurnos e state.currentTurnLogs). O filtro por DIA existe porque um dia com cards ja esta representado la em cima inteiro: sem ele ficavam orfaos no bloco os commits de rodadas com DUAS publicacoes (a tarefa + a auto-melhoria), que nao tem card proprio. MEDIDO a 2026-09-25: 178 commits no repo -> 151 no bloco (25/09: 4, 24/09: 1, 23/09: 3 orfaos) ANTES, 143 DEPOIS, com o bloco a comecar em 22/09 - o dia seguinte ao mais antigo dos cards. LIMITE: um commit de um dia com cards que nao pertenca a rodada nenhuma (feito fora do painel) tambem sai; os commits de dias SEM cards (22/09 e mais antigos) ficam todos. DADOS: /api/git/estado (estado.commits e tags), carregados em segundo plano por antigos.js:carregarRepositorio (painel.js:prefetchSessionDetails); uma leitura por sessao. CABECALHO recolhido: 'Mais antigo' + '|' + contador + '+'. Linhas agrupadas por dia com separador 1px por cima de cada data (branca): hash curto + tituloDaTarefaDoCommit (le-se 'Tarefa N - resumo'), chips das etiquetas da versao (antigos.js:_tagsDoCommit), mensagem em 2 linhas no maximo com o texto inteiro no balao do painel (espera 500ms) e o restaurar que RESERVA o lugar (visibility hidden, sem salto). 'Ver mais' de 20 em 20.",
+      "identificador": "historico/antigos.js:_linha / .history-antigo-linha",
+      "descricao": "Bloco \"Mais antigo\" da coluna 1, montado por historico/antigos.js:_pintar dentro de .history-antigos. Mostra os commits do repositorio que NAO estao nos cards, em paginas de 20 (LIMITE) com o botao de continuar.\n\nO FILTRO E POR DIA (2026-10-06): commitsAntigos cruza _hashesComCard() com os dias que tem cards (diasVisiveis) e descarta TAMBEM todo o commit cujo DIA ja tem card - nao so o commit que casa por hash. Motivo medido: cada rodada publica DUAS vezes (tarefa + auto-melhoria) e so uma da nome ao card, logo a outra ficava orfa aqui a repetir um dia que ja estava em cima. SAO 143 commits a comecar em 22/09 (antes eram 151, com 25/09, 24/09 e 23/09 repetidos). LIMITE assumido: um dia com cards leva consigo um commit que nao seja de rodada nenhuma (feito fora do painel) - foi o preco escolhido para o bloco ser continuacao limpa.\n\nA LINHA tem DUAS ALTURAS desde 2026-10-06 (antes era uma linha so, com o nome a 2 linhas clamped): _linha monta .history-antigo-topo (hash, tarefa, chips de etiqueta e o restaurar, todos na mesma linha, e o restaurar com margin-left:auto na ponta direita) e, IRMA do topo e NAO dentro dele, a .history-antigo-msg com a mensagem do commit, uma linha so com reticencias (white-space:nowrap + text-overflow:ellipsis, no lugar do -webkit-line-clamp:2). A mensagem comeca na MESMA indentacao da hash (x=6 - os 6px de padding da linha), que e o pedido: o commit por baixo, justificado a esquerda como a hash. MEDIDO a 320px: hash x=6, msg x=6, restaurar x=304,4, topo y=34,5 e msg y=60,5.\n\nO BALAO DA MENSAGEM mudou com ela: _ligarBaloes so mostrava o popup quando o texto estava cortado na VERTICAL (scrollHeight contra clientHeight); com a linha agora horizontal, o teste passou a ser scrollWidth contra clientWidth - sem esta troca o balao deixava de aparecer justamente quando o texto ja nao cabe.\n\nAs ETIQUETAS (chips verdes) cruzam repositorio.tags com o ponto do commit (_tagsDoCommit, casa pelo hash COMPLETO) e vivem do cache de /api/git/estado - uma versao criada depois desta leitura so aparece depois de Ctrl+R.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/antigos.js",
-        "linha": 136,
-        "conferido": [
-          1790299945.006,
-          9739
-        ]
+        "linha": 74
       }
     },
     {
@@ -5031,8 +5019,8 @@
         "linha do ja enviada",
         "marca do aviao no painel"
       ],
-      "identificador": "git_panel.js:marcaDoPonto / .git-marca",
-      "descricao": "A label \"Ja enviada para o GitHub\" saiu do painel (2026-10) e virou o POPUP do aviao: o cabecalho passa a ser so o icone do aviao (svgDoAviao) mais o hash na cor da hash (--git-cor-hash, rgb 107,114,128) mais o + logo a seguir. O corpo recolhido mantem \"Tarefa N - <mensagem>\", com o prefixo em --git-cor-tarefa e a mensagem em --git-cor-commit. O icone e o hash partilham a classe .git-marca (git.css:398) e alinham em baseline. Quem decide que a tarefa esta enviada e cards.js:enviadaParaOServidor - a MESMA funcao que governa o aviao do card; as duas marcas saem de git_panel.js:marcaDoPonto(enviado, valor).",
+      "identificador": "git_panel.js:marcaDoPonto / .git-marca / .git-hash-acesa",
+      "descricao": "Marca do ponto no painel de git: git_panel.js:marcaDoPonto(enviado, valor) devolve O ICONE (.git-marca, com title de popup) seguido do valor (a hash curta). Nao ha mais label escrita - \"Esta tarefa\" e \"Ja enviada para o GitHub\" sairam do ecra e viraram o POPUP dos dois icones (2026-10-06, a pedido). Nascido localmente = o bookmark svgDoPonto + \"Salvo localmente\"; ja no remoto = o aviao svgDoAviao + \"Ja enviada para o GitHub\". Quem decide e enviadaParaOServidor(hash) de cards.js - a MESMA funcao que poe o aviao no card, logo painel e pilha nunca se contradizem. Usado por blocoDaTarefa (.git-grupo-tarefa) e blocoDoPontoEnviado (.git-ponto-enviado).\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (2026-10-06): marcaDoPonto escreve-a com classe .git-hash git-hash-acesa e a regra git.css:.git-hash-acesa { color: var(--oliva) } pinta-a. As outras hashes ficam cinzentas no --git-cor-hash (#6b7280) - a da lista do \"Por subir\" (.git-lista .git-hash) e a do historico mais antigo (.history-antigo-hash). O mapa das cores vive no :root do style.css: --git-cor-hash #6b7280 (hash), --git-cor-tarefa #d1d5db (prefixo \"Tarefa N\"), --git-cor-commit #9ca3af (mensagem).\n\nO AFASTAMENTO PARA ALINHAR: esta linha nao tem contador (o chip do ramo e o da etiqueta tem o numero - \"1\", \"7\" - antes do rotulo), logo a hash precisava de um empurrao para cair debaixo da TERCEIRA COLUNA das linhas de cima, ou seja alinhada com o rotulo (\"main\", \"v3.1.3\"). MEDIDO antes: o rotulo comeca a x=41,2 e a hash caia a x=30 - 11,2px de desencontro. Ficou git.css:.git-ponto-enviado .git-hash, .git-grupo-tarefa .git-hash { margin-left: 11px }. MEDIDO depois: .git-chip-rotulo x=41,2 e .git-hash x=41,0 (0,2px de sub-pixel, do arredondamento), com o icone da marca a x=10 nos dois blocos. O 11 e 10+13+6+6,2+6 menos 24: o valor sai do chip (padding 10 + icone 13 + gap 6 + numero 6,2 + gap 6), nao e um numero de gosto - mexer-lhe parte o alinhamento.\n\nO CORPO do bloco (.git-ponto-nome, que mostra \"Tarefa N - mensagem\") continua a x=10, alinhado com o ICONE e nao com o rotulo.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 273
@@ -5048,14 +5036,10 @@
         "salvo localmente"
       ],
       "identificador": "git_panel.js:blocoDaTarefa / marcaDoPonto",
-      "descricao": "A \"Esta tarefa\" deixou de ser uma label (2026-10): o cabecalho passou a ser a MARCA do ponto - o icone do bookmark (svgDoPonto) com o popup \"Salvo localmente\" ou, se o ponto ja subiu, o aviao com \"Ja enviada para o GitHub\" -, seguidos do hash na MESMA cor da hash do painel (--git-cor-hash, rgb 107,114,128) e do +. Vive DENTRO da seccao do Repositorio, abaixo das etiquetas: quem separa dali e a .git-separa, que abre o \"Por subir\". O bloco leva padding-left 10px - a MESMA indentacao do icone dos chips (ramo e etiquetas) -, para o icone e o hash alinharem com o que esta acima. O corpo e \"Tarefa N - mensagem\", com o prefixo fixo fora do input em --git-cor-tarefa e a mensagem em --git-cor-commit. Nasce aberto no modo manual e recolhido no automatico. Sem ponto e sem ficheiros fica so o nome, sem icone.",
+      "descricao": "Bloco da tarefa no painel de git, DENTRO da seccao do Repositorio e abaixo do chip das etiquetas (desde 2026-10-06 a ordem do painel e Repositorio | Esta tarefa -> separador -> Por subir -> Dependencias). git_panel.js:blocoDaTarefa monta um recolhivel (git-recolhivel git-grupo-tarefa) cujo CABECALHO e a marca do ponto - marcaDoPonto(false, curto ou nomeDaTarefa) -, e o CORPO e a linha do commit (corpoDoCommit).\n\nO CABECALHO NAO TEM LABEL ESCRITA: e o icone + a hash + o '+'. \"Esta tarefa\" e \"Ja enviada para o GitHub\" viraram o POPUP dos icones (title). Tarefa sem commit mostra o NOME no lugar da hash (unico identificador que existe nessa altura); tarefa sem ponto NEM ficheiros fica so com o nome, sem icone nenhum - nao se carimba \"salvo localmente\" o que nunca foi salvo.\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (.git-hash-acesa) e leva margin-left:11px para cair debaixo do ROTULO do chip de cima (\"main\"/\"v3.1.3\"), porque esta linha nao tem contador. Detalhe medido na ficha \"ja enviada para o github\".\n\nO CORPO (git-ponto-nome) mostra a linha do commit em camadas (git_tarefa-nome = prefixo \"Tarefa N\", git_commit_nome = a mensagem), comeca a x=10 - alinhado com o ICONE do chip e nao com o rotulo. O bloco nasce aberto/fechado conforme o estado (recolhivel(cabecalho, corpo, !estado.automatico, ...)).\n\nO LAPIS fica ENCOSTADO ao campo do commit (ordem: prefixo -> input -> lapis -> varinha -> salvar, em corpoDoCommit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 271,
-        "conferido": [
-          1790301208.283,
-          34791
-        ]
+        "linha": 271
       }
     }
   ]

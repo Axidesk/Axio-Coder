@@ -273,7 +273,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         return `<span class="git-marca" title="${escapeHtml(titulo)}">`
             + (enviado ? svgDoAviao('h-3.5 w-3.5') : svgDoPonto('h-3.5 w-3.5'))
             + '</span>'
-            + (valor ? `<span class="git-hash">${escapeHtml(valor)}</span>` : '');
+            + (valor ? `<span class="git-hash git-hash-acesa">${escapeHtml(valor)}</span>` : '');
     }
     function linhaEmCamadas(base, resumo) {
         if (!base) return resumo ? `<span class="git-commit-nome">${escapeHtml(resumo)}</span>` : '';
@@ -340,13 +340,11 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         return 'Guardar a mensagem corrigida neste commit';
     }
     function descricaoDoEnvio(porSubir, vaiCommitar) {
-        const commits = porSubir || [];
-        const quantos = commits.length + (vaiCommitar ? 1 : 0);
-        const acao = vaiCommitar ? 'Commitar esta tarefa e enviar' : 'Enviar';
-        if (quantos <= 1) return vaiCommitar ? `${acao} para o GitHub` : 'Enviar para o GitHub';
-        const nomes = commits.map(c => nomeDaTarefaDoCommit(c.hash)).filter(Boolean).slice(0, 3);
-        if (!nomes.length) return `${acao} ${quantos} commits para o GitHub`;
-        return `${acao} ${quantos} commits para o GitHub (${nomes.join(', ')}${nomes.length < quantos ? ', ...' : ''})`;
+        const quantos = (porSubir || []).length + (vaiCommitar ? 1 : 0);
+        if (!quantos) return 'Enviar para a nuvem | GitHub | Push';
+        const sufixo = quantos === 1 ? '1 commit' : `${quantos} commits`;
+        const acao = vaiCommitar ? 'Salvar esta tarefa e enviar' : 'Enviar';
+        return `${acao} ${sufixo} para a nuvem | GitHub | Push`;
     }
     function htmlDependencias(estado) {
         const manifestos = estado.manifestos || [];
