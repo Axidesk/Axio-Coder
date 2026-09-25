@@ -89,6 +89,7 @@ import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert";
+import { execFileSync } from "node:child_process";
 import { pathToFileURL as __paraUrl } from "node:url";
 import { join as __juntar } from "node:path";
 
@@ -150,6 +151,14 @@ const funcaoDoDisco = (rel, nome) => {
 };
 
 const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join(String.fromCharCode(10));
+
+// Le o repositorio git do projeto sem passar pelo shell: os argumentos chegam um a
+// um ao executavel, logo o '%' de um --pretty=format:%cI chega intacto - num
+// execSync do Windows quem o come e o cmd.exe, e o erro que sai ("'%cI' nao e
+// reconhecido como um comando") nao aponta para o formato. Um teste que mede
+// commits, tags ou o repo real passa a ser uma linha:
+//   const linhas = gitDoDisco(["log", "--pretty=format:%H|%cI", "-n", "500"]).split("\\n");
+const gitDoDisco = (args) => execFileSync("git", args, { encoding: "utf8", cwd: process.cwd() });
 '''
 
 _DOM_FALSO_JS = r'''
@@ -1491,7 +1500,10 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "por isso nada fica na pasta do projeto. E o espelho do tool_executar_python para o frontend: use "
     "para PROVAR comportamento em JS - um assert sobre uma funcao real lida do disco, um stub de DOM/"
     "globais, a comparacao de duas versoes do mesmo codigo na mesma cena. Tem 'import' de node:fs, "
-    "node:path e node:assert, e top-level await; os caminhos relativos sao a raiz do projeto aberto. "
+    "node:path, node:assert e node:child_process, e top-level await; os caminhos relativos sao a raiz "
+    "do projeto aberto. Para ler o repositorio git do projeto use gitDoDisco(['log', ...]) - corre o git "
+    "SEM shell, por isso o '%' de um --pretty=format:%cI chega intacto (num execSync do Windows o cmd.exe "
+    "come-o e o erro nao aponta para o formato). "
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
     "appendChild soltam o no do pai, className e classList sao a mesma fonte, toggle respeita a "

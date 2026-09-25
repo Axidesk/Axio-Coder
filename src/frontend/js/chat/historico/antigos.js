@@ -49,7 +49,11 @@ let alvoComBalao = null;
     }
     function commitsAntigos() {
         const comCard = _hashesComCard();
-        return (repositorio ? repositorio.commits : []).filter(c => !comCard.has(c.hash));
+        return (repositorio ? repositorio.commits : []).filter(c => {
+            const dia = diaDoCommit(c.data);
+            const diaNosCards = !!dia && diasVisiveis.indexOf(dia) !== -1;
+            return !comCard.has(c.hash) && !diaNosCards;
+        });
     }
     function _tituloDoCommit(commit) {
         return tituloDaTarefaDoCommit(commit.hash, commit.mensagem) || commit.mensagem || '';
