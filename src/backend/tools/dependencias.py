@@ -11,6 +11,7 @@ import re
 import ast
 import json
 import sys
+import tomllib
 
 from src.backend.tools.projeto_comum import (
     EXTENSOES_JS,
@@ -30,6 +31,8 @@ BUILTINS_NODE = {
 MAX_ARQUIVOS_DEPENDENCIAS = 800
 _RE_IMPORT_JS = re.compile(r"""import\s+(?:[\w${}*,\s]+\s+from\s+)?['"]([^'"]+)['"]""")
 _RE_REQUIRE_JS = re.compile(r"""require\s*\(\s*['"]([^'"]+)['"]""")
+_RE_FIND_PACKAGE = re.compile(r"find_package\s*\(\s*([A-Za-z][A-Za-z0-9_\-]*)")
+_RE_PKG_MODULES = re.compile(r"pkg_check_modules\s*\(\s*[A-Za-z0-9_]+\s+(?:REQUIRED\s+|QUIET\s+)*([A-Za-z][A-Za-z0-9_\-]*)")
 
 
 def manifests_do_projeto(raiz):
@@ -77,7 +80,109 @@ def manifests_do_projeto(raiz):
             nlinhas = 0
         saida.append({"manifesto": "pyproject.toml", "rotulo": "linhas",
                       "pacotes": [], "linhas": nlinhas})
+    saida.extend(_manifestos_nativos(raiz))
     return saida
+
+
+def _manifestos_nativos(raiz):
+    """Dependencias declaradas fora do mundo Python/Node (CMake, vcpkg, Conan, Cargo, Go).
+
+    Faltava: o retrato respondia 'sem manifestos detectados' a um projeto CMake
+    inteiro, quando o CMakeLists e' o manifesto dele e os find_package sao as
+    dependencias que ele exige.
+    """
+    saida = []
+    cmake = os.path.join(raiz, "CMakeLists.txt")
+    if os.path.exists(cmake):
+        try:
+            with open(cmake, "r", encoding="utf-8", errors="ignore") as f:
+                texto = f.read()
+        except OSError:
+            texto = ""
+        pacotes = sorted(set(_RE_FIND_PACKAGE.findall(texto)) | set(_RE_PKG_MODULES.findall(texto)),
+                         key=str.lower)
+        if pacotes:
+            saida.append({"manifesto": "CMakeLists.txt", "rotulo": "pacotes CMake", "pacotes": pacotes})
+        else:
+            saida.append({"manifesto": "CMakeLists.txt", "rotulo": "linhas", "pacotes": [],
+                          "linhas": texto.count("\n") + 1 if texto else 0})
+    for nome_arq, leitor in (("vcpkg.json", _pacotes_vcpkg), ("conanfile.txt", _pacotes_conan),
+                             ("Cargo.toml", _pacotes_cargo), ("go.mod", _pacotes_go)):
+        caminho = os.path.join(raiz, nome_arq)
+        if os.path.exists(caminho):
+            pacotes = leitor(caminho)
+            if pacotes:
+                saida.append({"manifesto": nome_arq, "rotulo": "pacotes", "pacotes": pacotes})
+    return saida
+
+
+def _pacotes_vcpkg(caminho):
+    try:
+        with open(caminho, "r", encoding="utf-8", errors="ignore") as f:
+            dados = json.load(f)
+    except (OSError, ValueError):
+        return []
+    nomes = []
+    for dep in dados.get("dependencies") or []:
+        if isinstance(dep, str):
+            nomes.append(dep)
+        elif isinstance(dep, dict) and dep.get("name"):
+            nomes.append(dep["name"])
+    return sorted(set(nomes), key=str.lower)
+
+
+def _pacotes_conan(caminho):
+    try:
+        with open(caminho, "r", encoding="utf-8", errors="ignore") as f:
+            linhas = f.read().splitlines()
+    except OSError:
+        return []
+    nomes, dentro = [], False
+    for linha in linhas:
+        limpa = linha.strip()
+        if limpa.startswith("["):
+            dentro = limpa.lower().startswith("[requires")
+            continue
+        if dentro and limpa and not limpa.startswith("#"):
+            nomes.append(limpa.split("/")[0].strip())
+    return sorted({n for n in nomes if n}, key=str.lower)
+
+
+def _pacotes_cargo(caminho):
+    try:
+        with open(caminho, "rb") as f:
+            dados = tomllib.load(f)
+    except (OSError, ValueError):
+        return []
+    nomes = []
+    for chave in ("dependencies", "dev-dependencies", "build-dependencies"):
+        nomes.extend((dados.get(chave) or {}).keys())
+    return sorted(set(nomes), key=str.lower)
+
+
+def _pacotes_go(caminho):
+    try:
+        with open(caminho, "r", encoding="utf-8", errors="ignore") as f:
+            linhas = f.read().splitlines()
+    except OSError:
+        return []
+    nomes, dentro = [], False
+    for linha in linhas:
+        limpa = linha.strip()
+        if limpa.startswith("require ("):
+            dentro = True
+            continue
+        if dentro and limpa == ")":
+            dentro = False
+            continue
+        if limpa.startswith("require "):
+            partes = limpa.split()
+            if len(partes) >= 2:
+                nomes.append(partes[1])
+            continue
+        if dentro and limpa and not limpa.startswith("//") and "/" in limpa:
+            nomes.append(limpa.split()[0])
+    return sorted(set(nomes), key=str.lower)
 
 def manifests_em_texto(raiz):
     linhas = []

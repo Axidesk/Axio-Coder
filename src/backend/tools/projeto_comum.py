@@ -27,7 +27,10 @@ PASTAS_IGNORADAS = {
     "dist", "build", "vendor", ".axio", ".mempalace", "target", ".next",
     ".idea", ".vscode", "coverage", ".tox", ".nox", ".pytest_cache",
 }
-NOMES_MANIFESTO = {"requirements.txt", "package.json"}
+NOMES_MANIFESTO = {
+    "requirements.txt", "package.json", "pyproject.toml", "Pipfile",
+    "CMakeLists.txt", "Cargo.toml", "go.mod", "vcpkg.json", "conanfile.txt",
+}
 EXTENSOES_PY = (".py",)
 EXTENSOES_JS = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs")
 MAX_ARQUIVOS_INDEX = 3000

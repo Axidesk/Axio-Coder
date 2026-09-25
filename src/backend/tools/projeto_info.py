@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import time
+import re
 import hashlib
 import threading
 
@@ -37,32 +38,117 @@ _trava_info = threading.Lock()
 _VERSAO_INFO_PROJETO = 2
 
 
-def _detectar_stack():
-    itens = [f"Python {sys.version.split()[0]}"]
-    raiz = estado.get("pasta_raiz", "")
-    if raiz:
-        pkg_path = os.path.join(raiz, "package.json")
-        if os.path.exists(pkg_path):
+_MARCADORES_STACK = (
+    ("requirements.txt", "Python"),
+    ("pyproject.toml", "Python"),
+    ("Pipfile", "Python"),
+    ("package.json", "JavaScript/Node"),
+    ("tsconfig.json", "TypeScript"),
+    ("Cargo.toml", "Rust"),
+    ("go.mod", "Go"),
+    ("CMakeLists.txt", "C++ (CMake)"),
+    ("meson.build", "C/C++ (Meson)"),
+    ("build.gradle", "Java (Gradle)"),
+    ("pom.xml", "Java (Maven)"),
+)
+_EXTENSAO_STACK = (
+    ((".cpp", ".cc", ".cxx", ".hpp", ".hh", ".h"), "C++"),
+    ((".c",), "C"),
+    ((".py",), "Python"),
+    ((".ts", ".tsx"), "TypeScript"),
+    ((".js", ".jsx", ".mjs", ".cjs"), "JavaScript"),
+    ((".rs",), "Rust"),
+    ((".go",), "Go"),
+    ((".java",), "Java"),
+    ((".cs",), "C#"),
+    ((".rb",), "Ruby"),
+    ((".php",), "PHP"),
+)
+_RE_QT = re.compile(r"find_package\s*\(\s*(Qt[56])")
+_RE_CXX_STANDARD = re.compile(r"CXX_STANDARD\s+(\d+)|cxx_std_(\d+)")
+
+
+def _linguagem_por_ficheiros():
+    contagem = {}
+    for caminho in arquivos_de_codigo(400):
+        ext = os.path.splitext(caminho)[1].lower()
+        for extensoes, nome in _EXTENSAO_STACK:
+            if ext in extensoes:
+                contagem[nome] = contagem.get(nome, 0) + 1
+                break
+    if not contagem:
+        return ""
+    return max(contagem.items(), key=lambda par: par[1])[0]
+
+
+def _detalhes_nativos(raiz):
+    """Versoes que o projeto declara fora do mundo Python (Qt, standard de C++, Node)."""
+    partes = []
+    cmake = os.path.join(raiz, "CMakeLists.txt")
+    if os.path.exists(cmake):
+        try:
+            with open(cmake, "r", encoding="utf-8", errors="ignore") as f:
+                texto = f.read()
+        except OSError:
+            texto = ""
+        achado = _RE_QT.search(texto)
+        if achado:
+            partes.append(achado.group(1).replace("Qt", "Qt "))
+        padrao = _RE_CXX_STANDARD.search(texto)
+        if padrao:
+            partes.append("C++" + (padrao.group(1) or padrao.group(2)))
+    pkg_path = os.path.join(raiz, "package.json")
+    if os.path.exists(pkg_path):
+        try:
+            with open(pkg_path, "r", encoding="utf-8") as f:
+                engines = (json.load(f).get("engines") or {})
+            if engines.get("node"):
+                partes.append(f"Node {engines['node']}")
+        except (OSError, ValueError):
+            pass
+    for nome_arq in (".nvmrc", ".node-version"):
+        caminho = os.path.join(raiz, nome_arq)
+        if os.path.exists(caminho):
             try:
-                with open(pkg_path, "r", encoding="utf-8") as f:
-                    pkg = json.load(f)
-                engines = pkg.get("engines") or {}
-                if engines.get("node"):
-                    itens.append(f"Node {engines['node']}")
-            except Exception:
-                pass
-        for nome_arq in (".nvmrc", ".node-version"):
-            caminho = os.path.join(raiz, nome_arq)
-            if os.path.exists(caminho):
-                try:
-                    with open(caminho, "r", encoding="utf-8") as f:
-                        versao = f.read().strip()
-                    if versao:
-                        itens.append(f"Node {versao}")
-                        break
-                except Exception:
-                    pass
-    return ", ".join(itens)
+                with open(caminho, "r", encoding="utf-8") as f:
+                    versao = f.read().strip()
+            except OSError:
+                versao = ""
+            if versao:
+                partes.append(f"Node {versao}")
+                break
+    return (", " + ", ".join(partes)) if partes else ""
+
+
+def _detectar_stack():
+    """Stack que o PROJETO aberto declara - nunca a do Axio.
+
+    A versao do interprete que corre o Axio so entra quando o projeto e mesmo
+    Python: antes disto o contexto anunciava 'Python 3.14' a um projeto CMake/Qt
+    inteiro, ou seja, dava ao modelo uma stack falsa sobre o projeto aberto.
+    """
+    raiz = estado.get("pasta_raiz", "")
+    if not raiz or not os.path.isdir(raiz):
+        return f"Python {sys.version.split()[0]}"
+    try:
+        nomes = {n.lower() for n in os.listdir(raiz)}
+    except OSError:
+        nomes = set()
+    itens = []
+    for ficheiro, rotulo in _MARCADORES_STACK:
+        if ficheiro.lower() in nomes and rotulo not in itens:
+            itens.append("Python " + sys.version.split()[0] if rotulo == "Python" else rotulo)
+    if any(n.endswith(".sln") for n in nomes) and "C++ (.sln)" not in itens:
+        itens.append("C++ (.sln)")
+    if any(n.endswith(".csproj") for n in nomes) and ".NET (MSBuild)" not in itens:
+        itens.append(".NET (MSBuild)")
+    detalhe = _detalhes_nativos(raiz)
+    if itens:
+        return ", ".join(itens) + detalhe
+    predominante = _linguagem_por_ficheiros()
+    if predominante:
+        return f"{predominante} (pela extensao dos ficheiros)" + detalhe
+    return "(nao identificada)"
 
 def _arvore_resumida(raiz, max_prof=3, max_entradas=80):
     linhas = []

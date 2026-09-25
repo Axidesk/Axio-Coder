@@ -201,14 +201,75 @@ Quando o projeto é NOVO não há nada para detetar — há para decidir. A orde
 4. **Nada disto vira instrução do sistema**: é código que corre quando é preciso, para não
    poluir o contexto de quem está a trabalhar numa linguagem que não precisa dele.
 
+## As instruções do sistema estavam engessadas em web/Python (revistas a 2026-10-06)
+
+As regras que o agente recebe em TODAS as rodadas vivem em `src/backend/ai/instructions.py` (e a
+descrição de `tool_planejar_arquitetura` em `tools/plan.py`). Estavam escritas como se todo o
+projeto fosse uma aplicação Python/JS — foi preciso medir para ver o quanto:
+
+- `0.0` mandava criar **sempre** um venv do projeto antes de instalar dependências (e dizia
+  literalmente *"Não use cmake (compile) em projetos do Qt Creator"*, o oposto do que agora existe).
+- `ESTRUTURA ENXUTA` obrigava a dividir o código em `backend/` + `frontend/` — divisão que não
+  existe numa app nativa.
+- `5. COMPILAÇÃO` dizia que num projeto do Qt Creator **não era preciso compilar**.
+- `4.1`/`4.2`/`4.4` falavam só de `requirements.txt`/`package.json`, pip e npm.
+- Nenhuma linha dizia que a **linguagem** de um projeto novo é escolha do agente: dava a entender,
+  pelo resto do texto, que o produto era Python.
+
+O que passou a valer (e a linguagem em que se escreve):
+
+1. **Linguagem pelo problema, nunca pelo hábito.** Nativo/tempo real -> C++ ou Rust; serviço, dados
+   e automação -> Python; browser -> HTML/JS ou o framework que a doc eleger; app nativa com
+   interface -> C++/Qt. **Python não é a resposta por omissão** e o facto de as ferramentas do Axio
+   serem em Python não decide o projeto do utilizador.
+2. **Versões: sempre a ESTÁVEL mais recente publicada, e só essa** — vale para pacote, biblioteca,
+   runtime, SDK, compilador, kit, ferramenta de build e programa auxiliar. `alpha/beta/rc/preview/
+   nightly/canary/dev` **não entram** (obrigam a retrabalho quando sai a estável); se só uma
+   pré-lançamento resolver, pergunta-se antes.
+3. **Ambiente isolado por ecossistema** (nunca sujar o ambiente do Axio): Python -> venv do projeto;
+   Node -> npm na pasta do projeto; C/C++ -> o diretório de build, escolhido pelo `tool_gerir_projeto`;
+   Rust/Go -> resolvem-no sozinhos. Só projeto estático é que não cria ambiente nenhum.
+4. **`4.5 PROJETO NATIVO`** (regra nova): nomeia `tool_gerir_projeto` (detetar/kits/preparar/
+   construir/correr/instalar), as ferramentas C/C++ por árvore e o `tool_auditar_cpp` — e diz
+   explicitamente que **num projeto Python/Node/Rust/Go nenhuma delas se chama**.
+5. **`5. COMPILAÇÃO E EXECUÇÃO`**: compilar é `tool_gerir_projeto(acao='construir')` (card do
+   terminal, com progresso e parar) e correr é `acao='correr'`; proibido pedir ao utilizador para
+   compilar à mão ou dizer que "não precisa".
+
+### O furo que isto destapou: a stack do contexto mentia
+
+Ao reler as regras apareceu um enviesamento pior, este no código: `_detectar_stack`
+(`tools/projeto_info.py`) começava **sempre** por `Python {versão do interpretador}` — abrir o
+DRAFTCAD dava ao modelo a stack *"Python 3.14.2"* num projeto CMake/Qt/Vulkan.
+
+Agora a stack sai do que o PROJETO declara (marcadores: `CMakeLists.txt`, `package.json`,
+`Cargo.toml`, `go.mod`, `pyproject.toml`, `.sln`/`.csproj`...) com detalhe nativo (Qt, standard de
+C++ pelo `CXX_STANDARD`/`cxx_std_`, Node por `engines`/`.nvmrc`), e o interpretador do Axio só entra
+se o projeto for mesmo Python. Sem marcador nenhum, decide a extensão dominante dos ficheiros.
+
+Medido (2026-10-06): Axio -> `Python 3.14.2, JavaScript/Node`; DRAFTCAD -> `C++ (CMake), Qt 6, C++17`;
+pasta solta de `.cpp`/`.h` -> `C++ (pela extensao dos ficheiros)`; projeto Rust -> `Rust`; projeto Go
+-> `Go` (com as dependências lidas do `Cargo.toml` e do `go.mod`).
+
+Pelo caminho, os **manifestos nativos passaram a ser lidos** (`tools/dependencias.py`:
+`_manifestos_nativos` + vcpkg/Conan/Cargo/Go): `find_package` e `pkg_check_modules` do `CMakeLists.txt`
+são as dependências de um projeto CMake, e o retrato dizia "sem manifestos detectados" a um projeto
+CMake inteiro. DRAFTCAD -> `CMakeLists.txt (2 pacotes CMake): Qt6, Vulkan`. É o que torna verdadeira
+a regra 4.1 (o manifesto é a fonte canónica da stack) para projetos que não são Python.
+
 ## O que falta (medido, não suposto)
 
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
-- **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: `detetar.py` cai em "desconhecido"
-  (os tipos são cmake/msbuild/qmake/python/npm/cargo/go/make). Já não mente sobre o kit (ver a
-  secção "Qualquer linguagem"), mas continua a não reconhecer **só código**.
+- **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: `detetar.py` (o motor de build) cai em
+  "desconhecido" — os tipos são cmake/msbuild/qmake/python/npm/cargo/go/make. Já não mente sobre o
+  kit (ver a secção "Qualquer linguagem") e o RETRATO do contexto já a identifica
+  (`C++ (pela extensao dos ficheiros)`, medido 2026-10-06), mas o motor ainda não tem caminho de
+  compilação para **só código**.
+- **Dependências nativas atrasadas**: o bloco de manutenção do prompt mede PyPI/npm; vcpkg, Conan,
+  NuGet e Cargo ainda não têm verificação de "está atrás do registo" (o manifesto já é lido, a
+  versão publicada ainda não é comparada).
 - **A árvore agrupada** por categoria no explorer: quem sabe os ficheiros de cada alvo é a
   CMake File API — uma versão por extensão de ficheiro seria palpite e foi descartada.
 - **Erros do MSBuild/MSVC** chegam (ao card e a mim) mas ainda não são clicáveis no Monaco. A

@@ -464,10 +464,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 559,
+        "linha": 581,
         "conferido": [
-          1790296602.906,
-          28758
+          1790370079.66,
+          29491
         ]
       }
     },
@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790114413.563,
-          10949
+          1790371613.387,
+          11034
         ]
       }
     },
@@ -606,8 +606,8 @@
         "arquivo": "src/backend/services/process_manager.py",
         "linha": 70,
         "conferido": [
-          1789675386.782,
-          9155
+          1790367916.333,
+          9589
         ]
       }
     },
@@ -803,10 +803,10 @@
       "descricao": "Decide que executaveis tool_executar_processo pode correr. Um conjunto de constantes de familia perto do topo do ficheiro (linha ~120): linguagens, gestores de pacotes (npm/yarn/pnpm/bun/deno/npx, pip/uv/poetry/pipx), compiladores, linters/testes (pytest/ruff/mypy/eslint/vite/tsc/electron...), git/nuvem/contentores, midia, rede (curl/netstat), tasklist/taskkill, sqlite3, tar/zip. FICAM DE FORA: shells (powershell/pwsh/cmd/bash/wsl), administracao do sistema (reg/winget/choco/schtasks) e o que apaga sem undo (del/rm). A familia npm e restrita por subcomando - `publish` nunca. NAO e fronteira de seguranca: tool_executar_python/executar_js correm codigo arbitrario sem passar por aqui; e um travao ergonomico. E so trava as MINHAS chamadas - routes/terminal.py:163 (iniciar_processo) nao passa por aqui, logo nunca bloqueia o utilizador. Desde 2026-09-19 tem tres pecas novas: FERRAMENTA_NATIVA (comando -> ferramenta nativa, fonte unica tambem usada por tool_executar_comando), ferramenta_nativa_do_comando (anexa \"Use: <ferramenta>.\" as recusas; python -c -> tool_executar_python, node -e -> tool_executar_js) e comando_destrutivo + COMANDOS_DESTRUTIVOS, que recusa 13 padroes irreversiveis (git reset --hard, git clean -f/-d/-x, git checkout/restore ., git push --force, git branch -D, rm -rf, del /s, rmdir /s, format X:, shutdown, docker prune, taskkill /F /IM). NAO confundir com comando_inicia_axio (src/backend/services/process_manager.py:15), que e outra lista, so para recusar arrancar um segundo Axio na raiz.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 169,
+        "linha": 200,
         "conferido": [
-          1790104459.25,
-          39755
+          1790371293.277,
+          43973
         ]
       }
     },
@@ -823,10 +823,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 641,
+        "linha": 663,
         "conferido": [
-          1790296602.906,
-          28758
+          1790370079.66,
+          29491
         ]
       }
     },
@@ -2106,10 +2106,10 @@
       "descricao": "Descobre os comandos de arranque plausiveis de uma pasta (a que o explorer mostra), expostos em GET /api/terminal/sugestoes?path=<rel> e consumidos pelos cards de sugestoes. Regras: package.json com scripts start/dev/serve; ficheiros .py com ponto de entrada (o ponto de entrada e decidido por AST - guarda `if __name__ == '__main__'` ou chamada app/uvicorn/socketio.run -, nunca por procura de texto); Docker Compose, Makefile, Cargo.toml, go.mod e ficheiros .bat. Limite de 6, sem repetidos. Le so o primeiro nivel da pasta. O resultado passa por _sem_recusados: quando a pasta E a raiz do Axio (APP_ROOT), saem as sugestoes que a rota /api/terminal/exec recusaria (npm start, python app.py, flask run) - um card que nunca arranca e ruido; fora da raiz nada e filtrado.",
       "localizacao": {
         "arquivo": "src/backend/services/sugestoes.py",
-        "linha": 27,
+        "linha": 28,
         "conferido": [
-          1789592864.27,
-          5112
+          1790369088.857,
+          6837
         ]
       }
     },
@@ -2157,8 +2157,8 @@
         "arquivo": "src/backend/services/process_manager.py",
         "linha": 143,
         "conferido": [
-          1789675386.782,
-          9155
+          1790367916.333,
+          9589
         ]
       }
     },
@@ -2176,8 +2176,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790114413.563,
-          10949
+          1790371613.387,
+          11034
         ]
       }
     },
@@ -2200,8 +2200,8 @@
         "arquivo": "src/backend/services/process_manager.py",
         "linha": 209,
         "conferido": [
-          1789675386.782,
-          9155
+          1790367916.333,
+          9589
         ]
       }
     },
@@ -2323,10 +2323,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 301,
+        "linha": 347,
         "conferido": [
-          1790104459.25,
-          39755
+          1790371293.277,
+          43973
         ]
       }
     },
@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 86,
         "conferido": [
-          1789840669.457,
-          15654
+          1790371613.299,
+          16703
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 94,
         "conferido": [
-          1789840669.457,
-          15654
+          1790371613.299,
+          16703
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 139,
         "conferido": [
-          1789840669.457,
-          15654
+          1790371613.299,
+          16703
         ]
       }
     },
@@ -4667,10 +4667,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 329,
+        "linha": 375,
         "conferido": [
-          1790104459.25,
-          39755
+          1790371293.277,
+          43973
         ]
       }
     },
@@ -5060,6 +5060,41 @@
           1790301868.417,
           34584
         ]
+      }
+    },
+    {
+      "termo": "auditar o projeto c++",
+      "aliases": [
+        "auditoria c++",
+        "conferir o c++",
+        "o que falta definir",
+        "simbolos repetidos no c++"
+      ],
+      "identificador": "tool_auditar_cpp",
+      "descricao": "Cruza o que cada ficheiro C/C++ DECLARA com o que DEFINE (linker, ODR, includes quebrados, cabecalho sem guarda). Le a arvore do tree-sitter em tools/cpp.py.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/cpp_auditoria.py",
+        "linha": 179,
+        "conferido": [
+          1790370418.384,
+          11267
+        ]
+      }
+    },
+    {
+      "termo": "stack do projeto",
+      "aliases": [
+        "stack",
+        "informacoes da stack",
+        "linguagens do projeto",
+        "que linguagem usa o projeto",
+        "stack da estrutura do projeto"
+      ],
+      "identificador": "_detectar_stack",
+      "descricao": "A linha \"Stack:\" do bloco ESTRUTURA DO PROJETO e do painel de informacoes. Passou a ler o que o PROJETO aberto declara (CMakeLists/package.json/Cargo.toml/go.mod/.sln) com detalhe nativo (Qt, C++ standard, Node); o interpretador do Axio so entra se o projeto for mesmo Python. Sem marcador, decide a extensao dominante dos ficheiros.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/projeto_info.py",
+        "linha": 123
       }
     }
   ]
