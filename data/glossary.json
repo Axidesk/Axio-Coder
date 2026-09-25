@@ -1169,8 +1169,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1549,
         "conferido": [
-          1790299496.228,
-          73915
+          1790301323.208,
+          73959
         ]
       }
     },
@@ -1680,10 +1680,10 @@
       "descricao": "Diff de duas colunas do retrato (Codigo Substituido): cada lado tem a sua rolagem horizontal e o scrollLeft das duas anda junto por files.js:sincronizarColunasDiff (listener em CAPTURE no contentor, porque o evento scroll nao borbulha; instalado nos contentores da doc e do historico). Sem a rolagem, a linha longa (ja sem quebra, como no Monaco) pintava 328px por cima da coluna vizinha. Medido: coluna de 279 com scrollWidth 608 e barra de 8px.",
       "localizacao": {
         "arquivo": "src/frontend/style.css",
-        "linha": 225,
+        "linha": 224,
         "conferido": [
-          1790299933.129,
-          15437
+          1790301210.495,
+          15396
         ]
       }
     },
@@ -2242,8 +2242,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1129,
         "conferido": [
-          1790299496.228,
-          73915
+          1790301323.208,
+          73959
         ]
       }
     },
@@ -4431,8 +4431,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 245,
         "conferido": [
-          1790299954.246,
-          34806
+          1790301208.283,
+          34791
         ]
       }
     },
@@ -4445,8 +4445,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 207,
         "conferido": [
-          1790299954.246,
-          34806
+          1790301208.283,
+          34791
         ]
       }
     },
@@ -4838,8 +4838,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 112,
         "conferido": [
-          1790299954.246,
-          34806
+          1790301208.283,
+          34791
         ]
       }
     },
@@ -4878,8 +4878,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 550,
         "conferido": [
-          1790299954.246,
-          34806
+          1790301208.283,
+          34791
         ]
       }
     },
@@ -4935,8 +4935,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 117,
         "conferido": [
-          1790299954.246,
-          34806
+          1790301208.283,
+          34791
         ]
       }
     },
@@ -5031,11 +5031,11 @@
         "linha do ja enviada",
         "marca do aviao no painel"
       ],
-      "identificador": "git_panel.js:marcaDoPonto / .git-marca-enviada",
-      "descricao": "A label \"Ja enviada para o GitHub\" saiu do painel (2026-10) e virou o POPUP do aviao: o cabecalho passa a ser so o icone do aviao (svgDoAviao, na cor --text-suave) mais o hash na cor da hash (--git-cor-hash) mais o + logo a seguir. O corpo recolhido mantem \"Tarefa 3 - <mensagem>\". Quem decide que a tarefa esta enviada e cards.js:enviadaParaOServidor - a MESMA funcao que governa o aviao do card. As duas marcas saem de git_panel.js:marcaDoPonto(enviado, valor).",
+      "identificador": "git_panel.js:marcaDoPonto / .git-marca",
+      "descricao": "A label \"Ja enviada para o GitHub\" saiu do painel (2026-10) e virou o POPUP do aviao: o cabecalho passa a ser so o icone do aviao (svgDoAviao) mais o hash na cor da hash (--git-cor-hash, rgb 107,114,128) mais o + logo a seguir. O corpo recolhido mantem \"Tarefa N - <mensagem>\", com o prefixo em --git-cor-tarefa e a mensagem em --git-cor-commit. O icone e o hash partilham a classe .git-marca (git.css:398) e alinham em baseline. Quem decide que a tarefa esta enviada e cards.js:enviadaParaOServidor - a MESMA funcao que governa o aviao do card; as duas marcas saem de git_panel.js:marcaDoPonto(enviado, valor).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 272
+        "linha": 273
       }
     },
     {
@@ -5051,7 +5051,11 @@
       "descricao": "A \"Esta tarefa\" deixou de ser uma label (2026-10): o cabecalho passou a ser a MARCA do ponto - o icone do bookmark (svgDoPonto) com o popup \"Salvo localmente\" ou, se o ponto ja subiu, o aviao com \"Ja enviada para o GitHub\" -, seguidos do hash na MESMA cor da hash do painel (--git-cor-hash, rgb 107,114,128) e do +. Vive DENTRO da seccao do Repositorio, abaixo das etiquetas: quem separa dali e a .git-separa, que abre o \"Por subir\". O bloco leva padding-left 10px - a MESMA indentacao do icone dos chips (ramo e etiquetas) -, para o icone e o hash alinharem com o que esta acima. O corpo e \"Tarefa N - mensagem\", com o prefixo fixo fora do input em --git-cor-tarefa e a mensagem em --git-cor-commit. Nasce aberto no modo manual e recolhido no automatico. Sem ponto e sem ficheiros fica so o nome, sem icone.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 271
+        "linha": 271,
+        "conferido": [
+          1790301208.283,
+          34791
+        ]
       }
     }
   ]
