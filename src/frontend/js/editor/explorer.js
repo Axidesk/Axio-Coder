@@ -279,8 +279,10 @@ export function renderEntry(entry) {
     return li;
 }
 function renderGrupo(entry, li, row) {
-    row.innerHTML = state.ICON_FOLDER + '<span>' + entry.nome + '</span>';
+    const projeto = entry.nivel === 'projeto';
+    row.innerHTML = (projeto ? state.ICON_PROJETO : state.ICON_GRUPO) + '<span>' + entry.nome + '</span>';
     row.classList.add('explorer-dir', 'explorer-grupo');
+    if (projeto) row.classList.add('explorer-projeto');
     if (entry.detalhe) row.title = entry.nome + ' - ' + entry.detalhe;
     li.appendChild(row);
     const childContainer = document.createElement('div');

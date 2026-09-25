@@ -71,12 +71,57 @@ assuntos: um lê UM ficheiro, o outro julga o PROJETO inteiro. (Ver a secção s
       `search`, em XML) e resolve o componente que traz cada módulo em falta, com a allowlist
       aberta aos subcomandos de consulta e instalação. **Bloqueado pela própria Qt** nesta máquina
       — ver a secção "Instalar o que falta".
-- [ ] **Fase 4** — o `.sln` do Tibia: leitura por `msbuild -getItem` e o retarget 2015→2022
-      numa cópia, provado a compilar.
+- [x] **Arrumação da árvore** (2026-10-06) — o explorer passou a ler a arrumação que o projeto
+      declara: CMake pela File API, Visual Studio pelos filtros do `.vcxproj.filters` e uma pasta de
+      código sem projeto agrupada pelo tipo. Sem azul, sem mover nada. Ver a secção própria.
+- [ ] **Fase 4** — o `.sln` do Tibia: leitura das **flags** por `msbuild -getItem` e o retarget
+      2015→2022 numa cópia, provado a compilar.
 - [ ] **Fase 5** — clangd (opcional): ir à definição, erro enquanto se escreve.
 - [ ] **Criar do zero** — esqueleto de projeto novo (CMake/Qt/Python) escolhido pelo tipo de
       programa que o utilizador pedir.
 - [ ] **Captura ao vivo da janela no preview** (WGC, já pendente no plano).
+
+## A arrumação da árvore: quem manda é o projeto (2026-10-06)
+
+O explorer já mostrava os ficheiros do DRAFTCAD arrumados pelo CMake, mas tudo a azul e os grupos
+soltos ao lado das pastas reais — e um projeto do **Visual Studio** (o Tibia74) carregava como uma
+pasta normal. A pergunta que resolveu as duas coisas foi uma só: **quem sabe onde cada ficheiro fica
+é o projeto, nunca a extensão do nome.**
+
+| Projeto | Fonte da arrumação |
+| --- | --- |
+| CMake | File API (`sourceGroups`) — `builds/cmake_api.py` |
+| Visual Studio (`.sln`/`.vcxproj`) | os filtros do `.vcxproj.filters` — `builds/msbuild.py` |
+| Pasta de código sem projeto nenhum | agrupada pelo tipo, como o VS faria ao criar um projeto lá |
+
+O `.vcxproj` diz QUE ficheiros pertencem ao projeto e o `.vcxproj.filters` diz em que pasta virtual
+cada um fica (Source Files, Header Files, Resource Files) — é a mesma ideia da File API do CMake, e
+lê-se do TEXTO, sem o Visual Studio instalado e sem avaliar condições. **Não confundir com a File API
+do MSBuild** (`msbuild -getItem`), que avalia o projeto e fica para a Fase 4 (as flags reais).
+
+`builds/arvore.py` passou a ser um motor só: monta uma árvore de nós virtual (prefixo `@arvore`),
+escolhe a fonte pelo que a pasta tiver e resolve por caminho. Duas decisões que valem:
+
+- **O que está num grupo sai da lista solta.** `ficheiros_agrupados` diz à rota quais os ficheiros já
+  representados dentro de um grupo, e a raiz do explorer deixa de os repetir. É isto que faz uma
+  pasta de `.cpp`/`.h` aparecer arrumada em Fontes/Cabeçalhos em vez de 150 ficheiros à solta — e no
+  DRAFTCAD tira o `main.qml` e o `qml.qrc` da raiz (ficam em Resources, como no Qt Creator).
+- **Nome repetido mostra o caminho.** Dois ficheiros com o mesmo nome no mesmo grupo deixam de ser
+  indistinguíveis: o rótulo passa a ser o caminho relativo.
+
+**Cor e ícone.** Os grupos deixaram de ser todos azuis: o nó de projeto tem ícone próprio e cor de
+destaque (`--text-branco`), os sub-grupos (Fontes/Cabeçalhos) ficam discretos (`--text-suave`) e as
+pastas reais continuam amarelas. Zero CSS azul na árvore.
+
+Medido (2026-10-06):
+
+- **Tibia74:** 1 nó de projeto (`Tibia74`, aplicação) com **81 cabeçalhos** e **72 fontes**;
+  `src/account.h` cai no filtro `Header Files`. A pasta `src` sozinha dá os mesmos grupos, sem
+  projeto nenhum.
+- **DRAFTCAD:** os 4 alvos do CMake (DraftCAD, dwg2dxf, doc, dxfrw); Fontes com 35 ficheiros; e
+  `main.qml`/`qml.qrc` fora da raiz.
+- **Axio** (projeto Python) e uma pasta sem C/C++: **zero grupos** — a árvore virtual não aparece
+  onde não faz sentido.
 
 ## Ferramentas C/C++ (2026-10-06)
 
@@ -262,21 +307,19 @@ a regra 4.1 (o manifesto é a fonte canónica da stack) para projetos que não s
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
-- **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: `detetar.py` (o motor de build) cai em
-  "desconhecido" — os tipos são cmake/msbuild/qmake/python/npm/cargo/go/make. Já não mente sobre o
-  kit (ver a secção "Qualquer linguagem") e o RETRATO do contexto já a identifica
-  (`C++ (pela extensao dos ficheiros)`, medido 2026-10-06), mas o motor ainda não tem caminho de
-  compilação para **só código**.
+- **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /
+  Cabeçalhos) e o retrato do contexto identifica-a (`C++ (pela extensao dos ficheiros)`). O que
+  falta é o **motor de build**: `detetar.py` cai em "desconhecido" (os tipos são
+  cmake/msbuild/qmake/python/npm/cargo/go/make), logo não há caminho de compilação para só código.
 - **Dependências nativas atrasadas**: o bloco de manutenção do prompt mede PyPI/npm; vcpkg, Conan,
   NuGet e Cargo ainda não têm verificação de "está atrás do registo" (o manifesto já é lido, a
   versão publicada ainda não é comparada).
-- **A árvore agrupada** por categoria no explorer: quem sabe os ficheiros de cada alvo é a
-  CMake File API — uma versão por extensão de ficheiro seria palpite e foi descartada.
+
 - **Erros do MSBuild/MSVC** chegam (ao card e a mim) mas ainda não são clicáveis no Monaco. A
   saída do MSBuild é **localizada em português** ("Arquivo de projeto não existe"); só os
   códigos ficam em inglês (`MSB1009`).
-- **`.sln` e `.pro`** ainda não têm leitor (a resposta da ferramenta di-lo, em vez de falhar
-  em silêncio).
+- **`.pro`** (qmake) não tem leitor: sem API oficial de fontes, a resposta da ferramenta di-lo em vez
+  de falhar em silêncio. O `.sln` já é lido para a árvore; falta-o para as flags.
 - **`.qmake`** (`.pro`) não tem API oficial de fontes.
 - **Motor de jogo** (Unreal/Unity) fica de fora: tem pipeline próprio.
 
@@ -292,4 +335,6 @@ a regra 4.1 (o manifesto é a fonte canónica da stack) para projetos que não s
 - CMake Presets — https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html
 - Qt: instalar e gerir por linha de comandos — https://doc.qt.io/qt-6/get-and-install-qt-cli.html
 - MSBuild: avaliar itens e propriedades (`-getItem`) — https://learn.microsoft.com/en-us/visualstudio/msbuild/evaluate-items-and-properties
+- Ficheiros de filtros do Visual C++ (`.vcxproj.filters`) — https://learn.microsoft.com/en-us/cpp/build/reference/vcxproj-filters-files
+- Esquema dos ficheiros de projeto do MSBuild — https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference
 - Portar/retarget de projetos Visual C++ — https://learn.microsoft.com/en-us/cpp/porting/overview-of-potential-upgrade-issues-visual-cpp
