@@ -278,12 +278,14 @@ export function renderEntry(entry) {
     }
     return li;
 }
+function iconeDoNivel(nivel) {
+    return nivel === 'pasta' ? state.ICON_FOLDER : state.ICON_GRUPO;
+}
 function renderGrupo(entry, li, row) {
-    const projeto = entry.nivel === 'projeto';
-    row.innerHTML = (projeto ? state.ICON_PROJETO : state.ICON_GRUPO) + '<span>' + entry.nome + '</span>';
-    row.classList.add('explorer-dir', 'explorer-grupo');
-    if (projeto) row.classList.add('explorer-projeto');
-    if (entry.detalhe) row.title = entry.nome + ' - ' + entry.detalhe;
+    const nivel = entry.nivel || 'grupo';
+    row.innerHTML = iconeDoNivel(nivel) + '<span>' + entry.nome + '</span>';
+    row.classList.add('explorer-dir', 'explorer-grupo', 'explorer-' + nivel);
+    row.title = entry.detalhe ? entry.nome + ' - ' + entry.detalhe : entry.nome;
     li.appendChild(row);
     const childContainer = document.createElement('div');
     childContainer.className = 'explorer-children hidden';

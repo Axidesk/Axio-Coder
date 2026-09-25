@@ -150,7 +150,7 @@ Medido pela rota real (2026-10-06):
 
 | Pasta aberta | Raiz mostra |
 | --- | --- |
-| DRAFTCAD (CMake, 4 alvos) | 4 nós de projeto, e nada mais |
+| DRAFTCAD (CMake) | 1 nó de projeto, e nada mais |
 | Tibia74 (`.sln`) | 1 nó (`Tibia74`) — fora o `DATA ORIGINAIS`, `Debug`, `Release`, `.sln`, `.VC.db` |
 | Tibia74 / projeto | Fontes, Cabeçalhos, Recursos (o terceiro vazio) |
 | Tibia74 / Cabeçalhos | 81 ficheiros |
@@ -158,7 +158,74 @@ Medido pela rota real (2026-10-06):
 | Axio (sem projeto) | 17 entradas, como sempre |
 
 O ícone do nó de projeto trocou: em vez da caixa ("pacote") ficou uma **janela mínima** (retângulo +
-barra no topo), o mesmo que o Qt Creator usa para o projeto.
+barra no topo). **Superado no mesmo dia** — ver a secção seguinte: nenhum nível tem glifo próprio.
+
+### A árvore aninhada e os "Módulos do CMake" (2026-10-06, no mesmo dia)
+
+A pergunta que abriu isto: *"porque é que o nosso fica solto e não com a mesma estrutura do Qt?"* — com
+uma captura do Qt Creator ao lado. Ele tinha razão e a causa era simples: cada alvo era um nó de topo,
+sem hierarquia nenhuma.
+
+**A hierarquia existe na própria resposta do CMake.** O `codemodel` traz, dentro de cada configuração,
+um campo `directories` com `source`, `parentIndex` e `targetIndexes`, e cada alvo diz em que
+`directoryIndex` nasce. É daqui que o Qt Creator desenha a vista de projeto — não há nada a adivinhar.
+Medido no DRAFTCAD: três diretórios (`.`, `libs/libdxfrw`, `libs/libdxfrw/dwg2dxf`) e quatro alvos com
+conteúdo.
+
+O que mudou em `arvore.py`:
+
+- o nó de topo passou a ser **o projeto** (nome do `project()`), e os alvos ficam dentro da pasta onde
+  nascem, com os grupos de fontes dentro deles;
+- as pastas que o CMake **não** nomeia (o `libs`, acima de `libs/libdxfrw`) são criadas a partir do
+  caminho (`_pasta_virtual`) — sem isto a árvore ficava plana na mesma;
+- o `CMakeLists.txt` de cada pasta aparece como **primeiro** filho dela;
+- `ALL_BUILD`, `ZERO_CHECK` e os `*_autogen` caem sozinhos: ficam sem grupos depois de excluir o que é
+  `gerado`;
+- o `path` dos nós virtuais passou de **nome** para **índice** (`@arvore/0/2`). Armadilha medida: o
+  `entradas_raiz` ficou a montar o caminho pelo nome e a árvore abria **vazia** — só a prova pela rota
+  é que o apanhou.
+
+**Os "Módulos do CMake".** Também não são invenção: o CMake considera os ficheiros dele parte do
+projeto e lista-os no objeto `cmakeFiles` (todos os que leu na configuração), com `isCMake` a dizer
+quais vêm da instalação. Medido: **1007 inputs**, dos quais **2** são do projeto (`libdxfrw.pc.in` e
+`libdxfrwConfig.cmake`). O nó fica com os do projeto que terminam em `.cmake` / `.cmake.in` / `.pc.in`;
+os da instalação ficam de fora, ou a lista teria milhares. Fonte: o próprio mantenedor do Qt Creator
+(Tobias Hunger, lista qt-creator) — *"CMake does consider its own files as part of a project. That is
+why you see them"*.
+
+**Medido pela rota real** (processo novo, `/api/explorer` no DRAFTCAD):
+
+```
+DraftCAD [projeto]
+    CMakeLists.txt
+    DraftCAD [alvo aplicação]   -> Fontes 35, Cabeçalhos 40, Outros 2 (qml.qrc, main.qml)
+    libs [pasta]
+        libdxfrw [pasta]
+            CMakeLists.txt
+            doc [alvo]          -> Outros 1
+            dxfrw [alvo biblioteca estática] -> Fontes 20, Cabeçalhos 19
+            dwg2dxf [pasta]
+                CMakeLists.txt
+                dwg2dxf [alvo aplicação] -> Fontes 2, Cabeçalhos 2
+    Módulos do CMake
+        libs/libdxfrw -> libdxfrw.pc.in
+                   cmake -> libdxfrwConfig.cmake
+```
+
+Tibia74 (`.sln`): `Tibia74 [projeto]` → Fontes (72), Cabeçalhos (81), Recursos (vazio).
+`Projects/Tibia74/src` sem projeto: Fontes (72), Cabeçalhos (80). Axio (Python): 17 entradas, zero
+grupos.
+
+**O que ficou de fora, e digo-o:** o grupo que o CMake deixa **sem nome** (no DRAFTCAD, o `qml.qrc` e o
+`main.qml`) sai como "Outros"; o Qt Creator chama-lhe "Resources" porque é **ele** que classifica
+ficheiros `.qrc`/`.qml` — o CMake não o faz. E o `dwg2dxf` fica em pasta própria com o alvo dentro (a
+pasta tem o seu `CMakeLists.txt`); nas capturas do Qt o nó aparece colapsado, logo não se vê se ele
+aninha ou não.
+
+**Ícones.** O nó de projeto deixou de ter glifo próprio: todos os níveis usam a **mesma pasta** e
+separam-se por **cor e peso** (`workspace.css`) — projeto em `--text-branco` a negrito, alvo no azul de
+ação, pasta em `--text-corpo`, grupo em `--text-suave`. `state.ICON_PROJETO` foi **removido** (a caixa
+3D e o retângulo com barra liam-se como "pacote", que foi a queixa). Ficou registado nas preferências.
 
 Fontes: [cmake-file-api(7)](https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html) e
 [vcxproj.filters files](https://learn.microsoft.com/en-us/cpp/build/reference/vcxproj-filters-files).

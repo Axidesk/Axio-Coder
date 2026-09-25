@@ -79,6 +79,11 @@
       "area": "camada de codigo",
       "texto": "Na camada de codigo (coluna 3 do doc e do historico), o cabecalho com o CAMINHO do ficheiro fica visivel enquanto a camada esta aberta, e nesse momento as abas do editor NAO aparecem (a barra de abas do doc recolhe). Clicar no TITULO revela o ficheiro na arvore do explorer - nunca entrega ao Monaco; a entrega ao Monaco e o clique no CORPO do codigo, e e ele que fecha a camada e traz as abas de volta. O titulo e so informacao e navegacao, nao uma acao sobre o editor.",
       "atualizado": "2026-09-22 23:12:56"
+    },
+    {
+      "area": "icones",
+      "texto": "Icones minimalistas: uma forma so, poucos tracos. Nada de formas cheias ou com detalhe interno (a caixa 3D e o retangulo com barra liam-se como \"pacote\"). Na arvore do explorer o nivel separa-se pela COR e pelo PESO, nunca por um glifo diferente: projeto = pasta em --text-branco a negrito, alvo = pasta em --azul-acao, pasta real = pasta amarela, grupo = pasta em --text-suave. Ficheiro = folha em --text-escuro.",
+      "atualizado": "2026-09-26 00:05:05"
     }
   ]
 }

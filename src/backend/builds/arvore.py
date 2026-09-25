@@ -1,9 +1,11 @@
 """A arvore do projeto como o sistema de build a ve, para o explorer mostrar agrupado.
 
 Quem sabe onde cada ficheiro fica e o proprio projeto, nunca a extensao do nome: o CMake responde pela
-File API (`sourceGroups`) e o Visual Studio escreve os filtros no `.vcxproj.filters`. Ler essa
-declaracao permite mostrar a MESMA arrumacao que o Qt Creator e o Solution Explorer mostram, sem mover
-um unico ficheiro do disco. Uma pasta de codigo sem projeto nenhum e agrupada pelo tipo, como o Visual
+File API (`sourceGroups`, os `directories` e o `cmakeFiles`) e o Visual Studio escreve os filtros no
+`.vcxproj.filters`. Ler essa declaracao permite mostrar a MESMA arrumacao que o Qt Creator e o Solution
+Explorer mostram, sem mover um unico ficheiro do disco: o projeto na raiz, as pastas pelo caminho que
+ele proprio declara, cada alvo com os seus grupos de fontes e, quando o CMake os leu, os scripts do
+projeto num no a parte. Uma pasta de codigo sem projeto nenhum e agrupada pelo tipo, como o Visual
 Studio faria ao criar um projeto la.
 
 Nada aqui toca no disco: sao caminhos virtuais com o prefixo `@arvore`, resolvidos pela rota
@@ -44,7 +46,7 @@ def e_no_virtual(chave):
 
 def entradas_raiz(pasta):
     """Nos de topo: um projeto (ou um grupo, quando a pasta nao tem projeto nenhum)."""
-    return [_entrada(no, [no["nome"]]) for no in _nos(pasta)]
+    return [_entrada(no, [str(i)]) for i, no in enumerate(_nos(pasta))]
 
 
 def tem_projeto(pasta):
@@ -55,19 +57,19 @@ def tem_projeto(pasta):
     (logs, .VC.db, ficheiros de build) ficam de fora. Sem projeto, a raiz continua a
     mostrar as pastas e a lista solta.
     """
-    return any(no["filhos"] for no in _nos(pasta))
+    return any(no.get("projeto") for no in _nos(pasta))
 
 
 def entradas(pasta, chave):
-    """Filhos de um no virtual: um projeto da os grupos, um grupo da os ficheiros."""
+    """Filhos de um no virtual: os sub-nos e, nos grupos, os ficheiros que ele mostra."""
     partes = [p for p in (chave or "").split("/")[1:] if p]
     no = _descer(_nos(pasta), partes)
     if no is None:
         return []
-    if no["filhos"]:
-        return [_entrada(filho, partes + [filho["nome"]]) for filho in no["filhos"]]
     rotulos = _rotulos(no["ficheiros"])
-    return [{"nome": rotulos[f], "tipo": "file", "path": f} for f in no["ficheiros"]]
+    return [{"nome": rotulos[f], "tipo": "file", "path": f} for f in no["ficheiros"]] + [
+        _entrada(filho, partes + [str(i)]) for i, filho in enumerate(no["filhos"])
+    ]
 
 
 def ficheiros_agrupados(pasta):
@@ -92,40 +94,135 @@ def _nos(pasta):
 
 
 def _montar(pasta):
-    projetos = _projetos_cmake(pasta) + msbuild.projetos(pasta)
-    if projetos:
-        return [_do_projeto(p) for p in projetos]
-    return [_do_grupo(g) for g in msbuild.grupos_soltos(pasta)]
+    nos = _projetos_cmake(pasta) + _projetos_msbuild(pasta)
+    if nos:
+        return nos
+    return [_no_grupo(g) for g in msbuild.grupos_soltos(pasta)]
 
 
 def _projetos_cmake(pasta):
-    """Alvos do CMake com as fontes agrupadas, pelo que o proprio CMake respondeu."""
+    """O projeto como o CMake o declara: a arvore de pastas com os alvos dentro de cada uma."""
     pasta_build = _pasta_com_resposta(pasta)
-    if not pasta_build:
+    estrutura = cmake_api.estrutura(pasta_build) if pasta_build else {}
+    if not estrutura:
         return _projeto_por_texto(pasta)
-    alvos = [_alvo_cmake(a) for a in cmake_api.alvos(pasta_build)]
-    alvos = _sem_alvos_repetidos([a for a in alvos if a["grupos"]])
-    alvos.sort(key=lambda a: (a["tipo"] != "EXECUTABLE", a["nome"].lower()))
-    return alvos
+    return [_no_cmake(pasta, estrutura, pasta_build)]
 
 
-def _alvo_cmake(dados):
-    """So ficam os ficheiros do projeto: fora a arvore de build e o que o CMake gerou."""
+def _no_cmake(pasta, estrutura, pasta_build):
+    origem = estrutura["origem"]
+    pastas = {}
+    _pasta_virtual(pastas, "")
+    for diretorio in estrutura["directorios"]:
+        no = _pasta_virtual(pastas, diretorio["pasta"])
+        alvos = _sem_alvos_repetidos([a for a in diretorio["alvos"] if a["grupos"]])
+        alvos.sort(key=lambda a: (a["tipo"] != "EXECUTABLE", a["nome"].lower()))
+        no["alvos"].extend(alvos)
+    raiz = _fechar_no(pastas[""], pasta, origem)
+    modulos = _no_dos_modulos(pasta_build, pasta, origem)
+    if modulos:
+        raiz["filhos"].append(modulos)
+    return {
+        "nome": estrutura.get("nome") or os.path.basename(pasta),
+        "detalhe": "projeto",
+        "projeto": True,
+        "filhos": raiz["filhos"],
+        "ficheiros": raiz["ficheiros"],
+    }
+
+
+def _pasta_virtual(pastas, caminho):
+    """No da pasta `caminho` (relativa, com `/`), criando as maes que faltarem.
+
+    A File API so lista as pastas que tem `CMakeLists.txt`; as que so existem no caminho
+    de outra (`libs`, acima de `libs/libdxfrw`) entram por aqui, ou a arvore ficava plana.
+    """
+    if "" not in pastas:
+        pastas[""] = {
+            "nome": "", "detalhe": "", "filhos": [], "alvos": [], "ficheiros": [], "_rel": ""
+        }
+    atual = pastas[""]
+    acumulado = ""
+    for parte in _partes_do_caminho(caminho):
+        acumulado = f"{acumulado}/{parte}" if acumulado else parte
+        if acumulado not in pastas:
+            filho = {
+                "nome": parte,
+                "detalhe": acumulado,
+                "pasta": True,
+                "filhos": [],
+                "alvos": [],
+                "ficheiros": [],
+                "_rel": acumulado,
+            }
+            pastas[acumulado] = filho
+            atual["filhos"].append(filho)
+        atual = pastas[acumulado]
+    return atual
+
+
+def _partes_do_caminho(caminho):
+    return [p for p in (caminho or "").replace("\\", "/").split("/") if p and p != "."]
+
+
+def _fechar_no(no, pasta, origem):
+    """Fecha o no: alvos e subpastas como filhos, o CMakeLists da pasta como ficheiro."""
+    rel = no.pop("_rel", "")
+    alvos = [a for a in (_no_do_alvo(alvo, pasta, origem) for alvo in no.pop("alvos", [])) if a]
+    no["filhos"] = alvos + [_fechar_no(filho, pasta, origem) for filho in no["filhos"]]
+    manifesto = _manifesto_da_pasta(pasta, origem, rel)
+    no["ficheiros"] = [manifesto] if manifesto else []
+    return no
+
+
+def _no_do_alvo(alvo, pasta, origem):
+    """Um alvo do CMake com os grupos de fontes que ele declara, fora o que o CMake gerou."""
     grupos = [
-        {
+        _no_grupo({
             "nome": grupo["nome"],
             "ficheiros": [
-                f["relativo"] for f in grupo["ficheiros"] if not f["externo"] and not f["gerado"]
+                _relativo_ao_projeto(f["relativo"], pasta, origem)
+                for f in grupo["ficheiros"]
+                if not f["externo"] and not f["gerado"]
             ],
-        }
-        for grupo in dados["grupos"]
+        })
+        for grupo in alvo["grupos"]
     ]
+    grupos = [g for g in grupos if _todos_os_ficheiros(g)]
+    if not grupos:
+        return None
     return {
-        "nome": dados["nome"],
-        "tipo": dados["tipo"],
-        "detalhe": _TIPOS_CMAKE.get(dados["tipo"], "alvo"),
-        "grupos": [g for g in grupos if g["ficheiros"]],
+        "nome": alvo["nome"],
+        "detalhe": _TIPOS_CMAKE.get(alvo["tipo"], "alvo"),
+        "alvo": True,
+        "filhos": grupos,
+        "ficheiros": [],
     }
+
+
+def _no_dos_modulos(pasta_build, pasta, origem):
+    """Os scripts do CMake do projeto, agrupados pelas pastas onde vivem."""
+    ficheiros = [
+        _relativo_ao_projeto(m, pasta, origem) for m in cmake_api.modulos_do_projeto(pasta_build)
+    ]
+    if not ficheiros:
+        return None
+    pastas = {}
+    _pasta_virtual(pastas, "")
+    raiz = pastas[""]
+    for ficheiro in ficheiros:
+        mae = ficheiro.rsplit("/", 1)[0] if "/" in ficheiro else ""
+        _pasta_virtual(pastas, mae)["ficheiros"].append(ficheiro)
+    raiz["nome"] = "Modulos do CMake"
+    raiz["detalhe"] = "scripts do projeto"
+    return _podar(raiz)
+
+
+def _podar(no):
+    no.pop("alvos", None)
+    no.pop("_rel", None)
+    no["filhos"] = [_podar(filho) for filho in no["filhos"]]
+    return no
 
 
 def _projeto_por_texto(pasta):
@@ -145,11 +242,19 @@ def _projeto_por_texto(pasta):
     ficheiros = _ficheiros_de_codigo(pasta, dados.get("pastas_de_build") or [])
     if not ficheiros:
         return []
+    manifesto = "CMakeLists.txt" if os.path.isfile(os.path.join(pasta, "CMakeLists.txt")) else ""
     return [{
         "nome": dados.get("projeto") or alvos[0]["nome"],
-        "tipo": alvos[0]["tipo"],
-        "detalhe": _TIPOS_CMAKE.get(alvos[0]["tipo"], "projeto"),
-        "grupos": msbuild.agrupar_por_tipo(ficheiros, {}, {}),
+        "detalhe": "projeto",
+        "projeto": True,
+        "ficheiros": [manifesto] if manifesto else [],
+        "filhos": [{
+            "nome": alvos[0]["nome"],
+            "detalhe": _TIPOS_CMAKE.get(alvos[0]["tipo"], "alvo"),
+            "alvo": True,
+            "filhos": [_no_grupo(g) for g in msbuild.agrupar_por_tipo(ficheiros, {}, {})],
+            "ficheiros": [],
+        }],
     }]
 
 
@@ -171,30 +276,53 @@ def _relativo(caminho, base):
     return os.path.relpath(caminho, base).replace("\\", "/")
 
 
-def _do_projeto(projeto):
-    return {
-        "nome": projeto["nome"],
-        "detalhe": projeto.get("detalhe") or "projeto",
-        "filhos": [
-            {
-                "nome": _rotulo(grupo["nome"]),
-                "detalhe": "",
-                "filhos": [],
-                "ficheiros": list(grupo["ficheiros"]),
-            }
-            for grupo in projeto["grupos"]
-        ],
-        "ficheiros": [],
-    }
+def _relativo_ao_projeto(relativo, pasta, origem):
+    """O caminho do ficheiro visto da pasta aberta: e por ele que a arvore o abre."""
+    if not origem or not relativo:
+        return relativo
+    absoluto = os.path.join(origem, relativo)
+    return _relativo(absoluto, pasta) if _caminho_dentro(absoluto, pasta) else relativo
 
 
-def _do_grupo(grupo):
-    return {
-        "nome": _rotulo(grupo["nome"]),
-        "detalhe": "",
-        "filhos": [],
-        "ficheiros": list(grupo["ficheiros"]),
-    }
+def _caminho_dentro(caminho, raiz):
+    absoluto = os.path.normcase(os.path.abspath(caminho))
+    base = os.path.normcase(os.path.abspath(raiz))
+    return absoluto == base or absoluto.startswith(base + os.sep)
+
+
+def _manifesto_da_pasta(pasta, origem, rel):
+    """O CMakeLists.txt daquela pasta, quando existe: o Qt Creator mostra-o ao lado dos alvos."""
+    if not origem:
+        return ""
+    absoluto = os.path.join(origem, rel, "CMakeLists.txt") if rel else os.path.join(
+        origem, "CMakeLists.txt"
+    )
+    if not os.path.isfile(absoluto) or not _caminho_dentro(absoluto, pasta):
+        return ""
+    return _relativo(absoluto, pasta)
+
+
+def _projetos_msbuild(pasta):
+    return [
+        {
+            "nome": projeto["nome"],
+            "detalhe": projeto.get("detalhe") or "projeto",
+            "projeto": True,
+            "filhos": [_no_grupo(grupo) for grupo in projeto["grupos"]],
+            "ficheiros": [],
+        }
+        for projeto in msbuild.projetos(pasta)
+    ]
+
+
+def _no_grupo(grupo):
+    """Um grupo do projeto; um filtro aninhado ('Source Files\\nucleo') vira pastas."""
+    partes = [p for p in (grupo["nome"] or "").replace("/", "\\").split("\\") if p] or ["Outros"]
+    partes[0] = _rotulo(partes[0])
+    no = {"nome": partes[-1], "detalhe": "", "filhos": [], "ficheiros": list(grupo["ficheiros"])}
+    for parte in reversed(partes[:-1]):
+        no = {"nome": parte, "detalhe": "", "filhos": [no], "ficheiros": []}
+    return no
 
 
 def _entrada(no, caminho):
@@ -203,17 +331,24 @@ def _entrada(no, caminho):
         "tipo": "grupo",
         "path": f"{PREFIXO}/{'/'.join(caminho)}",
         "detalhe": no["detalhe"],
-        "nivel": "projeto" if no["filhos"] else "grupo",
+        "nivel": _nivel(no),
     }
+
+
+def _nivel(no):
+    for marca in ("projeto", "alvo", "pasta"):
+        if no.get(marca):
+            return marca
+    return "grupo"
 
 
 def _descer(nos, partes):
     atual = None
     candidatos = nos
     for parte in partes:
-        atual = next((n for n in candidatos if n["nome"] == parte), None)
-        if atual is None:
+        if not parte.isdigit() or int(parte) >= len(candidatos):
             return None
+        atual = candidatos[int(parte)]
         candidatos = atual["filhos"]
     return atual
 

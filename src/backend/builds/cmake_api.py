@@ -28,6 +28,8 @@ _CLIENTE_JSON = {"name": "axio", "version": "1.0"}
 
 _PREFERIDAS = ("Debug", "RelWithDebInfo", "Release", "MinSizeRel")
 
+_EXTENSOES_DE_SCRIPT = (".cmake", ".cmake.in", ".pc.in")
+
 
 def escrever_pedido(pasta_build):
     """Deixa o pedido na arvore de build: a proxima geracao do CMake responde-lhe."""
@@ -71,17 +73,78 @@ def resposta(pasta_build):
 
 def alvos(pasta_build, configuracao=""):
     """Alvos do projeto com as fontes agrupadas e as flags, tal como o CMake os modela."""
-    modelo = resposta(pasta_build).get("codemodel") or {}
-    if not isinstance(modelo, dict):
+    return _alvos(_modelo(pasta_build), pasta_build, configuracao)
+
+
+def estrutura(pasta_build, configuracao=""):
+    """A arrumacao do projeto como o CMake a declara: nome, pastas e alvos por pasta.
+
+    O `codemodel` traz `directories` (a hierarquia real das pastas, com `parentIndex`) e
+    `targets` (cada alvo diz em que `directoryIndex` nasce). E daqui que o Qt Creator
+    desenha a vista de projeto, e nao de um palpite pela extensao dos ficheiros.
+    """
+    modelo = _modelo(pasta_build)
+    conf = _configuracao(modelo, configuracao)
+    if not conf:
+        return {}
+    caminhos = modelo.get("paths") or {}
+    alvos = _alvos(modelo, pasta_build, configuracao)
+    return {
+        "origem": _normalizar(caminhos.get("source") or ""),
+        "build": _normalizar(caminhos.get("build") or ""),
+        "nome": _nome_do_projeto(conf),
+        "directorios": [
+            {
+                "pai": item.get("parentIndex", -1),
+                "pasta": _normalizar(item.get("source") or ""),
+                "alvos": [alvos[i] for i in item.get("targetIndexes") or [] if i < len(alvos)],
+            }
+            for item in conf.get("directories") or []
+        ],
+    }
+
+
+def modulos_do_projeto(pasta_build):
+    """Os scripts do CMake que o PROJETO traz, fora os da instalacao do proprio CMake.
+
+    O CMake considera os proprios ficheiros parte do projeto: o `cmakeFiles` lista todos os
+    que leu na configuracao e cada um diz se vem da instalacao (`isCMake`). Os da instalacao
+    ficam de fora - o Qt Creator mostra os do projeto num no proprio, e sem esse corte a
+    lista teria milhares de ficheiros que nao sao do projeto.
+    """
+    resposta_api = resposta(pasta_build)
+    dados = resposta_api.get("cmakeFiles") or {}
+    if not isinstance(dados, dict):
         return []
-    configuracao = configuracao or _configuracao_preferida(modelo)
+    origem = _normalizar(
+        (dados.get("paths") or {}).get("source")
+        or ((resposta_api.get("codemodel") or {}).get("paths") or {}).get("source")
+        or ""
+    )
+    achados = []
+    for item in dados.get("inputs") or []:
+        if item.get("isCMake") or item.get("isGenerated"):
+            continue
+        if not (item.get("path") or "").lower().endswith(_EXTENSOES_DE_SCRIPT):
+            continue
+        absoluto = _absoluto(item["path"], origem)
+        if _dentro_de(absoluto, origem):
+            achados.append(_relativo(absoluto, origem))
+    return _unicos(achados)
+
+
+def _modelo(pasta_build):
+    modelo = resposta(pasta_build).get("codemodel") or {}
+    return modelo if isinstance(modelo, dict) else {}
+
+
+def _alvos(modelo, pasta_build, configuracao):
+    conf = _configuracao(modelo, configuracao)
+    if not conf:
+        return []
     pasta = os.path.join(pasta_build, PASTA_REPLY)
     caminhos = modelo.get("paths") or {}
-    for conf in modelo.get("configurations") or []:
-        if conf.get("name") != configuracao:
-            continue
-        return [_alvo(pasta, item, caminhos) for item in conf.get("targets") or []]
-    return []
+    return [_alvo(pasta, item, caminhos) for item in conf.get("targets") or []]
 
 
 def _configuracao_preferida(modelo):
@@ -90,6 +153,19 @@ def _configuracao_preferida(modelo):
         if preferida in nomes:
             return preferida
     return nomes[0] if nomes else ""
+
+
+def _configuracao(modelo, pedida):
+    nome = pedida or _configuracao_preferida(modelo)
+    return next(
+        (c for c in modelo.get("configurations") or [] if c.get("name") == nome), {}
+    )
+
+
+def _nome_do_projeto(conf):
+    projetos = conf.get("projects") or []
+    raiz = next((p for p in projetos if "parentIndex" not in p), projetos[0] if projetos else {})
+    return raiz.get("name") or ""
 
 
 def _alvo(pasta_reply, item, caminhos):
@@ -145,6 +221,10 @@ def _fontes(fontes, nomes_de_grupo, origem, build):
             "externo": not dentro,
         })
     return saida
+
+
+def _normalizar(caminho):
+    return os.path.normpath(caminho).replace("\\", "/") if caminho else ""
 
 
 def _absoluto(caminho, base):

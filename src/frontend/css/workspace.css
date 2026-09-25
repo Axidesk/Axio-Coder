@@ -239,7 +239,9 @@
 .explorer-file.explorer-selected .explorer-file-icon { color: var(--oliva); }
 .explorer-dir { color: var(--text-corpo); }
 .explorer-grupo { color: var(--text-suave); }
-.explorer-grupo.explorer-projeto { color: var(--text-branco); }
+.explorer-grupo.explorer-pasta { color: var(--text-corpo); }
+.explorer-grupo.explorer-alvo { color: var(--azul-acao); }
+.explorer-grupo.explorer-projeto { color: var(--text-branco); font-weight: 600; }
 .explorer-grupo-icon { flex-shrink: 0; }
 .explorer-file { color: var(--text-escuro); }
 .explorer-row.explorer-error { color: var(--vermelho-vivo); }
