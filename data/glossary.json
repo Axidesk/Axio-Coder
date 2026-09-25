@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790378093.016,
-          12061
+          1790379033.502,
+          12082
         ]
       }
     },
@@ -2176,8 +2176,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790378093.016,
-          12061
+          1790379033.502,
+          12082
         ]
       }
     },
@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 86,
         "conferido": [
-          1790377402.342,
-          16884
+          1790379030.084,
+          16965
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 94,
         "conferido": [
-          1790377402.342,
-          16884
+          1790379030.084,
+          16965
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 139,
         "conferido": [
-          1790377402.342,
-          16884
+          1790379030.084,
+          16965
         ]
       }
     },
@@ -5120,7 +5120,7 @@
         "arquivo": "src/backend/builds/arvore.py",
         "linha": 47,
         "conferido": [
-          1790377443.439,
+          1790379025.023,
           16080
         ]
       }
@@ -5150,7 +5150,7 @@
         "arquivo": "src/backend/builds/arvore.py",
         "linha": 85,
         "conferido": [
-          1790377443.439,
+          1790379025.023,
           16080
         ]
       }
@@ -5169,7 +5169,11 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 276
+        "linha": 276,
+        "conferido": [
+          1790379030.003,
+          36268
+        ]
       }
     }
   ]

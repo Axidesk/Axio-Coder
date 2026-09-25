@@ -566,6 +566,37 @@ Fontes: [cmake-presets(7)](https://cmake.org/cmake/help/latest/manual/cmake-pres
 [CMake presets no Qt Creator](https://doc.qt.io/qtcreator/creator-build-settings-cmake-presets.html);
 [build systems do Qt Creator](https://doc.qt.io/qtcreator/creator-reference-build-systems.html).
 
+## O projeto é o texto; o IDE é uma vista dele (2026-10-06)
+
+Pergunta do utilizador: *"um utilizador experiente consegue criar um projeto destes do zero sem o
+Visual/Qt, ou precisa daquela infinidade de opções da interface? metade daquilo é poluição visual?"*
+
+- **Tudo o que DEFINE o build é texto.** `CMakeLists.txt` (alvos, fontes, includes, defines, flags,
+  ligações) mais `CMakePresets.json` (gerador, arquitetura, `toolset`, compilador por `CC`/`CXX`,
+  `CMAKE_BUILD_TYPE`, `binaryDir`, `installDir`, `toolchainFile`, `environment` e `cacheVariables` —
+  onde vivem o `CMAKE_CXX_FLAGS` e as definições). A cmake-presets(7) confirma-o campo a campo: é
+  JSON, e nada do que define o build existe só no GUI.
+- **Três coisas NÃO vivem no projeto** — e são a razão de o mesmo projeto pedir configuração noutra
+  máquina: o **kit/compilador** (vive na máquina; no Qt Creator é a lista de kits, no VS vem do
+  workload instalado); o **lançamento/depurador** (o VS guarda em `.vs/launch.vs.json`, que pode ser
+  derivado dos presets); e o **índice/IntelliSense** (cache, recriado a cada configure).
+- **O resto do GUI é conveniência, não requisito.** As property pages de um `.vcxproj` parecem
+  infinitas porque o MSBuild **não tem linguagem própria**: cada switch do compilador é uma
+  propriedade. Tudo é XML no próprio `.vcxproj` — editável à mão e ninguém o faz; o CMake existe
+  precisamente para não se fazer. E num projeto **CMake** o VS não usa property pages: *"Visual
+  Studio uses a CMake configuration file to drive CMake generation and build"*, e a manipulação de
+  projeto (adicionar/remover/renomear ficheiros) reescreve o `CMakeLists.txt` com pré-visualização.
+- **Prova no disco:** as "opções" que o VS mostraria neste projeto já estão lá como texto —
+  `DRAFTCAD/build/axio-debug/DraftCAD.vcxproj` traz `<LanguageStandard>stdcpp17</LanguageStandard>` e
+  os `AdditionalIncludeDirectories` com o Qt 6.10.0 e o Vulkan SDK. A interface é uma forma sobre
+  essas linhas, e as linhas vieram do nosso preset.
+- **Veredicto honesto:** um profissional faz tudo em texto — é assim que o CMake se usa — e não perde
+  flag nenhuma. O que se perde sem IDE não é configuração: é depurador, profiler, refactor e
+  navegação, que são características do IDE e não do projeto.
+
+Fontes: [CMake projects in Visual Studio](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio)
+e [CMake presets no VS](https://learn.microsoft.com/en-us/cpp/build/cmake-presets-vs).
+
 ## O que falta (medido, não suposto)
 
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
@@ -584,7 +615,7 @@ Fontes: [cmake-presets(7)](https://cmake.org/cmake/help/latest/manual/cmake-pres
   códigos ficam em inglês (`MSB1009`).
 - **`.pro`** (qmake) não tem leitor: sem API oficial de fontes, a resposta da ferramenta di-lo em vez
   de falhar em silêncio. O `.sln` já é lido para a árvore; falta-o para as flags.
-- **`.qmake`** (`.pro`) não tem API oficial de fontes.
+
 - **Motor de jogo** (Unreal/Unity) fica de fora: tem pipeline próprio.
 
 ## O que NÃO se faz
