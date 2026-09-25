@@ -134,7 +134,11 @@ const __vizinhosQueDefinem = (caminho, nome) => {
 };
 
 const funcaoDoDisco = (rel, nome) => {
-    const caminho = path.join(process.cwd(), rel);
+    const caminho = path.isAbsolute(rel) ? rel : path.join(process.cwd(), rel);
+    if (!fs.existsSync(caminho)) {
+        throw new Error("ficheiro nao encontrado: " + rel
+            + (path.isAbsolute(rel) ? "" : " (o caminho e relativo a raiz do projeto)"));
+    }
     const corpo = __corpoDeFuncao(fs.readFileSync(caminho, "utf8"), nome);
     if (corpo) return corpo;
     const vizinhos = __vizinhosQueDefinem(caminho, nome);
@@ -1509,7 +1513,8 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "TypeError '... is not a function'). Para a poder chamar, envolva-a: new Function(texto + "
     "' return nome;')() - ou, tendo dependencias, new Function('DEP1', texto + ' return {nome};')(dep). "
     "O texto vem EXATO (com o async a frente quando existir) e funcoesDoDisco('src/x.js', 'a', 'b') "
-    "junta varias na ordem pedida - nao reescreva o balanceamento de chaves a mao, que esquecer o "
+    "junta varias na ordem pedida (o caminho e relativo a raiz do projeto ou absoluto) - nao "
+    "reescreva o balanceamento de chaves a mao, que esquecer o "
     "async de uma funcao assincrona da um SyntaxError que nao aponta para a causa. "
     "ATENCAO: no harness (ESM, modo estrito) o eval direto cria SEMPRE "
     "o seu proprio escopo, mesmo para var, logo uma constante ou funcao avaliada num eval NAO fica "
