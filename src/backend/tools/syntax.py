@@ -508,6 +508,54 @@ def _aviso_referencias_orfas(caminho_relativo, texto_antigo, texto_novo):
             + " saiu do import nesta edicao e continua a ser usado -> quebra em execucao;"
               " corrige o uso ou repoe o import antes de finalizar.")
 
+def _decoradores_de_registo(texto):
+    """[(nome declarado no @register, nome da funcao decorada, linha)] do topo do modulo."""
+    if not texto:
+        return []
+    try:
+        arvore = ast.parse(texto)
+    except (SyntaxError, ValueError):
+        return []
+    achados = []
+    for no in arvore.body:
+        if not isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        for decorador in no.decorator_list:
+            if not isinstance(decorador, ast.Call) or not decorador.args:
+                continue
+            alvo = decorador.func
+            nome_decorador = alvo.id if isinstance(alvo, ast.Name) else getattr(alvo, "attr", "")
+            if nome_decorador != "register":
+                continue
+            primeiro = decorador.args[0]
+            if not (isinstance(primeiro, ast.Constant) and isinstance(primeiro.value, str)):
+                continue
+            achados.append((primeiro.value, no.name, no.lineno))
+    return achados
+
+def _aviso_registo_em_funcao_errada(caminho_relativo, texto_novo):
+    """@register declarado para um nome que nao e o da funcao logo abaixo dele.
+
+    Um decorador cola-se SEMPRE a funcao imediatamente a seguir: inserir uma
+    auxiliar privada entre o `@register("tool_x", ...)` e o `def tool_x` registra a
+    auxiliar no lugar do handler, e a ferramenta morre em execucao com um TypeError
+    de argumento inesperado - sem a sintaxe acusar nada, porque o ficheiro continua
+    valido. A prova de que esta certo e tool_verificar_ferramentas.
+    """
+    if not str(caminho_relativo or "").endswith(".py"):
+        return ""
+    errados = [
+        f'@register("{declarado}") decora {funcao} (linha {linha})'
+        for declarado, funcao, linha in _decoradores_de_registo(texto_novo)
+        if declarado != funcao
+    ]
+    if not errados:
+        return ""
+    return ("REGISTO NA FUNCAO ERRADA: " + "; ".join(errados)
+            + " -> o decorador cola-se a funcao imediatamente a seguir, logo o handler registado e o errado"
+              " e a ferramenta morre em execucao (a sintaxe passa): a auxiliar privada vai ANTES do @register"
+              " ou DEPOIS da funcao registada. Confirma com tool_verificar_ferramentas.")
+
 def aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, texto_novo):
     """Checklist automatico anexado ao retorno das ferramentas de edicao.
 
@@ -524,6 +572,9 @@ def aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, texto_novo):
     criadas = sorted(nomes_depois - nomes_antes)
     removidas = sorted(nomes_antes - nomes_depois)
     partes = []
+    registo = _aviso_registo_em_funcao_errada(caminho_relativo, texto_novo)
+    if registo:
+        partes.append(registo)
     if criadas:
         partes.append(
             "FUNCAO(OES) NOVA(S): " + ", ".join(criadas)
