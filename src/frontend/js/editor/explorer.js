@@ -1,6 +1,6 @@
 import { findExplorerRow, loadTrash, openFileInEditor, pinPreview, updateExplorerToolbar } from './editor.js';
 import { appendLine, basename, enterDir, updateExplorerPath } from './terminal.js';
-import { applyTabsVisibility, layoutAllEditors } from './workspace.js';
+import { aplicarDockDeProjeto, applyTabsVisibility, layoutAllEditors } from './workspace.js';
 import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
 import { abreNoViewer } from './familia_ficheiro.js';
@@ -193,6 +193,7 @@ export async function loadExplorer(path) {
     }
 }
 export function renderExplorer(data) {
+    aplicarDockDeProjeto(data.agrupada, data.root || '');
     state.rootPath = data.root || '';
     state.currentCwd = data.cwd || '';
     state.currentCwdRel = data.path || '';

@@ -271,6 +271,17 @@ export function animateDock(dir) {
     state.explorerView.classList.add(dir === 'right' ? 'dock-anim-right' : 'dock-anim-bottom');
 }
 
+let raizDoDock = null;
+
+export function aplicarDockDeProjeto(agrupada, raiz) {
+    if (agrupada === undefined || raiz === raizDoDock) return;
+    raizDoDock = raiz;
+    if (!agrupada || state.dockSide === 'right') return;
+    state.dockSide = 'right';
+    applyDockLayout();
+    persistDockPrefs();
+}
+
 export function initExplorerResizer() {
     if (!state.explorerResizer) return;
     state.explorerResizer.addEventListener('mousedown', (e) => {

@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790374884.749,
-          11103
+          1790378093.016,
+          12061
         ]
       }
     },
@@ -2176,8 +2176,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790374884.749,
-          11103
+          1790378093.016,
+          12061
         ]
       }
     },
@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 86,
         "conferido": [
-          1790374884.755,
-          16840
+          1790377402.342,
+          16884
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 94,
         "conferido": [
-          1790374884.755,
-          16840
+          1790377402.342,
+          16884
         ]
       }
     },
@@ -2985,10 +2985,10 @@
       "descricao": "Quanto de conversa cabe antes de o Axio resumir e perder detalhe. Padrao no .env (LIMITE_TOKENS_HISTORICO=200000), maximo do modelo em LIMITE_TOKENS_HISTORICO_MAX (1000000). Numa tarefa longa (modelagem com varias iteracoes), subir o teto ANTES de chegar ao padrao evita compactar a conversa a meio. O ajuste vale so para a sessao.",
       "localizacao": {
         "arquivo": "src/backend/tools/memory_tools.py",
-        "linha": 86,
+        "linha": 87,
         "conferido": [
-          1790296505.385,
-          19518
+          1790377608.978,
+          19856
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 139,
         "conferido": [
-          1790374884.755,
-          16840
+          1790377402.342,
+          16884
         ]
       }
     },
@@ -5118,7 +5118,58 @@
       "descricao": "A arvore do explorer deixa de ser so pastas: quem manda na arrumacao e o PROJETO. Fontes, por ordem: File API do CMake (cmake_api.py), filtros do .vcxproj.filters (msbuild.py) e, para projeto CMake AINDA NAO configurado, o CMakeLists lido como texto (_projeto_por_texto, que so age com UM alvo). Uma pasta de codigo sem projeto agrupa pelo tipo. Os nos sao virtuais (prefixo @arvore) e resolvidos pela rota /api/explorer (routes/editor.py): nada se move no disco. ficheiros_agrupados diz a rota que ficheiros ja estao dentro de um grupo, para nao repetirem na lista solta. Ordem dos grupos: Fontes, Cabecalhos, Recursos, Outros.",
       "localizacao": {
         "arquivo": "src/backend/builds/arvore.py",
-        "linha": 45
+        "linha": 47,
+        "conferido": [
+          1790377443.439,
+          16080
+        ]
+      }
+    },
+    {
+      "termo": "ficheiro de projeto",
+      "aliases": [
+        "cmakelist",
+        "cmakelists",
+        "cmake",
+        "sln",
+        "vcxproj",
+        "vcxproj.filters",
+        "pro",
+        "qmake",
+        "meson",
+        "build system",
+        "arquivo de projeto",
+        "ficheiro do visual studio",
+        "ficheiro do cmake",
+        "tipo de projeto",
+        "estrutura do projeto"
+      ],
+      "identificador": "_nos",
+      "descricao": "Quem manda na arvore do explorer e o PROPRIO projeto, e a escolha do leitor e por FAMILIA: CMakeLists.txt ja configurado -> cmake_api (File API do CMake); CMakeLists.txt sem build nenhum -> detetar.py:_alvos_do_texto (lido como texto); .sln/.vcxproj -> msbuild.py:projetos (le o .vcxproj para saber os ficheiros e o .vcxproj.filters para saber as pastas virtuais); nenhum ficheiro de projeto -> msbuild.py:agrupar_por_tipo (rede por extensao: Fontes/Cabecalhos/Recursos/Outros). Ainda NAO ha leitor de qmake (.pro) nem de Meson: caem na rede por extensao. Nenhuma destas familias e intrinseca do C++ - CMake (Kitware) e MSBuild (Microsoft) sao formatos de FERRAMENTAS, e o Qt Creator suporta 7 build systems (CMake, qmake, Qbs, Autotools, Nimble, Meson, IncrediBuild); Ninja nao e build system, e o executor que o CMake usa por baixo.",
+      "localizacao": {
+        "arquivo": "src/backend/builds/arvore.py",
+        "linha": 85,
+        "conferido": [
+          1790377443.439,
+          16080
+        ]
+      }
+    },
+    {
+      "termo": "doc ja abre na vertical",
+      "aliases": [
+        "doc vertical automatico",
+        "projeto abre na vertical",
+        "dock vertical sozinho",
+        "arvore agrupada na vertical",
+        "doc em coluna pra projeto c++",
+        "vertical automatica"
+      ],
+      "identificador": "aplicarDockDeProjeto",
+      "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/workspace.js",
+        "linha": 276
       }
     }
   ]

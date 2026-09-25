@@ -92,8 +92,10 @@ def explorer():
             item["ext"] = os.path.splitext(e["nome"])[1].lstrip('.').lower()
         items.append(item)
     items.sort(key=lambda x: (_ORDEM_DE_ENTRADAS.get(x["tipo"], 1), x["nome"].lower()))
+    agrupada = None
     if not caminho_rel:
         nos = arvore.entradas_raiz(raiz)
+        agrupada = bool(nos)
         if arvore.tem_projeto(raiz):
             items = nos
         else:
@@ -101,11 +103,11 @@ def explorer():
             items = nos + [i for i in items if i["path"] not in agrupados]
     cwd = caminho_alvo
     relativo, dentro = calcular_posicao_relativa(cwd, raiz_abs())
-    return jsonify(_resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items))
+    return jsonify(_resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items, agrupada))
 
 
-def _resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items):
-    return {
+def _resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items, agrupada=None):
+    resposta = {
         "root": raiz,
         "path": caminho_rel,
         "cwd": cwd,
@@ -114,6 +116,9 @@ def _resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items):
         "raiz_nome": os.path.basename(raiz_abs()) if raiz_abs() else "",
         "entries": items,
     }
+    if agrupada is not None:
+        resposta["agrupada"] = agrupada
+    return resposta
 
 TETO_TEXTO_BYTES = 4 * 1024 * 1024
 AMOSTRA_TEXTO_BYTES = 65536

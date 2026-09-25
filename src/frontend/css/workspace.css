@@ -247,7 +247,7 @@
 .explorer-row.explorer-error { color: var(--vermelho-vivo); }
 .explorer-row.explorer-error .explorer-file-icon,
 .explorer-row.explorer-error .explorer-folder-icon { color: var(--vermelho-vivo); }
-.explorer-children { margin-left: 16px; }
+.explorer-children { margin-left: 28px; }
 .explorer-children > ul > .explorer-item { position: relative; }
 .explorer-children > ul > .explorer-item::after {
     content: "";
@@ -259,13 +259,13 @@
     background: var(--border-suave);
 }
 .explorer-children > ul > .explorer-item:last-child::after { display: none; }
-.explorer-children > ul > .explorer-item > .explorer-row { position: relative; }
+.explorer-children > ul > .explorer-item > .explorer-row { position: relative; padding-left: 20px; }
 .explorer-children > ul > .explorer-item > .explorer-row::before {
     content: "";
     position: absolute;
     left: 0;
     top: 50%;
-    width: 8px;
+    width: 20px;
     height: 1px;
     background: var(--border-suave);
 }
