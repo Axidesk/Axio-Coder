@@ -414,7 +414,7 @@ def _monitorar_processo_segundo_plano(pid, popen):
     except Exception:
         return
     reg = estado.get("processos", {}).get(pid)
-    if reg is None or reg.get("status") == "parado":
+    if reg is None or reg.get("status") != "rodando":
         return
     reg["status"] = "ok" if codigo == 0 else "erro"
     emit_event("process_finished", pid=pid, exit_code=codigo, status=reg["status"])
@@ -1005,5 +1005,53 @@ def _esperar_com_progresso(popen, pid, timeout, fatia=FATIA_PROGRESSO_PROCESSO):
                 return False
             emit_event("executing", function=_texto_de_progresso(pid, decorrido, timeout))
     return False
+
+
+def correr_como_card(comando, cwd=None, timeout=300, caminhos_extra=None):
+    """Corre o comando como card do terminal (visivel, com parar) e espera pelo fim."""
+    reg = iniciar_processo(comando, cwd=cwd, modo="card", acompanhar=True,
+                           caminhos_extra=caminhos_extra)
+    return _esperar_card(reg, timeout)
+
+
+def _esperar_card(reg, timeout):
+    pid = reg["id"]
+    restante = float(timeout)
+    decorrido = 0.0
+    while restante > 0:
+        passo = min(FATIA_PROGRESSO_PROCESSO, restante)
+        fim = time.time() + passo
+        while time.time() < fim:
+            if reg.get("status") != "rodando":
+                return _resultado_do_card(reg)
+            time.sleep(0.2)
+        decorrido += passo
+        restante -= passo
+        if restante > 0:
+            emit_event("executing", function=_texto_de_progresso(pid, decorrido, timeout))
+    popen = reg.get("popen")
+    if popen is not None:
+        matar_arvore(popen)
+    reg["status"] = "timeout"
+    emit_event("process_finished", pid=pid, exit_code=None, status="timeout")
+    return _resultado_do_card(reg)
+
+
+def _resultado_do_card(reg):
+    leitor = reg.get("_leitor")
+    if leitor is not None:
+        leitor.join(timeout=5)
+    popen = reg.get("popen")
+    codigo = None
+    if popen is not None:
+        try:
+            codigo = popen.returncode if popen.returncode is not None else popen.poll()
+        except Exception:
+            codigo = None
+    resultado = subprocess.CompletedProcess(reg.get("comando"), codigo,
+                                            "\n".join(reg.get("log") or []), "")
+    resultado.status = reg.get("status")
+    resultado.pid = reg.get("id")
+    return resultado
 
 

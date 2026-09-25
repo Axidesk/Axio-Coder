@@ -3,6 +3,7 @@ import json
 import os
 import re
 
+from src.backend.builds import construir, presets
 from src.backend.config import APP_ROOT
 from src.backend.services.process_manager import comando_inicia_axio
 
@@ -32,7 +33,8 @@ def detectar_sugestoes(pasta):
         ficheiros = sorted(n for n in os.listdir(pasta) if os.path.isfile(os.path.join(pasta, n)))
     except OSError:
         return []
-    sugestoes = _sugestoes_npm(pasta) + _sugestoes_python(pasta, ficheiros) + _sugestoes_projeto(ficheiros)
+    sugestoes = (_sugestoes_npm(pasta) + _sugestoes_python(pasta, ficheiros)
+                 + _sugestoes_cmake(pasta, ficheiros) + _sugestoes_projeto(ficheiros))
     return _sem_repetidos(_sem_recusados(sugestoes, pasta))
 
 
@@ -122,6 +124,46 @@ def _sugestoes_projeto(ficheiros):
         if nome.lower().endswith(".bat"):
             saida.append({"comando": nome, "origem": nome, "dica": "script"})
     return saida
+
+
+def _sugestoes_cmake(pasta, ficheiros):
+    """A cadeia configurar/compilar/executar de um projeto CMake ja preparado pelo Axio."""
+    if "CMakeLists.txt" not in ficheiros:
+        return []
+    preset = _preset_do_axio(pasta)
+    if not preset:
+        return []
+    sugestoes = [
+        {"comando": f"cmake --preset {preset}", "origem": presets.ARQUIVO, "dica": "configurar"},
+        {"comando": f"cmake --build --preset {preset}", "origem": presets.ARQUIVO, "dica": "compilar"},
+    ]
+    executavel = _executavel_do_build(pasta, preset)
+    if executavel:
+        sugestoes.append({"comando": f'"{executavel}"', "origem": "build", "dica": "executar"})
+    return sugestoes
+
+
+def _preset_do_axio(pasta):
+    """O primeiro preset que o Axio escreveu neste projeto (nome com o prefixo do Axio)."""
+    caminho = os.path.join(pasta, presets.ARQUIVO)
+    if not os.path.isfile(caminho):
+        return ""
+    try:
+        with open(caminho, "r", encoding="utf-8", errors="replace") as f:
+            dados = json.load(f)
+    except (OSError, ValueError):
+        return ""
+    for preset in dados.get("configurePresets") or []:
+        nome = preset.get("name") if isinstance(preset, dict) else None
+        if isinstance(nome, str) and nome.startswith(presets.PREFIXO_PRESET):
+            return nome
+    return ""
+
+
+def _executavel_do_build(pasta, preset):
+    achados = construir.exe_produzido(os.path.join(pasta, "build", preset),
+                                      nome=os.path.basename(os.path.normpath(pasta)))
+    return achados[0]["caminho"] if achados else ""
 
 
 def _sem_repetidos(sugestoes):

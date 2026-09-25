@@ -4,7 +4,7 @@ import time
 from src.backend.builds import construir, detetar, kits
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
-from src.backend.tools.process import iniciar_processo, run_com_timeout
+from src.backend.tools.process import correr_como_card, iniciar_processo
 from src.backend.tools.registry import register
 
 
@@ -17,6 +17,7 @@ from src.backend.tools.registry import register
     "Fluxo: acao='detetar' (o que e o projeto e o que exige), 'kits' (o que esta instalado e o que foi "
     "escolhido), 'preparar' (escolhe o kit, escreve o preset e configura), 'construir' (compila) e "
     "'correr' (abre o que ficou compilado). 'construir' e 'correr' fazem o preparo sozinhos. "
+    "build corre como card do terminal (saida a vivo, com botao de parar). "
     "Nao serve para ler nem editar codigo (para isso ha as ferramentas de arquivo) nem para construir o "
     "proprio Axio.",
     {
@@ -74,39 +75,69 @@ def _pasta(pasta):
 
 def _preparar(pasta, configuracao):
     plano = construir.preparar(pasta, configuracao)
-    if plano.get("erro"):
-        return f"ERRO: {plano['erro']}"
-    if plano.get("faltam"):
-        return _texto_faltam(plano)
+    falha = _bloqueio(plano)
+    if falha:
+        return falha
+    _, texto = _configurar(pasta, plano)
+    return _texto_plano(plano) + "\n\n" + texto
+
+
+def _configurar(pasta, plano):
+    """Configura o projeto (escreve o cache do CMake) como card do terminal. Devolve (ok, texto)."""
     comando = plano["configurar"]
     emit_event("executing", function=f"Configurando {os.path.basename(pasta)} ({comando})")
-    resultado = run_com_timeout(comando, construir.TIMEOUT_CONFIGURAR, cwd=pasta)
+    resultado = correr_como_card(comando, cwd=pasta, timeout=construir.TIMEOUT_CONFIGURAR,
+                                 caminhos_extra=plano["escolha"].get("caminhos"))
     saida = recortar_texto(_texto_do_processo(resultado))
-    cabeca = _texto_plano(plano)
+    if _interrompido(resultado):
+        return False, "CONFIGURACAO INTERROMPIDA: o card do terminal foi parado."
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
-        return f"{cabeca}\n\nCONFIGURADO (exit 0).\n{saida}"
-    return f"{cabeca}\n\nERRO AO CONFIGURAR (exit {resultado.returncode}):\n{saida}"
+        return True, f"CONFIGURADO (exit 0).\n{saida}"
+    return False, f"ERRO AO CONFIGURAR (exit {resultado.returncode}):\n{saida}"
 
 
 def _construir(pasta, configuracao, alvo):
     plano = construir.preparar(pasta, configuracao)
-    if plano.get("erro"):
-        return f"ERRO: {plano['erro']}"
-    if plano.get("faltam"):
-        return _texto_faltam(plano)
+    falha = _bloqueio(plano)
+    if falha:
+        return falha
+    blocos = [_texto_plano(plano)]
+    if plano.get("precisa_configurar"):
+        ok, texto = _configurar(pasta, plano)
+        blocos.append(texto)
+        if not ok:
+            return "\n\n".join(blocos)
     comando = plano["construir"] + (f" --target {alvo}" if alvo else "")
     inicio = time.time()
     emit_event("executing", function=f"Compilando {plano['deteccao'].get('projeto') or os.path.basename(pasta)}")
-    resultado = run_com_timeout(comando, construir.TIMEOUT_CONSTRUIR, cwd=pasta)
+    resultado = correr_como_card(comando, cwd=pasta, timeout=construir.TIMEOUT_CONSTRUIR,
+                                 caminhos_extra=plano["escolha"].get("caminhos"))
     saida = recortar_texto(_texto_do_processo(resultado))
     produzidos = construir.exe_produzido(
         plano["pasta_build"], desde=inicio, nome=plano["deteccao"].get("projeto", "")
     )
+    if _interrompido(resultado):
+        blocos.append("COMPILACAO INTERROMPIDA: o card do terminal foi parado.")
+        return "\n\n".join(blocos)
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
-        return f"COMPILADO (exit 0).\n{_texto_executaveis(produzidos)}\n{saida}"
-    return f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}"
+        blocos.append(f"COMPILADO (exit 0).\n{_texto_executaveis(produzidos)}\n{saida}")
+        return "\n\n".join(blocos)
+    blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
+    return "\n\n".join(blocos)
+
+
+def _bloqueio(plano):
+    if plano.get("erro"):
+        return f"ERRO: {plano['erro']}"
+    if plano.get("faltam"):
+        return _texto_faltam(plano)
+    return ""
+
+
+def _interrompido(resultado):
+    return getattr(resultado, "status", "") == "parado"
 
 
 def _correr(pasta, configuracao):

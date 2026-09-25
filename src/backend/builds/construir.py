@@ -32,6 +32,9 @@ def preparar(pasta, configuracao="debug"):
         "configurar": f"cmake --preset {escrita['preset']}",
         "construir": f"cmake --build --preset {escrita['preset']}",
         "pasta_build": escrita["pasta_build"],
+        "precisa_configurar": not os.path.isfile(
+            os.path.join(escrita["pasta_build"], "CMakeCache.txt")
+        ),
     }
 
 
