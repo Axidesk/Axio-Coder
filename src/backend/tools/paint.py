@@ -13,9 +13,12 @@ capturePage, e devolve tres coisas:
   * GEOMETRIA - getBoundingClientRect de cada elemento que casa com `seletores`,
     com o ::before/::after computados (medidas e cor), para ver a fiacao do CSS;
   * PALETA - as cores pintadas (nº de pixels + caixa de cada uma), sem o `fundo`,
-    para descobrir tons inesperados;
-  * DESENHO - com `cor`, o mapa traco a traco dessa cor: por coluna e por linha, com
-    os troços contiguos (e e assim que se ve uma linha de 1px interrompida).
+    para descobrir tons inesperados; as cores PEDIDAS em `cor` entram sempre, mesmo
+    com poucos pixels (o nucleo de um glifo pequeno nunca fica fora da lista);
+  * DESENHO - com `cor`, o mapa traco a traco dessas cores: por coluna e por linha,
+    com os troços contiguos (e e assim que se ve uma linha de 1px interrompida).
+    Aceita VARIAS cores separadas por ';' - mede a tinta de varios elementos (o texto
+    e o + de um cabecalho, por exemplo) numa so chamada.
 
 O PNG fica num temporario do sistema (nada e escrito na pasta do projeto) e o
 caminho e devolvido; com manter_png=True o temporario nao e apagado no fim.
@@ -211,6 +214,16 @@ def _cor_hex(texto, padrao):
         return padrao
 
 
+def _cores(texto):
+    """'#ff0000;#00ff00' -> [(255,0,0),(0,255,0)]; string vazia -> []."""
+    cores = []
+    for parte in (texto or "").replace(",", ";").split(";"):
+        c = _cor_hex(parte, None)
+        if c and c not in cores:
+            cores.append(c)
+    return cores
+
+
 def _troços(valores):
     """Compressao de inteiros ordenados em intervalos contiguos."""
     out = []
@@ -222,8 +235,11 @@ def _troços(valores):
     return out
 
 
-def _paleta(px, W, H, fundo):
-    """Cores pintadas (nº de pixels + caixa) por ordem de quantidade, com o total de tons."""
+def _paleta(px, W, H, fundo, obrigatorias=()):
+    """Cores pintadas (nº de pixels + caixa) por ordem de quantidade, com o total de tons.
+
+    As cores de `obrigatorias` ficam sempre na lista, mesmo fora do topo por quantidade.
+    """
     tons = {}
     for y in range(H):
         for x in range(W):
@@ -236,7 +252,10 @@ def _paleta(px, W, H, fundo):
             t[2] = min(t[2], y)
             t[3] = max(t[3], x)
             t[4] = max(t[4], y)
-    return sorted(tons.items(), key=lambda kv: -kv[1][0])[:MAX_TONS], len(tons)
+    topo = sorted(tons.items(), key=lambda kv: -kv[1][0])[:MAX_TONS]
+    nomes = {k for k, _ in topo}
+    fora = [c for c in obrigatorias if c in tons and c not in nomes]
+    return topo + [(c, tons[c]) for c in fora], len(tons)
 
 
 def _desenho(px, W, H, alvo):
@@ -260,7 +279,7 @@ def _desenho(px, W, H, alvo):
         "html": {"tipo": "STRING", "desc": "Markup a medir (o corpo da pagina de teste).", "obrig": True, "padrao": ""},
         "estilo": {"tipo": "STRING", "desc": "Texto de CSS extra, injetado depois dos ficheiros (ex: ':root{--border-suave:#ff0000}').", "obrig": False, "padrao": ""},
         "css": {"tipo": "STRING", "desc": "CAMINHOS de ficheiros CSS do projeto, separados por virgula (ex: 'src/frontend/css/dock.css') e nao o texto das regras - o texto vai no 'estilo'; vazio = style.css + css/*.css do frontend.", "obrig": False, "padrao": ""},
-        "cor": {"tipo": "STRING", "desc": "Cor alvo do mapa de desenho, em hex sem # (ex: 'ff0000'). Vazio = so paleta e geometria.", "obrig": False, "padrao": ""},
+        "cor": {"tipo": "STRING", "desc": "Cor alvo do mapa de desenho, em hex sem # (ex: 'ff0000'). Aceita VARIAS separadas por ';' (ex: 'ff0000;00ff00') - cada uma sai com o seu mapa e entra SEMPRE na paleta, mesmo com poucos pixels. Vazio = so paleta e geometria.", "obrig": False, "padrao": ""},
         "fundo": {"tipo": "STRING", "desc": "Cor de fundo a ignorar na paleta, hex sem # (padrao '1e1e1e').", "obrig": False, "padrao": "1e1e1e"},
         "seletores": {"tipo": "STRING", "desc": "Seletor CSS dos elementos cuja geometria medir (padrao '[class]').", "obrig": False, "padrao": ""},
         "largura": {"tipo": "INTEGER", "desc": "Largura da janela em px (padrao 460).", "obrig": False, "padrao": 460},
@@ -300,7 +319,7 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
         im = Image.open(png).convert("RGB")
         W, H = im.size
         px = im.load()
-        alvo = _cor_hex(cor, None)
+        alvos = _cores(cor)
         fundo_rgb = _cor_hex(fundo, (30, 30, 30))
 
         linhas = ["PINTURA MEDIDA: imagem %dx%d | CSS: %s" % (W, H, ", ".join(os.path.basename(f) for f in ficheiros))]
@@ -354,7 +373,7 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
                 if r["depois"]:
                     linhas.append("         ::after  %s" % r["depois"])
 
-        tons, total_tons = _paleta(px, W, H, fundo_rgb)
+        tons, total_tons = _paleta(px, W, H, fundo_rgb, alvos)
         linhas.append("")
         cabecalho_paleta = "PALETA (sem o fundo #%02x%02x%02x):" % fundo_rgb
         if total_tons > len(tons):
@@ -363,10 +382,11 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
                                  " nesta lista: confirme-a com o parametro cor." % (total_tons, len(tons)))
         linhas.append(cabecalho_paleta)
         for c, t in tons:
-            linhas.append("  #%02x%02x%02x: %6d px, caixa x %d..%d y %d..%d" %
-                          (c[0], c[1], c[2], t[0], t[1], t[3], t[2], t[4]))
+            linhas.append("  #%02x%02x%02x: %6d px, caixa x %d..%d y %d..%d%s" %
+                          (c[0], c[1], c[2], t[0], t[1], t[3], t[2], t[4],
+                           "   <- cor pedida" if c in alvos else ""))
 
-        if alvo:
+        for alvo in alvos:
             colunas, linhas_cor = _desenho(px, W, H, alvo)
             linhas.append("")
             linhas.append("DESENHO DA COR #%02x%02x%02x:" % alvo)

@@ -1,7 +1,7 @@
 .git-painel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     font-family: inherit;
 }
 
@@ -12,7 +12,7 @@
 }
 
 .git-seccao + .git-seccao {
-    padding-top: 8px;
+    padding-top: 4px;
     border-top: 1px solid var(--border-suave);
 }
 
@@ -118,11 +118,11 @@
 
 .git-ponto-enviado > .projeto-linha > .projeto-mais,
 .git-grupo-tarefa > .projeto-linha > .projeto-mais {
-    align-self: center;
+    align-self: baseline;
 }
 
 .git-grupo-tarefa .git-campo-linha {
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .git-ponto-nome {
@@ -233,12 +233,25 @@
     display: flex;
 }
 
-.git-campo-trancado {
-    background: transparent;
+.git-campo-linha .git-ponto-prefixo {
+    flex: 0 0 auto;
     color: var(--text-suave);
-    padding-left: 0;
-    padding-right: 0;
-    cursor: default;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.git-campo-linha .git-sem-edicao {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.git-campo-linha:not(.git-editando) .git-ponto-prefixo,
+.git-campo-linha:not(.git-editando) .git-campo-editor {
+    display: none;
+}
+
+.git-campo-linha.git-editando .git-sem-edicao {
+    display: none;
 }
 
 .git-lapis {

@@ -464,10 +464,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 511,
+        "linha": 559,
         "conferido": [
-          1790286463.481,
-          26345
+          1790296602.906,
+          28758
         ]
       }
     },
@@ -823,10 +823,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 590,
+        "linha": 641,
         "conferido": [
-          1790286463.481,
-          26345
+          1790296602.906,
+          28758
         ]
       }
     },
@@ -2985,7 +2985,7 @@
         "arquivo": "src/backend/tools/memory_tools.py",
         "linha": 86,
         "conferido": [
-          1790295689.845,
+          1790296505.385,
           19518
         ]
       }
@@ -5046,13 +5046,14 @@
         "esta tarefa | tarefa n",
         "cabecalho da tarefa no painel",
         "bloco da tarefa atual",
-        "campo do commit recolhido"
+        "campo do commit recolhido",
+        "prefixo fixo da tarefa"
       ],
-      "identificador": "blocoDaTarefa / campoDoCommit",
-      "descricao": "Recolhivel \"Esta tarefa | Tarefa N\" com o campo do commit dentro do corpo: nasce aberto no modo manual e recolhido no automatico. Sem campo nem ponto, fica a linha solta (linhaComTitulo).",
+      "identificador": "git_panel.js:blocoDaTarefa / corpoDoCommit",
+      "descricao": "Recolhivel \"Esta tarefa | <hash curto>\" (sem hash, o nome da tarefa) com o corpo \"Tarefa N - mensagem\": o prefixo e FIXO fora do input e o input so leva a mensagem. So-leitura mostra o texto; ao lapis vira prefixo + input. Sem campo nem ponto, fica a linha solta (linhaComTitulo).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 270
+        "linha": 278
       }
     }
   ]
