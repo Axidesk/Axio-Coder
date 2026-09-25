@@ -7,7 +7,7 @@ import { svgDoPonto, svgDoAviao } from './icones.js';
 import { showConfirm } from './ui.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { esquecerIntencaoManual, marcarProximoComoManual } from './historico/marcas_envio.js';
-import { nomeDaTarefaDoCommit, tituloDaTarefaDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, partesDoTituloDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
 
 const CHAVE_RASCUNHOS = 'axio.git.rascunhos';
 
@@ -250,15 +250,18 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             corpo = '<div class="git-nota">Tudo o que esta commitado ja subiu para o remoto.</div>';
         } else {
             corpo = '<div class="git-lista">' + commits.map(c => {
-                return `• ${escapeHtml(c.curto)} ${escapeHtml(tituloDaTarefaDoCommit(c.hash, c.mensagem))}`;
+                const partes = partesDoTituloDoCommit(c.hash, c.mensagem);
+                return `• <span class="git-hash">${escapeHtml(c.curto)}</span> ${linhaEmCamadas(partes.base, partes.resumo)}`;
             }).join('<br>') + '</div>';
         }
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo, '', commits.length > 0);
     }
     function blocoDoPontoEnviado(hash, mensagem) {
         const curto = String(hash || '').slice(0, 7);
-        const titulo = tituloDaTarefaDoCommit(hash, mensagem);
-        const corpo = titulo ? `<div class="git-ponto-nome">${escapeHtml(titulo)}</div>` : '';
+        const partes = partesDoTituloDoCommit(hash, mensagem);
+        const corpo = (partes.base || partes.resumo)
+            ? `<div class="git-ponto-nome">${linhaEmCamadas(partes.base, partes.resumo)}</div>`
+            : '';
         return recolhivel(marcaDoPonto(true, curto), corpo, false, 'git-ponto-enviado');
     }
     function blocoDaTarefa(grupo, corpo, aberta, hash) {
@@ -267,25 +270,30 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     }
     function marcaDoPonto(enviado, valor) {
         const titulo = enviado ? 'Ja enviada para o GitHub' : 'Salvo localmente';
-        return `<span class="git-marca${enviado ? ' git-marca-enviada' : ''}" title="${escapeHtml(titulo)}">`
+        return `<span class="git-marca" title="${escapeHtml(titulo)}">`
             + (enviado ? svgDoAviao('h-3.5 w-3.5') : svgDoPonto('h-3.5 w-3.5'))
             + '</span>'
-            + (valor ? `<span class="git-hash git-hash-acesa">${escapeHtml(valor)}</span>` : '');
+            + (valor ? `<span class="git-hash">${escapeHtml(valor)}</span>` : '');
+    }
+    function linhaEmCamadas(base, resumo) {
+        if (!base) return resumo ? `<span class="git-commit-nome">${escapeHtml(resumo)}</span>` : '';
+        if (!resumo) return `<span class="git-tarefa-nome">${escapeHtml(base)}</span>`;
+        return `<span class="git-tarefa-nome">${escapeHtml(base)}</span>`
+            + `<span class="git-commit-nome"> - ${escapeHtml(resumo)}</span>`;
     }
     function corpoDoCommit(grupo, vaiCommitar, podeCorrigir, mensagemDoPonto) {
         const rascunho = valorDoCampo(grupo);
         const editando = vaiCommitar || !!rascunho;
         const escrito = rascunho || (vaiCommitar ? '' : mensagemDoPonto);
         const tarefa = nomeDaTarefa(grupo);
-        const linha = [tarefa, escrito].filter(Boolean).join(' - ');
         return `<div class="git-campo-linha${editando ? ' git-editando' : ''}">`
-            + `<span class="git-ponto-nome git-sem-edicao">${escapeHtml(linha)}</span>`
-            + (tarefa ? `<span class="git-ponto-prefixo">${escapeHtml(tarefa)} -</span>` : '')
+            + `<span class="git-ponto-nome git-sem-edicao">${linhaEmCamadas(tarefa, escrito)}</span>`
+            + (tarefa ? `<span class="git-ponto-prefixo git-tarefa-nome">${escapeHtml(tarefa)} -</span>` : '')
             + '<input id="git-mensagem" class="git-campo git-campo-editor" type="text" spellcheck="false"'
             + ` value="${escapeHtml(escrito)}" placeholder="Mensagem do commit">`
+            + (podeCorrigir ? lapis() : '')
             + varinha('sugerir', 'Escrever a mensagem com a IA', 'git-editavel')
             + salvar('salvar', descricaoDoSalvar(vaiCommitar), 'git-editavel')
-            + (podeCorrigir ? lapis() : '')
             + '</div>';
     }
     function htmlDaTarefa(grupo, pendentes, estado) {

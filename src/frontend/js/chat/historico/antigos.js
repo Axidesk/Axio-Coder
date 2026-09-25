@@ -3,7 +3,7 @@ import { esconderIconTooltip, mostrarIconTooltip } from '../ui.js';
 import { svgDoRestauro } from '../icones.js';
 import { requestGitRestore } from './restauro.js';
 import { diaDoCommit } from './marcas_envio.js';
-import { tituloDaTarefaDoCommit, turnosComCommit } from './cards.js';
+import { tituloDaTarefaDoCommit, partesDoTituloDoCommit, turnosComCommit } from './cards.js';
 
 const LIMITE = 20;
 const TITULO = 'Mais antigo';
@@ -58,6 +58,11 @@ let alvoComBalao = null;
     function _tituloDoCommit(commit) {
         return tituloDaTarefaDoCommit(commit.hash, commit.mensagem) || commit.mensagem || '';
     }
+    function _partesDoCommit(commit) {
+        const partes = partesDoTituloDoCommit(commit.hash, commit.mensagem);
+        if (!partes.base && !partes.resumo) return { base: '', resumo: commit.mensagem || '' };
+        return partes;
+    }
     function _tagsDoCommit(hash) {
         return ((repositorio && repositorio.tags) || [])
             .filter(t => t && typeof t === 'object' && t.ponto === hash)
@@ -70,10 +75,14 @@ let alvoComBalao = null;
         const hash = document.createElement('span');
         hash.className = 'history-antigo-hash';
         hash.textContent = commit.curto || String(commit.hash).slice(0, 7);
+        const partes = _partesDoCommit(commit);
+        const tarefa = document.createElement('span');
+        tarefa.className = 'history-antigo-tarefa';
+        tarefa.textContent = partes.base;
         const mensagem = document.createElement('span');
         mensagem.className = 'history-antigo-msg';
-        mensagem.textContent = _tituloDoCommit(commit);
-        mensagem.dataset.info = mensagem.textContent;
+        mensagem.textContent = partes.resumo;
+        mensagem.dataset.info = _tituloDoCommit(commit);
         const restaurar = document.createElement('button');
         restaurar.type = 'button';
         restaurar.className = 'history-round-restore-icon focus:outline-none';
@@ -84,6 +93,7 @@ let alvoComBalao = null;
             requestGitRestore(commit.hash, _tituloDoCommit(commit) || hash.textContent, '');
         });
         linha.appendChild(hash);
+        if (partes.base) linha.appendChild(tarefa);
         linha.appendChild(mensagem);
         _tagsDoCommit(commit.hash).forEach(nome => {
             const chip = document.createElement('span');

@@ -261,7 +261,7 @@ let nomesDeTarefaDe = -1;
         const naNuvem = document.createElement('span');
         naNuvem.className = 'shrink-0 mt-0.5 history-round-enviado-icon';
         naNuvem.title = 'Ja enviada para o GitHub';
-        naNuvem.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
+        naNuvem.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--text-suave)]');
         row.appendChild(naNuvem);
     }
     function enviadaParaOServidor(hash) {
@@ -312,7 +312,7 @@ let nomesDeTarefaDe = -1;
         const aviao = document.createElement('span');
         aviao.className = 'shrink-0 mt-0.5 history-day-saved-icon';
         aviao.title = 'O envio automatico levou o trabalho deste dia';
-        aviao.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
+        aviao.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--text-suave)]');
         row.appendChild(aviao);
     }
     function atualizarMarcasDosCards() {
@@ -425,11 +425,16 @@ let nomesDeTarefaDe = -1;
         const base = (group && (group.displayName || group.name)) || 'Tarefa';
         return comporTitulo(base, resumoDoCommit(group && group.commitNome));
     }
-    function tituloDaTarefaDoCommit(hash, resumoDoPonto) {
+    function partesDoTituloDoCommit(hash, resumoDoPonto) {
         const turno = turnoDoCommit(hash);
-        const base = nomeDoTurno(turno);
-        const resumo = resumoDoCommit(resumoDoPonto) || resumoDoCommit(resumoDoCommitDoLog(hash, turno));
-        return comporTitulo(base, resumo);
+        return {
+            base: nomeDoTurno(turno),
+            resumo: resumoDoCommit(resumoDoPonto) || resumoDoCommit(resumoDoCommitDoLog(hash, turno))
+        };
+    }
+    function tituloDaTarefaDoCommit(hash, resumoDoPonto) {
+        const partes = partesDoTituloDoCommit(hash, resumoDoPonto);
+        return comporTitulo(partes.base, partes.resumo);
     }
     function resumoDoCommitDoLog(hash, turno) {
         if (!turno) return '';
@@ -668,6 +673,7 @@ export {
     mountCollapsibleCard,
     sincronizarEtiquetasNosCards,
     nomeDaTarefaDoCommit,
+    partesDoTituloDoCommit,
     tituloDaTarefaDoCommit,
     assignDisplayNamesByDay,
     ensureSessionDetailsLoaded,

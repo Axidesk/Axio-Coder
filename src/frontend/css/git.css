@@ -35,10 +35,6 @@
     font-weight: 600;
 }
 
-.git-hash {
-    color: var(--text-mutado);
-}
-
 .git-titulo-linha {
     display: flex;
     align-items: baseline;
@@ -106,6 +102,11 @@
     padding-left: 4px;
 }
 
+.git-ponto-enviado,
+.git-grupo-tarefa {
+    padding-left: 10px;
+}
+
 .git-ponto-enviado > .projeto-linha,
 .git-grupo-tarefa > .projeto-linha {
     align-items: baseline;
@@ -122,9 +123,17 @@
 }
 
 .git-ponto-nome {
-    color: var(--text-suave);
+    color: var(--git-cor-commit);
     font-size: 12.5px;
     line-height: 1.5;
+}
+
+.git-tarefa-nome {
+    color: var(--git-cor-tarefa);
+}
+
+.git-commit-nome {
+    color: var(--git-cor-commit);
 }
 
 .git-painel .projeto-cabecalho {
@@ -215,10 +224,11 @@
 }
 
 .git-campo-linha .git-campo {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     width: auto;
-    min-width: 0;
+    min-width: 12ch;
     margin-top: 0;
+    field-sizing: content;
 }
 
 .git-campo-linha .git-editavel {
@@ -231,13 +241,13 @@
 
 .git-campo-linha .git-ponto-prefixo {
     flex: 0 0 auto;
-    color: var(--text-suave);
+    color: var(--git-cor-tarefa);
     font-size: 12.5px;
     white-space: nowrap;
 }
 
 .git-campo-linha .git-sem-edicao {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
 }
 
@@ -289,7 +299,7 @@
 }
 
 .git-hash {
-    color: var(--text-mutado);
+    color: var(--git-cor-hash);
     font-size: 11.5px;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -391,14 +401,6 @@
     flex: 0 0 auto;
     transform: translateY(2px);
     color: var(--text-suave);
-}
-
-.git-marca-enviada {
-    color: var(--oliva);
-}
-
-.git-hash.git-hash-acesa {
-    color: var(--oliva);
 }
 
 .git-separa {
