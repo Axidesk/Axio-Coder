@@ -4346,10 +4346,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 460,
+        "linha": 472,
         "conferido": [
-          1790294890.488,
-          31040
+          1790296116.263,
+          31545
         ]
       }
     },
@@ -4409,8 +4409,8 @@
         "arquivo": "src/frontend/js/chat/historico/cards.js",
         "linha": 232,
         "conferido": [
-          1790294890.488,
-          31040
+          1790296116.263,
+          31545
         ]
       }
     },
@@ -4429,8 +4429,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 246,
         "conferido": [
-          1790295494.54,
-          33442
+          1790296132.547,
+          34085
         ]
       }
     },
@@ -4443,8 +4443,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 208,
         "conferido": [
-          1790295494.54,
-          33442
+          1790296132.547,
+          34085
         ]
       }
     },
@@ -4836,8 +4836,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 112,
         "conferido": [
-          1790295494.54,
-          33442
+          1790296132.547,
+          34085
         ]
       }
     },
@@ -4874,10 +4874,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 531,
+        "linha": 544,
         "conferido": [
-          1790295494.54,
-          33442
+          1790296132.547,
+          34085
         ]
       }
     },
@@ -4895,10 +4895,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 594,
+        "linha": 606,
         "conferido": [
-          1790294890.488,
-          31040
+          1790296116.263,
+          31545
         ]
       }
     },
@@ -4933,8 +4933,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 117,
         "conferido": [
-          1790295494.54,
-          33442
+          1790296132.547,
+          34085
         ]
       }
     },
@@ -4953,8 +4953,8 @@
         "arquivo": "src/frontend/js/chat/historico/cards.js",
         "linha": 232,
         "conferido": [
-          1790294890.488,
-          31040
+          1790296116.263,
+          31545
         ]
       }
     },
@@ -4992,10 +4992,10 @@
       "descricao": "Seccao da COLUNA 1 do historico, por baixo dos tres cards de dia: a continuacao do historico ate onde o repositorio vai. A 2026-10 mudou de casa - vivia no painel de git (git_panel.js:htmlHistorico, com \"Ver mais\" e linhaCommit) e esse bloco foi REMOVIDO do painel. FILTRO: nao e por posicao, e por \"este commit tem card?\" - saem os hashes dos turnos com commit dos TRES dias a vista (cards.js:turnosComCommit filtrado por dia, mais state.commitsDosTurnos e state.currentTurnLogs), fica todo o resto. Cortar por posicao esconderia um commit sem card mais recente que o card mais antigo. DADOS: /api/git/estado (estado.commits e tags), carregado em segundo plano por historico/antigos.js:carregarRepositorio - disparado em painel.js:prefetchSessionDetails, logo o painel abre com a lista ja em cache e o corpo so se constroi quando o usuario expande. CABECALHO: recolhido, com o titulo \"Mais antigo\" (a constante TITULO; o CSS .projeto-secao-titulo poe em CAIXA ALTA) + \"|\" + o CONTADOR (projeto-secao-resumo) + o \"+\" empurrado para a direita por margin-left auto. Corpo com grid 0fr->1fr (card-collapsible). Cada linha e hash curto + tituloDaTarefaDoCommit (o MESMO compositor do card, logo le-se \"Tarefa N - resumo\"; ver a nota do painel de git para o prefixo), agrupada por dia com a data em dd/mm/yyyy (marcas_envio.diaDoCommit). CADA DATA TEM UM SEPARADOR: .history-antigos-dia leva border-top 1px var(--border-suave) e a data passou a --text-claro (era --text-mutado) - o corpo le-se em blocos \"separador, data, labels\". A MENSAGEM QUEBRA NO MAXIMO 2 LINHAS (-webkit-line-clamp: 2) e o texto inteiro sai no balao do painel (mostrarIconTooltip via data-info, nunca o title do browser), que ja espera ICON_TOOLTIP_DELAY=500ms (ui.js) antes de aparecer - a espera que o utilizador pediu. O RESTAURAR RESERVA O LUGAR: ao contrario dos cards (que trocam marcador por restaurar), aqui o botao esta SEMPRE no flex com 14x14 (display:flex + visibility:hidden + opacity:0) e so acende no hover (.history-antigo-linha:hover -> visibility:visible, opacity:1) - antes era display:none/flex e o texto dava um salto (flick) de 22px ao passar o rato. O motor e o MESMO dos cards, requestGitRestore(hash, titulo, '') - aceita qualquer hash. ETIQUETAS DA VERSAO (2026-10-06): cada linha leva os chips das etiquetas que apontam para aquele commit - antigos.js:_tagsDoCommit(hash) cruza repositorio.tags (de /api/git/estado -> git_repo.tags_com_ponto, ponto COMPLETO) com o hash e _linha insere um <span class=\"history-antigo-tag\"> POR ETIQUETA, depois da mensagem e ANTES do restaurar. CSS style.css:.history-antigo-tag = --oliva sobre --bg-selecao, radius 9999, 10px/700, letter-spacing .03em, `align-self: center` (a linha e baseline por causa da mensagem de 2 linhas). LIMITE das etiquetas: vem do cache do repositorio (uma leitura por sessao, como os proprios commits) - uma versao criada depois so aparece depois de Ctrl+R. MEDIDO (tool_medir_pintura, CSS real, coluna 340px, 2026-10-06): cabecalho 324, linha 324x42.3, restaurar 14x14 a x=312 NAS DUAS cenas (repouso e hover forcado, msg 238.1px em ambas - a prova de que nao ha salto), msg de 2 linhas 36.3 de altura, data 324x27.5 com a linha do separador em y=43 e y=117, chip 44x17 centrado (centro 152,4 = centro da linha, custa ~59px a mensagem: 185,5 contra 244,8 sem chip) e a cor #90a015 pinta so o texto do chip.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/antigos.js",
-        "linha": 119,
+        "linha": 122,
         "conferido": [
-          1790295494.43,
-          8427
+          1790296150.318,
+          9050
         ]
       }
     },
@@ -5035,9 +5035,24 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 268,
         "conferido": [
-          1790295494.54,
-          33442
+          1790296132.547,
+          34085
         ]
+      }
+    },
+    {
+      "termo": "esta tarefa do painel de git",
+      "aliases": [
+        "esta tarefa | tarefa n",
+        "cabecalho da tarefa no painel",
+        "bloco da tarefa atual",
+        "campo do commit recolhido"
+      ],
+      "identificador": "blocoDaTarefa / campoDoCommit",
+      "descricao": "Recolhivel \"Esta tarefa | Tarefa N\" com o campo do commit dentro do corpo: nasce aberto no modo manual e recolhido no automatico. Sem campo nem ponto, fica a linha solta (linhaComTitulo).",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/git_panel.js",
+        "linha": 270
       }
     }
   ]
