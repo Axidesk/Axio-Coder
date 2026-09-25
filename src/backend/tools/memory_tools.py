@@ -183,10 +183,10 @@ def _onde_mais_o_simbolo(identificador, arquivo_indicado):
 
 @register(
     "tool_gerenciar_glossario",
-    "Gerencia o glossario de termos leigos -> codigo (data/glossary.json). Use quando descobrir um termo leigo do usuario mapeado para um identificador real (ex: 'icone do editor' -> '#btn-editor'). acao='escrever' grava com filtro critico + dedup no backend; acao='listar' mostra os termos; acao='verificar' remede a linha real de cada identificador, SEGUE o simbolo quando ele mudou de ficheiro (alvo reapontado sozinho quando so ha um sitio que o define; com varios candidatos, fica a proposta no relatorio) e reporta o que continua ausente; acao='remover' apaga. Use com criterio: so salve termos concretos e verificados no codigo, para nao poluir o glossario (ele e injetado no seu contexto toda rodada).",
+    "Gerencia o glossario de termos leigos -> codigo (data/glossary.json). Use quando descobrir um termo leigo do usuario mapeado para um identificador real (ex: 'icone do editor' -> '#btn-editor'). acao='escrever' grava com filtro critico + dedup no backend; acao='listar' mostra os termos (passe 'termo' - um ou varios, um por linha - para filtrar por termo, alias ou identificador, em vez de despejar o acervo inteiro); acao='verificar' remede a linha real de cada identificador, SEGUE o simbolo quando ele mudou de ficheiro (alvo reapontado sozinho quando so ha um sitio que o define; com varios candidatos, fica a proposta no relatorio) e reporta o que continua ausente; acao='remover' apaga. Use com criterio: so salve termos concretos e verificados no codigo, para nao poluir o glossario (ele e injetado no seu contexto toda rodada).",
     {
         'acao': {"tipo": "STRING", "enum": ['listar', 'escrever', 'verificar', 'remover'], "obrig": True},
-        'termo': {"tipo": "STRING", "desc": "Termo leigo do usuario (ex: 'icone do editor')"},
+        'termo': {"tipo": "STRING", "desc": "Termo leigo do usuario (ex: 'icone do editor'). Em acao='listar', filtra por termo, alias e identificador - aceita varios, um por linha"},
         'aliases': {"tipo": "STRING", "desc": 'Sinonimos separados por virgula'},
         'identificador': {"tipo": "STRING", "desc": "Identificador real no codigo (ex: '#btn-editor', '#editor-host', nome de funcao)"},
         'descricao': {"tipo": "STRING"},
@@ -194,6 +194,18 @@ def _onde_mais_o_simbolo(identificador, arquivo_indicado):
         'localizacao_linha': {"tipo": "INTEGER", "desc": 'Linha aproximada'},
     },
 )
+def _texto_do_termo_do_glossario(t):
+    partes = [t.get("termo", ""), *(t.get("aliases", []) or []), t.get("identificador", "")]
+    return normalizar(" ".join(str(p) for p in partes if p))
+
+
+def _termos_que_casam(termos, alvos):
+    """Sem alvos devolve o acervo inteiro; com alvos, so quem os contem."""
+    if not alvos:
+        return termos
+    return [t for t in termos if any(alvo in _texto_do_termo_do_glossario(t) for alvo in alvos)]
+
+
 def tool_gerenciar_glossario(acao, termo=None, aliases=None, identificador=None, descricao=None, localizacao_arquivo=None, localizacao_linha=None):
     """Gerencia o glossario de termos leigos -> codigo com filtro critico + dedup.
 
@@ -216,15 +228,21 @@ def tool_gerenciar_glossario(acao, termo=None, aliases=None, identificador=None,
     if acao == "listar":
         if not termos:
             return "Glossario vazio."
+        alvos = [normalizar(p) for p in str(termo or "").splitlines() if p.strip()]
+        escolhidos = _termos_que_casam(termos, alvos)
+        if not escolhidos:
+            return (f"Nenhum termo do glossario casa com: {', '.join(alvos)}."
+                    f" O acervo tem {len(termos)} termos - sem 'termo' a listagem sai inteira.")
         linhas = []
-        for t in termos:
+        for t in escolhidos:
             aliases_str = ", ".join(t.get("aliases", []))
             loc = t.get("localizacao", {}) or {}
             arquivo = loc.get("arquivo", "")
             linha = loc.get("linha", "")
             onde = f" ({arquivo}:{linha})" if arquivo else ""
             linhas.append(f"- \"{t.get('termo', '')}\" [aliases: {aliases_str}] -> {t.get('identificador', '')}{onde}")
-        return "GLOSSARIO ATUAL:\n" + "\n".join(linhas)
+        cabecalho = "GLOSSARIO ATUAL:" if not alvos else f"GLOSSARIO ({len(escolhidos)} de {len(termos)} casam com {', '.join(alvos)}):"
+        return cabecalho + "\n" + "\n".join(linhas)
 
     if acao == "verificar":
         if not termos:
