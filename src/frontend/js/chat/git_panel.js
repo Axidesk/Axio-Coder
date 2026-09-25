@@ -256,13 +256,16 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         }
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo, '', commits.length > 0);
     }
-    function linhaDoPontoEnviado(hash, mensagem) {
+    function blocoDoPontoEnviado(hash, mensagem) {
         const curto = String(hash || '').slice(0, 7);
+        let cabecalho = '<span class="git-seccao-titulo">Ja enviada para o GitHub</span>';
+        if (curto) {
+            cabecalho += '<span class="projeto-secao-sep">|</span>'
+                + `<span class="git-hash">${escapeHtml(curto)}</span>`;
+        }
         const titulo = tituloDaTarefaDoCommit(hash, mensagem);
-        const partes = [];
-        if (curto) partes.push(`<span class="git-hash">${escapeHtml(curto)}</span>`);
-        if (titulo) partes.push(escapeHtml(titulo));
-        return partes.join(' ');
+        const corpo = titulo ? `<div class="git-ponto-nome">${escapeHtml(titulo)}</div>` : '';
+        return recolhivel(cabecalho, corpo, false, 'git-ponto-enviado');
     }
     function htmlDaTarefa(grupo, pendentes, estado) {
         if (!grupo) {
@@ -292,10 +295,10 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const enviado = pontoDaTarefaEnviado
             ? { hash: pontoDaTarefa, mensagem: mensagemDoPonto }
             : (commitDeOutroJaEnviado ? { hash: levou.hash, mensagem: levou.mensagem } : null);
-        const cabecalho = enviado
-            ? linhaComTitulo('Ja enviada para o GitHub', linhaDoPontoEnviado(enviado.hash, enviado.mensagem), true)
+        let html = '<div class="git-seccao">';
+        html += enviado
+            ? blocoDoPontoEnviado(enviado.hash, enviado.mensagem)
             : linhaComTitulo('Esta tarefa', nomeDaTarefa(grupo));
-        let html = `<div class="git-seccao">${cabecalho}`;
         html += notaTemDepois + notaNoutroCommit;
         if (vaiCommitar || podeCorrigir) {
             const rascunho = valorDoCampo(grupo);
@@ -357,8 +360,8 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
         html += htmlCabecalho(estado, grupo, versaoDaTarefa);
-        html += htmlPorSubir(estado);
         html += htmlDaTarefa(grupo, pendentes, estado);
+        html += htmlPorSubir(estado);
         html += htmlDependencias(estado);
         html += '</div>';
         return html;

@@ -110,6 +110,16 @@
     padding-left: 4px;
 }
 
+.git-ponto-enviado > .projeto-linha {
+    padding-left: 0;
+}
+
+.git-ponto-nome {
+    color: var(--text-suave);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
 .git-seccao .projeto-cabecalho {
     margin: 0 0 5px;
 }

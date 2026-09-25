@@ -51,6 +51,12 @@ let alvoComBalao = null;
     function _tituloDoCommit(commit) {
         return tituloDaTarefaDoCommit(commit.hash, commit.mensagem) || commit.mensagem || '';
     }
+    function _tagsDoCommit(hash) {
+        return ((repositorio && repositorio.tags) || [])
+            .filter(t => t && typeof t === 'object' && t.ponto === hash)
+            .map(t => t.nome)
+            .filter(Boolean);
+    }
     function _linha(commit) {
         const linha = document.createElement('div');
         linha.className = 'history-antigo-linha';
@@ -72,6 +78,12 @@ let alvoComBalao = null;
         });
         linha.appendChild(hash);
         linha.appendChild(mensagem);
+        _tagsDoCommit(commit.hash).forEach(nome => {
+            const chip = document.createElement('span');
+            chip.className = 'history-antigo-tag';
+            chip.textContent = nome;
+            linha.appendChild(chip);
+        });
         linha.appendChild(restaurar);
         return linha;
     }
