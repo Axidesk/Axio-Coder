@@ -166,6 +166,10 @@ def _grupo_por_extensao(ficheiro, extensoes):
 def agrupar_por_tipo(ficheiros, atribuicao, extensoes):
     """Grupos por filtro declarado; sem filtro, pela extensao. 'Outros' fecha a lista.
 
+    Os filtros que o projeto DECLARA entram mesmo sem ficheiros: o Solution Explorer
+    mostra o no vazio (o Tibia74 declara 'Resource Files' e nao tem la nada), e esconder
+    um no que o projeto pediu dava uma arvore que nao bate com a do Visual Studio.
+
     Serve tambem quem agrupa sem projeto nenhum (arvore.py, no CMake ainda nao
     configurado): nesse caso `atribuicao` e `extensoes` vao vazios e a extensao decide.
     """
@@ -173,6 +177,8 @@ def agrupar_por_tipo(ficheiros, atribuicao, extensoes):
     for ficheiro in ficheiros:
         grupo = atribuicao.get(ficheiro) or _grupo_por_extensao(ficheiro, extensoes)
         por_grupo.setdefault(grupo, []).append(ficheiro)
+    for declarado in extensoes:
+        por_grupo.setdefault(declarado, [])
     nomes = sorted(por_grupo, key=lambda g: (_ORDEM.get(g, 1), g.lower()))
     return [{"nome": nome, "ficheiros": por_grupo[nome]} for nome in nomes]
 

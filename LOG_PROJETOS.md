@@ -127,6 +127,42 @@ Medido (2026-10-06):
 - **Axio** (projeto Python) e uma pasta sem C/C++: **zero grupos** — a árvore virtual não aparece
   onde não faz sentido.
 
+### A vista de projeto esconde o que o projeto não declara (2026-10-06)
+
+Até aqui a raiz mostrava os grupos **e** a lista solta da pasta: no DRAFTCAD apareciam `libs`,
+`shaders`, `src`, `compile_commands.json` e os `LOG_*.md` ao lado dos alvos; no Tibia74 apareciam
+`DATA ORIGINAIS`, `Debug`, `Release`, o `.sln` e o `.VC.db`. Nem o Qt Creator nem o Solution Explorer
+fazem isso: a **vista de projeto** mostra o que o projeto declara e mais nada. `arvore.tem_projeto`
+passou a decidir isto na rota `/api/explorer` — havendo projeto, a raiz fica **só** com ele; sem
+projeto, continua a mostrar as pastas e a lista solta (o Axio, com 17 entradas, não mudou).
+
+Os filtros que o projeto **declara** entram mesmo vazios: o `.vcxproj.filters` do Tibia74 declara
+`Resource Files` e não tem lá nada, mas o VS mostra o nó — esconder um nó que o projeto pediu daria
+uma árvore que não bate com a dele.
+
+O que **não** se copiou, de propósito: `References` e `External Dependencies`. A documentação da
+Microsoft di-lo à letra (*"References and External Dependencies are special folders that don't
+participate in filtering"*): o `External Dependencies` é o IntelliSense a indexar headers externos
+(milhares de ficheiros; a comunidade do VS queixa-se dele e há opção para o esconder), e o Tibia74
+não declara uma única `ProjectReference` — um nó `References` nasceria vazio a fingir.
+
+Medido pela rota real (2026-10-06):
+
+| Pasta aberta | Raiz mostra |
+| --- | --- |
+| DRAFTCAD (CMake, 4 alvos) | 4 nós de projeto, e nada mais |
+| Tibia74 (`.sln`) | 1 nó (`Tibia74`) — fora o `DATA ORIGINAIS`, `Debug`, `Release`, `.sln`, `.VC.db` |
+| Tibia74 / projeto | Fontes, Cabeçalhos, Recursos (o terceiro vazio) |
+| Tibia74 / Cabeçalhos | 81 ficheiros |
+| `Projects/Tibia74/src` aberta como raiz | Fontes, Cabeçalhos |
+| Axio (sem projeto) | 17 entradas, como sempre |
+
+O ícone do nó de projeto trocou: em vez da caixa ("pacote") ficou uma **janela mínima** (retângulo +
+barra no topo), o mesmo que o Qt Creator usa para o projeto.
+
+Fontes: [cmake-file-api(7)](https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html) e
+[vcxproj.filters files](https://learn.microsoft.com/en-us/cpp/build/reference/vcxproj-filters-files).
+
 ## Projeto do zero: a árvore antes da primeira configuração (2026-10-06)
 
 Pergunta que abriu isto: *"num projeto do zero, se eu decidir criar em C++, a doc atualiza

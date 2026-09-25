@@ -93,8 +93,12 @@ def explorer():
         items.append(item)
     items.sort(key=lambda x: (_ORDEM_DE_ENTRADAS.get(x["tipo"], 1), x["nome"].lower()))
     if not caminho_rel:
-        agrupados = arvore.ficheiros_agrupados(raiz)
-        items = arvore.entradas_raiz(raiz) + [i for i in items if i["path"] not in agrupados]
+        nos = arvore.entradas_raiz(raiz)
+        if arvore.tem_projeto(raiz):
+            items = nos
+        else:
+            agrupados = arvore.ficheiros_agrupados(raiz)
+            items = nos + [i for i in items if i["path"] not in agrupados]
     cwd = caminho_alvo
     relativo, dentro = calcular_posicao_relativa(cwd, raiz_abs())
     return jsonify(_resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items))
