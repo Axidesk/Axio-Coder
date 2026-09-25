@@ -6,10 +6,12 @@ import { assignDisplayNamesByDay, hidratarGroup, ensureSessionDetailsLoaded, reb
 import { esmaecerEmGesto } from '../esmaecer.js';
 import { marcarTermo } from '../marcar_termo.js';
 
-const { btnHistorySearch, historySearchBox, historySearchLupa, historySearchInputInline, historySearchCols, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
+const { btnHistorySearch, btnShowGitHistory, btnGitEnviarHistory, historySearchBox, historySearchLupa, historySearchInputInline, historySearchCols, historySearchResultsInline, historySearchRespostas, buscaContaPerguntas, buscaContaRespostas, panelCol1, slidingPanelContainer } = dom;
 
 const MSG_VAZIO_PERGUNTAS = 'Nenhuma pergunta encontrada com esse termo.';
 const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
+const CLASSE_OCULTA = 'busca-oculta';
+const TAMANHO_MINIMO_DE_HASH = 4;
 
     function collapseHistorySearchInline() {
         state.historySearchInlineActive = false;
@@ -17,6 +19,8 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         if (slidingPanelContainer) slidingPanelContainer.classList.remove('history-search-expanded');
         if (btnHistorySearch) btnHistorySearch.classList.remove('hide');
         if (historySearchBox) historySearchBox.classList.remove('aberta');
+        modoHash(false);
+        ocultarBotoesDoGit(false);
     }
     function encolherBuscaInline() {
         if (!state.historySearchInlineActive) return;
@@ -32,6 +36,7 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         if (slidingPanelContainer) slidingPanelContainer.classList.add('history-search-expanded');
         if (btnHistorySearch) btnHistorySearch.classList.add('hide');
         if (historySearchBox) historySearchBox.classList.add('aberta');
+        ocultarBotoesDoGit(true);
         const termoAberto = historySearchInputInline ? historySearchInputInline.value.trim() : '';
         if (termoAberto) performHistorySearch(termoAberto);
         else if (!jaAberta) limparColunas();
@@ -72,6 +77,14 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         const termoLower = termo.toLowerCase();
         await ensureSessionDetailsLoaded();
         assignDisplayNamesByDay();
+        if (pareceHash(termoLower)) {
+            const tarefas = tarefasPorHash(termoLower);
+            if (tarefas.length) {
+                pintarPorHash(tarefas);
+                return;
+            }
+        }
+        modoHash(false);
         const perguntas = [];
         const respostas = [];
         for (const sessao of state.sessionHistoryList) {
@@ -94,10 +107,47 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         pintarColuna(historySearchRespostas, buscaContaRespostas, respostas, termoLower, MSG_VAZIO_RESPOSTAS);
     }
     function limparColunas() {
+        modoHash(false);
         if (historySearchResultsInline) historySearchResultsInline.innerHTML = '';
         if (historySearchRespostas) historySearchRespostas.innerHTML = '';
         if (buscaContaPerguntas) buscaContaPerguntas.textContent = '';
         if (buscaContaRespostas) buscaContaRespostas.textContent = '';
+    }
+    function ocultarBotoesDoGit(ocultar) {
+        [btnShowGitHistory, btnGitEnviarHistory].forEach(botao => {
+            if (botao) botao.classList.toggle(CLASSE_OCULTA, ocultar);
+        });
+    }
+    function modoHash(ligado) {
+        if (historySearchCols) historySearchCols.classList.toggle('busca-hash', ligado);
+    }
+    function pareceHash(termo) {
+        return new RegExp('^[0-9a-f]{' + TAMANHO_MINIMO_DE_HASH + ',40}$').test(termo);
+    }
+    function hashesDoLog(saved) {
+        const lista = saved.commit ? [String(saved.commit)] : [];
+        (saved.commits || []).forEach(c => {
+            if (c && c.hash) lista.push(String(c.hash));
+        });
+        return lista;
+    }
+    function tarefasPorHash(termo) {
+        const achados = [];
+        state.sessionHistoryList.forEach(sessao => {
+            const dia = (sessao.datetime || '').split(' ')[0] || 'Data desconhecida';
+            (state.sessionDetailCache[sessao.filename] || []).forEach(saved => {
+                const hash = hashesDoLog(saved).find(h => h.toLowerCase().startsWith(termo));
+                if (!hash) return;
+                achados.push({
+                    nome: saved.displayName || saved.name || 'Tarefa',
+                    hash: hash.slice(0, 7),
+                    dia,
+                    hora: saved.timestamp || '',
+                    saved
+                });
+            });
+        });
+        return achados;
     }
     function primeiroComTermo(textos, termoLower) {
         for (const texto of textos) {
@@ -123,6 +173,15 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
             container.appendChild(createHistorySearchResultCard(r, termoLower));
         });
     }
+    function pintarPorHash(tarefas) {
+        modoHash(true);
+        if (buscaContaPerguntas) buscaContaPerguntas.textContent = '';
+        if (buscaContaRespostas) buscaContaRespostas.textContent = '';
+        if (historySearchRespostas) historySearchRespostas.innerHTML = '';
+        if (!historySearchResultsInline) return;
+        historySearchResultsInline.innerHTML = '';
+        tarefas.forEach(t => historySearchResultsInline.appendChild(createHistorySearchResultCard(t, '')));
+    }
     function createHistorySearchResultCard(r, termoLower) {
         const card = document.createElement('div');
         card.className = 'flex flex-col gap-1 py-1';
@@ -140,14 +199,24 @@ const MSG_VAZIO_RESPOSTAS = 'Nenhuma resposta encontrada com esse termo.';
         });
         const meta = document.createElement('div');
         meta.className = 'text-[10px] text-[var(--cinza-meta)] leading-tight';
-        meta.textContent = [r.dia, r.hora].filter(Boolean).join(' | ');
-        const trecho = document.createElement('div');
-        trecho.className = 'text-[12px] text-[var(--text-usuario)] leading-relaxed';
-        trecho.textContent = buildSearchSnippet(r.texto, termoLower);
-        marcarTermo(trecho, termoLower);
+        const restante = [r.dia, r.hora].filter(Boolean).join(' | ');
+        if (r.hash) {
+            const ponto = document.createElement('span');
+            ponto.className = 'busca-ponto';
+            ponto.textContent = r.hash;
+            meta.appendChild(ponto);
+            if (restante) meta.appendChild(document.createTextNode(' | '));
+        }
+        if (restante) meta.appendChild(document.createTextNode(restante));
         card.appendChild(nome);
         if (meta.textContent) card.appendChild(meta);
-        card.appendChild(trecho);
+        if (r.texto) {
+            const trecho = document.createElement('div');
+            trecho.className = 'text-[12px] text-[var(--text-usuario)] leading-relaxed';
+            trecho.textContent = buildSearchSnippet(r.texto, termoLower);
+            marcarTermo(trecho, termoLower);
+            card.appendChild(trecho);
+        }
         return card;
     }
     function buildSearchSnippet(texto, termoLower) {

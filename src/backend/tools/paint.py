@@ -137,6 +137,10 @@ def _sonda_js(seletores):
   const sel = %s;
   const out = [];
   let i = 0;
+  const quatro = (a, b, c, d) => [a, b, c, d].map(v => {
+    const n = parseFloat(v);
+    return isNaN(n) ? v : Math.round(n * 10) / 10;
+  }).join('/');
   const deslocamento = el => {
     const tr = getComputedStyle(el).transform;
     if (!tr || tr === 'none') return '';
@@ -153,9 +157,12 @@ def _sonda_js(seletores):
     const pseudo = p => (p.content && p.content !== 'none')
       ? p.width + 'x' + p.height + ' @ ' + p.top + ',' + p.left + ' bg=' + p.background.slice(0, 24)
       : '';
+    const cs = getComputedStyle(el);
     out.push({ tag: el.tagName.toLowerCase(), classe: String(el.className).slice(0, 70),
                x: +r.x.toFixed(1), y: +r.y.toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1),
                desloc: deslocamento(el),
+               margem: quatro(cs.marginTop, cs.marginRight, cs.marginBottom, cs.marginLeft),
+               espaco: quatro(cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft),
                antes: pseudo(b), depois: pseudo(a) });
   });
   return JSON.stringify({ pagina: [document.body.scrollWidth, document.body.scrollHeight],
@@ -201,6 +208,24 @@ app.whenReady().then(async () => {
   app.quit();
 });
 """.replace("__SONDA__", json.dumps(sonda)).replace("__ESPERA__", str(int(ESPERA_TAILWIND_MS)))
+
+
+def _espacos_do_elemento(r):
+    """Margem e padding de um elemento medido, quando algum nao e zero.
+
+    A geometria diz a CAIXA de cada elemento, nunca a COSTURA entre dois: um espaco
+    grande entre dois blocos pode vir do margin-bottom do primeiro, do margin-top do
+    segundo ou de um gap do pai, e descobri-lo por tentativa custa uma medicao por
+    hipotese. Esta linha responde-o com o valor real.
+    """
+    partes = []
+    if r.get("margem") and r["margem"] != "0/0/0/0":
+        partes.append("margem cima/dir/baixo/esq %s" % r["margem"])
+    if r.get("espaco") and r["espaco"] != "0/0/0/0":
+        partes.append("padding cima/dir/baixo/esq %s" % r["espaco"])
+    if not partes:
+        return ""
+    return "         " + "; ".join(partes) + "  (o espaco entre este elemento e os vizinhos vem daqui)"
 
 
 def _cor_hex(texto, padrao):
@@ -368,6 +393,8 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
                         dx, dy = [float(v) for v in r["desloc"].split(",")]
                         linhas.append("         DESLOCADA por transform: a posicao no LAYOUT e x=%.1f y=%.1f (+%.1f x, +%.1f y)"
                                       % (r["x"] - dx, r["y"] - dy, dx, dy))
+                if _espacos_do_elemento(r):
+                    linhas.append(_espacos_do_elemento(r))
                 if r["antes"]:
                     linhas.append("         ::before %s" % r["antes"])
                 if r["depois"]:

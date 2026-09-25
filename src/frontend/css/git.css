@@ -1,18 +1,18 @@
 .git-painel {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     font-family: inherit;
 }
 
 .git-seccao {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
 }
 
 .git-seccao + .git-seccao {
-    padding-top: 4px;
+    padding-top: 10px;
     border-top: 1px solid var(--border-suave);
 }
 
@@ -53,10 +53,6 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
-}
-
-.git-grupo-etiquetas {
-    margin-top: 2px;
 }
 
 .git-grupo-etiquetas > .projeto-linha {
@@ -131,7 +127,7 @@
     line-height: 1.5;
 }
 
-.git-seccao .projeto-cabecalho {
+.git-painel .projeto-cabecalho {
     margin: 0 0 5px;
 }
 

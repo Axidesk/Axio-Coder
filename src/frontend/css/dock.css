@@ -73,6 +73,21 @@
     transform: scale(0.4);
     pointer-events: none;
 }
+#btn-show-git-history,
+#btn-git-enviar-history {
+    transition: width var(--dur-7) var(--ease-fluid), opacity var(--dur-3) ease,
+        transform var(--dur-7) var(--ease-fluid), color var(--dur-3) ease;
+}
+#btn-show-git-history.busca-oculta,
+#btn-git-enviar-history.busca-oculta {
+    width: 0;
+    min-width: 0;
+    margin-left: -12px;
+    opacity: 0;
+    transform: scale(0.4);
+    pointer-events: none;
+    overflow: hidden;
+}
 #history-search-box {
     flex: 0 1 0;
     min-width: 0;
@@ -95,6 +110,20 @@
 #history-search-cols {
     display: flex;
     transition: opacity var(--dur-3) var(--ease-fluid);
+}
+#history-search-cols.busca-hash .busca-coluna {
+    border-right: 0;
+}
+#history-search-cols.busca-hash .busca-coluna-topo {
+    display: none;
+}
+#history-search-cols.busca-hash > div:last-child {
+    display: none;
+}
+.busca-ponto {
+    color: var(--text-mutado);
+    font-family: monospace;
+    letter-spacing: 0.02em;
 }
 .busca-coluna {
     border-right: 1px solid var(--border-suave);

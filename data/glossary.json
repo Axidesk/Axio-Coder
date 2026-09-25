@@ -1465,17 +1465,15 @@
         "campo de busca do historico",
         "lupa do historico",
         "pesquisa do historico",
-        "painel de busca do historico"
+        "painel de busca do historico",
+        "busca por hash",
+        "buscar conversas ou hash"
       ],
       "identificador": "#history-search-input-inline",
-      "descricao": "REESCRITO A 2026-10 (o campo mudou de casa). O campo da busca do historico vive NO CABECALHO da coluna 1 - dentro de #history-search-box, IRMAO do botao #btn-history-search (index.html, o mesmo cabecalho que tem \"Historico\"). NAO esta mais embaixo: o painel #history-search-panel passou a ter SO as duas colunas de resultados. O efeito e o do chat: o botao encolhe e some (.hide: width 20px -> 0, opacity 0, scale 0.4) enquanto #history-search-box cresce em largura (.aberta: flex 0 1 0 -> 1 1 0) e, ao contrario da lupa do chat (absoluta), EMPURRA os icones ao lado ate ao limite - o grupo do cabecalho precisa de flex: 1 1 auto (dock.css) senao nada cresce. O campo e a pilula PARTILHADA .busca-campo / .busca-campo-lupa / .busca-campo-input de src/frontend/css/busca.css (a mesma do chat). Fecha pelo clique na lupa de dentro do campo (historySearchLupa -> collapseHistorySearchInline) ou pelo botao. Componente de busca: busca.css; posicao e animacao: dock.css; abrir/fechar: src/frontend/js/chat/historico/busca.js:abrirBuscaInline. ACRESCENTADO A 2026-10: as colunas ja nao tem texto de espera nenhum (os MSG_BUSCA_INICIAL/MSG_BUSCA_RESPOSTAS foram apagados) - sem termo ficam so os rotulos Perguntas/Respostas; com termo e sem resultado fica a mensagem \"Nenhuma pergunta/resposta encontrada com esse termo.\". CLICAR NUM RESULTADO FECHA A BUSCA primeiro (collapseHistorySearchInline) e SO DEPOIS seleciona o card da tarefa na pilha (selectHistoryTaskInPile(r.dia, r.saved.id)) e abre os ficheiros - a ordem importa, porque a pilha esta com opacity 0 enquanto a busca esta aberta. LIMITE CONHECIDO: selectHistoryTaskInPile so encontra o card de um dia que esteja na pilha (renderHistoryCards faz dias.slice(0, 3)), logo um resultado de um dia mais antigo fecha a busca mas nao seleciona card nenhum. CORRIGIDO A 2026-10: este cabecalho deixou de ter os botoes restaurar/salvar/excluir (a lixeira e o salvar morreram e o restaurar subiu para o cabecalho da coluna 3) - dos icones so ficou a lupa, portanto #btn-history-search e o campo sao os unicos vizinhos e o grupo do cabecalho ficou mais largo.",
+      "descricao": "REESCRITO A 2026-10-06 (o campo aceita hash e os vizinhos do cabecalho voltaram a ser escondidos durante a busca). O campo da busca do historico vive NO CABECALHO da coluna 1 - dentro de #history-search-box, IRMAO do botao #btn-history-search (index.html, o mesmo cabecalho que tem \"Historico\"). NAO esta mais embaixo: o painel #history-search-panel passou a ter SO as duas colunas de resultados. O efeito e o do chat: o botao encolhe e some (.hide: width 20px -> 0, opacity 0, scale 0.4) enquanto #history-search-box cresce em largura (.aberta: flex 0 1 0 -> 1 1 0) e EMPURRA os icones ao lado ate ao limite - o grupo do cabecalho precisa de flex: 1 1 auto (dock.css) senao nada cresce. O campo e a pilula PARTILHADA .busca-campo / .busca-campo-lupa / .busca-campo-input de src/frontend/css/busca.css (a mesma do chat). Fecha pelo clique na lupa de dentro do campo (historySearchLupa -> collapseHistorySearchInline) ou pelo botao. Componente de busca: busca.css; posicao e animacao: dock.css; abrir/fechar: src/frontend/js/chat/historico/busca.js:abrirBuscaInline.\n\nA LABEL diz \"Buscar conversas ou hash\" (placeholder e title do botao). As colunas nao tem texto de espera nenhum: sem termo ficam so os rotulos Perguntas/Respostas; com termo e sem resultado fica \"Nenhuma pergunta/resposta encontrada com esse termo.\".\n\nBUSCA POR HASH: quem decide e busca.js:pareceHash(termo) - 4 a 40 caracteres de [0-9a-f] - e, havendo TAREFA que case (busca.js:tarefasPorHash, que le o campo commit e a lista commits de cada log e casa por PREFIXO do hash), a busca entra em MODO HASH: #history-search-cols ganha .busca-hash e com isso caem o separador vertical (.busca-coluna border-right), os rotulos Perguntas/Respostas com os contadores e a SEGUNDA coluna - fica UMA lista, com a tarefa e o hash em .busca-ponto (monospace, --text-mutado) ao lado do dia. Se o termo parecer hash mas nao casar com tarefa nenhuma, a busca segue normal, com as duas colunas. O modo e limpo em limparColunas e em collapseHistorySearchInline.\n\nOS VIZINHOS: com a busca aberta os dois icones do git do cabecalho (#btn-show-git-history e #btn-git-enviar-history) recebem .busca-oculta (dock.css: width 0, margin-left -12px, opacity 0, scale 0.4) e ficam so o TITULO e o campo. O margin-left -12px (o gap-3 do cabecalho) devolve o lugar que cada icone ocupava - sem ele ficava um buraco de 12px por icone. MEDIDO a 320px: com os dois escondidos o campo comeca em x=101,4, EXACTAMENTE o mesmo sitio de quando so havia a lupa, e o input tem 158,6px de largura (134,6 antes). A classe e gerida por busca.js:ocultarBotoesDoGit e NAO mexe no 'hidden' de cada botao: o aviao continua a ser escondido por git_panel.js:pintarBotaoEnvio quando nao ha nada por subir.\n\nLIMITE CONHECIDO: selectHistoryTaskInPile so encontra o card de um dia que esteja na pilha (renderHistoryCards faz dias.slice(0, 3)), logo um resultado de um dia mais antigo fecha a busca mas nao seleciona card nenhum.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 105,
-        "conferido": [
-          1790291721.944,
-          81161
-        ]
+        "linha": 105
       }
     },
     {
@@ -4427,10 +4425,10 @@
       "descricao": "Seccao do painel de git que lista os commits que ainda estao so no disco. NASCE ABERTA quando ha o que subir (a 2026-10 passou a abrir por padrao: antes era sempre recolhida) e RECOLHIDA quando nao ha nada - nesse caso o corpo traz so a nota 'Tudo o que esta commitado ja subiu para o remoto.' e o estado ja e dito pelo aviao do dia, por isso nao vale ocupar espaco. Cada linha e 'bullet + hash curto + titulo do card', montado por cards.js:tituloDaTarefaDoCommit(hash, mensagem) - o MESMO compositor do titulo da coluna 1 (cards.js:comporTitulo), logo le-se igual a lista do historico: 'Tarefa 17 - resumo da mensagem'. Commit que nao pertence a nenhuma tarefa conhecida aparece so com a mensagem. O cabecalho mostra o titulo e a contagem. O corpo vem de git_repo.por_subir via /api/git/por_subir (com truncado a partir de um teto, que enviadaParaOServidor respeita).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 246,
+        "linha": 244,
         "conferido": [
-          1790296132.547,
-          34085
+          1790297147.659,
+          34325
         ]
       }
     },
@@ -4441,10 +4439,10 @@
       "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 208,
+        "linha": 206,
         "conferido": [
-          1790296132.547,
-          34085
+          1790297147.659,
+          34325
         ]
       }
     },
@@ -4836,8 +4834,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 112,
         "conferido": [
-          1790296132.547,
-          34085
+          1790297147.659,
+          34325
         ]
       }
     },
@@ -4874,10 +4872,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 544,
+        "linha": 546,
         "conferido": [
-          1790296132.547,
-          34085
+          1790297147.659,
+          34325
         ]
       }
     },
@@ -4933,8 +4931,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 117,
         "conferido": [
-          1790296132.547,
-          34085
+          1790297147.659,
+          34325
         ]
       }
     },
@@ -5033,10 +5031,10 @@
       "descricao": "Linha do cartao \"Esta tarefa\" do painel de git que substitui o campo do commit quando aquele ponto JA esta no remoto (git_panel.js:htmlDaTarefa, ramo `enviado`). Montada por git_panel.js:blocoDoPontoEnviado(hash, mensagem) com o recolhivel() do proprio modulo (o mesmo desenho do \"Por subir\"): CABECALHO \"Ja enviada para o GitHub | 27c074e\" com o hash num <span class=\"git-hash\"> (--text-mutado, a mesma cor discreta do titulo) e o \"+\" logo a seguir ao hash (nao encostado a direita); CORPO com tituloDaTarefaDoCommit num <div class=\"git-ponto-nome\"> (12.5px, --text-suave) = \"Tarefa 3 - Captura do painel de git reposta inteira\". NASCE RECOLHIDO. Quem decide que a tarefa esta enviada e cards.js:enviadaParaOServidor(hash) - a MESMA funcao do aviao do card - e vale nos dois casos: ponto proprio ja enviado, ou ficheiros que foram dentro de OUTRO commit que ja subiu. Numa tarefa enviada nao ha campo, nem lapis, nem varinha: _podeEmendar exige o hash em por_subir. Substituiu a linhaComTitulo de uma linha e a funcao linhaDoPontoEnviado (que morreu). CSS git.css: .git-ponto-enviado > .projeto-linha (padding-left 0) e .git-ponto-nome. MEDIDO a 340px: cabecalho h=22 com o corpo a h=0 (nada pinta), aberto o corpo tem 18,8 e o texto comeca a x=9 (alinhado com o titulo).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 268,
+        "linha": 266,
         "conferido": [
-          1790296132.547,
-          34085
+          1790297147.659,
+          34325
         ]
       }
     },
@@ -5053,7 +5051,11 @@
       "descricao": "Recolhivel \"Esta tarefa | <hash curto>\" (sem hash, o nome da tarefa) com o corpo \"Tarefa N - mensagem\": o prefixo e FIXO fora do input e o input so leva a mensagem. So-leitura mostra o texto; ao lapis vira prefixo + input. Sem campo nem ponto, fica a linha solta (linhaComTitulo).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 278
+        "linha": 278,
+        "conferido": [
+          1790297147.659,
+          34325
+        ]
       }
     }
   ]
