@@ -455,6 +455,67 @@ são as dependências de um projeto CMake, e o retrato dizia "sem manifestos det
 CMake inteiro. DRAFTCAD -> `CMakeLists.txt (2 pacotes CMake): Qt6, Vulkan`. É o que torna verdadeira
 a regra 4.1 (o manifesto é a fonte canónica da stack) para projetos que não são Python.
 
+## Quem manda na arrumação é o projeto — e não há só CMake e sln (2026-10-06)
+
+Pergunta do utilizador: *"isso só serve para cmake? o cmake é do Qt Creator? todo código cpp e h tem
+necessariamente cmake e sln?"* — vale a pena ficar escrito, porque a resposta é o que decide se a
+árvore é escalável ou feita à medida de dois programas.
+
+**Medido na documentação oficial** (https://doc.qt.io/qtcreator/creator-reference-build-systems.html
+e https://doc.qt.io/qt-6/topics-app-development.html): *"Qt Creator supports CMake, qmake, Qbs,
+Autotools, Nimble, Meson, and IncrediBuild projects"*. Ou seja:
+
+- O **CMake não é do Qt Creator**. É um gerador de build independente (Kitware) que o Qt Creator, o
+  Visual Studio, o CLion e mais meia dúzia sabem ler. O `.sln`/`.vcxproj` é **MSBuild** (Microsoft) e
+  não é mais "do C++" do que o CMake. Nenhum dos dois é intrínseco da linguagem.
+- **Não existe UM formato de projeto.** Cada família declara o que quer, e quem não declara nada é
+  agrupado pela extensão. A lista real: CMake (`CMakeLists.txt`), MSBuild (`.sln`/`.vcxproj`/
+  `.vcxproj.filters`), qmake (`.pro`/`.pri`), Meson (`meson.build`), Autotools (`configure.ac`/
+  `Makefile.am`), SCons (`SConstruct`), Premake (`premake5.lua`), GN (`BUILD.gn`), Bazel (`BUILD`),
+  Xcode (`project.pbxproj`), Make (`Makefile`) e Ninja (`build.ninja`).
+
+**O contrato do Axio** (é por isto que não engessa): um motor de árvore (`builds/arvore.py`) +
+**um leitor por família** (`builds/cmake_api.py`, `builds/msbuild.py`) + **o agrupamento por extensão
+como rede** para quem não declara nada. Um leitor devolve sempre a mesma forma —
+`projetos: [{nome, grupos: [{nome, ficheiros}]}]` — e a visualização (ícones, cores, guias) nunca se
+toca. Família nova = um ficheiro, não uma árvore nova.
+
+Implementado a 2026-10-06: CMake pela File API, CMake pelo texto (antes da primeira configuração),
+MSBuild pelos filtros declarados, e o agrupamento por extensão (que é o que o Visual Studio faria ao
+criar um projeto numa pasta de código). O `detetar.py` já reconhece `cmake`, `msbuild`, `qmake` e
+`make`; um `.pro` cai hoje na rede (Fontes/Cabeçalhos) até haver leitor próprio — é o próximo, quando
+aparecer um projeto qmake a sério.
+
+### A árvore desenha as guias como o Qt Creator
+
+O explorer usava um `border-left` no contentor: uma linha contínua que atravessava tudo e nenhum
+traço a ligar cada ficheiro à pasta-mãe. Agora desenha `|`, `|-` e o cotovelo `L` como o painel de
+informações do projeto, com a mesma técnica — e é a técnica padrão da web para isto, porque **não há
+especificação de CSS para ligações de árvore**: fio vertical num pseudo-elemento, traço horizontal
+noutro, e o cotovelo desenhado pelo último filho.
+
+Duas decisões que a medição impôs:
+
+- **Percentagens, nunca pixeis fixos.** A linha mede 25.5px de verdade (fonte de 13px + 6px de
+  padding), não os ~22 que se supõem. Com `top: 50%` no traço e `height: 50%` no cotovelo, os dois
+  encontram-se exactamente no meio da linha, seja qual for a altura. O painel de projeto, que fixa
+  `top: 11px`, acerta por sorte da altura da linha dele.
+- **O fio alinha com o centro do ícone da pasta-mãe** (x=24 medido: padding de 8 + ícone de 16),
+  nunca com a borda dela — é o que faz a linha parecer que "desce" do ícone.
+
+Medido com `tool_medir_pintura` (cena com o caso difícil: o último filho é um grupo com filhos):
+fio de 1px `#444444` (`--border-suave`), traço de 8px a acabar no início do ícone, cotovelo de
+12.75px no último filho, e os traços por cima do fundo de hover.
+
+### O ícone do nó de projeto: pasta, e a correcção de uma promessa
+
+O nó de projeto andou com uma **caixa 3D que se lia como "pacote"** (`ICON_PROJETO`, commit
+`32791c3`) — e a rodada que a introduziu descreveu-a ao utilizador como "uma janela mínima". Não
+era: era o pacote, e o utilizador viu-o e disse que não gostou. O commit seguinte (`bd0771d`)
+apagou a constante por acidente, e o que ficou foi o desenho certo pela regra dele: **pasta em
+`--text-branco` a negrito** (o nível separa-se por COR e PESO, nunca por um glifo diferente). Fica
+escrito para não voltar a nascer um pacote em nome de uma "janela".
+
 ## O que falta (medido, não suposto)
 
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
