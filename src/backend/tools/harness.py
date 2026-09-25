@@ -176,35 +176,35 @@ const __GLOBaisConhecidos = new Set(("Array ArrayBuffer Boolean Date decodeURI d
 
 const dependenciasDeDisco = (rel, ...nomes) => {
     const texto = funcoesDoDisco(rel, ...nomes)
-        .replace(/\/\*[\s\S]*?\*\//g, " ")
-        .replace(/\/\/[^\n]*/g, " ")
-        .replace(/`(?:[^`\\]|\\[\s\S])*`/g, (t) => (t.match(/\$\{[^}]*\}/g) || []).join(" "))
-        .replace(/'(?:[^'\\\n]|\\.)*'/g, " ")
-        .replace(/"(?:[^"\\\n]|\\.)*"/g, " ");
+        .replace(/\\/\\*[\\s\\S]*?\\*\\//g, " ")
+        .replace(/\\/\\/.*/g, " ")
+        .replace(/`(?:[^`\\\\]|\\\\[\\s\\S])*`/g, (t) => (t.match(/\\$\\{[^}]*\\}/g) || []).join(" "))
+        .replace(/'(?:[^'\\n]|\\.)*'/g, " ")
+        .replace(/"(?:[^"\\n]|\\.)*"/g, " ");
     const declarados = new Set();
     let m;
     const varrer = (re, grupo) => {
         while ((m = re.exec(texto))) {
-            const bruto = m[grupo].replace(/[{}[\]]/g, ",");
+            const bruto = m[grupo].replace(/[{}[\\]]/g, ",");
             bruto.split(",").forEach((p) => {
-                const nome = p.trim().replace(/^\.\.\./, "").split(/[\s=:]/)[0];
+                const nome = p.trim().replace(/^\\.\\.\\./, "").split(/[\\s=:]/)[0];
                 if (nome) declarados.add(nome);
             });
         }
     };
-    varrer(/(?:function|class)\s+([A-Za-z_$][\w$]*)/g, 1);
-    varrer(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g, 1);
-    varrer(/(?:const|let|var)\s*(\{[^}]*\})/g, 1);
-    varrer(/\bfunction\s*[A-Za-z_$\w]*\s*\(([^()]*)\)/g, 1);
-    varrer(/\(([^()]*)\)\s*=>/g, 1);
-    varrer(/([A-Za-z_$][\w$]*)\s*=>/g, 1);
+    varrer(/(?:function|class)\\s+([A-Za-z_$][\\w$]*)/g, 1);
+    varrer(/(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)/g, 1);
+    varrer(/(?:const|let|var)\\s*(\\{[^}]*\\})/g, 1);
+    varrer(/\\bfunction\\s*[A-Za-z_$\\w]*\\s*\\(([^()]*)\\)/g, 1);
+    varrer(/\\(([^()]*)\\)\\s*=>/g, 1);
+    varrer(/([A-Za-z_$][\\w$]*)\\s*=>/g, 1);
     const semMembro = texto
-        .replace(/[A-Za-z_$][\w$]*(?:-[A-Za-z_$][\w$]*)+/g, " ")
-        .replace(/\.\s*[A-Za-z_$][\w$]*/g, " ")
-        .replace(/[A-Za-z_$][\w$]*\s*:/g, " ")
-        .replace(/\$\{/g, " ");
+        .replace(/[A-Za-z_$][\\w$]*(?:-[A-Za-z_$][\\w$]*)+/g, " ")
+        .replace(/\\.\\s*[A-Za-z_$][\\w$]*/g, " ")
+        .replace(/[A-Za-z_$][\\w$]*\\s*:/g, " ")
+        .replace(/\\$\\{/g, " ");
     const usados = new Set();
-    const nomesUsados = /[A-Za-z_$][\w$]*/g;
+    const nomesUsados = /[A-Za-z_$][\\w$]*/g;
     while ((m = nomesUsados.exec(semMembro))) usados.add(m[0]);
     return Array.from(usados)
         .filter((n) => !declarados.has(n) && !__GLOBaisConhecidos.has(n))
