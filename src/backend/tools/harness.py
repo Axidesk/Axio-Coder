@@ -152,6 +152,65 @@ const funcaoDoDisco = (rel, nome) => {
 
 const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join(String.fromCharCode(10));
 
+// O que a funcao extraida chama de FORA: os nomes que ela usa e nao declara
+// dentro. E a resposta a "o que tenho de injetar no new Function?", em vez de a
+// descobrir um ReferenceError de cada vez:
+//   const faltam = dependenciasDeDisco("src/frontend/js/chat/git_panel.js", "montarPainel");
+//   // -> ["RASCUNHOS", "escapeHtml", "state", "svgDoPonto", "tituloDaTarefaDoCommit", ...]
+//   const api = new Function(...faltam, fonte + "return {montarPainel};")(...faltam.map(duble));
+// E heuristica (nao e um parser): pode apanhar um nome que ja vem de dentro de
+// uma funcao extraida a parte, e nao ve nomes obtidos por indice (obj[nome]).
+// Serve para dar a LISTA, nunca para decidir sozinha o que existe - o assert e
+// do modelo. Os literais de template CONTAM: o ${X} de uma template string e
+// codigo vivo, e apagar a template inteira escondia um SVG_RAMO de verdade.
+const __GLOBaisConhecidos = new Set(("Array ArrayBuffer Boolean Date decodeURI decodeURIComponent " +
+    "encodeURI encodeURIComponent Error EvalError Function Infinity Intl isFinite isNaN JSON Map Math " +
+    "Number Object parseFloat parseInt Promise Proxy RangeError ReferenceError Reflect RegExp Set " +
+    "String Symbol SyntaxError TypeError URIError WeakMap WeakSet console document window globalThis " +
+    "process require module exports localStorage sessionStorage fetch setTimeout clearTimeout " +
+    "setInterval clearInterval requestAnimationFrame cancelAnimationFrame queueMicrotask structuredClone " +
+    "URL URLSearchParams FormData Blob File FileReader AbortController TextEncoder TextDecoder " +
+    "arguments undefined NaN null true false this super new typeof instanceof void delete in of return function class " +
+    "const let var if else for while do switch case break continue try catch finally throw await async " +
+    "yield import export default static get set").split(" "));
+
+const dependenciasDeDisco = (rel, ...nomes) => {
+    const texto = funcoesDoDisco(rel, ...nomes)
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/\/\/[^\n]*/g, " ")
+        .replace(/`(?:[^`\\]|\\[\s\S])*`/g, (t) => (t.match(/\$\{[^}]*\}/g) || []).join(" "))
+        .replace(/'(?:[^'\\\n]|\\.)*'/g, " ")
+        .replace(/"(?:[^"\\\n]|\\.)*"/g, " ");
+    const declarados = new Set();
+    let m;
+    const varrer = (re, grupo) => {
+        while ((m = re.exec(texto))) {
+            const bruto = m[grupo].replace(/[{}[\]]/g, ",");
+            bruto.split(",").forEach((p) => {
+                const nome = p.trim().replace(/^\.\.\./, "").split(/[\s=:]/)[0];
+                if (nome) declarados.add(nome);
+            });
+        }
+    };
+    varrer(/(?:function|class)\s+([A-Za-z_$][\w$]*)/g, 1);
+    varrer(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g, 1);
+    varrer(/(?:const|let|var)\s*(\{[^}]*\})/g, 1);
+    varrer(/\bfunction\s*[A-Za-z_$\w]*\s*\(([^()]*)\)/g, 1);
+    varrer(/\(([^()]*)\)\s*=>/g, 1);
+    varrer(/([A-Za-z_$][\w$]*)\s*=>/g, 1);
+    const semMembro = texto
+        .replace(/[A-Za-z_$][\w$]*(?:-[A-Za-z_$][\w$]*)+/g, " ")
+        .replace(/\.\s*[A-Za-z_$][\w$]*/g, " ")
+        .replace(/[A-Za-z_$][\w$]*\s*:/g, " ")
+        .replace(/\$\{/g, " ");
+    const usados = new Set();
+    const nomesUsados = /[A-Za-z_$][\w$]*/g;
+    while ((m = nomesUsados.exec(semMembro))) usados.add(m[0]);
+    return Array.from(usados)
+        .filter((n) => !declarados.has(n) && !__GLOBaisConhecidos.has(n))
+        .sort();
+};
+
 // Le o repositorio git do projeto sem passar pelo shell: os argumentos chegam um a
 // um ao executavel, logo o '%' de um --pretty=format:%cI chega intacto - num
 // execSync do Windows quem o come e o cmd.exe, e o erro que sai ("'%cI' nao e
