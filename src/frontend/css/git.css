@@ -290,24 +290,11 @@
     word-break: break-all;
 }
 
-.git-commit {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 3px 0;
-    font-size: 12.5px;
-}
-
 .git-hash {
     color: var(--git-cor-hash);
     font-size: 11.5px;
     letter-spacing: 0.02em;
     white-space: nowrap;
-}
-
-.git-commit-head .git-hash {
-    color: var(--oliva);
-    font-weight: 700;
 }
 
 .git-hash-acesa {
@@ -317,13 +304,6 @@
 .git-ponto-enviado .git-hash,
 .git-grupo-tarefa .git-hash {
     margin-left: 11px;
-}
-
-.git-commit-msg {
-    color: var(--text-claro);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .git-comando {
@@ -397,11 +377,6 @@
     color: var(--text-mutado);
     font-weight: 400;
     font-size: 10.5px;
-}
-
-.git-commit-da-tarefa {
-    background: var(--bg-selecao);
-    border-radius: 8px;
 }
 
 .git-marca {

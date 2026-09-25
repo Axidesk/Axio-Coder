@@ -20,13 +20,13 @@ Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o q
 
 ## Cada tarefa deixa um ponto a que podes voltar.
 
-Trabalho terminado não fica à espera de te lembrares de o guardar. Cada rodada que mexe em ficheiros fecha com um **ponto** no git, com uma mensagem de uma linha escrita pelo próprio agente — o interruptor no alto do painel decide se isto acontece. O cartão daquela tarefa no histórico passa a mostrar o resumo do commit ao lado do nome, e o **marcador** diz, no *tooltip*, se aquele ponto já subiu.
+Trabalho terminado não fica à espera de te lembrares de o guardar. Cada rodada que mexe em ficheiros fecha com um **ponto** no git, com uma mensagem de uma linha escrita pelo próprio agente — o interruptor no alto do painel decide se isto acontece. O cartão daquela tarefa no histórico passa a mostrar o resumo do commit ao lado do nome e, junto dele, onde está o ponto: o **marcador** enquanto está só no teu disco, o **avião** depois de subir — cada um diz o que é no *tooltip*.
 
-O **avião** é um marco de envio e fica onde o envio aconteceu: um envio à mão marca o cartão daquele ponto (e nesse o marcador dá-lhe lugar), um envio automático marca o cartão do dia que subiu. Os marcos ficam — deixam de ser só «onde o envio parou» e passam a ser o registo de tudo o que já foi para o GitHub.
+O **avião** é um marco de envio e não fica só onde o envio aconteceu: um envio à mão deixa com avião todos os pontos que levou (nesses o marcador dá-lhe lugar), um envio automático marca também o cartão do dia que subiu. Os marcos ficam — deixam de ser só «onde o envio parou» e passam a ser o registo de tudo o que já foi para o GitHub.
 
 E o painel abre logo a lista dos pontos que ainda estão só no disco, cada um com o nome da tarefa, pela ordem em que foram guardados. O **avião** no alto do histórico empurra-os para o GitHub quando quiseres — não é preciso esperar pelo envio automático.
 
-Voltar atrás é um clique no cartão: ao selecionares a tarefa, o **marcador** dá lugar ao **restaurar**, ali mesmo. Antes de tocar em nada, ele diz o que vai repor e o que vai apagar — e **recusa** quando a reposição deixaria o código a chamar funções que já não existem. É a mesma regra do resto da casa: o que não encaixa não é gravado. E vale também para o que é mais antigo que o histórico: por baixo dos três dias, a coluna continua até onde o repositório vai, numa lista **recolhida** de commits já sem cartão — agrupados por dia e com o mesmo nome de tarefa — onde cada linha se restaura ao passar o rato.
+Voltar atrás é um clique no cartão: ao selecionares a tarefa, o **marcador** dá lugar ao **restaurar**, ali mesmo. Antes de tocar em nada, ele diz o que vai repor e o que vai apagar — e **recusa** quando a reposição deixaria o código a chamar funções que já não existem. É a mesma regra do resto da casa: o que não encaixa não é gravado. E vale também para o que é mais antigo que o histórico: por baixo dos três dias, a coluna continua até onde o repositório vai, numa lista **recolhida** de commits já sem cartão — agrupados por dia, sem repetir os dias que já estão em cartão lá em cima, com a hash e o nome da tarefa em cima e o texto do commit por baixo — onde cada linha se restaura ao passar o rato.
 
 A mensagem do ponto nasce **trancada**, e por boa razão: mexer nela não é preencher um campo, é reescrever um commit. Enquanto o ponto não subiu e é a ponta do ramo, o **lápis** destranca o campo e gravar ali é uma emenda — o ponto ganha outro hash e o cartão segue-o sozinho. Depois de estar no GitHub não há lápis nenhum: mudar história publicada é o que o painel recusa, para não partir os pontos de quem já a tem.
 
@@ -34,7 +34,7 @@ O envio é do dia seguinte. O que guardaste hoje fica no teu disco e sobe na vir
 
 ![O painel de git: os pontos por subir do dia e a mensagem do ponto desta tarefa](docs/interface/painel-de-git.jpg)
 
-O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. E quando o ponto de uma tarefa já está no GitHub, o painel troca tudo por uma linha só — *Já enviada para o GitHub*, com o hash e o nome da tarefa — em vez de manter um campo para escrever numa mensagem que já ninguém pode mudar.
+O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. O ponto da tarefa é um cabeçalho que se abre: o ícone (o *tooltip* diz *Salvo localmente*, ou *Já enviada para o GitHub* depois de subir), a hash curta e o `+`. A hash do ponto é a única do painel em verde oliva; as outras ficam cinzentas. O campo de escrita só aparece quando há ponto para guardar ou mensagem ainda emendável — ponto já no GitHub abre sem campo, porque uma mensagem publicada já ninguém a muda.
 
 ## Refatorações grandes com margem de erro praticamente nula.
 
@@ -118,7 +118,7 @@ O agente pensa em voz alta: o painel mostra o que ele está a considerar, o que 
 
 ## Procura no que já foi dito
 
-Uma lupa procura dentro da conversa: o termo fica aceso a verde e o resto da mensagem em cinza, com o contador de quantas casaram. A mesma lupa, na janela do histórico, procura nas sessões antigas e devolve cada tarefa com a pergunta, a resposta, os ficheiros e as ferramentas — o termo destacado, e um clique abre a tarefa na pilha com os ficheiros dela ao lado.
+Uma lupa procura dentro da conversa: o termo fica aceso a verde e o resto da mensagem em cinza, com o contador de quantas casaram. A mesma lupa, na janela do histórico, procura nas sessões antigas e devolve cada tarefa com a pergunta, a resposta, os ficheiros e as ferramentas — o termo destacado, e um clique abre a tarefa na pilha com os ficheiros dela ao lado. Abrir a busca recolhe os controles do git para o campo ficar sozinho, e o que lá se escreve pode ser uma palavra **ou uma hash**: os primeiros caracteres de um ponto dispensam as duas colunas e trazem a tarefa daquele commit.
 
 Buscar no acervo inteiro era o gesto mais lento da casa, e o custo não estava na procura: estava na leitura. Cada sessão carrega o diff já renderizado, e há logs de 266 MB. Agora fica de cada uma um **índice leve** em disco — pergunta, resposta, nomes dos ficheiros, contagem de ferramentas — **2852 vezes menor** que o log; o diff só desce quando aquela tarefa se abre. A primeira busca deixou de custar um minuto.
 
