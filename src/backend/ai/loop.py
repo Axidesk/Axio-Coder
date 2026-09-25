@@ -27,6 +27,8 @@ from src.backend.tools import (
     cofre,
     comments,
     computador,
+    cpp,
+    cpp_auditoria,
     edit,
     environment,
     espera,

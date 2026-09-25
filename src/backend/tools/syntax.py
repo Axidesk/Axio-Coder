@@ -8,6 +8,7 @@ import subprocess
 from html.parser import HTMLParser
 
 from src.backend.state import emit_event
+from src.backend.tools import cpp
 from src.backend.tools.js_lexico import contar_simbolo, limpar
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho
@@ -24,6 +25,17 @@ EXTENSOES = {
     ".css": "css",
     ".html": "html",
     ".htm": "html",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".c++": "cpp",
+    ".hpp": "cpp",
+    ".hh": "cpp",
+    ".hxx": "cpp",
+    ".ipp": "cpp",
+    ".tpp": "cpp",
+    ".h": "cpp",
+    ".c": "cpp",
 }
 
 def _detectar_linguagem(caminho, linguagem):
@@ -88,6 +100,10 @@ def _validar_typescript(conteudo, abs_path):
     if erro:
         return erro
     return _validar_com_tree_sitter(conteudo, parser)
+
+def _validar_cpp(caminho_abs):
+    return cpp.erros_de_sintaxe(caminho_abs)
+
 
 def _validar_json(conteudo):
     try:
@@ -264,10 +280,10 @@ def _validar_html(conteudo):
 
 @register(
     "tool_validar_sintaxe",
-    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, JSON, CSS ou HTML) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Retorna OK ou o erro com linha/coluna.',
+    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, JSON, CSS ou HTML) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Retorna OK ou o erro com linha/coluna.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'json', 'css', 'html'], "padrao": ""},
+        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'json', 'css', 'html'], "padrao": ""},
     },
 )
 def tool_validar_sintaxe(caminho_relativo, linguagem=""):
@@ -314,6 +330,8 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
         except OSError as e:
             return f"ERRO ao ler o arquivo: {e}"
         erro_msg = _validar_typescript(conteudo, abs_path)
+    elif lang == "cpp":
+        erro_msg = _validar_cpp(abs_path)
     else:
         return f"ERRO: linguagem '{lang}' não suportada para validação."
     if erro_msg:
@@ -339,13 +357,15 @@ def validar_texto(caminho_relativo, conteudo):
             return _validar_json(conteudo)
         if lang == "html":
             return _validar_html(conteudo)
+        if lang == "cpp":
+            return cpp.erros_de_texto(conteudo, caminho_relativo)
     except Exception as e:
         return f"falha ao validar: {e}"
     return None
 
 def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
     lang = _detectar_linguagem(caminho_relativo, "")
-    if lang not in ("python", "javascript", "json", "css", "html"):
+    if lang not in ("python", "javascript", "json", "css", "html", "cpp"):
         return ""
     if caminho_absoluto is None:
         caminho_absoluto, erro = resolver_caminho(caminho_relativo)
@@ -360,6 +380,8 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
             erro = _validar_css(_ler_texto(caminho_absoluto))
         elif lang == "html":
             erro = _validar_html(_ler_texto(caminho_absoluto))
+        elif lang == "cpp":
+            erro = _validar_cpp(caminho_absoluto)
         else:
             erro = _validar_javascript(caminho_absoluto)
     except OSError:

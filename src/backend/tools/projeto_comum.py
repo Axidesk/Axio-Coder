@@ -69,6 +69,31 @@ def eh_arquivo_de_codigo(nome):
         return True
     return os.path.splitext(nome)[1].lower() in EXTENSOES_CODIGO
 
+def varrer_por_extensao(raiz, extensoes, maximo=MAX_ARQUIVOS_INDEX):
+    """Ficheiros de uma pasta (recursivo) cuja extensao esta na lista, ordenados.
+
+    Mesma politica de pastas ignoradas da varredura do projeto: o que nao entra no indice
+    de codigo tambem nao entra aqui (build, .git, node_modules, pastas escondidas).
+    """
+    achados = []
+    for pasta, dirs, ficheiros in os.walk(raiz):
+        dirs[:] = [d for d in dirs if d not in PASTAS_IGNORADAS and not d.startswith(".")]
+        for nome in ficheiros:
+            if os.path.splitext(nome)[1].lower() in extensoes:
+                achados.append(os.path.join(pasta, nome))
+                if len(achados) >= maximo:
+                    return sorted(achados)
+    return sorted(achados)
+
+
+def relativo_a(caminho, raiz):
+    """Caminho curto e com barras normais para mostrar em relatorio."""
+    try:
+        return os.path.relpath(caminho, raiz).replace("\\\\", "/")
+    except ValueError:
+        return caminho
+
+
 def contar_linhas(caminho):
     """Linhas de um ficheiro de texto (0 quando nao for legivel)."""
     try:

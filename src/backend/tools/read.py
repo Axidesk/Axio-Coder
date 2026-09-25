@@ -9,6 +9,7 @@ import ast
 import subprocess
 
 from src.backend.state import emit_event
+from src.backend.tools import cpp
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, conteudo_de_revisao
 
@@ -92,6 +93,8 @@ def tool_mapear_codigo(caminho_relativo: str):
                 linhas = f.readlines()
             if caminho_relativo.endswith(('.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs')):
                 mapa = _mapear_javascript(linhas)
+            elif cpp.eh_cpp(caminho_relativo):
+                mapa = cpp.mapa(caminho_absoluto).splitlines()
             else:
                 regex_cpp = r"^\s*(?:(?:inline|static|virtual|explicit|constexpr)\s+)*(?:[\w<>:]+\s+)*(?:[\w<>:]+::)?~?\w+\s*\([^)]*\)\s*(?:const|override|final|noexcept)*\s*\{?"
                 for i, linha in enumerate(linhas):

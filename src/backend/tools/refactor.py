@@ -1,14 +1,15 @@
-import os
-import re
 import ast
 import hashlib
+import os
+import re
 import shutil
 import uuid
 
-from src.backend.state import estado, emit_event, notificar_mudanca_arquivos
-from src.backend.tools.registry import register
-from src.backend.services.file_service import resolver_caminho, registrar_edicao
 from src.backend.services.diff import gerar_diff
+from src.backend.services.file_service import registrar_edicao, resolver_caminho
+from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
+from src.backend.tools import cpp
+from src.backend.tools.registry import register
 
 def _localizar_funcao_py(linhas, nome_funcao):
     conteudo = "".join(linhas)
@@ -186,13 +187,28 @@ def _corpo_com_chaves_balanceadas(corpo):
         i += 1
     return profundidade == 0
 
+def _localizar_funcao_em(caminho_absoluto, linhas, nome_funcao):
+    """Despacha o localizador pela extensao: Python pela AST, JS pelas chaves, C/C++ pela arvore.
+
+    Antes disto tudo o que nao era .py caia no localizador de JavaScript, e um .cpp a serio
+    respondia "Funcao 'applyPan' nao encontrada no JavaScript" - um erro que nao dizia nada
+    sobre o ficheiro nem sobre o que fazer.
+    """
+    ext = os.path.splitext(caminho_absoluto)[1].lower()
+    if ext in (".py", ".pyw"):
+        return _range_com_decoradores_py(linhas, nome_funcao)
+    if ext in (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"):
+        return _localizar_funcao_js(linhas, nome_funcao)
+    if cpp.eh_cpp(caminho_absoluto):
+        return cpp.localizar(caminho_absoluto, nome_funcao)
+    return (f"ERRO: a extensao '{ext}' nao tem localizador de funcao. Sao cobertos Python, "
+            "JavaScript/TypeScript e C/C++.")
+
+
 def _extrair_corpo_funcao(caminho_absoluto, nome_funcao):
     with open(caminho_absoluto, "r", encoding="utf-8", errors="ignore") as f:
         linhas = f.readlines()
-    if caminho_absoluto.endswith(".py"):
-        r = _localizar_funcao_py(linhas, nome_funcao)
-    else:
-        r = _localizar_funcao_js(linhas, nome_funcao)
+    r = _localizar_funcao_em(caminho_absoluto, linhas, nome_funcao)
     if isinstance(r, str):
         return None, r
     inicio, fim = r
@@ -212,9 +228,62 @@ def _colapsar_linhas_vazias(linhas):
         resultado.append(linha)
     return resultado
 
-def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors=None):
-    """Anexa `corpo` ao destino, registra no undo e grava. Devolve (diff_dest, grupo_mover)."""
+def _com_include(conteudo, linha_include):
+    """Poe a linha de include no sitio certo: depois do ultimo #include (ou do cabecalho).
+
+    Um metodo movido de um .cpp para outro leva o nome da classe no proprio nome
+    (CameraManager::applyPan) - sem o include do cabecalho dela, o destino compila contra
+    um tipo que nao conhece. Se o include ja la estiver, o texto sai intacto.
+    """
+    if not linha_include:
+        return conteudo
+    if not conteudo:
+        return linha_include + "\n"
+    ficheiro = os.path.basename(linha_include.split('"')[1]) if '"' in linha_include else ""
+    if ficheiro and re.search(r'#\s*include\s*"' + re.escape(ficheiro) + r'"', conteudo):
+        return conteudo
+    linhas = conteudo.splitlines(keepends=True)
+    indice = None
+    for i, linha in enumerate(linhas):
+        if re.match(r"\s*#\s*include\b", linha):
+            indice = i + 1
+    if indice is None:
+        indice = 0
+        for i, linha in enumerate(linhas):
+            if re.match(r"\s*(?:#\s*(?:pragma|ifndef|define)\b|//)", linha) or not linha.strip():
+                indice = i + 1
+            else:
+                break
+    linhas.insert(indice, linha_include + "\n")
+    return "".join(linhas)
+
+
+def _include_da_classe(origem_abs, dest_abs, nome_funcao):
+    """Linha '#include' do cabecalho que declara a classe do metodo movido, ou ''.
+
+    Procura nas pastas da origem e do destino (recursivo): no projeto real o cabecalho vive
+    ao lado do .cpp ou numa pasta de includes, e essa vizinhanca chega para o encontrar sem
+    varrer o projeto inteiro. Destino que JA e o cabecalho nao se inclui a si proprio.
+    """
+    classe = cpp.escopo_de(origem_abs, nome_funcao)
+    if not classe:
+        return ""
+    cabecalho = cpp.header_da_classe(classe, [os.path.dirname(origem_abs), os.path.dirname(dest_abs)])
+    if not cabecalho or os.path.abspath(cabecalho) == os.path.abspath(dest_abs):
+        return ""
+    relativo = os.path.relpath(cabecalho, os.path.dirname(dest_abs)).replace("\\", "/")
+    return f'#include "{relativo}"'
+
+
+def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem,
+                              include_extra="", errors=None):
+    """Anexa `corpo` ao destino, registra no undo e grava. Devolve (diff, grupo, include_novo)."""
     novo_dest = conteudo_dest
+    include_novo = False
+    if include_extra:
+        com_include = _com_include(novo_dest, include_extra)
+        include_novo = com_include != novo_dest
+        novo_dest = com_include
     if novo_dest and not novo_dest.endswith("\n"):
         novo_dest += "\n"
     novo_dest += corpo
@@ -224,7 +293,7 @@ def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remo
     registrar_edicao(dest_abs, None if not dest_existia else conteudo_dest, novo_dest, grupo=grupo_mover)
     with open(dest_abs, "w", encoding="utf-8", errors=errors) as f:
         f.write(novo_dest)
-    return gerar_diff(conteudo_dest, novo_dest), grupo_mover
+    return gerar_diff(conteudo_dest, novo_dest), grupo_mover, include_novo
 
 def _emitir_diff_movido(arquivo_origem, arquivo_destino, conteudo_orig, novo_orig, diff_dest):
     """Gera o diff da origem e o diff combinado (removido + adicionado) e emite o evento 'moved'."""
@@ -263,6 +332,15 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
         return info
     inicio, fim = info
     if corpo[:1].isspace():
+        if cpp.eh_cpp(origem_abs):
+            return (
+                f"ERRO: '{nome_funcao}' esta indentada (linha {inicio}), e em C++ isso quer dizer que esta "
+                "DENTRO de uma classe (definicao inline), de um namespace ou de outra funcao. O destino recebe "
+                "o corpo no topo do modulo, logo move-la verbatim gravaria um ficheiro invalido - o nome teria "
+                "de ganhar o scope ('Classe::metodo') e a indentacao teria de sair, e isso ja nao e o mesmo "
+                "texto. Nada foi movido: mova a mao por faixas (tool_mover_bloco_verbatim) corrigindo o nome, "
+                "ou deixe-a onde esta."
+            )
         return (
             f"ERRO: '{nome_funcao}' esta ANINHADA dentro de outra funcao (linha {inicio} indentada). O destino "
             "recebe o corpo no topo do modulo, logo move-la assim gravaria um ficheiro invalido. Aninhada nao e "
@@ -293,14 +371,18 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
             return f"ERRO: Já existe uma função '{nome_funcao}' no destino '{arquivo_destino}'. Mover novamente causaria duplicação."
         with open(dest_abs, "r", encoding="utf-8", errors="ignore") as f:
             linhas_dest = f.readlines()
-        if _tem_assinatura_funcao_js(linhas_dest, nome_funcao):
+        if not cpp.eh_cpp(dest_abs) and _tem_assinatura_funcao_js(linhas_dest, nome_funcao):
             return f"ERRO: Já existe a assinatura da função '{nome_funcao}' no destino '{arquivo_destino}' (mesmo que truncada/duplicada). Corrija o destino manualmente antes de mover novamente."
     if dest_existia:
         with open(dest_abs, "r", encoding="utf-8") as f:
             conteudo_dest = f.read()
     else:
         conteudo_dest = ""
-    diff_dest, grupo_mover = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem)
+    include_extra = ""
+    if cpp.eh_cpp(origem_abs) and cpp.eh_cpp(dest_abs):
+        include_extra = _include_da_classe(origem_abs, dest_abs, nome_funcao)
+    diff_dest, grupo_mover, include_novo = _gravar_destino_com_corpo(
+        dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, include_extra)
     if remover_origem:
         with open(origem_abs, "r", encoding="utf-8") as f:
             conteudo_orig = f.read()
@@ -321,6 +403,12 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
         f"Linhas movidas: {fim - inicio + 1}\n"
         f"SHA-256 do corpo: {hash_corpo}\n"
         f"Removida da origem: {'sim' if remover_origem else 'não'}"
+        + (f"\nInclude {'acrescentado' if include_novo else 'ja existente'} no destino: {include_extra}"
+           if include_extra else "")
+        + (f"\nAVISO: este metodo levou o nome '{nome_funcao}' com scope de classe e o cabecalho que o "
+           "declara nao foi encontrado junto da origem nem do destino - confirme os includes a mao."
+           if cpp.eh_cpp(origem_abs) and cpp.eh_cpp(dest_abs) and not include_extra
+           and cpp.escopo_de(origem_abs, nome_funcao) else "")
     )
 
 @register(
@@ -408,7 +496,10 @@ def tool_remover_funcao(arquivo, nome_funcao, preview=False):
     with open(alvo_abs, "r", encoding="utf-8", errors="ignore") as f:
         conteudo_orig = f.read()
     linhas = conteudo_orig.replace("\r\n", "\n").splitlines(keepends=True)
-    r = _range_com_decoradores_py(linhas, nome_funcao) if alvo_abs.endswith(".py") else _localizar_funcao_js(linhas, nome_funcao)
+    if alvo_abs.endswith(".py"):
+        r = _range_com_decoradores_py(linhas, nome_funcao)
+    else:
+        r = _localizar_funcao_em(alvo_abs, linhas, nome_funcao)
     if isinstance(r, str):
         return r
     inicio, fim = r
@@ -445,6 +536,14 @@ def tool_remover_funcao(arquivo, nome_funcao, preview=False):
     while 0 < corte < len(linhas) and not linhas[corte].strip() and not linhas[corte - 1].strip():
         del linhas[corte]
     novo = "".join(linhas)
+    if cpp.eh_cpp(alvo_abs):
+        problema = cpp.erros_de_texto(novo, alvo_abs)
+        if problema and not cpp.erros_de_texto(conteudo_orig, alvo_abs):
+            return (
+                f"ERRO: apagar '{nome_funcao}' quebraria a sintaxe do ficheiro ({problema}). Nada foi "
+                "apagado - apague pelo bloco com tool_mover_bloco_verbatim (linhas exatas) ou "
+                "tool_substituir_texto."
+            )
     if alvo_abs.endswith(".py"):
         try:
             ast.parse(novo)
