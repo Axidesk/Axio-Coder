@@ -516,6 +516,56 @@ apagou a constante por acidente, e o que ficou foi o desenho certo pela regra de
 `--text-branco` a negrito** (o nível separa-se por COR e PESO, nunca por um glifo diferente). Fica
 escrito para não voltar a nascer um pacote em nome de uma "janela".
 
+### O que os nossos presets valem lá fora — e porque não declaram mais do que usam (2026-10-06)
+
+Pergunta do utilizador: *"se eu carregar o cmake lá no Visual, era só clicar em compilar? e a pasta
+módulos do cmake, quando for ninja muda de nome?"*
+
+**O nó dos módulos só existe onde há CMake a lê-lo** — medido: DRAFTCAD (146 nós) tem 1
+`Módulos do CMake`; Tibia74 (MSBuild, 157 nós) tem **zero**; a raiz do Axio, zero. O nome não é um
+rótulo fixo do explorer: é emitido pelo módulo que montou aquela árvore, logo uma família nova emite
+o nome dela. E o Ninja não é família nenhuma: é o **executor que o CMake chama** (`cmake --build`
+corre o gerador — make, mingw32-make, nmake ou ninja, diz a doc do Qt), portanto um projeto Ninja
+**é** um projeto CMake e o nó continua a chamar-se Módulos do CMake, com razão.
+
+**Quem lê o que escrevemos:** o `CMakeUserPresets.json` é lido pelo Visual Studio e pelo Qt Creator,
+os dois, mais o CMake pela linha de comandos — a doc da Microsoft di-lo à letra (*"configure, build,
+and test options and share them with others: CMakePresets.json and CMakeUserPresets.json... Both
+files are supported in Visual Studio 2019 version 16.10 or later"*) e a do Qt também. Como o
+`CMakeUserPresets` inclui sozinho o `CMakePresets` do projeto, o que escrevemos nunca colide com
+quem o escreveu.
+
+**A versão declarada era 6 e passou a 3** — correcção, não gosto. A doc do CMake diz o que cada
+versão acrescenta (a 6 só acrescenta `packagePresets` e `workflowPresets`, que não usamos; a 2 trouxe
+os `buildPresets`; a 3 os `condition`/`toolchainFile`/`installDir`), e a da Microsoft diz até que
+versão cada VS lê. Declarar acima do que se usa não dá nada e tira compatibilidade: um VS que não
+conheça a versão **ignora o ficheiro todo** e volta aos presets de omissão (*"If either
+CMakePresets.json or CMakeUserPresets.json is invalid, Visual Studio will fall back on its default
+behavior and show only the default Configure Presets"*). Ficheiro que só tem presets nossos passa a
+declarar a nossa versão; ficheiro com presets de outro dono, `include` ou test/package/workflow fica
+com a versão que tem (baixá-la podia invalidar o que não é nosso). Provado em 4 cenários: ficheiro
+novo -> 3; reescrito -> 3; com preset alheio -> 6 intacto; com `testPresets` -> 6 intacto.
+
+**Medido nesta máquina:** o preset que o Axio escreveu para o DRAFTCAD usa o gerador *Visual Studio
+17 2022*, x64, com `CMAKE_PREFIX_PATH` para o Qt 6.10.0 — e o build já produziu, em
+`DRAFTCAD/build/axio-debug/`, um `DraftCAD.sln` com os `.vcxproj` e `.filters` (2026-09-25). O `.sln`
+existe, mas **nasce do CMake**, dentro da pasta de build; nunca é escrito à mão ao lado do
+`CMakeLists.txt`.
+
+**O que viaja e o que não viaja:** o `CMakeLists.txt` (alvos, standard, defines, includes) e os
+presets viajam; o **compilador/kit não** — vive na máquina, e é por isso que o mesmo projeto abre no
+VS e no Qt Creator sem configuração nenhuma *nesta* máquina e precisaria de kit noutra.
+
+Cuidado a ter com o Qt Creator: ele importa presets **na primeira abertura** do projeto, quando não
+existe `CMakeLists.txt.user` (*"You can import the presets the first time you open a project, when no
+CMakeLists.txt.user file exists or you have disabled all kits"*); se o `.user` já existir, o caminho
+é **Build > Reload CMake Presets**. O DRAFTCAD não tem `.user` na pasta — a importação passa.
+
+Fontes: [cmake-presets(7)](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html);
+[CMake Presets no Visual Studio](https://learn.microsoft.com/en-us/cpp/build/cmake-presets-vs);
+[CMake presets no Qt Creator](https://doc.qt.io/qtcreator/creator-build-settings-cmake-presets.html);
+[build systems do Qt Creator](https://doc.qt.io/qtcreator/creator-reference-build-systems.html).
+
 ## O que falta (medido, não suposto)
 
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.

@@ -4,7 +4,8 @@ import os
 PREFIXO_PRESET = "axio-"
 ARQUIVO = "CMakeUserPresets.json"
 
-_VISAO = 6
+# A versao mais baixa que cobre o que escrevemos: declarar acima disso so reduz compatibilidade.
+_VISAO = 3
 _GERADORES_MULTI_CONFIG = ("Visual Studio", "Xcode", "Multi-Config")
 _CONFIGURACOES = {"debug": "Debug", "release": "Release", "relwithdebinfo": "RelWithDebInfo", "minsizerel": "MinSizeRel"}
 
@@ -102,5 +103,25 @@ def _ler(pasta):
         return {}, f"o {ARQUIVO} que ja existe nao e JSON valido ({e}) - nao lhe toquei."
     if not isinstance(dados, dict):
         return {}, f"o {ARQUIVO} que ja existe nao tem um objeto na raiz - nao lhe toquei."
-    dados.setdefault("version", _VISAO)
+    if _presets_de_outro_dono(dados):
+        dados.setdefault("version", _VISAO)
+    else:
+        dados["version"] = _VISAO
     return dados, ""
+
+
+def _presets_de_outro_dono(dados):
+    """Ficheiro com presets de outro dono (ou include/test/package/workflow) mantem a versao que tem.
+
+    Baixa-la ali podia invalidar o que nao e nosso; quando o ficheiro so tem presets do Axio,
+    a versao declarada e nossa para escolher.
+    """
+    if any(chave in dados for chave in ("include", "testPresets", "packagePresets", "workflowPresets")):
+        return True
+    nomes = [
+        preset.get("name")
+        for chave in ("configurePresets", "buildPresets")
+        for preset in (dados.get(chave) or [])
+        if isinstance(preset, dict)
+    ]
+    return not nomes or not all(nome and nome.startswith(PREFIXO_PRESET) for nome in nomes)
