@@ -146,6 +146,17 @@ COMPILADORES = (
     "meson", "dotnet", "cargo", "rustc", "go", "javac", "nmake", "msbuild", "cl",
 )
 
+INSTALADORES_DE_PACOTES = (
+    "maintenancetool", "qt-unified-windows-x64", "qt-unified-linux-x64",
+    "qt-unified-macos-x64", "qt-online-installer",
+)
+
+SUBCOMANDOS_DE_INSTALADOR = (
+    "install", "in", "search", "se", "list", "check-updates", "ch", "update", "up",
+)
+
+SUBCOMANDOS_DE_INSTALADOR_PROIBIDOS = ("remove", "rm", "purge")
+
 VERSIONAMENTO_E_NUVEM = (
     "git", "gh", "glab", "docker", "docker-compose", "kubectl", "helm", "supabase",
     "firebase", "gcloud", "aws", "az", "vercel", "netlify", "wrangler", "flyctl",
@@ -167,6 +178,13 @@ def _normalizar_exe(token):
     for sufixo in SUFIXOS_DE_EXECUTAVEL:
         exe = exe.removesuffix(sufixo)
     return exe
+
+def _subcomando_do_instalador(partes):
+    """Primeiro argumento que nao e uma flag: nos instaladores da Qt o subcomando vem depois delas."""
+    for token in partes[1:]:
+        if not token.startswith("-"):
+            return token.lower()
+    return ""
 
 def _pasta_de_trabalho(cwd):
     """Pasta onde o processo corre: a indicada, ou a do projeto aberto. Sem nenhuma, nao adivinha."""
@@ -239,6 +257,21 @@ def _validar_comando_processo(comando):
 
     if exe in COMPILADORES:
         return True, ""
+
+    if exe in INSTALADORES_DE_PACOTES:
+        sub = _subcomando_do_instalador(partes)
+        if sub in SUBCOMANDOS_DE_INSTALADOR:
+            return True, ""
+        if sub in SUBCOMANDOS_DE_INSTALADOR_PROIBIDOS:
+            return False, (
+                f"'{exe} {sub}' desinstala componentes que ja estao instalados nesta maquina. "
+                "Nao removo software instalado por iniciativa propria - se e mesmo isso que queres, "
+                "corre-o tu no painel do terminal."
+            )
+        return False, (
+            f"'{exe}' so e permitido com os subcomandos de consulta e instalacao "
+            f"({', '.join(SUBCOMANDOS_DE_INSTALADOR)})."
+        )
 
     if not re.search(r"\.(?:exe|cmd|bat)$", partes[0], re.IGNORECASE) and re.search(r"\.(?:exe|cmd|bat)\b", cmd, re.IGNORECASE):
         return False, (

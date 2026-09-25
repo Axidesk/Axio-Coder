@@ -238,6 +238,7 @@
 .explorer-file.explorer-selected { background: var(--bg-hover); }
 .explorer-file.explorer-selected .explorer-file-icon { color: var(--oliva); }
 .explorer-dir { color: var(--text-corpo); }
+.explorer-grupo, .explorer-grupo .explorer-folder-icon { color: var(--azul-acao); }
 .explorer-file { color: var(--text-escuro); }
 .explorer-row.explorer-error { color: var(--vermelho-vivo); }
 .explorer-row.explorer-error .explorer-file-icon,

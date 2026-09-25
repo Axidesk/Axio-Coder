@@ -54,12 +54,14 @@ def escolher_kit(deteccao, instalado):
         faltam.append("CMake nao esta instalado - sem ele nao ha projeto para configurar.")
     exigencia_qt = exigencia_de(deteccao.get("pacotes", []), "qt")
     qt = None
+    modulos_ausentes = []
     if exigencia_qt:
         qt = _melhor_qt(instalado["qt"], versao_pedida(exigencia_qt), msvc)
         if not qt:
             faltam.append(_falta_qt(exigencia_qt, instalado, msvc))
         else:
-            faltam += _modulos_em_falta(qt, exigencia_qt)
+            modulos_ausentes = modulos_em_falta(qt, exigencia_qt)
+            faltam += _texto_dos_modulos(qt, modulos_ausentes, exigencia_qt)
     if deteccao.get("programas"):
         for programa in deteccao["programas"]:
             if any("glslc" in nome for nome in programa["nomes"]) and not glslc:
@@ -84,6 +86,7 @@ def escolher_kit(deteccao, instalado):
         "ninja": ninja,
         "glslc": glslc,
         "vulkan": vulkan,
+        "modulos_em_falta": modulos_ausentes,
         "variaveis": variaveis,
         "caminhos": _caminhos_para_correr(qt, vulkan),
         "satisfaz": not faltam,
@@ -311,17 +314,21 @@ def _caminhos_para_correr(qt, vulkan):
     return [os.path.normpath(c) for c in caminhos if os.path.isdir(c)]
 
 
-def _modulos_em_falta(kit, exigencia):
+def modulos_em_falta(kit, exigencia):
     """Modulos que o find_package pede e que o kit escolhido nao traz (a pasta do modulo e a prova)."""
     pedidos = exigencia.get("componentes") or []
     major = kit["versao"].split(".")[0]
-    ausentes = [
+    return [
         modulo
         for modulo in pedidos
         if not os.path.isdir(os.path.join(kit["caminho"], "lib", "cmake", f"Qt{major}{modulo}"))
     ]
+
+
+def _texto_dos_modulos(kit, ausentes, exigencia):
     if not ausentes:
         return []
+    pedidos = exigencia.get("componentes") or []
     onde = f" Instala-se pelo instalador que ja esta na maquina ({kit['instalador']})." if kit["instalador"] else ""
     return [
         (

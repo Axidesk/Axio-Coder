@@ -15,6 +15,7 @@ from src.backend.services.file_service import (
     registrar_edicao_para_contexto,
 )
 from src.backend.services.busca_texto import buscar_no_projeto
+from src.backend.builds import arvore
 
 editor_bp = Blueprint("editor", __name__)
 @editor_bp.route('/api/undo_redo_status', methods=['GET'])
@@ -53,6 +54,9 @@ def undo():
 def redo():
     return _undo_redo(refazer_edicao)
 
+_ORDEM_DE_ENTRADAS = {"dir": 0}
+
+
 @editor_bp.route('/api/explorer', methods=['GET'])
 def explorer():
     caminho_rel = request.args.get("path", "") or ""
@@ -67,6 +71,11 @@ def explorer():
             "entries": [],
             "sem_raiz": True
         })
+    raiz = estado.get("pasta_raiz", "")
+    if arvore.e_no_virtual(caminho_rel):
+        return jsonify(_resposta_explorer(
+            raiz, caminho_rel, raiz_abs(), "", True, arvore.entradas(raiz, caminho_rel)
+        ))
     caminho_alvo, erro = resolver_caminho(caminho_rel, permitir_extra=True)
     if erro:
         return jsonify({"error": erro}), 400
@@ -82,20 +91,24 @@ def explorer():
         if e["tipo"] == "file":
             item["ext"] = os.path.splitext(e["nome"])[1].lstrip('.').lower()
         items.append(item)
-    items.sort(key=lambda x: (x["tipo"] != "dir", x["nome"].lower()))
-    raiz = estado.get("pasta_raiz", "")
-    raiz_absoluta = raiz_abs()
+    items.sort(key=lambda x: (_ORDEM_DE_ENTRADAS.get(x["tipo"], 1), x["nome"].lower()))
+    if not caminho_rel:
+        items = arvore.entradas_raiz(raiz) + items
     cwd = caminho_alvo
-    relativo, dentro = calcular_posicao_relativa(cwd, raiz_absoluta)
-    return jsonify({
+    relativo, dentro = calcular_posicao_relativa(cwd, raiz_abs())
+    return jsonify(_resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items))
+
+
+def _resposta_explorer(raiz, caminho_rel, cwd, relativo, dentro, items):
+    return {
         "root": raiz,
         "path": caminho_rel,
         "cwd": cwd,
         "relativo": relativo,
         "dentro_da_raiz": dentro,
-        "raiz_nome": os.path.basename(raiz_absoluta) if raiz_absoluta else "",
-        "entries": items
-    })
+        "raiz_nome": os.path.basename(raiz_abs()) if raiz_abs() else "",
+        "entries": items,
+    }
 
 TETO_TEXTO_BYTES = 4 * 1024 * 1024
 AMOSTRA_TEXTO_BYTES = 65536

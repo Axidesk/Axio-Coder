@@ -1,6 +1,6 @@
 import os
 
-from src.backend.builds import detetar, kits, presets
+from src.backend.builds import cmake_api, detetar, kits, presets
 
 TIMEOUT_CONFIGURAR = 420
 TIMEOUT_CONSTRUIR = 3000
@@ -25,6 +25,7 @@ def preparar(pasta, configuracao="debug"):
     escrita = presets.escrever(deteccao["pasta"], escolha, configuracao)
     if escrita.get("erro"):
         return {"deteccao": deteccao, "escolha": escolha, "faltam": [escrita["erro"]]}
+    cmake_api.escrever_pedido(escrita["pasta_build"])
     return {
         "deteccao": deteccao,
         "escolha": escolha,

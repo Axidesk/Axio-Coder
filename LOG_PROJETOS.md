@@ -38,6 +38,9 @@ ou outra coisa."
 | `kits.py` | o que está NA máquina (Qt por kit, MSVC por `vswhere`, CMake, Ninja, `glslc`, Vulkan, vcpkg); nota cada kit contra o projeto e nomeia o que falta |
 | `presets.py` | escreve o `CMakeUserPresets.json` LOCAL (schema 6/10) — nunca toca no do projeto |
 | `construir.py` | decisões e comandos (não executa): `preparar` devolve `precisa_configurar` |
+| `cmake_api.py` | a File API do CMake: escreve o pedido, lê a resposta e devolve os alvos com fontes, grupos e flags |
+| `arvore.py` | a árvore agrupada para o explorer (só leitura) e os nós virtuais `@arvore/...` |
+| `instalar.py` | o catálogo do instalador da Qt e o id do componente que traz cada módulo em falta |
 
 `src/backend/tools/builds.py` — `tool_gerir_projeto` (detetar/kits/preparar/construir/correr).
 O build corre como **card do terminal** (saída a vivo, botão de parar) e configura sozinho
@@ -58,10 +61,16 @@ assuntos: um lê UM ficheiro, o outro julga o PROJETO inteiro. (Ver a secção s
       O botão de build não precisa de botão — é o mesmo mecanismo dos cards que já existiam.
 - [x] **Ferramentas C/C++** (2026-10-06) — refatorar, analisar, listar e validar C++ de verdade
       (ver a secção seguinte).
-- [ ] **Fase 1** — CMake File API: alvos, fontes e flags reais; árvore do explorer agrupada em
-      Headers/Sources/QML/Resources (como o Qt Creator mostra, sem tocar no disco); erros do
-      compilador clicáveis no Monaco.
-- [ ] **Fase 3** — instalar sozinho o que faltar (MaintenanceTool CLI + vcpkg).
+- [x] **Fase 1** (2026-10-06) — CMake File API: alvos, fontes, grupos e flags reais
+      (`builds/cmake_api.py`) e a árvore do explorer agrupada por alvo e categoria
+      (`builds/arvore.py` + `routes/editor.py`), sem tocar no disco. Provado por HTTP: raiz do
+      DRAFTCAD com 4 grupos (DraftCAD, dwg2dxf, doc, dxfrw), `@arvore/DraftCAD` com Fontes/
+      Cabeçalhos/Outros, 40 cabeçalhos listados; a raiz do Axio (projeto Python) sai com 0 grupos.
+      **Falta:** erros do compilador clicáveis no Monaco.
+- [x] **Fase 3** (2026-10-06) — `builds/instalar.py`: lê o catálogo do instalador da Qt (`list` e
+      `search`, em XML) e resolve o componente que traz cada módulo em falta, com a allowlist
+      aberta aos subcomandos de consulta e instalação. **Bloqueado pela própria Qt** nesta máquina
+      — ver a secção "Instalar o que falta".
 - [ ] **Fase 4** — o `.sln` do Tibia: leitura por `msbuild -getItem` e o retarget 2015→2022
       numa cópia, provado a compilar.
 - [ ] **Fase 5** — clangd (opcional): ir à definição, erro enquanto se escreve.
@@ -115,6 +124,18 @@ Armadilhas que custaram voltas (registadas para não voltarem):
 - O tree-sitter não conhece `Q_OBJECT`, `signals:`, `emit` — sem filtrar isso, todo cabeçalho Qt
   saía marcado como quebrado.
 
+Armadilhas da File API (medidas no CMake 4.0.2, custaram voltas):
+
+- No objeto `codemodel` os `projects`, `directories` e `targets` vivem **dentro de cada
+  configuração**, não na raiz — ler a raiz dá `KeyError: 'projects'`.
+- Os ficheiros gerados na árvore de build ficam **dentro** da pasta do projeto quando o build é
+  in-tree (`build/axio-debug/...`), logo o caminho relativo não os distingue de ficheiros do
+  projeto: quem exclui é a pasta de build (absoluta) ou o `isGenerated`.
+- O `sourceGroups` do próprio CMake já traz os nomes ("Source Files", "Header Files", "CMake Rules"
+  e um grupo sem nome onde caem o `qml.qrc` e o `main.qml`) — não é preciso adivinhar por extensão.
+- Ordenar os grupos por nome na rota destruía a ordem "executável primeiro" calculada em `arvore.py`:
+  os grupos passam a ser pré-colados depois de ordenar as entradas do disco.
+
 Prova medida no DRAFTCAD (77 ficheiros, 110 classes): a auditoria desceu de **191 apontamentos
 para 1** — e esse 1 é real (`stb_truetype.h` inclui `stb_rect_pack.h`, que não está no projeto).
 Refactor provado num **cópia descartável** dentro do projeto (nunca nos ficheiros dele):
@@ -122,8 +143,37 @@ mover para destino novo escreve o `#include` e o corpo verbatim; mover de volta 
 include; função inline e protótipo sem corpo são recusados com o motivo; remover apaga o range
 certo e a sintaxe fica limpa.
 
+## Instalar o que falta (2026-10-06) — o que a Qt permite e o que não
+
+A CLI do instalador da Qt (https://doc.qt.io/qt-6/get-and-install-qt-cli.html) responde em **XML**:
+`list` dá o que está instalado e `search --type package` dá o catálogo; a instalação sem janelas é
+`--accept-licenses --default-answer --confirm-command install <ids>`. Os ids **nunca** são escritos
+de memória: só se usa um id que o próprio instalador listou.
+
+Medições que valem (nesta máquina, 2026-10-06):
+
+- O código da versão nos ids concatena major+minor+patch **sem zeros**: 6.10.0 → `6100`,
+  6.8.2 → `682`, 6.5.3 → `653`. Confirmado contra os 2079 pacotes do catálogo.
+- Os addons aparecem no catálogo a nível de MÓDULO (`qt.qt6.6100.addons.qtwebsockets`), enquanto o
+  `list` dos instalados os mostra com o kit no fim (`...qtwebsockets.win64_msvc2022_64`).
+- **O catálogo NÃO prova que se instala.** O `search` lista 2079 pacotes, mas o `install` recusa
+  selecionar componentes que não estejam já instalados: `qt.qt6.6100.addons.qtwebsockets` → *not
+  found*; `qt.qt6.6120.win64_msvc2022_64` (kit base de uma versão corrente, não instalado) → *not
+  found*; `qt.qt6.6100.addons.qtcharts.win64_msvc2022_64` (já instalado) → resolve. O
+  `--accept-obligations` não muda nada e o `check-updates` só oferece o Qt Creator 20 (730 MB).
+- Por isso a ferramenta **não diz "instalei"** quando não instalou: cita o instalador ("archive of
+  historical versions", "No components available with the current selection") em vez de inventar a
+  causa. O caminho seguinte é atualizar o instalador, que é uma mudança grande e não se faz sozinho.
+- A allowlist ganhou os instaladores da Qt mas SÓ nos subcomandos de consulta e instalação:
+  `remove` e `purge` são recusados — não se desinstala software do utilizador sem ele pedir.
+- A sondagem que mede isto sem instalar nada: correr o `install` **sem** `--confirm-command`; se o
+  componente existir, o instalador mostra o resumo e aborta (exit 3) em vez de instalar.
+
 ## O que falta (medido, não suposto)
 
+- **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
+- **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
+  "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: `detetar.py` cai em "desconhecido"
   (os tipos são cmake/msbuild/qmake/python/npm/cargo/go/make). Falta reconhecer só código.
 - **A árvore agrupada** por categoria no explorer: quem sabe os ficheiros de cada alvo é a

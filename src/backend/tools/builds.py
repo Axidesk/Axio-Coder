@@ -1,7 +1,7 @@
 import os
 import time
 
-from src.backend.builds import construir, detetar, kits
+from src.backend.builds import construir, detetar, instalar, kits
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
 from src.backend.tools.process import correr_como_card, iniciar_processo
@@ -15,16 +15,18 @@ from src.backend.tools.registry import register
     "construir, gerar o executavel ou correr o programa. Quem escolhe o kit, o gerador e os modulos e esta "
     "ferramenta: nunca peca ao utilizador para decidir compilador, versao de Qt ou caminhos. "
     "Fluxo: acao='detetar' (o que e o projeto e o que exige), 'kits' (o que esta instalado e o que foi "
-    "escolhido), 'preparar' (escolhe o kit, escreve o preset e configura), 'construir' (compila) e "
-    "'correr' (abre o que ficou compilado). 'construir' e 'correr' fazem o preparo sozinhos. "
+    "escolhido), 'preparar' (escolhe o kit, escreve o preset e configura), 'construir' (compila), "
+    "'correr' (abre o que ficou compilado) e 'instalar' (traz do instalador da Qt os modulos que o "
+    "projeto pede e o kit nao tem - sem uma unica janela). "
+    "'construir' e 'correr' fazem o preparo sozinhos. "
     "build corre como card do terminal (saida a vivo, com botao de parar). "
     "Nao serve para ler nem editar codigo (para isso ha as ferramentas de arquivo) nem para construir o "
     "proprio Axio.",
     {
         "acao": {
             "tipo": "STRING",
-            "desc": "detetar | kits | preparar | construir | correr",
-            "enum": ["detetar", "kits", "preparar", "construir", "correr"],
+            "desc": "detetar | kits | preparar | construir | correr | instalar",
+            "enum": ["detetar", "kits", "preparar", "construir", "correr", "instalar"],
             "padrao": "detetar",
         },
         "pasta": {
@@ -59,6 +61,8 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo=""):
         return _construir(caminho, configuracao, alvo)
     if acao == "correr":
         return _correr(caminho, configuracao)
+    if acao == "instalar":
+        return _instalar(caminho, configuracao)
     return f"ERRO: acao desconhecida '{acao}'."
 
 
@@ -167,8 +171,79 @@ def _correr(pasta, configuracao):
             "e o botao de parar estao.")
 
 
+def _instalar(pasta, configuracao):
+    """Traz do instalador da Qt os componentes que servem os modulos que o projeto pede e faltam."""
+    deteccao = detetar.detetar(pasta)
+    if deteccao.get("erro"):
+        return f"ERRO: {deteccao['erro']}"
+    escolha = kits.escolher_kit(deteccao, kits.kits_instalados(deteccao.get("prefixos", ())))
+    qt = escolha.get("qt") or {}
+    modulos = escolha.get("modulos_em_falta") or []
+    if not qt:
+        return ("NAO DA PARA INSTALAR SOZINHO: nao ha nenhum kit de Qt escolhido para este projeto, "
+                "por isso o que falta instalar primeiro e o proprio Qt.\n" +
+                _texto_faltam({"faltam": escolha.get("faltam") or [], "deteccao": deteccao}))
+    instalador = qt.get("instalador") or ""
+    if not instalador:
+        return (f"ERRO: nao encontrei o instalador da Qt nesta maquina, por isso os modulos "
+                f"{', '.join(modulos)} tem de ser instalados a mao.")
+    if not modulos:
+        return (f"NADA A INSTALAR: o kit de Qt {qt['versao']} {qt['kit']} ja traz todos os modulos "
+                "que este projeto pede.")
+    emit_event("executing", function=f"A consultar o catalogo da Qt ({len(modulos)} modulo(s) em falta)")
+    plano = instalar.componentes_para(instalador, qt["versao"], modulos)
+    if not plano["ids"]:
+        return _texto_sem_componente(modulos, plano["sem_componente"])
+    comando = instalar.comando_instalar(instalador, plano["ids"])
+    emit_event("executing", function=f"Instalando {', '.join(plano['nomes'])}")
+    resultado = correr_como_card(comando, cwd=pasta, timeout=instalar.TIMEOUT_INSTALAR,
+                                 caminhos_extra=escolha.get("caminhos"))
+    saida = recortar_texto(_texto_do_processo(resultado))
+    if _interrompido(resultado):
+        return f"INSTALACAO INTERROMPIDA: o card do terminal foi parado.\n{saida}"
+    if resultado.returncode != 0:
+        linhas = [
+            f"NAO INSTALOU (exit {resultado.returncode}): {', '.join(plano['nomes'])}.",
+            f"  componentes pedidos: {', '.join(plano['ids'])}",
+        ]
+        linhas += instalar.explicar(saida)
+        return "\n".join(linhas + ["", saida])
+    return _texto_instalado(pasta, plano, saida)
+
+
 def _texto_do_processo(resultado):
     return ((resultado.stdout or "") + (resultado.stderr or "")).strip()
+
+
+def _texto_instalado(pasta, plano, saida):
+    deteccao = detetar.detetar(pasta)
+    escolha = kits.escolher_kit(deteccao, kits.kits_instalados(deteccao.get("prefixos", ())))
+    restantes = escolha.get("modulos_em_falta") or []
+    linhas = [
+        f"INSTALADO (exit 0): {', '.join(plano['nomes'])}.",
+        f"  componentes: {', '.join(plano['ids'])}",
+    ]
+    if restantes:
+        linhas.append(f"  ATENCAO: o kit escolhido continua sem {', '.join(restantes)}.")
+    else:
+        linhas.append("  CONFIRMADO: o kit ja traz os modulos que o projeto pede. "
+                      "Corra acao='construir' para configurar e compilar.")
+    if saida:
+        linhas += ["", saida]
+    return "\n".join(linhas)
+
+
+def _texto_sem_componente(modulos, sem_componente):
+    if not sem_componente:
+        return (f"NADA A INSTALAR: o instalador ja da os componentes destes modulos "
+                f"({', '.join(modulos)}) como instalados.")
+    return "\n".join([
+        "NAO HA COMPONENTE PARA INSTALAR:",
+        f"  - o instalador da Qt nao lista nenhum componente para {', '.join(sem_componente)}",
+        "",
+        "Um modulo que o instalador nao lista a parte faz normalmente parte do proprio kit: nesse caso "
+        "o que falta e o kit inteiro, e nao um extra. Veja o que falta com acao='kits'.",
+    ])
 
 
 def _texto_faltam(plano):

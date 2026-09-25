@@ -252,6 +252,9 @@ export function renderEntry(entry) {
     row.title = entry.path;
     row.dataset.path = entry.path;
     row.dataset.tipo = entry.tipo;
+    if (entry.tipo === 'grupo') {
+        return renderGrupo(entry, li, row);
+    }
     if (entry.tipo === 'dir') {
         row.innerHTML = state.ICON_FOLDER + '<span>' + entry.nome + '</span>';
         row.classList.add('explorer-dir');
@@ -275,6 +278,32 @@ export function renderEntry(entry) {
     }
     return li;
 }
+function renderGrupo(entry, li, row) {
+    row.innerHTML = state.ICON_FOLDER + '<span>' + entry.nome + '</span>';
+    row.classList.add('explorer-dir', 'explorer-grupo');
+    if (entry.detalhe) row.title = entry.nome + ' - ' + entry.detalhe;
+    li.appendChild(row);
+    const childContainer = document.createElement('div');
+    childContainer.className = 'explorer-children hidden';
+    li.appendChild(childContainer);
+    row.addEventListener('click', () => alternarGrupo(entry.path, row, childContainer));
+    return li;
+}
+
+function alternarGrupo(path, row, container) {
+    if (row.classList.contains('explorer-aberto')) {
+        row.classList.remove('explorer-aberto');
+        container.classList.add('hidden');
+        return;
+    }
+    row.classList.add('explorer-aberto');
+    if (container.dataset.loaded === '1') {
+        container.classList.remove('hidden');
+        return;
+    }
+    loadDirChildren(path, container);
+}
+
 export function staggerExplorerItems(container) {
     const items = typeof container.querySelectorAll === 'function'
         ? container.querySelectorAll('.explorer-item')
