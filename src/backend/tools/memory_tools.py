@@ -18,15 +18,16 @@ from src.backend.state import emit_event, estado
 
 @register(
     "tool_gerenciar_memoria",
-    "Acessa a memoria persistente (notas de knowledge). acao='escrever' grava/atualiza uma nota, 'ler' devolve o corpo, 'listar' mostra as notas com idade e tamanho, 'excluir' apaga, e 'diagnostico' mede TUDO o que e injetado no contexto a cada rodada (glossario com alvos ausentes/duplicados, notas com referencias mortas ou redundantes, tamanho do vetor) e, se passar 'query', mede tambem a busca semantica (hits, quantos a dedup removeu, faixa de similaridade). Use 'diagnostico' quando o usuario quiser saber se a memoria esta limpa.",
+    "Acessa a memoria persistente (notas de knowledge). acao='escrever' grava/atualiza uma nota, 'ler' devolve o corpo, 'listar' mostra as notas com idade e tamanho (passe 'filtro' - um ou varios termos, um por linha - para filtrar pelo titulo e pelo corpo, em vez de despejar as centenas de notas do acervo inteiro), 'excluir' apaga, e 'diagnostico' mede TUDO o que e injetado no contexto a cada rodada (glossario com alvos ausentes/duplicados, notas com referencias mortas ou redundantes, tamanho do vetor) e, se passar 'query', mede tambem a busca semantica (hits, quantos a dedup removeu, faixa de similaridade). Use 'diagnostico' quando o usuario quiser saber se a memoria esta limpa.",
     {
         'acao': {"tipo": "STRING", "enum": ['ler', 'escrever', 'listar', 'excluir', 'diagnostico'], "obrig": True},
         'titulo': {"tipo": "STRING"},
         'conteudo': {"tipo": "STRING"},
         'query': {"tipo": "STRING", "desc": "Somente para acao='diagnostico': frase para medir a busca semantica"},
+        'filtro': {"tipo": "STRING", "desc": "Somente para acao='listar': um ou varios termos, um por linha, para filtrar as notas pelo titulo e pelo corpo"},
     },
 )
-def tool_gerenciar_memoria(acao: str, titulo: str = None, conteudo: str = None, query: str = None):
+def tool_gerenciar_memoria(acao: str, titulo: str = None, conteudo: str = None, query: str = None, filtro: str = None):
     emit_event("executing", function="Gerenciando memoria")
     pasta = garantir_pasta_knowledge()
     if acao == "escrever" and titulo and conteudo:
@@ -70,7 +71,7 @@ def tool_gerenciar_memoria(acao: str, titulo: str = None, conteudo: str = None, 
                     "Não é preciso repetir a exclusão.")
         return f"Memória '{titulo}' excluída (.md). Remoção no vetor: {status_vetor}."
     elif acao == "listar":
-        return listar_notas_knowledge()
+        return listar_notas_knowledge(filtro)
     elif acao == "diagnostico":
         return formatar_raio_x(raio_x_da_injecao(query=query, incluir_vetor=True))
     return "Ação inválida."

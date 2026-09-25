@@ -4,8 +4,8 @@ import re
 import time
 from datetime import datetime
 
-from src.backend.state import caminho_estado_projeto
 from src.backend.services.file_service import normalizar_unicode
+from src.backend.state import caminho_estado_projeto
 
 _STOPWORDS = {
     "como", "para", "uma", "umas", "uns", "que", "com", "dos", "das", "por",
@@ -148,7 +148,7 @@ def dedup_nota(titulo, conteudo):
         try:
             with open(caminho, "r", encoding="utf-8") as f:
                 existente = f.read()
-        except Exception:
+        except (OSError, UnicodeError):
             continue
         exist_norm = _normalizar_para_dedup(existente)
         if not exist_norm:
@@ -217,7 +217,7 @@ def coletar_notas_knowledge():
             with open(caminho, "r", encoding="utf-8") as f:
                 conteudo = f.read().strip()
             mtime = os.path.getmtime(caminho)
-        except Exception:
+        except (OSError, UnicodeError):
             continue
         notas.append({"nome": nome[:-3], "conteudo": conteudo, "mtime": mtime})
     return notas
@@ -315,20 +315,48 @@ def carregar_indice_knowledge(query=None, max_notas=12):
         + "\n".join(linhas)
     )
 
-def listar_notas_knowledge():
+def listar_notas_knowledge(filtro=""):
     """Lista as notas de knowledge com idade e tamanho, mais recentes primeiro.
 
     Da ao agente a informacao que faltava para CURAR a memoria de longo prazo
     (regra 24): sem a idade nao ha como perceber que uma nota ficou obsoleta, e
     o resumo permite decidir se vale a pena reler o conteudo completo.
+
+    `filtro` leva um ou varios termos, um por linha: com eles so saem as notas que os
+    contem no titulo ou no corpo. Sem filtro sai o acervo inteiro, como sempre - e o
+    caminho para conferir UM nome deixou de ser despejar centenas de notas no contexto.
     """
     notas = coletar_notas_knowledge()
     if not notas:
         return "(nenhuma nota de knowledge)"
-    notas.sort(key=lambda n: n["mtime"], reverse=True)
+    alvos = _termos_do_filtro(filtro)
+    selecionadas = _notas_que_casam(notas, alvos)
+    if alvos and not selecionadas:
+        return (f"Nenhuma nota de memoria contem: {', '.join(alvos)}. O acervo tem "
+                f"{len(notas)} notas - sem 'filtro' a listagem sai inteira.")
+    selecionadas.sort(key=lambda n: n["mtime"], reverse=True)
     linhas = []
-    for n in notas:
+    for n in selecionadas:
         idade = idade_legivel(n["mtime"])
         kb = len(n["conteudo"].encode("utf-8")) / 1024
         linhas.append(f"- {n['nome']} ({idade}, {kb:.1f} KB): {_resumo_nota(n['conteudo'])}")
-    return f"{len(notas)} nota(s) de memoria (mais recente primeiro):\n" + "\n".join(linhas)
+    cabecalho = (
+        f"{len(selecionadas)} de {len(notas)} notas casam com {', '.join(alvos)}"
+        if alvos else f"{len(notas)} nota(s) de memoria"
+    )
+    return f"{cabecalho} (mais recente primeiro):\n" + "\n".join(linhas)
+
+
+def _termos_do_filtro(filtro):
+    return [t for t in normalizar_unicode(filtro or "").casefold().splitlines() if t.strip()]
+
+
+def _notas_que_casam(notas, alvos):
+    """Sem alvos devolve o acervo inteiro; com alvos, so as notas que os contem."""
+    if not alvos:
+        return list(notas)
+    return [n for n in notas if any(alvo in _texto_da_nota(n) for alvo in alvos)]
+
+
+def _texto_da_nota(nota):
+    return normalizar_unicode(f"{nota['nome']}\n{nota['conteudo']}").casefold()
