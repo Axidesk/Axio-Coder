@@ -24,15 +24,22 @@ def _localizar_funcao_py(linhas, nome_funcao):
     return f"ERRO: Função ou classe '{nome_funcao}' não encontrada no Python."
 
 def _range_com_decoradores_py(linhas, nome_funcao):
-    """Estende o range da funcao para cima, ate aos decoradores dela (@rota, @register)."""
-    r = _localizar_funcao_py(linhas, nome_funcao)
-    if isinstance(r, str):
-        return r
-    inicio, fim = r
-    idx = inicio - 2
-    while idx >= 0 and linhas[idx].lstrip().startswith("@"):
-        idx -= 1
-    return (idx + 2, fim)
+    """Estende o range da funcao para cima, ate aos decoradores dela (@rota, @register).
+
+    A linha do decorador vem da AST (decorator_list), nao de olhar para a linha de cima: um
+    decorador de varias linhas (@register( / 'nome', / ) ) tem ')' imediatamente antes do
+    'def', e a leitura linha-a-linha deixava o decorador para tras - a funcao era movida sem
+    ele e a origem ficava com um @ orfao, que nem sintaxe valida e.
+    """
+    try:
+        arvore = ast.parse("".join(linhas))
+    except SyntaxError:
+        return _localizar_funcao_py(linhas, nome_funcao)
+    for no in ast.walk(arvore):
+        if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and no.name == nome_funcao:
+            linhas_dec = [d.lineno for d in getattr(no, "decorator_list", None) or []]
+            return (min(linhas_dec + [no.lineno]), no.end_lineno or no.lineno)
+    return _localizar_funcao_py(linhas, nome_funcao)
 
 def _fim_funcao_js(linhas, inicio):
     texto = "".join(linhas)
