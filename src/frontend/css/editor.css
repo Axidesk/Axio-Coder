@@ -277,6 +277,12 @@
     opacity: 0;
     pointer-events: none;
 }
+#editor-panel.dock-right #log-dock:has(#panel-log-session.panel-col-closed) {
+    flex: 0 0 0;
+    min-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
 #editor-panel.dock-right #explorer-view {
     order: -1;
     flex: 1 1 0;
