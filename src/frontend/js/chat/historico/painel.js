@@ -5,7 +5,7 @@ import { escapeHtml } from '../messages.js';
 import { syncMenuIcons } from '../ui.js';
 import { setHistoryActionButtonsVisible, updateActionButtons } from './acoes.js';
 import { abrirColunasDoHistorico } from './busca.js';
-import { carregarRepositorio, montarHistoricoAntigo } from './antigos.js';
+import { atualizarHistoricoAntigo, carregarRepositorio, montarHistoricoAntigo } from './antigos.js';
 import { ensureSessionDetailsLoaded, loadDayRoundCards, mountCollapsibleCard, sincronizarEtiquetasNosCards, talvezLembrarDeGuardar } from './cards.js';
 import { fetchSessionHistoryData } from './estado.js';
 
@@ -76,6 +76,7 @@ const { historyLogsWrapper, panelTitle } = dom;
         carregarRepositorio();
         await ensureSessionDetailsLoaded();
         sincronizarEtiquetasNosCards();
+        atualizarHistoricoAntigo();
         talvezLembrarDeGuardar();
     }
     async function toggleSessionHistory() {

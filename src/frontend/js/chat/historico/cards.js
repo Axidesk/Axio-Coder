@@ -398,7 +398,8 @@ let nomesDeTarefaDe = -1;
     }
     function turnoDoCommit(hash) {
         if (!hash) return null;
-        const daLista = (lista) => (lista || []).find(l => (l.commit || (state.commitsDosTurnos || {})[String(l.id)] || '') === hash) || null;
+        const daLista = (lista) => (lista || []).find(l => _logTemCommit(l, hash)
+            || (state.commitsDosTurnos || {})[String(l.id)] === hash) || null;
         const doTurnoAtual = daLista(state.currentTurnLogs);
         if (doTurnoAtual) return doTurnoAtual;
         for (const sessao of state.sessionHistoryList) {
@@ -406,6 +407,11 @@ let nomesDeTarefaDe = -1;
             if (achado) return achado;
         }
         return null;
+    }
+    function _logTemCommit(log, hash) {
+        if (!log) return false;
+        if (log.commit === hash) return true;
+        return (log.commits || []).some(c => c && c.hash === hash);
     }
     function nomeDaTarefaDoCommit(hash) {
         return nomeDoTurno(turnoDoCommit(hash));
@@ -425,8 +431,14 @@ let nomesDeTarefaDe = -1;
     function tituloDaTarefaDoCommit(hash, resumoDoPonto) {
         const turno = turnoDoCommit(hash);
         const base = nomeDoTurno(turno);
-        const resumo = resumoDoCommit(resumoDoPonto) || (turno ? resumoDoCommit(turno.commitNome) : '');
+        const resumo = resumoDoCommit(resumoDoPonto) || resumoDoCommit(resumoDoCommitDoLog(hash, turno));
         return comporTitulo(base, resumo);
+    }
+    function resumoDoCommitDoLog(hash, turno) {
+        if (!turno) return '';
+        const daLista = (turno.commits || []).find(c => c && c.hash === hash);
+        if (daLista) return daLista.nome || '';
+        return turno.commit === hash ? (turno.commitNome || '') : '';
     }
     function comporTitulo(base, resumo) {
         return [base, resumo].filter(Boolean).join(' - ');

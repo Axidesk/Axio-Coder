@@ -777,6 +777,13 @@ def marcar_commit_no_log(nome_log, turn_id, hash_commit, mensagem=""):
             continue
         grupo["commit"] = hash_commit or ""
         grupo["commit_nome"] = (mensagem or "").strip()
+        if hash_commit:
+            registos = grupo.get("commits")
+            if not isinstance(registos, list):
+                registos = []
+            if not any(isinstance(r, dict) and r.get("hash") == hash_commit for r in registos):
+                registos.append({"hash": hash_commit, "nome": (mensagem or "").strip()})
+            grupo["commits"] = registos
         try:
             gravar_log_sessao(caminho, payload)
         except OSError:

@@ -267,6 +267,28 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const corpo = titulo ? `<div class="git-ponto-nome">${escapeHtml(titulo)}</div>` : '';
         return recolhivel(cabecalho, corpo, false, 'git-ponto-enviado');
     }
+    function blocoDaTarefa(grupo, corpo, aberta) {
+        let cabecalho = '<span class="git-seccao-titulo">Esta tarefa</span>';
+        const nome = nomeDaTarefa(grupo);
+        if (nome) {
+            cabecalho += '<span class="projeto-secao-sep">|</span>'
+                + `<span class="git-identidade">${escapeHtml(nome)}</span>`;
+        }
+        return recolhivel(cabecalho, corpo, aberta, 'git-grupo-tarefa');
+    }
+    function campoDoCommit(grupo, vaiCommitar, podeCorrigir, mensagemDoPonto) {
+        const rascunho = valorDoCampo(grupo);
+        const editando = vaiCommitar || !!rascunho;
+        const escrito = rascunho || (vaiCommitar ? '' : mensagemDoPonto);
+        return `<div class="git-campo-linha${editando ? ' git-editando' : ''}">`
+            + `<input id="git-mensagem" class="git-campo${editando ? '' : ' git-campo-trancado'}" type="text" spellcheck="false"`
+            + ` value="${escapeHtml(escrito)}"${editando ? '' : ' readonly'}`
+            + ' placeholder="Mensagem do commit">'
+            + varinha('sugerir', 'Escrever a mensagem com a IA', 'git-editavel')
+            + salvar('salvar', descricaoDoSalvar(vaiCommitar), 'git-editavel')
+            + (podeCorrigir ? lapis() : '')
+            + '</div>';
+    }
     function htmlDaTarefa(grupo, pendentes, estado) {
         if (!grupo) {
             return `<div class="git-seccao">${linhaComTitulo('Esta tarefa', '')}`
@@ -296,23 +318,14 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             ? { hash: pontoDaTarefa, mensagem: mensagemDoPonto }
             : (commitDeOutroJaEnviado ? { hash: levou.hash, mensagem: levou.mensagem } : null);
         let html = '<div class="git-seccao">';
-        html += enviado
-            ? blocoDoPontoEnviado(enviado.hash, enviado.mensagem)
-            : linhaComTitulo('Esta tarefa', nomeDaTarefa(grupo));
-        html += notaTemDepois + notaNoutroCommit;
-        if (vaiCommitar || podeCorrigir) {
-            const rascunho = valorDoCampo(grupo);
-            const editando = vaiCommitar || !!rascunho;
-            const escrito = rascunho || (vaiCommitar ? '' : mensagemDoPonto);
-            html += `<div class="git-campo-linha${editando ? ' git-editando' : ''}">`
-                + `<input id="git-mensagem" class="git-campo${editando ? '' : ' git-campo-trancado'}" type="text" spellcheck="false"`
-                + ` value="${escapeHtml(escrito)}"${editando ? '' : ' readonly'}`
-                + ' placeholder="Mensagem do commit">'
-                + varinha('sugerir', 'Escrever a mensagem com a IA', 'git-editavel')
-                + salvar('salvar', descricaoDoSalvar(vaiCommitar), 'git-editavel')
-                + (podeCorrigir ? lapis() : '')
-                + '</div>';
+        if (enviado) {
+            html += blocoDoPontoEnviado(enviado.hash, enviado.mensagem);
+        } else if (vaiCommitar || podeCorrigir) {
+            html += blocoDaTarefa(grupo, campoDoCommit(grupo, vaiCommitar, podeCorrigir, mensagemDoPonto), !estado.automatico);
+        } else {
+            html += linhaComTitulo('Esta tarefa', nomeDaTarefa(grupo));
         }
+        html += notaTemDepois + notaNoutroCommit;
         html += '</div>';
         return html;
     }

@@ -11,12 +11,13 @@ const TITULO = 'Mais antigo';
 let commitsAMostrar = LIMITE;
 let diasVisiveis = [];
 let repositorio = null;
+let leituraValida = false;
 let pedidoEmCurso = null;
 let alvoComBalao = null;
 
     async function carregarRepositorio(forcar) {
-        if (!forcar && repositorio) return repositorio;
-        if (!forcar && pedidoEmCurso) return pedidoEmCurso;
+        if (!forcar && leituraValida) return repositorio;
+        if (pedidoEmCurso) return pedidoEmCurso;
         pedidoEmCurso = fetch('/api/git/estado')
             .then(r => r.json())
             .then(d => {
@@ -24,10 +25,12 @@ let alvoComBalao = null;
                 repositorio = estado.repo
                     ? { commits: estado.commits || [], tags: estado.tags || [] }
                     : { commits: [], tags: [] };
+                leituraValida = !!estado.repo;
                 return repositorio;
             })
             .catch(() => {
                 repositorio = { commits: [], tags: [] };
+                leituraValida = false;
                 return repositorio;
             })
             .finally(() => { pedidoEmCurso = null; });
@@ -178,26 +181,36 @@ let alvoComBalao = null;
         if (anterior) anterior.remove();
         const bloco = _bloco();
         container.appendChild(bloco);
-        if (repositorio) {
+        if (leituraValida) {
             _preencher(bloco);
             return;
         }
-        carregarRepositorio().then(() => {
-            if (!bloco.isConnected) return;
+        carregarRepositorio().then(() => { _preencher(bloco); });
+    }
+    function atualizarHistoricoAntigo() {
+        const bloco = document.querySelector('.history-antigos');
+        if (!bloco) return;
+        if (leituraValida) {
             _preencher(bloco);
-        });
+            return;
+        }
+        carregarRepositorio().then(() => { _preencher(bloco); });
     }
     function _preencher(bloco) {
+        if (!bloco.isConnected) return;
         const total = commitsAntigos().length;
-        if (!total) {
+        if (leituraValida && !total) {
             bloco.remove();
             return;
         }
+        bloco.style.display = leituraValida ? '' : 'none';
         bloco._resumo.textContent = String(total);
-        bloco.dataset.resumo = 'pronto';
+        bloco.dataset.resumo = leituraValida ? 'pronto' : 'pendente';
+        if (leituraValida && bloco.classList.contains('projeto-aberto')) _pintar(bloco._clip);
     }
 
 export {
     carregarRepositorio,
-    montarHistoricoAntigo
+    montarHistoricoAntigo,
+    atualizarHistoricoAntigo
 };
