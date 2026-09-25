@@ -21,6 +21,15 @@ _CAMINHOS_PLAUSIVEIS = (
 _VSWHERE = "Microsoft Visual Studio/Installer/vswhere.exe"
 _PREFERENCIA_COMPILADOR = {"msvc": 3, "clang": 2, "mingw": 1}
 
+_TIPOS_COMPILADOS = ("cmake", "msbuild", "qmake", "make")
+
+_LINGUAGENS_SEM_KIT = {
+    "python": ("o interpretador Python", ("python", "python3")),
+    "npm": ("o Node.js", ("node",)),
+    "cargo": ("o Rust (cargo e rustc)", ("cargo", "rustc")),
+    "go": ("a ferramenta do Go", ("go",)),
+}
+
 
 def kits_instalados(prefixos=()):
     """O que esta instalado NESTA maquina: Qt (por versao e kit), MSVC, CMake, Ninja, glslc, Vulkan, vcpkg."""
@@ -43,6 +52,8 @@ def escolher_kit(deteccao, instalado):
     Nao pergunta nada ao utilizador: escolhe entre o que a maquina tem e, quando nao chega,
     diz exatamente o que falta e onde se instala.
     """
+    if deteccao.get("tipo") not in _TIPOS_COMPILADOS:
+        return _kit_sem_compilador(deteccao)
     faltam = []
     notas = []
     msvc = instalado["msvc"][0] if instalado["msvc"] else None
@@ -89,6 +100,43 @@ def escolher_kit(deteccao, instalado):
         "modulos_em_falta": modulos_ausentes,
         "variaveis": variaveis,
         "caminhos": _caminhos_para_correr(qt, vulkan),
+        "satisfaz": not faltam,
+        "faltam": faltam,
+        "notas": notas,
+    }
+
+
+def _kit_sem_compilador(deteccao):
+    """Projeto que nao se compila com kit C++: nomeia a ferramenta da linguagem, ou diz que nao ha projeto."""
+    faltam = []
+    notas = []
+    tipo = deteccao.get("tipo") or ""
+    if tipo not in _LINGUAGENS_SEM_KIT:
+        faltam.append(
+            f"A pasta '{deteccao['pasta']}' nao tem nenhum ficheiro de projeto conhecido (CMakeLists.txt, "
+            ".sln, .pro, pyproject.toml, package.json...): nao ha kit a escolher."
+        )
+    else:
+        rotulo, executaveis = _LINGUAGENS_SEM_KIT[tipo]
+        achados = [achado for achado in (shutil.which(nome) for nome in executaveis) if achado]
+        notas.append(
+            f"Projeto {deteccao['rotulo']}: nao se compila com um kit C++. "
+            + (f"Corre sobre {rotulo}, encontrado em {', '.join(achados)}." if achados
+               else f"Corre sobre {rotulo}, que nao esta no PATH.")
+        )
+        if not achados:
+            faltam.append(f"Este projeto corre sobre {rotulo} e nao encontrei nenhum desses programas no PATH.")
+    return {
+        "gerador": "",
+        "arquitetura": "",
+        "qt": None,
+        "cmake": None,
+        "ninja": None,
+        "glslc": None,
+        "vulkan": {"raiz": "", "lib": "", "glslc": ""},
+        "modulos_em_falta": [],
+        "variaveis": {},
+        "caminhos": [],
         "satisfaz": not faltam,
         "faltam": faltam,
         "notas": notas,

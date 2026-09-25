@@ -169,13 +169,46 @@ Medições que valem (nesta máquina, 2026-10-06):
 - A sondagem que mede isto sem instalar nada: correr o `install` **sem** `--confirm-command`; se o
   componente existir, o instalador mostra o resumo e aborta (exit 3) em vez de instalar.
 
+## Qualquer linguagem, não só C++ (2026-10-06)
+
+Escolher um kit só faz sentido para projetos que se COMPILAM. O `kits.py` tratava qualquer pasta
+como se fosse C++: pedir os kits do próprio Axio (projeto Python) respondia
+*"gerador: Visual Studio 17 2022 x64"* — a resposta certa para o projeto errado.
+
+Agora a decisão passa pelo TIPO detetado:
+
+- `_TIPOS_COMPILADOS` (`cmake`, `msbuild`, `qmake`, `make`) seguem pelo caminho C++ de sempre.
+- `python`, `npm`, `cargo` e `go` saem por `_kit_sem_compilador`: dizem sobre que ferramenta o
+  projeto corre e se ela está no PATH, sem inventar gerador nenhum.
+- Pasta **sem projeto conhecido** deixa de anunciar um gerador e passa a nomear o que falta
+  (*"não tem nenhum ficheiro de projeto conhecido...: não há kit a escolher"*).
+
+Medido (2026-10-06): Axio (python) -> gerador vazio + *"corre sobre o interpretador Python,
+encontrado em .venv\\Scripts\\python.EXE"*; DRAFTCAD (cmake) -> `Visual Studio 17 2022 x64`
+(sem regressão); `C:\\` e `src/frontend` (desconhecidos) -> *"não há kit a escolher"*.
+
+A regra que fica: **a linguagem do projeto decide a ferramenta; o C++ é um caso, não o default.**
+
+## Criar do zero: quem escolhe a stack (regra permanente)
+
+Quando o projeto é NOVO não há nada para detetar — há para decidir. A ordem é:
+
+1. **O tipo de programa decide a família** (serviço/API, app de desktop, CLI, ferramenta web,
+   jogo, modelação...), nunca o hábito nem a linguagem da tarefa anterior.
+2. **A documentação OFICIAL decide a escolha dentro da família** (pesquisa-primeiro): a versão
+   vem da doc, nunca da memória do modelo.
+3. **O que já existe na máquina ganha** a uma instalação nova, quando serve.
+4. **Nada disto vira instrução do sistema**: é código que corre quando é preciso, para não
+   poluir o contexto de quem está a trabalhar numa linguagem que não precisa dele.
+
 ## O que falta (medido, não suposto)
 
 - **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: `detetar.py` cai em "desconhecido"
-  (os tipos são cmake/msbuild/qmake/python/npm/cargo/go/make). Falta reconhecer só código.
+  (os tipos são cmake/msbuild/qmake/python/npm/cargo/go/make). Já não mente sobre o kit (ver a
+  secção "Qualquer linguagem"), mas continua a não reconhecer **só código**.
 - **A árvore agrupada** por categoria no explorer: quem sabe os ficheiros de cada alvo é a
   CMake File API — uma versão por extensão de ficheiro seria palpite e foi descartada.
 - **Erros do MSBuild/MSVC** chegam (ao card e a mim) mas ainda não são clicáveis no Monaco. A

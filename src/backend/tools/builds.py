@@ -264,8 +264,12 @@ def _texto_plano(plano):
         "PLANO ESCOLHIDO PELO AXIO:",
         f"  projeto: {deteccao['rotulo']} '{deteccao.get('projeto') or os.path.basename(deteccao['pasta'])}'"
         + (f" ({', '.join(deteccao['vertentes'])})" if deteccao["vertentes"] else ""),
-        f"  gerador: {escolha['gerador']}" + (f" {escolha['arquitetura']}" if escolha.get("arquitetura") else ""),
     ]
+    if escolha.get("gerador"):
+        linhas.append(
+            f"  gerador: {escolha['gerador']}"
+            + (f" {escolha['arquitetura']}" if escolha.get("arquitetura") else "")
+        )
     if qt:
         linhas.append(f"  Qt: {qt['versao']} {qt['kit']}")
     if escolha.get("cmake"):
