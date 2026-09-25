@@ -594,8 +594,48 @@ Visual/Qt, ou precisa daquela infinidade de opções da interface? metade daquil
   flag nenhuma. O que se perde sem IDE não é configuração: é depurador, profiler, refactor e
   navegação, que são características do IDE e não do projeto.
 
-Fontes: [CMake projects in Visual Studio](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio)
-e [CMake presets no VS](https://learn.microsoft.com/en-us/cpp/build/cmake-presets-vs).
+### As property pages, uma a uma — e a linha que as escreve (2026-10-06)
+
+Segunda rodada da mesma pergunta, agora com os prints das property pages do Tibia74 (`.vcxproj`) à
+frente, incluindo o campo que ele diz ter preenchido à mão: Linker → Input → Additional Dependencies
+com `lua51.lib;libmysql.lib;libxml2.lib;ws2_32.lib;zlib.lib;iconv.lib;sqlite3.lib`.
+
+| Página do VS | Linha de CMake |
+|---|---|
+| Linker → Input → Additional Dependencies | `target_link_libraries(alvo PRIVATE lua51 mysql ...)` |
+| Linker → General → Additional Library Directories | `target_link_directories` |
+| C/C++ → General → Additional Include Directories | `target_include_directories` |
+| C/C++ → Language → C++ Standard | `set(CMAKE_CXX_STANDARD ...)` / `target_compile_features` |
+| C/C++ → Preprocessor → Definitions | `target_compile_definitions` |
+| C/C++ → Optimization / Code Generation | `CMAKE_CXX_FLAGS_<CONFIG>` / `target_compile_options` |
+| General → Target Name / Configuration Type / Extension | `add_executable` / `add_library(STATIC/SHARED)` |
+| General → Output / Intermediate Directory | `CMAKE_RUNTIME_OUTPUT_DIRECTORY` / `CMAKE_ARCHIVE_OUTPUT_DIRECTORY` |
+| General → Target Platform Version | `CMAKE_SYSTEM_VERSION` |
+| General → Platform Toolset | vem do compilador instalado (máquina, não projeto) |
+| Debugging → Working Directory | `VS_DEBUGGER_WORKING_DIRECTORY` ou `launch.vs.json` |
+| Build Events → Pre/Post-Build | `add_custom_command(TARGET ... PRE_BUILD/POST_BUILD)` |
+| Build Events → Custom Build Step | `add_custom_command` / `add_custom_target` |
+| Command Line / All Options | a leitura final: o que o compilador recebe |
+
+O que **não** tem equivalente de primeira linha são nichos do MSVC — Embedded IDL (COM), Windows
+Metadata (WinRT/UWP), Manifest Tool, XML Document Generator — e os `VC++ Directories`, onde o CMake
+deliberadamente não deixa escrever: os includes vêm do `find_package`/`target_include_directories`.
+
+**A prova que fecha o caso dele:** no Tibia74 aquela lista foi escrita à mão, campo a campo. No
+DRAFTCAD está lá sem ninguém a ter escrito — `build/axio-debug/DraftCAD.vcxproj` linha 141 traz
+`<AdditionalDependencies>` com `Qt6Core.lib`, `vulkan-1.lib`, `dxfrw.lib`, `d3d11.lib`, `ws2_32.lib`,
+e as `<AdditionalIncludeDirectories>` (linha 113) com o Qt 6.10.0 e o Vulkan SDK. Veio do
+`target_link_libraries` e do `find_package` do `CMakeLists.txt`: o mesmo campo, a mesma página, e a
+diferença é quem o escreveu.
+
+O compilador, esse, instala-se sozinho — a `learn.microsoft.com` dá o caminho por linha de comando
+(`winget install -e --id Microsoft.VisualStudio.BuildTools`, componente
+`Microsoft.VisualStudio.Component.VC.Tools.x86.x64`, ou o `vs_buildtools.exe` estável com um
+`.vsconfig`), que é o que a mensagem de "falta compilador" passou a nomear.
+
+Fontes: [CMake projects in Visual Studio](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio),
+[CMake presets no VS](https://learn.microsoft.com/en-us/cpp/build/cmake-presets-vs) e
+[Install the MSVC Build Tools](https://learn.microsoft.com/en-us/cpp/overview/acquire-msvc).
 
 ## O que falta (medido, não suposto)
 

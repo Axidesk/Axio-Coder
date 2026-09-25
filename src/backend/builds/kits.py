@@ -88,7 +88,13 @@ def escolher_kit(deteccao, instalado):
     if msvc and not qt:
         notas.append(f"Compilador MSVC {msvc['ferramentas'][-1] if msvc['ferramentas'] else ''} de {msvc['produto']}.")
     if not msvc and not qt:
-        faltam.append("Nao ha compilador C++ instalado (nem MSVC nem um kit de Qt com compilador).")
+        faltam.append(
+            "Nao ha compilador C++ instalado (nem MSVC nem um kit de Qt com compilador). O compilador vive "
+            "na maquina, nao no projeto, por isso instala-se uma vez: pelo Visual Studio Installer com o "
+            "workload 'Desktop development with C++', ou so as ferramentas de linha de comando com "
+            "'winget install -e --id Microsoft.VisualStudio.BuildTools' (componente "
+            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64). Pede administrador."
+        )
     return {
         "gerador": gerador,
         "arquitetura": arquitetura,
