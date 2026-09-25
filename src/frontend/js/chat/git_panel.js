@@ -3,7 +3,7 @@ import { vistaDe } from './colunas.js';
 import { setCodeViewContent } from './files.js';
 import { escapeHtml } from './messages.js';
 import { btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
-import { svgDoPonto } from './icones.js';
+import { svgDoPonto, svgDoAviao } from './icones.js';
 import { showConfirm } from './ui.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { esquecerIntencaoManual, marcarProximoComoManual } from './historico/marcas_envio.js';
@@ -192,7 +192,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             </div>
         </div>`;
     }
-    function htmlCabecalho(estado, grupo, versaoDaTarefa) {
+    function htmlCabecalho(estado, grupo, pendentes, versaoDaTarefa) {
         const ramos = (estado.ramos || []).length || 1;
         let html = `<div class="git-seccao">${linhaComTitulo('Repositorio', estado.slug || 'repositorio local')}`;
         html += '<div class="git-ramo-linha">';
@@ -200,6 +200,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<span class="git-chip-rotulo">${escapeHtml(estado.branch || 'sem ramo')}</span></span>`;
         html += '</div>';
         html += blocoDeEtiquetas(estado, grupo, versaoDaTarefa);
+        html += htmlDaTarefa(grupo, pendentes, estado);
         html += '</div>';
         return html;
     }
@@ -256,24 +257,20 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     }
     function blocoDoPontoEnviado(hash, mensagem) {
         const curto = String(hash || '').slice(0, 7);
-        let cabecalho = '<span class="git-seccao-titulo">Ja enviada para o GitHub</span>';
-        if (curto) {
-            cabecalho += '<span class="projeto-secao-sep">|</span>'
-                + `<span class="git-hash">${escapeHtml(curto)}</span>`;
-        }
         const titulo = tituloDaTarefaDoCommit(hash, mensagem);
         const corpo = titulo ? `<div class="git-ponto-nome">${escapeHtml(titulo)}</div>` : '';
-        return recolhivel(cabecalho, corpo, false, 'git-ponto-enviado');
+        return recolhivel(marcaDoPonto(true, curto), corpo, false, 'git-ponto-enviado');
     }
     function blocoDaTarefa(grupo, corpo, aberta, hash) {
-        let cabecalho = '<span class="git-seccao-titulo">Esta tarefa</span>';
         const curto = String(hash || '').slice(0, 7);
-        const valor = curto || nomeDaTarefa(grupo);
-        if (valor) {
-            cabecalho += '<span class="projeto-secao-sep">|</span>'
-                + `<span class="${curto ? 'git-hash' : 'git-identidade'}">${escapeHtml(valor)}</span>`;
-        }
-        return recolhivel(cabecalho, corpo, aberta, 'git-grupo-tarefa');
+        return recolhivel(marcaDoPonto(false, curto || nomeDaTarefa(grupo)), corpo, aberta, 'git-grupo-tarefa');
+    }
+    function marcaDoPonto(enviado, valor) {
+        const titulo = enviado ? 'Ja enviada para o GitHub' : 'Salvo localmente';
+        return `<span class="git-marca${enviado ? ' git-marca-enviada' : ''}" title="${escapeHtml(titulo)}">`
+            + (enviado ? svgDoAviao('h-3.5 w-3.5') : svgDoPonto('h-3.5 w-3.5'))
+            + '</span>'
+            + (valor ? `<span class="git-hash git-hash-acesa">${escapeHtml(valor)}</span>` : '');
     }
     function corpoDoCommit(grupo, vaiCommitar, podeCorrigir, mensagemDoPonto) {
         const rascunho = valorDoCampo(grupo);
@@ -293,8 +290,8 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     }
     function htmlDaTarefa(grupo, pendentes, estado) {
         if (!grupo) {
-            return `<div class="git-seccao">${linhaComTitulo('Esta tarefa', '')}`
-                + '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div></div>';
+            return linhaComTitulo('Esta tarefa', '')
+                + '<div class="git-vazio">Seleciona uma tarefa no historico para ver o ponto dela.</div>';
         }
         const ficheiros = ficheirosDaTarefa(grupo);
         const pontoDaTarefa = hashDaTarefa(grupo);
@@ -319,16 +316,15 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         const enviado = pontoDaTarefaEnviado
             ? { hash: pontoDaTarefa, mensagem: mensagemDoPonto }
             : (commitDeOutroJaEnviado ? { hash: levou.hash, mensagem: levou.mensagem } : null);
-        let html = '<div class="git-seccao">';
+        let html = '';
         if (enviado) {
             html += blocoDoPontoEnviado(enviado.hash, enviado.mensagem);
         } else if (vaiCommitar || podeCorrigir) {
             html += blocoDaTarefa(grupo, corpoDoCommit(grupo, vaiCommitar, podeCorrigir, mensagemDoPonto), !estado.automatico, pontoDaTarefa);
         } else {
-            html += linhaComTitulo('Esta tarefa', nomeDaTarefa(grupo));
+            html += `<div class="git-titulo-linha"><span class="git-identidade">${escapeHtml(nomeDaTarefa(grupo))}</span></div>`;
         }
         html += notaTemDepois + notaNoutroCommit;
-        html += '</div>';
         return html;
     }
     function descricaoDoSalvar(vaiCommitar) {
@@ -374,9 +370,9 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
     function montarPainel(estado, grupo, pendentes, versaoDaTarefa) {
         if (!estado || !estado.repo) return htmlSemRepo(estado && estado.motivo);
         let html = '<div class="git-painel">';
-        html += htmlCabecalho(estado, grupo, versaoDaTarefa);
-        html += htmlDaTarefa(grupo, pendentes, estado);
-        html += htmlPorSubir(estado);
+        html += htmlCabecalho(estado, grupo, pendentes, versaoDaTarefa);
+        const porSubir = htmlPorSubir(estado);
+        if (porSubir) html += `<div class="git-separa">${porSubir}</div>`;
         html += htmlDependencias(estado);
         html += '</div>';
         return html;

@@ -384,3 +384,24 @@
     background: var(--bg-selecao);
     border-radius: 8px;
 }
+
+.git-marca {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    transform: translateY(2px);
+    color: var(--text-suave);
+}
+
+.git-marca-enviada {
+    color: var(--oliva);
+}
+
+.git-hash.git-hash-acesa {
+    color: var(--oliva);
+}
+
+.git-separa {
+    padding-top: 10px;
+    border-top: 1px solid var(--border-suave);
+}

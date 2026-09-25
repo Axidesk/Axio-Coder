@@ -228,7 +228,7 @@ let nomesDeTarefaDe = -1;
         card.appendChild(body);
         historyLogsWrapper.appendChild(card);
     }
-    function _injectMarcas(el, grupo, titulo, tag, ultimo) {
+    function _injectMarcas(el, grupo, titulo, tag, enviado) {
         el.querySelectorAll('.history-round-saved-icon, .history-round-enviado-icon, .history-round-restore-icon, .history-round-tag').forEach(m => m.remove());
         const row = el.firstElementChild;
         if (!row) return;
@@ -238,7 +238,7 @@ let nomesDeTarefaDe = -1;
             chip.textContent = tag;
             row.appendChild(chip);
         }
-        if (titulo && !ultimo) {
+        if (titulo && !enviado) {
             const salvo = document.createElement('span');
             salvo.className = 'shrink-0 mt-0.5 history-round-saved-icon';
             salvo.title = titulo;
@@ -257,10 +257,10 @@ let nomesDeTarefaDe = -1;
             });
             row.appendChild(restaurar);
         }
-        if (!ultimo) return;
+        if (!enviado) return;
         const naNuvem = document.createElement('span');
         naNuvem.className = 'shrink-0 mt-0.5 history-round-enviado-icon';
-        naNuvem.title = 'Enviado para o GitHub (' + String((grupo && grupo.commit) || '').slice(0, 7) + ')';
+        naNuvem.title = 'Ja enviada para o GitHub';
         naNuvem.innerHTML = svgDoAviao('h-3.5 w-3.5 text-[var(--oliva)]');
         row.appendChild(naNuvem);
     }
@@ -300,11 +300,8 @@ let nomesDeTarefaDe = -1;
             _injectMarcas(el, grupo, '', '', false);
             return;
         }
-        const curto = String(commit).slice(0, 7);
-        const naNuvem = enviadaParaOServidor(commit);
-        const ultimo = marcasDeEnvio().porCommit.has(commit);
-        const onde = naNuvem ? ', na nuvem' : ', por enviar';
-        _injectMarcas(el, grupo, 'Salvo localmente (' + curto + onde + ')', tagDoCommit(commit), ultimo);
+        const enviado = enviadaParaOServidor(commit) || marcasDeEnvio().porCommit.has(commit);
+        _injectMarcas(el, grupo, enviado ? '' : 'Salvo localmente', tagDoCommit(commit), enviado);
     }
     function _marcasDoDia(el) {
         const anterior = el.querySelector('.history-day-saved-icon');
