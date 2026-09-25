@@ -9,7 +9,7 @@ _GERADORES_MULTI_CONFIG = ("Visual Studio", "Xcode", "Multi-Config")
 _CONFIGURACOES = {"debug": "Debug", "release": "Release", "relwithdebinfo": "RelWithDebInfo", "minsizerel": "MinSizeRel"}
 
 
-def nome_do_preset(configuracao):
+def _nome_do_preset(configuracao):
     return PREFIXO_PRESET + configuracao
 
 
@@ -22,7 +22,7 @@ def escrever(pasta, escolha, configuracao="debug"):
     """
     if escolha.get("faltam") or not escolha.get("gerador"):
         return {"erro": "sem kit escolhido", "faltam": escolha.get("faltam", [])}
-    nome = nome_do_preset(configuracao)
+    nome = _nome_do_preset(configuracao)
     dados, erro = _ler(pasta)
     if erro:
         return {"erro": erro}
@@ -49,12 +49,6 @@ def escrever(pasta, escolha, configuracao="debug"):
         "configurePreset": nome,
         "buildPreset": nome,
     }
-
-
-def ler_presets(pasta):
-    """Nomes dos presets de configure que existem hoje no projeto (do Axio e de outros)."""
-    dados, _ = _ler(pasta)
-    return [p.get("name") for p in dados.get("configurePresets") or [] if p.get("name")]
 
 
 def _configure(nome, escolha, configuracao, multi_config):

@@ -29,18 +29,10 @@ def preparar(pasta, configuracao="debug"):
         "deteccao": deteccao,
         "escolha": escolha,
         "escrita": escrita,
-        "configurar": comando_configurar(escrita["preset"]),
-        "construir": comando_construir(escrita["preset"]),
+        "configurar": f"cmake --preset {escrita['preset']}",
+        "construir": f"cmake --build --preset {escrita['preset']}",
         "pasta_build": escrita["pasta_build"],
     }
-
-
-def comando_configurar(preset):
-    return f"cmake --preset {preset}"
-
-
-def comando_construir(preset):
-    return f"cmake --build --preset {preset}"
 
 
 def _sem_caminho(deteccao):
