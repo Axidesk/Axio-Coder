@@ -14,6 +14,7 @@ let sincronizacaoDoEnvio = null;
 let apiDeRestauro = null;
 let cacheDoUltimoEnviado = '';
 let cacheDoUltimoEnviadoValida = false;
+let nomesDeTarefaDe = -1;
 
     function rebuildGroupFromSaved(saved) {
         return {
@@ -407,8 +408,12 @@ let cacheDoUltimoEnviadoValida = false;
         return null;
     }
     function nomeDaTarefaDoCommit(hash) {
-        const turno = turnoDoCommit(hash);
-        return turno ? (turno.displayName || turno.name || '') : '';
+        return nomeDoTurno(turnoDoCommit(hash));
+    }
+    function nomeDoTurno(turno) {
+        if (!turno) return '';
+        if (!turno.displayName && !turno.name) _nomearTurnos();
+        return turno.displayName || turno.name || '';
     }
     function resumoDoCommit(texto) {
         return String(texto || '').trim().split(/\s+/).join(' ');
@@ -419,7 +424,7 @@ let cacheDoUltimoEnviadoValida = false;
     }
     function tituloDaTarefaDoCommit(hash, resumoDoPonto) {
         const turno = turnoDoCommit(hash);
-        const base = turno ? (turno.displayName || turno.name || '') : '';
+        const base = nomeDoTurno(turno);
         const resumo = resumoDoCommit(resumoDoPonto) || (turno ? resumoDoCommit(turno.commitNome) : '');
         return comporTitulo(base, resumo);
     }
@@ -445,6 +450,12 @@ let cacheDoUltimoEnviadoValida = false;
                 log.displayName = log.name || ('Tarefa ' + (idx + 1));
             });
         });
+    }
+    function _nomearTurnos() {
+        const carregadas = state.sessionHistoryList.filter(s => state.sessionDetailCache[s.filename]).length;
+        if (carregadas === nomesDeTarefaDe) return;
+        nomesDeTarefaDe = carregadas;
+        assignDisplayNamesByDay();
     }
     function marcarTagsNosCards() {
         document.querySelectorAll('.history-round-card').forEach(el => {

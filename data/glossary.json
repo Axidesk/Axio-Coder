@@ -1680,8 +1680,8 @@
         "arquivo": "src/frontend/style.css",
         "linha": 220,
         "conferido": [
-          1790290568.423,
-          12938
+          1790293685.244,
+          14676
         ]
       }
     },
@@ -4346,10 +4346,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 441,
+        "linha": 449,
         "conferido": [
-          1790290942.662,
-          30066
+          1790293693.209,
+          30639
         ]
       }
     },
@@ -4407,10 +4407,10 @@
       "descricao": "Botao que vive NO CARD da pilha (2026-10): cards.js:_injectMarcas cria-o ao lado do marcador do ponto sempre que git_panel.js:podeRestaurar(grupo) deixa (commit OU __session), e o CSS troca-o pelo marcador quando o card esta selecionado - por isso ele aparece APENAS no card selecionado. A troca e PURA CSS em style.css: .history-round-restore-icon nasce display:none, .history-round-card.history-round-selected esconde o .history-round-saved-icon e mostra o restaurar. Nao ha repintura por JS na selecao. O clique faz stopPropagation (para nao cair no clique do card, que seleciona/abre) e chama a API registada em cards.js:registrarRestauroDaTarefa, ligada em renderer.js a git_panel.js:restaurarTarefa(grupo) - que escolhe o MOTOR: com commit -> requestGitRestore (previa + modal), sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o #btn-git-restore-history do cabecalho da coluna 1, REMOVIDO a 2026-10; com ele sairam sincronizarBotaoRestauro (git_panel.js), btnGitRestoreHistory (dom.js) e o registo registrarSincronizacaoDeRestauro (acoes.js). O registo novo existe pelo ciclo de imports: git_panel importa cards, logo cards nao pode importar git_panel. MEDIDO (tool_medir_pintura, CSS real): card fechado pinta o marcador 14x14 e o restaurar 0x0; selecionado, o marcador vai a 0x0 e o restaurar pinta 14x14 na MESMA posicao - o icone nao salta.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 230,
+        "linha": 231,
         "conferido": [
-          1790290942.662,
-          30066
+          1790293693.209,
+          30639
         ]
       }
     },
@@ -4427,10 +4427,10 @@
       "descricao": "Seccao do painel de git que lista os commits que ainda estao so no disco. NASCE ABERTA quando ha o que subir (a 2026-10 passou a abrir por padrao: antes era sempre recolhida) e RECOLHIDA quando nao ha nada - nesse caso o corpo traz so a nota 'Tudo o que esta commitado ja subiu para o remoto.' e o estado ja e dito pelo aviao do dia, por isso nao vale ocupar espaco. Cada linha e 'bullet + hash curto + titulo do card', montado por cards.js:tituloDaTarefaDoCommit(hash, mensagem) - o MESMO compositor do titulo da coluna 1 (cards.js:comporTitulo), logo le-se igual a lista do historico: 'Tarefa 17 - resumo da mensagem'. Commit que nao pertence a nenhuma tarefa conhecida aparece so com a mensagem. O cabecalho mostra o titulo e a contagem. O corpo vem de git_repo.por_subir via /api/git/por_subir (com truncado a partir de um teto, que enviadaParaOServidor respeita).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 250,
+        "linha": 246,
         "conferido": [
-          1790291709.78,
-          35088
+          1790293707.168,
+          33033
         ]
       }
     },
@@ -4441,10 +4441,10 @@
       "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 212,
+        "linha": 208,
         "conferido": [
-          1790291709.78,
-          35088
+          1790293707.168,
+          33033
         ]
       }
     },
@@ -4834,10 +4834,10 @@
       "descricao": "Botao que grava o ponto da tarefa, ao lado do campo da mensagem do commit (varinha e marcador trocam de lugar conforme o campo esta trancado ou destrancado - ver o lapis). O DESENHO muda a 2026-10: era o disquete, passou a ser o bookmark do Lucide, e vive num TEMPLATE UNICO em src/frontend/js/chat/icones.js:svgDoPonto(classe) - a classe entra por parametro porque o mesmo icone pinta em tres sitios com tamanhos diferentes: aqui h-4 w-4 (git_panel.js:salvar), no cabecalho da coluna 1 h-5 w-5 icon-header-action (injetado por renderer.js) e no card da pilha h-3.5 w-3.5 (cards.js:_injectMarcas). Trocar o desenho passa a ser mudar UM caminho em icones.js. NO CARD o marcador cede o lugar a dois vizinhos, nunca por repintura de JS: ao restaurar quando o card esta selecionado (troca PURA CSS, ver .history-round-restore-icon) e ao AVIAO quando aquele e o ultimo ponto enviado (cards.js:_marcasDoCard:289).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 116,
+        "linha": 112,
         "conferido": [
-          1790291709.78,
-          35088
+          1790293707.168,
+          33033
         ]
       }
     },
@@ -4874,10 +4874,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 564,
+        "linha": 523,
         "conferido": [
-          1790291709.78,
-          35088
+          1790293707.168,
+          33033
         ]
       }
     },
@@ -4895,10 +4895,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 573,
+        "linha": 583,
         "conferido": [
-          1790290942.662,
-          30066
+          1790293693.209,
+          30639
         ]
       }
     },
@@ -4931,10 +4931,10 @@
       "descricao": "Botao de lapis no cartao da tarefa que destranca a mensagem do ponto. O campo nasce TRANCADO (readonly + .git-campo-trancado: fundo transparente e texto em --text-suave) e a varinha e o disquete ficam escondidos por .git-editavel; o lapis destranca (classe .git-editando na linha, .git-acesa no botao), e clicar outra vez ou Esc tranca e repoe a mensagem do ponto, descartando o rascunho. So existe quando o commit e a ponta do ramo e ainda esta por subir (grupo.__podeEmendar) - e a unica janela em que a emenda e segura.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 121,
+        "linha": 117,
         "conferido": [
-          1790291709.78,
-          35088
+          1790293707.168,
+          33033
         ]
       }
     },
@@ -4951,7 +4951,11 @@
       "descricao": "O aviao oliva vive num TEMPLATE UNICO em src/frontend/js/chat/icones.js:svgDoAviao(classe) e e injetado por cards.js:_injectMarcas. REGRA (2026-10, reescrita): o aviao e um MARCO DE ENVIO e fica ONDE O ENVIO ACONTECEU, acumulando - ja nao marca \"o ultimo ponto enviado\". Quem decide e o armazem historico/marcas_envio.js (localStorage axio.git.envios, chaveado pelo URL do remoto): a cada leitura de /api/git/por_subir, cards.js:carregarPorSubir compara a lista de pendentes com a anterior e regista um marco no commit mais recente que saiu da lista. TIPO: 'manual' quando git_panel.js:enviarRepositorio chamou marcarProximoComoManual antes do refetch - o aviao vai para o CARTAO daquele commit (marcasDeEnvio().porCommit) e o marcador do ponto cede-lhe o lugar; 'auto' quando o envio veio de outro caminho (virada do dia, empurrao pelo terminal) - o aviao vai para o CARTAO DO DIA daquele commit (marcasDeEnvio().porDia contra o dataset.dia dos cards de dia). Os marcos PERSISTEM: o card de ontem mantem o seu. cards.js:ultimoEnviadoParaOServidor passou a ser so a SEMENTE (semearSeVazio: um marco unico por projeto quando o armazem esta vazio, para a primeira abertura nao ficar sem aviao nenhum). NUNCA afirma sem remoto nem com a lista por subir truncada: leitura truncada SALTA a deteccao (uma lista cortada nao prova nada).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 231
+        "linha": 231,
+        "conferido": [
+          1790293693.209,
+          30639
+        ]
       }
     },
     {
@@ -4981,13 +4985,14 @@
         "commits antigos",
         "ver mais commits",
         "lista antiga do historico",
-        "continuacao do historico"
+        "continuacao do historico",
+        "mais antigo"
       ],
       "identificador": "historico/antigos.js:montarHistoricoAntigo / .history-antigos",
-      "descricao": "Seccao da COLUNA 1 do historico, por baixo dos tres cards de dia: a continuacao do historico ate onde o repositorio vai. A 2026-10 mudou de casa - vivia no painel de git (git_panel.js:htmlHistorico, com \"Ver mais\" e linhaCommit) e esse bloco foi REMOVIDO do painel. FILTRO: nao e por posicao, e por \"este commit tem card?\" - saem os hashes dos turnos com commit dos TRES dias a vista (cards.js:turnosComCommit filtrado por dia, mais state.commitsDosTurnos e state.currentTurnLogs), fica todo o resto. Cortar por posicao esconderia um commit sem card mais recente que o card mais antigo. DADOS: /api/git/estado (estado.commits e tags), carregado em segundo plano por historico/antigos.js:carregarRepositorio - disparado em painel.js:prefetchSessionDetails, logo o painel abre com a lista ja em cache e o corpo so se constroi quando o usuario expande. LAYOUT: cabecalho recolhido (.projeto-cabecalho + .projeto-secao-titulo + .projeto-secao-resumo + .projeto-mais, com o + empurrado para a direita por margin-left auto) e corpo com grid 0fr->1fr (card-collapsible). Cada linha e hash curto + tituloDaTarefaDoCommit (o MESMO compositor do card, logo le-se \"Tarefa N - resumo\"), agrupada por dia com a data em dd/mm/yyyy (marcas_envio.diaDoCommit), mensagem a quebrar ate 3 linhas (-webkit-line-clamp) e o texto inteiro no balao do painel (mostrarIconTooltip via data-info, nao title). O restaurar aparece SO no hover (.history-antigo-linha:hover .history-round-restore-icon) e usa o MESMO motor dos cards, requestGitRestore(hash, titulo, '') - aceita qualquer hash. MEDIDO (tool_medir_pintura, CSS real, coluna 340px): cabecalho 324 de largura com o + a x=312, linha 324 de largura, restaurar 0x0 em repouso e 14x14 a x=312 no hover, sem mexer na altura da linha.",
+      "descricao": "Seccao da COLUNA 1 do historico, por baixo dos tres cards de dia: a continuacao do historico ate onde o repositorio vai. A 2026-10 mudou de casa - vivia no painel de git (git_panel.js:htmlHistorico, com \"Ver mais\" e linhaCommit) e esse bloco foi REMOVIDO do painel. FILTRO: nao e por posicao, e por \"este commit tem card?\" - saem os hashes dos turnos com commit dos TRES dias a vista (cards.js:turnosComCommit filtrado por dia, mais state.commitsDosTurnos e state.currentTurnLogs), fica todo o resto. Cortar por posicao esconderia um commit sem card mais recente que o card mais antigo. DADOS: /api/git/estado (estado.commits e tags), carregado em segundo plano por historico/antigos.js:carregarRepositorio - disparado em painel.js:prefetchSessionDetails, logo o painel abre com a lista ja em cache e o corpo so se constroi quando o usuario expande. CABECALHO: recolhido, com o titulo \"Mais antigo\" (a constante TITULO; o CSS .projeto-secao-titulo poe em CAIXA ALTA) + \"|\" + o CONTADOR (projeto-secao-resumo) + o \"+\" empurrado para a direita por margin-left auto. Corpo com grid 0fr->1fr (card-collapsible). Cada linha e hash curto + tituloDaTarefaDoCommit (o MESMO compositor do card, logo le-se \"Tarefa N - resumo\"; ver a nota do painel de git para o prefixo), agrupada por dia com a data em dd/mm/yyyy (marcas_envio.diaDoCommit). CADA DATA TEM UM SEPARADOR: .history-antigos-dia leva border-top 1px var(--border-suave) e a data passou a --text-claro (era --text-mutado) - o corpo le-se em blocos \"separador, data, labels\". A MENSAGEM QUEBRA NO MAXIMO 2 LINHAS (-webkit-line-clamp: 2) e o texto inteiro sai no balao do painel (mostrarIconTooltip via data-info, nunca o title do browser), que ja espera ICON_TOOLTIP_DELAY=500ms (ui.js) antes de aparecer - a espera que o utilizador pediu. O RESTAURAR RESERVA O LUGAR: ao contrario dos cards (que trocam marcador por restaurar), aqui o botao esta SEMPRE no flex com 14x14 (display:flex + visibility:hidden + opacity:0) e so acende no hover (.history-antigo-linha:hover -> visibility:visible, opacity:1) - antes era display:none/flex e o texto dava um salto (flick) de 22px ao passar o rato. O motor e o MESMO dos cards, requestGitRestore(hash, titulo, '') - aceita qualquer hash. MEDIDO (tool_medir_pintura, CSS real, coluna 340px, 2026-10-06): cabecalho 324, linha 324x42.3, restaurar 14x14 a x=312 NAS DUAS cenas (repouso e hover forcado, msg 238.1px em ambas - a prova de que nao ha salto), msg de 2 linhas 36.3 de altura, data 324x27.5 com a linha do separador em y=43 e y=117.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/antigos.js",
-        "linha": 105
+        "linha": 107
       }
     },
     {
@@ -5003,7 +5008,11 @@
       "descricao": "Armazem dos marcos de envio do aviao, em localStorage (chave axio.git.envios), um registo por PROJETO com a chave do URL do remoto (sem remoto nao ha nada a registar). Cada projeto guarda duas listas: 'pendentes' (os commits da ultima leitura de /api/git/por_subir, com hash e dia) e 'marcas' (hash + dia + tipo 'manual'/'auto', ate 80, as mais antigas caem). O fluxo: cards.js:carregarPorSubir entrega a lista nova a registarLeitura, que compara com a anterior e, se algum hash saiu da lista, regista UMA marca no mais recente que saiu (a lista vem do git do mais novo para o mais antigo) - um empurrao de varios commits deixa um marco so, no topo. O tipo sai de um sinalizador de intencao: git_panel.js:enviarRepositorio chama marcarProximoComoManual depois do envio correr bem e esquecerIntencaoManual quando falha ou quando o remoto ja tinha tudo; o sinalizador so e consumido quando uma marca e de facto gravada. diaDoCommit converte o ISO do commit para dd/mm/yyyy, o MESMO formato do dataset.dia dos cards de dia. marcasDeEnvio() devolve Sets prontos a consultar (porCommit, porDia) e fica em cache ate esquecerCache() - chamado por cards.js:atualizarMarcasDosCards e renderDayRoundCards. PROVADO com o disco (harness): envio nao pedido pelo painel cria marca de DIA, envio pedido cria marca de CARTAO e mantem as anteriores, leitura truncada e sem remoto nao criam nada, e a semente so entra uma vez por projeto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/marcas_envio.js",
-        "linha": 80
+        "linha": 80,
+        "conferido": [
+          1790293774.786,
+          3586
+        ]
       }
     }
   ]

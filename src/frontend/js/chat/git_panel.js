@@ -136,11 +136,11 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             + `<div class="projeto-filhos card-collapsible"><div class="card-collapsible-clip">${corpo}</div></div>`
             + '</div>';
     }
-    function linhaComTitulo(titulo, valor) {
+    function linhaComTitulo(titulo, valor, valorEhHtml) {
         let linha = `<span class="git-seccao-titulo">${escapeHtml(titulo)}</span>`;
         if (!valor) return `<div class="git-titulo-linha">${linha}</div>`;
         return `<div class="git-titulo-linha">${linha}<span class="projeto-secao-sep">|</span>`
-            + `<span class="git-identidade">${escapeHtml(valor)}</span></div>`;
+            + `<span class="git-identidade">${valorEhHtml ? valor : escapeHtml(valor)}</span></div>`;
     }
     async function comBotaoOcupado(botao, tarefa) {
         const antes = botao ? botao.disabled : false;
@@ -257,7 +257,12 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo, '', commits.length > 0);
     }
     function linhaDoPontoEnviado(hash, mensagem) {
-        return [String(hash || '').slice(0, 7), tituloDaTarefaDoCommit(hash, mensagem)].filter(Boolean).join(' ');
+        const curto = String(hash || '').slice(0, 7);
+        const titulo = tituloDaTarefaDoCommit(hash, mensagem);
+        const partes = [];
+        if (curto) partes.push(`<span class="git-hash">${escapeHtml(curto)}</span>`);
+        if (titulo) partes.push(escapeHtml(titulo));
+        return partes.join(' ');
     }
     function htmlDaTarefa(grupo, pendentes, estado) {
         if (!grupo) {
@@ -288,7 +293,7 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             ? { hash: pontoDaTarefa, mensagem: mensagemDoPonto }
             : (commitDeOutroJaEnviado ? { hash: levou.hash, mensagem: levou.mensagem } : null);
         const cabecalho = enviado
-            ? linhaComTitulo('Ja enviada para o GitHub', linhaDoPontoEnviado(enviado.hash, enviado.mensagem))
+            ? linhaComTitulo('Ja enviada para o GitHub', linhaDoPontoEnviado(enviado.hash, enviado.mensagem), true)
             : linhaComTitulo('Esta tarefa', nomeDaTarefa(grupo));
         let html = `<div class="git-seccao">${cabecalho}`;
         html += notaTemDepois + notaNoutroCommit;

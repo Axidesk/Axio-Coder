@@ -35,6 +35,10 @@
     font-weight: 600;
 }
 
+.git-hash {
+    color: var(--text-mutado);
+}
+
 .git-titulo-linha {
     display: flex;
     align-items: baseline;

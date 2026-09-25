@@ -6,7 +6,7 @@ import { diaDoCommit } from './marcas_envio.js';
 import { tituloDaTarefaDoCommit, turnosComCommit } from './cards.js';
 
 const LIMITE = 20;
-const TITULO = 'Historico mais antigo';
+const TITULO = 'Mais antigo';
 
 let commitsAMostrar = LIMITE;
 let diasVisiveis = [];
@@ -76,6 +76,8 @@ let alvoComBalao = null;
         return linha;
     }
     function _ligarBaloes(raiz) {
+        if (raiz.__baloesLigados) return;
+        raiz.__baloesLigados = true;
         raiz.addEventListener('mouseover', (evento) => {
             const alvo = evento.target && evento.target.closest ? evento.target.closest('[data-info]') : null;
             if (!alvo || alvo === alvoComBalao) return;
@@ -143,7 +145,7 @@ let alvoComBalao = null;
         let pintado = false;
         cabecalho.addEventListener('click', () => {
             const aberto = bloco.classList.toggle('projeto-aberto');
-            sinal.textContent = aberto ? '\u2212' : '+';
+            sinal.textContent = aberto ? '−' : '+';
             if (!aberto || pintado) return;
             pintado = true;
             _pintar(clip);
