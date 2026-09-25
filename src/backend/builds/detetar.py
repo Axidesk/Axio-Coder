@@ -21,6 +21,13 @@ _RE_COMPONENTS = re.compile(
     re.DOTALL,
 )
 _RE_PROJECT = re.compile(r"project\s*\(\s*([A-Za-z0-9_]+)")
+_RE_ADD_ALVO = re.compile(r"add_(executable|library)\s*\(\s*([A-Za-z0-9_.\-]+)([^)]*)", re.DOTALL)
+_TIPOS_DE_BIBLIOTECA = {
+    "STATIC": "STATIC_LIBRARY",
+    "SHARED": "SHARED_LIBRARY",
+    "MODULE": "MODULE_LIBRARY",
+    "INTERFACE": "INTERFACE_LIBRARY",
+}
 _RE_ADD_SUBDIRECTORY = re.compile(r"add_subdirectory\s*\(\s*([A-Za-z0-9_./\\-]+)")
 _RE_PALAVRAS_IGNORADAS = re.compile(r"[()\s\"']+")
 
@@ -98,10 +105,12 @@ def _leitura_cmake(caminho, nomes):
     prefixos = []
     padrao = ""
     projeto = ""
+    alvos = []
     for texto in textos:
         pacotes += _pacotes_do_texto(texto)
         programas += _programas_do_texto(texto)
         prefixos += _prefixos_do_texto(texto)
+        alvos += _alvos_do_texto(texto)
         if not projeto:
             achado = _RE_PROJECT.search(texto)
             if achado:
@@ -115,6 +124,7 @@ def _leitura_cmake(caminho, nomes):
         "pacotes": _sem_repetidos(pacotes, "nome"),
         "programas": _sem_repetidos(programas, "variavel"),
         "prefixos": _sem_repetidos(prefixos),
+        "alvos": _sem_repetidos(alvos, "nome"),
         "padrao_cxx": padrao,
         "cmakelists_lidos": len(textos),
         "tem_presets": "CMakePresets.json" in nomes,
@@ -169,6 +179,24 @@ def _programas_do_texto(texto):
             nomes = [n for n in _RE_PALAVRAS_IGNORADAS.split(antes) if n]
         programas.append({"variavel": achado.group(1), "nomes": nomes})
     return programas
+
+
+def _alvos_do_texto(texto):
+    """Alvos que o proprio CMakeLists declara (add_executable / add_library).
+
+    O nome sai literal: quando vem de uma variavel (`add_executable(${NOME}`) o alvo nao
+    entra, porque o nome so existe depois de o CMake avaliar o ficheiro.
+    """
+    alvos = []
+    for achado in _RE_ADD_ALVO.finditer(texto):
+        comando, nome, resto = achado.group(1), achado.group(2), achado.group(3)
+        if comando == "executable":
+            tipo = "EXECUTABLE"
+        else:
+            palavras = {p.upper() for p in _RE_PALAVRAS_IGNORADAS.split(resto) if p}
+            tipo = next((v for k, v in _TIPOS_DE_BIBLIOTECA.items() if k in palavras), "LIBRARY")
+        alvos.append({"nome": nome, "tipo": tipo})
+    return alvos
 
 
 def _prefixos_do_texto(texto):

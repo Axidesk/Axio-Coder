@@ -60,10 +60,14 @@ def grupos_soltos(pasta):
         nomes = sorted(os.listdir(pasta))
     except OSError:
         return []
-    ficheiros = [n for n in nomes if os.path.isfile(os.path.join(pasta, n))]
-    if not any(_extensao(f) in EXTENSOES_DE_CODIGO for f in ficheiros):
+    ficheiros = [
+        n for n in nomes
+        if os.path.isfile(os.path.join(pasta, n))
+        and _grupo_por_extensao(n, {}) != "Outros"
+    ]
+    if not ficheiros:
         return []
-    return _agrupar(ficheiros, {}, {})
+    return agrupar_por_tipo(ficheiros, {}, {})
 
 
 def _vcxprojs(pasta):
@@ -100,7 +104,7 @@ def _projeto(caminho):
         return None
     ficheiros = _ficheiros(arvore)
     atribuicao, extensoes = _filtros(os.path.isfile(caminho + ".filters") and caminho + ".filters")
-    grupos = _agrupar(ficheiros, atribuicao, extensoes)
+    grupos = agrupar_por_tipo(ficheiros, atribuicao, extensoes)
     nome = (
         _texto(arvore, "ProjectName")
         or _texto(arvore, "RootNamespace")
@@ -145,17 +149,7 @@ def _extensoes_do_filtro(elemento):
     return {e.strip().lower() for e in texto.split(";") if e.strip()}
 
 
-def _agrupar(ficheiros, atribuicao, extensoes):
-    """Grupos por filtro declarado; sem filtro, pela extensao. 'Outros' fecha a lista."""
-    por_grupo = {}
-    for ficheiro in ficheiros:
-        grupo = atribuicao.get(ficheiro) or _grupo_por_extensao(ficheiro, extensoes)
-        por_grupo.setdefault(grupo, []).append(ficheiro)
-    nomes = sorted(por_grupo, key=lambda g: (_ORDEM.get(g, 1), g.lower()))
-    return [{"nome": nome, "ficheiros": por_grupo[nome]} for nome in nomes]
-
-
-_ORDEM = {"Source Files": 0, "Header Files": 0, "Resource Files": 0, "Outros": 2}
+_ORDEM = {"Source Files": 0, "Header Files": 1, "Resource Files": 2, "Outros": 3}
 
 
 def _grupo_por_extensao(ficheiro, extensoes):
@@ -167,6 +161,20 @@ def _grupo_por_extensao(ficheiro, extensoes):
         if extensao in declaradas:
             return grupo
     return "Outros"
+
+
+def agrupar_por_tipo(ficheiros, atribuicao, extensoes):
+    """Grupos por filtro declarado; sem filtro, pela extensao. 'Outros' fecha a lista.
+
+    Serve tambem quem agrupa sem projeto nenhum (arvore.py, no CMake ainda nao
+    configurado): nesse caso `atribuicao` e `extensoes` vao vazios e a extensao decide.
+    """
+    por_grupo = {}
+    for ficheiro in ficheiros:
+        grupo = atribuicao.get(ficheiro) or _grupo_por_extensao(ficheiro, extensoes)
+        por_grupo.setdefault(grupo, []).append(ficheiro)
+    nomes = sorted(por_grupo, key=lambda g: (_ORDEM.get(g, 1), g.lower()))
+    return [{"nome": nome, "ficheiros": por_grupo[nome]} for nome in nomes]
 
 
 def _texto(arvore, nome):

@@ -12,9 +12,11 @@ Nada aqui toca no disco: sao caminhos virtuais com o prefixo `@arvore`, resolvid
 
 import os
 
-from src.backend.builds import cmake_api, msbuild
+from src.backend.builds import cmake_api, detetar, msbuild
 
 PREFIXO = "@arvore"
+MAX_FICHEIROS = 3000
+PROFUNDIDADE_DA_MARCA = 3
 
 _ROTULOS = {
     "Source Files": "Fontes",
@@ -30,6 +32,7 @@ _TIPOS_CMAKE = {
     "MODULE_LIBRARY": "modulo",
     "OBJECT_LIBRARY": "biblioteca de objetos",
     "INTERFACE_LIBRARY": "biblioteca de interface",
+    "LIBRARY": "biblioteca",
 }
 
 _cache = {}
@@ -88,7 +91,7 @@ def _projetos_cmake(pasta):
     """Alvos do CMake com as fontes agrupadas, pelo que o proprio CMake respondeu."""
     pasta_build = _pasta_com_resposta(pasta)
     if not pasta_build:
-        return []
+        return _projeto_por_texto(pasta)
     alvos = [_alvo_cmake(a) for a in cmake_api.alvos(pasta_build)]
     alvos = _sem_alvos_repetidos([a for a in alvos if a["grupos"]])
     alvos.sort(key=lambda a: (a["tipo"] != "EXECUTABLE", a["nome"].lower()))
@@ -112,6 +115,49 @@ def _alvo_cmake(dados):
         "detalhe": _TIPOS_CMAKE.get(dados["tipo"], "alvo"),
         "grupos": [g for g in grupos if g["ficheiros"]],
     }
+
+
+def _projeto_por_texto(pasta):
+    """O projeto como o CMakeLists o declara, para antes da primeira configuracao.
+
+    So vale quando o CMakeLists declara UM alvo: com varios, os ficheiros de alvos
+    diferentes apareceriam juntos e o no mentiria sobre a que alvo pertence cada um.
+    Nesse caso nao ha no de projeto e a arvore fica como pasta, ate o CMake responder
+    pela File API (que e quem sabe a pertenca real).
+    """
+    dados = detetar.detetar(pasta)
+    if dados.get("tipo") != "cmake":
+        return []
+    alvos = dados.get("alvos") or []
+    if len(alvos) != 1:
+        return []
+    ficheiros = _ficheiros_de_codigo(pasta, dados.get("pastas_de_build") or [])
+    if not ficheiros:
+        return []
+    return [{
+        "nome": dados.get("projeto") or alvos[0]["nome"],
+        "tipo": alvos[0]["tipo"],
+        "detalhe": _TIPOS_CMAKE.get(alvos[0]["tipo"], "projeto"),
+        "grupos": msbuild.agrupar_por_tipo(ficheiros, {}, {}),
+    }]
+
+
+def _ficheiros_de_codigo(pasta, pastas_de_build):
+    """Ficheiros de codigo sob a pasta, fora das pastas de build e das escondidas."""
+    ignorar = {nome.lower() for nome in pastas_de_build}
+    achados = []
+    for raiz, pastas, ficheiros in os.walk(pasta):
+        pastas[:] = [p for p in pastas if not p.startswith(".") and p.lower() not in ignorar]
+        for nome in ficheiros:
+            if os.path.splitext(nome)[1].lstrip(".").lower() in msbuild.EXTENSOES_DE_CODIGO:
+                achados.append(_relativo(os.path.join(raiz, nome), pasta))
+                if len(achados) >= MAX_FICHEIROS:
+                    return sorted(achados)
+    return sorted(achados)
+
+
+def _relativo(caminho, base):
+    return os.path.relpath(caminho, base).replace("\\", "/")
 
 
 def _do_projeto(projeto):
@@ -214,7 +260,12 @@ def _pasta_com_resposta(pasta):
 
 
 def _marca(pasta):
-    """Tudo o que muda a arrumacao: os ficheiros de projeto, o indice do CMake e a propria pasta."""
+    """Tudo o que muda a arrumacao: os ficheiros de projeto, o indice do CMake e as pastas.
+
+    As pastas entram ate `PROFUNDIDADE_DA_MARCA` niveis porque a arrumacao sem File API
+    e montada a partir dos ficheiros que estao la dentro: sem elas, criar um ficheiro
+    numa subpasta nao invalidava o cache e a arvore so mudava ao navegar para fora e voltar.
+    """
     alvos = []
     try:
         alvos = [
@@ -229,8 +280,30 @@ def _marca(pasta):
     if pasta_build:
         alvos.append(cmake_api.ultimo_indice(pasta_build))
     marcas = [_mtime(caminho) for caminho in alvos]
-    marcas.append(_mtime(pasta))
+    marcas.extend(_mtime(p) for p in _pastas_ate(pasta, PROFUNDIDADE_DA_MARCA))
     return tuple(sorted(marcas))
+
+
+def _pastas_ate(pasta, profundidade):
+    """A pasta e as subpastas ate N niveis, sem descer ao que nao interessa."""
+    niveis = [pasta]
+    atual = [pasta]
+    for _ in range(max(0, profundidade)):
+        seguinte = []
+        for pai in atual:
+            try:
+                seguinte.extend(
+                    os.path.join(pai, nome)
+                    for nome in os.listdir(pai)
+                    if not nome.startswith(".") and os.path.isdir(os.path.join(pai, nome))
+                )
+            except OSError:
+                continue
+        if not seguinte:
+            break
+        niveis.extend(seguinte)
+        atual = seguinte
+    return niveis
 
 
 def _mtime(caminho):

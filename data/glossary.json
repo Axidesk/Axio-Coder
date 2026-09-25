@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790371613.387,
-          11034
+          1790374884.749,
+          11103
         ]
       }
     },
@@ -2176,8 +2176,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790371613.387,
-          11034
+          1790374884.749,
+          11103
         ]
       }
     },
@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 86,
         "conferido": [
-          1790371613.299,
-          16703
+          1790374884.755,
+          16840
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 94,
         "conferido": [
-          1790371613.299,
-          16703
+          1790374884.755,
+          16840
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 139,
         "conferido": [
-          1790371613.299,
-          16703
+          1790374884.755,
+          16840
         ]
       }
     },
@@ -5094,7 +5094,31 @@
       "descricao": "A linha \"Stack:\" do bloco ESTRUTURA DO PROJETO e do painel de informacoes. Passou a ler o que o PROJETO aberto declara (CMakeLists/package.json/Cargo.toml/go.mod/.sln) com detalhe nativo (Qt, C++ standard, Node); o interpretador do Axio so entra se o projeto for mesmo Python. Sem marcador, decide a extensao dominante dos ficheiros.",
       "localizacao": {
         "arquivo": "src/backend/tools/projeto_info.py",
-        "linha": 123
+        "linha": 123,
+        "conferido": [
+          1790373380.721,
+          15969
+        ]
+      }
+    },
+    {
+      "termo": "arvore agrupada do projeto",
+      "aliases": [
+        "grupos de fontes e cabecalhos",
+        "fontes e cabecalhos na arvore",
+        "no de projeto na arvore",
+        "arvore do cmake",
+        "arvore do visual studio",
+        "estrutura da doc do projeto",
+        "cabecalhos agrupados",
+        "explorer com grupos",
+        "pastas virtuais do projeto"
+      ],
+      "identificador": "entradas_raiz / entradas / ficheiros_agrupados / _projeto_por_texto",
+      "descricao": "A arvore do explorer deixa de ser so pastas: quem manda na arrumacao e o PROJETO. Fontes, por ordem: File API do CMake (cmake_api.py), filtros do .vcxproj.filters (msbuild.py) e, para projeto CMake AINDA NAO configurado, o CMakeLists lido como texto (_projeto_por_texto, que so age com UM alvo). Uma pasta de codigo sem projeto agrupa pelo tipo. Os nos sao virtuais (prefixo @arvore) e resolvidos pela rota /api/explorer (routes/editor.py): nada se move no disco. ficheiros_agrupados diz a rota que ficheiros ja estao dentro de um grupo, para nao repetirem na lista solta. Ordem dos grupos: Fontes, Cabecalhos, Recursos, Outros.",
+      "localizacao": {
+        "arquivo": "src/backend/builds/arvore.py",
+        "linha": 45
       }
     }
   ]

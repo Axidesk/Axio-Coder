@@ -34,12 +34,13 @@ ou outra coisa."
 
 | ficheiro | faz |
 |---|---|
-| `detetar.py` | que projeto é (por evidência no disco), vertentes, e o que EXIGE (lendo `find_package`/`find_program`/`CMAKE_PREFIX_PATH`) |
+| `detetar.py` | que projeto é (por evidência no disco), vertentes, o que EXIGE (lendo `find_package`/`find_program`/`CMAKE_PREFIX_PATH`) e os alvos que o `CMakeLists` declara (`add_executable`/`add_library`) |
 | `kits.py` | o que está NA máquina (Qt por kit, MSVC por `vswhere`, CMake, Ninja, `glslc`, Vulkan, vcpkg); nota cada kit contra o projeto e nomeia o que falta |
 | `presets.py` | escreve o `CMakeUserPresets.json` LOCAL (schema 6/10) — nunca toca no do projeto |
 | `construir.py` | decisões e comandos (não executa): `preparar` devolve `precisa_configurar` |
 | `cmake_api.py` | a File API do CMake: escreve o pedido, lê a resposta e devolve os alvos com fontes, grupos e flags |
-| `arvore.py` | a árvore agrupada para o explorer (só leitura) e os nós virtuais `@arvore/...` |
+| `msbuild.py` | a árvore como o Visual Studio a vê (`.sln`/`.vcxproj`/`.vcxproj.filters` lidos do texto) e o agrupamento por tipo partilhado |
+| `arvore.py` | a árvore agrupada para o explorer (só leitura), os nós virtuais `@arvore/...` e o projeto lido do texto do CMake antes da primeira configuração |
 | `instalar.py` | o catálogo do instalador da Qt e o id do componente que traz cada módulo em falta |
 
 `src/backend/tools/builds.py` — `tool_gerir_projeto` (detetar/kits/preparar/construir/correr).
@@ -74,6 +75,9 @@ assuntos: um lê UM ficheiro, o outro julga o PROJETO inteiro. (Ver a secção s
 - [x] **Arrumação da árvore** (2026-10-06) — o explorer passou a ler a arrumação que o projeto
       declara: CMake pela File API, Visual Studio pelos filtros do `.vcxproj.filters` e uma pasta de
       código sem projeto agrupada pelo tipo. Sem azul, sem mover nada. Ver a secção própria.
+- [x] **Projeto do ZERO na árvore** (2026-10-06) — um projeto acabado de criar aparece arrumado
+      sem nunca ter sido configurado: o `CMakeLists.txt` é lido como texto e o nó do projeto sai
+      dali. Ver a secção própria.
 - [ ] **Fase 4** — o `.sln` do Tibia: leitura das **flags** por `msbuild -getItem` e o retarget
       2015→2022 numa cópia, provado a compilar.
 - [ ] **Fase 5** — clangd (opcional): ir à definição, erro enquanto se escreve.
@@ -122,6 +126,52 @@ Medido (2026-10-06):
   `main.qml`/`qml.qrc` fora da raiz.
 - **Axio** (projeto Python) e uma pasta sem C/C++: **zero grupos** — a árvore virtual não aparece
   onde não faz sentido.
+
+## Projeto do zero: a árvore antes da primeira configuração (2026-10-06)
+
+Pergunta que abriu isto: *"num projeto do zero, se eu decidir criar em C++, a doc atualiza
+automaticamente para a estrutura nova?"* Medido antes de mexer (pasta limpa, `CMakeLists.txt` +
+`src/*.cpp/.h`, nenhum `build/`): **a raiz não mostrava nada**. A File API só existe depois de o
+CMake correr, e o nó de projeto era todo ele File API — logo, entre criar o projeto e o configurar,
+o explorer não anunciava projeto nenhum. As pastas (`src/`) já agrupavam bem por tipo; faltava o nó.
+
+Agora `arvore._projeto_por_texto` cobre esse intervalo, e só esse:
+
+- o **nome** e o **tipo** saem do texto do `CMakeLists.txt` — `project(Nome)` e `add_executable` /
+  `add_library STATIC|SHARED|MODULE|INTERFACE` (novo: `detetar._alvos_do_texto`);
+- os **ficheiros** são os de código sob a pasta, fora das pastas de build e das escondidas,
+  agrupados por tipo (Fontes / Cabeçalhos / Recursos / Outros);
+- **só com UM alvo.** Com vários, os ficheiros de alvos diferentes apareceriam juntos e o nó mentiria
+  sobre a que alvo pertence cada um — nesse caso não há nó de projeto e fica a pasta normal, até o
+  CMake responder pela File API (que é quem sabe a pertença real). Um alvo por variável
+  (`add_executable(${NOME}`) também não é nomeado: o nome só existe depois de o CMake avaliar.
+
+O nó da File API continua a mandar assim que existe: o texto é o intervalo, não a substituição.
+
+**Armadilha medida — o cache da árvore.** `_marca` só olhava a mtime da pasta consultada e dos
+ficheiros de projeto, e a arrumação por texto lê o que está DENTRO das subpastas: criar
+`src/nucleo/novo.cpp` não mudava a mtime da raiz, a chave do cache continuava igual e a árvore só
+mudava ao navegar para fora e voltar. Agora a marca leva as mtimes das pastas até 3 níveis
+(`PROFUNDIDADE_DA_MARCA`), provado: criar um ficheiro numa subpasta passa a mudar a árvore na hora.
+
+**Ordem dos grupos.** O caminho CMake mostrava Fontes antes de Cabeçalhos e o caminho Visual
+Studio ao contrário (ordem alfabética), o que fazia a mesma árvore mudar de aspecto conforme o
+projeto. Uniformizado: Fontes → Cabeçalhos → Recursos → Outros nos dois.
+
+**O que se ganhou de graça:** um `CMakeLists.txt` sozinho já não aparece dentro de um grupo "Outros"
+(pasta de código sem projeto agrupava tudo o que estivesse lá, manifestos incluídos). Agora os
+ficheiros sem tipo conhecido ficam na lista solta da pasta, onde sempre estiveram visíveis.
+
+Prova (2026-10-06, pela rota real `/api/explorer`, com `pasta_raiz` a apontar a uma pasta temporária):
+
+| Cenário | Resultado |
+| --- | --- |
+| projeto do zero, 1 alvo, sem `build/` | raiz = `MinhaApp` (aplicação) + `src` + `CMakeLists.txt`; Fontes e Cabeçalhos certos, incluindo ficheiros de subpasta |
+| criar `src/nucleo/novo.cpp` | a árvore muda sem navegar |
+| 2 alvos, ou alvo por variável | sem nó de projeto (pasta normal), como desenhado |
+| `add_library STATIC/SHARED/sem tipo` | biblioteca estática / partilhada / biblioteca |
+| `build/` com ficheiros gerados | os gerados não entram |
+| DRAFTCAD, Tibia74, pasta `src` do Tibia, Axio | sem regressão (4 alvos / 81+72 / grupos por tipo / zero nós) |
 
 ## Ferramentas C/C++ (2026-10-06)
 
