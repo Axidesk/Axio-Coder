@@ -248,6 +248,10 @@
 #explorer-resizer:hover { background: var(--azul-acao); }
 #editor-panel.dock-bottom #explorer-resizer { height: 4px; width: 100%; cursor: row-resize; }
 #editor-panel.dock-right #explorer-resizer { width: 4px; height: 100%; cursor: col-resize; }
+#log-resizer { display: none; flex-shrink: 0; background: transparent; transition: background var(--dur-1); }
+#log-resizer:hover { background: var(--azul-acao); }
+#editor-panel.dock-right #log-resizer { display: block; order: 0; width: 100%; height: 4px; cursor: row-resize; }
+#editor-panel.dock-right #log-dock:has(#panel-log-session.panel-col-closed) + #log-resizer { display: none; }
 #editor-panel.dock-bottom #explorer-view { width: auto; }
 #editor-panel.dock-right #dock-bottom-row {
     flex-direction: column;
@@ -260,8 +264,9 @@
 #editor-panel.dock-right #log-dock {
     flex-direction: column;
     width: 100%;
-    flex: 1 1 0;
+    flex: 0 0 var(--log-altura, 50%);
     min-height: 0;
+    order: 1;
 }
 #editor-panel.dock-right #panel-log-session,
 #editor-panel.dock-right #panel-col-2 {

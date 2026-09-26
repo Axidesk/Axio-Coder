@@ -213,6 +213,16 @@ export function applyExplorerSize(diferirLayout) {
     else layoutAllEditors();
 }
 
+export function applyLogAltura() {
+    const dock = state.logDock;
+    if (!dock) return;
+    if (state.dockSide === 'right' && state.logAltura > 0) {
+        dock.style.setProperty('--log-altura', (state.logAltura * 100).toFixed(2) + '%');
+    } else {
+        dock.style.removeProperty('--log-altura');
+    }
+}
+
 export function collapseDockForFocus() {
     if (state.dockCollapsedForFocus) return;
     const row = document.getElementById('dock-bottom-row');
@@ -252,6 +262,7 @@ export function applyDockLayout() {
     }
     applyFilesLayout();
     applyExplorerSize(true);
+    applyLogAltura();
     if (state.btnDockRight) {
         state.btnDockRight.classList.toggle('text-[var(--oliva)]', isRight);
         state.btnDockRight.classList.toggle('text-[var(--text-suave)]', !isRight);
@@ -340,6 +351,56 @@ export function initExplorerResizer() {
             applyExplorerSize();
             persistDockPrefs();
             if (dockRow) dockRow.classList.remove('resizing');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+}
+
+export function initLogResizer() {
+    if (!state.logResizer) return;
+    state.logResizer.addEventListener('mousedown', (e) => {
+        const dock = state.logDock;
+        const dockRow = document.getElementById('dock-bottom-row');
+        if (!dock || !dockRow || state.dockSide !== 'right') return;
+        e.preventDefault();
+        const inicioY = e.clientY;
+        const alturaInicial = dock.getBoundingClientRect().height;
+        let rafId = null;
+        let pendente = null;
+        dockRow.classList.add('resizing');
+
+        function flush() {
+            rafId = null;
+            if (pendente === null) return;
+            state.logAltura = pendente;
+            pendente = null;
+            applyLogAltura();
+        }
+
+        function onMove(ev) {
+            const coluna = dockRow.getBoundingClientRect().height;
+            if (!coluna) return;
+            const nova = alturaInicial - (ev.clientY - inicioY);
+            pendente = Math.max(0.1, Math.min(0.9, nova / coluna));
+            if (rafId === null) rafId = requestAnimationFrame(flush);
+        }
+
+        function onUp() {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            if (pendente !== null) {
+                state.logAltura = pendente;
+                pendente = null;
+            }
+            applyLogAltura();
+            persistDockPrefs();
+            dockRow.classList.remove('resizing');
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
         }
@@ -888,7 +949,7 @@ const DOCK_PREFS_KEY = 'axio-dock-prefs';
 
 export function persistDockPrefs() {
     try {
-        localStorage.setItem(DOCK_PREFS_KEY, JSON.stringify({ side: state.dockSide, size: state.explorerSize }));
+        localStorage.setItem(DOCK_PREFS_KEY, JSON.stringify({ side: state.dockSide, size: state.explorerSize, altura: state.logAltura }));
     } catch (e) {}
 }
 
@@ -899,6 +960,8 @@ export function initDockPrefs() {
     if (saved.side === 'right' || saved.side === 'bottom') state.dockSide = saved.side;
     const tamanho = parseInt(saved.size, 10);
     if (!isNaN(tamanho)) state.explorerSize = Math.max(80, Math.min(700, tamanho));
+    const altura = parseFloat(saved.altura);
+    if (!isNaN(altura)) state.logAltura = Math.max(0.1, Math.min(0.9, altura));
 }
 
 export function applyDockTheme(theme) {
@@ -924,6 +987,7 @@ initDockPrefs();
 
 applyDockLayout();
 initExplorerResizer();
+initLogResizer();
 
 
 export function scheduleEditorLayout() {
