@@ -170,7 +170,7 @@ function cancelarPrefetch() {
     prefetchAgendado = null;
 }
 export async function loadExplorer(path) {
-    const queryPath = path !== undefined ? path : (state.currentCwdRel || '');
+    const queryPath = path !== undefined ? path : caminhoDaArvore();
     const guardada = listaGuardada(queryPath);
     if (guardada) {
         renderExplorer(guardada);
@@ -308,7 +308,11 @@ function renderGrupo(entry, li, row) {
     const childContainer = document.createElement('div');
     childContainer.className = 'explorer-children hidden';
     li.appendChild(childContainer);
-    row.addEventListener('click', () => alternarGrupo(entry.path, row, childContainer));
+    const manterAberta = raiz && modoColunas();
+    row.addEventListener('click', () => {
+        if (manterAberta && row.classList.contains('explorer-aberto')) return;
+        alternarGrupo(entry.path, row, childContainer);
+    });
     if (raiz) alternarGrupo(entry.path, row, childContainer);
     return li;
 }
@@ -363,6 +367,10 @@ export async function loadDirChildren(path, container) {
 }
 function modoColunas() {
     return !!state.explorerTree && state.explorerTree.classList.contains('files-colunas');
+}
+function caminhoDaArvore() {
+    if (modoColunas()) return state.explorerRenderPath || '';
+    return state.currentCwdRel || '';
 }
 function garantirCascaColunas() {
     let casca = state.explorerTree.querySelector(':scope > .explorer-colunas');
@@ -451,7 +459,6 @@ async function abrirColunaDePasta(path, row) {
     atualizarMigalhaDaArvore();
     highlightSelection();
     applyErrorMarkers();
-    state.explorerRenderPath = dados.path || state.explorerRenderPath;
     if (path.startsWith(PREFIXO_ARVORE)) return;
     state.currentCwdRel = dados.path || '';
     updateExplorerPath(dados);
@@ -554,14 +561,17 @@ function filhosInlineAbertos(row) {
     if (!container || container.classList.contains('hidden')) return null;
     return container;
 }
-function fecharInlineDaColuna(coluna, excepto) {
-    if (!coluna) return;
-    coluna.querySelectorAll(':scope > ul > .explorer-item > .explorer-children').forEach(container => {
-        const li = container.parentElement;
-        const row = li ? li.querySelector(':scope > .explorer-row') : null;
-        if (row === excepto) return;
+function fecharInlineDaColuna(coluna, row) {
+    if (!coluna || !row) return;
+    const li = row.closest('.explorer-item');
+    const ul = li ? li.parentElement : null;
+    if (!ul) return;
+    ul.querySelectorAll(':scope > .explorer-item > .explorer-children').forEach(container => {
+        const irmao = container.parentElement;
+        const irmaoRow = irmao ? irmao.querySelector(':scope > .explorer-row') : null;
+        if (!irmaoRow || irmaoRow === row || irmaoRow.dataset.raiz === '1') return;
         container.classList.add('hidden');
-        if (row) row.classList.remove('explorer-aberto');
+        irmaoRow.classList.remove('explorer-aberto');
     });
 }
 function linhaDaColuna(coluna, path) {
