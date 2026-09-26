@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 
 from src.backend.builds import leitura_depurador
 
@@ -95,11 +96,16 @@ def comando(exe, pastas=()):
 
 
 def preparacao(breakpoints):
-    """Os comandos que abrem a sessao: fonte por linha, os pontos marcados e seguir."""
+    """Os comandos que abrem a sessao: fonte por linha, os pontos marcados, seguir e a pilha.
+
+    O 'k' no fim nao e decoracao: o cdb diz a LINHA onde parou mas nao diz de que ficheiro ela
+    e - so um 'k' traz os quadros com o caminho, e sem caminho o editor nao tem o que abrir.
+    Vai ja escrito, porque a execucao so o consome depois de parar."""
     linhas = ["l+t", "l+s"]
     for ponto in breakpoints:
         linhas.append(f"bp `{ponto}`")
     linhas.append("g")
+    linhas.append("k")
     return linhas
 
 
@@ -144,6 +150,14 @@ def motor(breakpoints):
         if extensao in _EXTENSOES_CPP:
             return "cpp"
     return "cpp"
+
+
+def motor_do_alvo(breakpoints, alvo):
+    """O depurador que sabe ler o que foi pedido: pelos pontos marcados, e sem eles pelo
+    ficheiro que esta aberto no editor (e o que decide o botao de depurar da barra)."""
+    if _pedacos(breakpoints):
+        return motor(breakpoints)
+    return "python" if _extensao_do_ponto(alvo or "") in _EXTENSOES_PY else "cpp"
 
 
 def pontos_de_outra_linguagem(breakpoints, escolhido):
@@ -193,6 +207,17 @@ def _ficheiro_de(nome, raiz):
     return os.path.realpath(achados[0])
 
 
+def script_de_arranque(alvo, raiz):
+    """O ficheiro Python que a sessao corre quando nao ha nenhum ponto marcado."""
+    if alvo:
+        return _ficheiro_de(alvo, raiz)
+    for nome in ("main.py", "app.py", "run.py", "__main__.py"):
+        caminho = os.path.join(raiz, nome)
+        if os.path.isfile(caminho):
+            return os.path.realpath(caminho)
+    return ""
+
+
 def pontos_python(texto, raiz):
     """Le os pontos de paragem, resolvendo cada ficheiro dentro da pasta do projeto."""
     limpos = []
@@ -228,7 +253,7 @@ def preparacao_python(pontos, script):
 
 SESSAO = {"id": "", "executavel": ""}
 JANELA_DA_LEITURA = 80
-_LEITURA = {"sobre": {}, "assinatura": ""}
+_LEITURA = {"sobre": {}, "linhas": []}
 
 
 def guardar_sessao(registo_id, executavel):
@@ -236,14 +261,14 @@ def guardar_sessao(registo_id, executavel):
     SESSAO["id"] = registo_id
     SESSAO["executavel"] = executavel
     _LEITURA["sobre"] = {}
-    _LEITURA["assinatura"] = ""
+    _LEITURA["linhas"] = []
 
 
 def esquecer_sessao():
     SESSAO["id"] = ""
     SESSAO["executavel"] = ""
     _LEITURA["sobre"] = {}
-    _LEITURA["assinatura"] = ""
+    _LEITURA["linhas"] = []
 
 
 def sessao_aberta():
@@ -256,15 +281,38 @@ def card_da_sessao():
     return SESSAO["id"]
 
 
+_LEITURA_TRANCA = threading.Lock()
+
+
 def leitura_nova(texto):
-    """Le a saida do depurador e devolve, em linguagem simples, o que ela diz - so quando muda."""
-    _LEITURA["sobre"] = leitura_depurador.leitura(texto, _LEITURA["sobre"])
-    novas = leitura_depurador.linhas(_LEITURA["sobre"])
-    assinatura = "\n".join(novas)
-    if not novas or assinatura == _LEITURA["assinatura"]:
-        return []
-    _LEITURA["assinatura"] = assinatura
-    return novas
+    """Le a saida do depurador e devolve, em linguagem simples, o que ela diz de NOVO: as
+    linhas que ja foram escritas no card nao se repetem a cada passo da sessao."""
+    with _LEITURA_TRANCA:
+        _LEITURA["sobre"] = leitura_depurador.leitura(texto, _LEITURA["sobre"])
+        atuais = leitura_depurador.linhas(_LEITURA["sobre"])
+        anteriores = _LEITURA["linhas"]
+        novas = [linha for linha in atuais if linha not in anteriores]
+        _LEITURA["linhas"] = atuais
+        return novas
+
+
+def paragem_atual():
+    """Onde a execucao esta, em ficheiro e linha - e isto que o editor abre quando ela para.
+
+    'acontecimento' diz se houve algo que explique a paragem (um ponto de paragem apanhado ou
+    uma queda). O sitio onde o depurador fica parado mal arranca nao conta como paragem: sem
+    esta separacao o editor saltava para a primeira linha do ficheiro em todas as sessoes."""
+    with _LEITURA_TRANCA:
+        sobre = dict(_LEITURA["sobre"] or {})
+    parou = dict(sobre.get("parou") or {})
+    motivo = (sobre.get("motivo") or "").strip()
+    caminho = (parou.get("caminho") or "").strip()
+    linha = int(parou.get("linha") or 0)
+    if not caminho or not linha:
+        return {}
+    return {"arquivo": os.path.realpath(caminho) if os.path.isfile(caminho) else caminho,
+            "linha": linha,
+            "acontecimento": bool(motivo) and not motivo.startswith("arranque do programa")}
 
 
 def texto_dos_comandos():

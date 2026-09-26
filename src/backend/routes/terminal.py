@@ -15,6 +15,7 @@ from src.backend.services.process_manager import (
     shell_caminho,
     comando_inicia_axio,
 )
+from src.backend.tools.builds import abrir_depuracao
 from src.backend.tools.process import (
     escrever_stdin_processo,
     iniciar_processo,
@@ -178,3 +179,16 @@ def terminal_sugestoes():
     if erro:
         return jsonify({"error": erro}), 400
     return jsonify({"sugestoes": detectar_sugestoes(caminho_alvo), "path": caminho_rel})
+
+@terminal_bp.route('/api/terminal/depurar', methods=['POST'])
+def terminal_depurar():
+    """Abre a sessao de depuracao pedida pela barra do terminal: o ficheiro aberto no editor e
+    os pontos marcados na margem. O card chega ao ecra pelo SSE, como qualquer processo, e quem
+    avisa o editor da linha onde parou e o evento 'debug_stop'."""
+    dados = request.json or {}
+    resultado = abrir_depuracao((dados.get("pasta") or "").strip(),
+                                (dados.get("pontos") or "").strip(),
+                                (dados.get("arquivo") or "").strip())
+    if not resultado.get("ok"):
+        return jsonify({"error": resultado.get("texto", "")}), 409
+    return jsonify(resultado)

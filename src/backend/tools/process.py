@@ -617,16 +617,39 @@ def _abrir_navegador(url):
         return False
 
 def _anexar_log_processo(pid, linha):
-    reg = estado.get("processos", {}).get(pid)
-    if reg is None:
+    reg = _guardar_linha(pid, linha)
+    vigia = (reg or {}).get("vigia")
+    if vigia is None:
         return
-    reg["log"].append(linha)
-    if len(reg["log"]) > 2000:
-        reg["log"] = reg["log"][-2000:]
+    try:
+        vigia(linha)
+    except Exception:
+        pass
 
 def registrar_linha_processo(pid, linha):
     emit_event("process_output", pid=pid, line=linha)
-    _anexar_log_processo(pid, linha)
+    _guardar_linha(pid, linha)
+
+def seguir_saida_processo(pid, vigia):
+    """Liga um vigia a cada linha NOVA deste processo: quem tem de ler a saida a medida que
+    chega (o depurador, que precisa de saber onde a execucao parou) recebe-a por aqui. O que
+    o vigia escrever no card vai por registrar_linha_processo, que nao volta a chama-lo -
+    sem isso a linha que ele escreve voltava a entrar no vigia."""
+    reg = estado.get("processos", {}).get(pid)
+    if reg is None:
+        return False
+    reg["vigia"] = vigia
+    return True
+
+def _guardar_linha(pid, linha):
+    """Guarda uma linha no log do processo e devolve o registo (None se ele ja nao existe)."""
+    reg = estado.get("processos", {}).get(pid)
+    if reg is None:
+        return None
+    reg["log"].append(linha)
+    if len(reg["log"]) > 2000:
+        reg["log"] = reg["log"][-2000:]
+    return reg
 
 def _abrir_quando_pronto(pid, porta):
     url = f"http://127.0.0.1:{porta}"

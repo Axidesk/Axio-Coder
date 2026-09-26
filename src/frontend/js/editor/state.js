@@ -9,6 +9,7 @@ state.termVenvName = document.getElementById('term-venv-name');
 state.termPromptArrow = document.getElementById('term-prompt-arrow');
 state.wsStatus = document.getElementById('ws-status');
 state.btnClear = document.getElementById('btn-clear');
+state.btnDebug = document.getElementById('btn-debug');
 state.btnEditor = document.getElementById('btn-editor');
 state.btnPreview = document.getElementById('btn-preview');
 state.wsTopBar = document.getElementById('ws-top-bar');

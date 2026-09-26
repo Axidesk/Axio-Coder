@@ -7,11 +7,13 @@ _QUADRO = re.compile(r"^\s*(?P<marca>>)?\s*(?P<ficheiro>[A-Za-z]:[\\/][^(]+?)\((
 _CODIGO_PDB = re.compile(r"^->\s*(?P<codigo>.*)$")
 _MARCADA_PDB = re.compile(r"^\s*(?P<linha>\d+)\s+B->\s?(?P<codigo>.*)$")
 _EXCECAO = re.compile(r"^\([0-9a-f.]+\):\s+(?P<nome>.+?)\s+-\s+code (?P<codigo>[0-9a-f]+)")
+_NAO_TRATADA = re.compile(r"^Uncaught exception", re.IGNORECASE)
 _PONTO = re.compile(r"^Breakpoint (?P<numero>\d+) hit")
 _VARIAVEL = re.compile(r"^[0-9a-f`]{16,}\s+(?P<resto>.+)$")
 _QUADRO_CDB = re.compile(r"\[(?P<ficheiro>[A-Za-z]:[^\]]*?)\s+@\s+(?P<linha>\d+)\]")
 
 _CODIGO_DE_ARRANQUE = "80000003"
+_MOTIVO_NAO_TRATADA = "rebentou: excecao nao tratada (o programa parou nesta linha)"
 _ENCHIMENTO = "padrao repetido - enchimento de memoria por usar, nao um valor do programa"
 _TRADUCOES = {
     "access violation": "o programa mexeu numa memoria que nao era dele",
@@ -44,6 +46,10 @@ def leitura(texto, antes=None):
         if achado:
             if sobre["parou"] and not sobre["parou"]["codigo"]:
                 sobre["parou"]["codigo"] = achado.group("codigo").strip()
+            continue
+        achado = _NAO_TRATADA.match(limpa)
+        if achado:
+            sobre["motivo"] = _MOTIVO_NAO_TRATADA
             continue
         achado = _EXCECAO.match(limpa)
         if achado:
@@ -105,6 +111,7 @@ def _parou_em(sobre, ficheiro, linha, codigo):
         sobre["quadros"] = []
     sobre["parou"] = {
         "ficheiro": _nome_curto(ficheiro) or (antes.get("ficheiro", "") if mesma else ""),
+        "caminho": (ficheiro or "").strip() or (antes.get("caminho", "") if mesma else ""),
         "linha": linha,
         "codigo": codigo.strip() or (antes.get("codigo", "") if mesma else ""),
     }
@@ -112,19 +119,20 @@ def _parou_em(sobre, ficheiro, linha, codigo):
 
 def _juntar_quadro(sobre, ficheiro, linha):
     """Anota um quadro da pilha, uma unica vez por ficheiro e linha."""
-    quadro = {"nome": _nome_curto(ficheiro), "linha": int(linha)}
+    quadro = {"nome": _nome_curto(ficheiro), "caminho": (ficheiro or "").strip(), "linha": int(linha)}
     if quadro not in sobre["quadros"]:
         sobre["quadros"].append(quadro)
 
 
 def _nomear_pelo_quadro(sobre):
-    """Da o nome do ficheiro ao sitio onde parou, lendo-o do quadro com a mesma linha."""
+    """Da o ficheiro ao sitio onde parou, lendo-o do quadro da pilha com a mesma linha."""
     parou = sobre.get("parou") or {}
-    if not parou or parou.get("ficheiro"):
+    if not parou or parou.get("caminho"):
         return
     for quadro in sobre["quadros"]:
         if quadro["linha"] == parou["linha"]:
             parou["ficheiro"] = quadro["nome"]
+            parou["caminho"] = quadro.get("caminho", "")
             return
 
 

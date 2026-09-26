@@ -2,10 +2,11 @@ import os
 import time
 
 from src.backend.builds import construir, depurar, detetar, diagnosticos, instalar, kits
+from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
 from src.backend.tools.process import (correr_como_card, escrever_stdin_processo, iniciar_processo,
-                                       registrar_linha_processo)
+                                       registrar_linha_processo, seguir_saida_processo)
 from src.backend.tools.registry import register
 
 
@@ -19,7 +20,8 @@ from src.backend.tools.registry import register
     "escolhido), 'preparar' (escolhe o kit, escreve o preset e configura), 'construir' (compila), "
     "'correr' (abre o que ficou compilado), 'depurar' (abre o programa num card sob o depurador da "
     "linguagem que os pontos marcados pedem - C++ pelo cdb do Windows SDK, Python pelo pdb, que ja "
-    "vem dentro do Python) e 'instalar' (traz do instalador "
+    "vem dentro do Python; sem nenhum ponto marcado corre o programa em modo de depuracao, para "
+    "onde ele rebentar) e 'instalar' (traz do instalador "
     "da Qt os modulos que o projeto pede e o kit nao tem - sem uma unica janela). "
     "'construir' e 'correr' fazem o preparo sozinhos. "
     "build corre como card do terminal (saida a vivo, com botao de parar). "
@@ -84,7 +86,7 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", 
     if acao == "correr":
         return _correr(caminho, configuracao)
     if acao == "depurar":
-        return _depurar(caminho, configuracao, breakpoints, comandos)
+        return _depurar(caminho, configuracao, breakpoints, comandos, alvo)
     if acao == "instalar":
         return _instalar(caminho, configuracao)
     return f"ERRO: acao desconhecida '{acao}'."
@@ -192,14 +194,14 @@ def _correr(pasta, configuracao):
             "A janela do programa aparece no ecra; o card do processo fica no terminal, onde a saida dele "
             "e o botao de parar estao.")
 
-def _depurar(pasta, configuracao, breakpoints, comandos=""):
+def _depurar(pasta, configuracao, breakpoints, comandos="", alvo=""):
     if comandos and _sessao_viva():
         return _conduzir_depuracao(comandos)
     if comandos and not breakpoints:
         return ("NAO HA SESSAO DE DEPURACAO ABERTA: a ultima fechou (o programa terminou ou o card foi "
                 "parado). Abra outra com acao='depurar' e os 'breakpoints'.")
-    if depurar.motor(breakpoints) == "python":
-        return _depurar_python(pasta, breakpoints, comandos)
+    if depurar.motor_do_alvo(breakpoints, alvo) == "python":
+        return _depurar_python(pasta, breakpoints, comandos, alvo)
     if not depurar.cdb():
         return ("ERRO: nao encontrei o depurador de consola do Windows SDK (cdb.exe), que vem com os "
                 "\"Debugging Tools for Windows\". Sem ele nao ha como depurar C++ nesta maquina.")
@@ -224,6 +226,7 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
         return f"ERRO: nao consegui abrir o depurador ({e})."
     depurar.guardar_sessao(registo["id"], executavel)
     registrar_linha_processo(registo["id"], depurar.LINHA_DO_CARD)
+    seguir_saida_processo(registo["id"], _vigia_do_depurador(registo["id"]))
     escritos = depurar.preparacao(pontos_de_paragem)
     for escrito in escritos:
         escrever_stdin_processo(registo["id"], escrito)
@@ -233,12 +236,13 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
         return texto + "\n\n" + _conduzir_depuracao(comandos)
     return texto
 
-def _depurar_python(pasta, breakpoints, comandos):
+def _depurar_python(pasta, breakpoints, comandos, alvo=""):
     pontos = depurar.pontos_python(breakpoints, pasta)
-    if not pontos:
+    script = pontos[0]["ficheiro"] if pontos else depurar.script_de_arranque(alvo, pasta)
+    if not script:
         return (f"ERRO: nenhum destes pontos aponta para um ficheiro dentro de '{pasta}': "
-                f"{breakpoints}. Indique o ficheiro (ex: app.py:62).")
-    script = pontos[0]["ficheiro"]
+                f"{breakpoints}. Abra um ficheiro .py no editor ou indique o ficheiro "
+                f"(ex: app.py:62).")
     linha = depurar.comando_python(script, pasta)
     if not linha:
         return f"ERRO: nao consegui montar o depurador para '{script}'."
@@ -251,6 +255,7 @@ def _depurar_python(pasta, breakpoints, comandos):
         return f"ERRO: nao consegui abrir o depurador ({e})."
     depurar.guardar_sessao(registo["id"], script)
     registrar_linha_processo(registo["id"], depurar.LINHA_DO_CARD_PY)
+    seguir_saida_processo(registo["id"], _vigia_do_depurador(registo["id"]))
     escritos = depurar.preparacao_python(pontos, script)
     for escrito in escritos:
         escrever_stdin_processo(registo["id"], escrito)
@@ -276,6 +281,33 @@ def _sessao_viva():
     if not vivo:
         depurar.esquecer_sessao()
     return vivo
+
+def abrir_depuracao(pasta, pontos="", arquivo=""):
+    """Abre a sessao pedida pela barra do terminal: o ficheiro aberto no editor e os pontos
+    marcados na margem. Devolve o card aberto, ou o motivo por que nao abriu."""
+    caminho, erro = _pasta(pasta)
+    if erro:
+        return {"ok": False, "texto": erro}
+    if not pontos and _sobe_o_axio(caminho, arquivo):
+        return {"ok": False, "texto": (
+            "NAO ABRI: este ficheiro arranca o proprio Axio, e uma segunda instancia dele "
+            "disputava a porta 5000. Marque uma linha na margem e carregue outra vez - a "
+            "sessao abre parada nesse ponto, sem o programa arrancar.")}
+    depurar.esquecer_sessao()
+    texto = _depurar(caminho, "debug", pontos, "", arquivo)
+    card = depurar.card_da_sessao()
+    if not card:
+        return {"ok": False, "texto": texto}
+    return {"ok": True, "id": card, "texto": texto}
+
+def _sobe_o_axio(pasta, arquivo):
+    """Diz se este alvo arrancaria o proprio Axio - a mesma trava que a rota do terminal usa."""
+    if os.path.normcase(os.path.abspath(pasta)) != os.path.normcase(APP_ROOT):
+        return False
+    nome = os.path.basename((arquivo or "").replace("\\", "/")).lower()
+    if not nome:
+        return any(os.path.isfile(os.path.join(pasta, n)) for n in ("app.py", "ax.py"))
+    return nome in ("app.py", "ax.py")
 
 def _instalar(pasta, configuracao):
     """Traz do instalador da Qt os componentes que servem os modulos que o projeto pede e faltam."""
@@ -481,6 +513,33 @@ def _texto_depuracao_py(registo_id, script, pontos, escritos, fora):
     blocos.append("Para conduzir a sessao sem sair daqui, chame de novo acao='depurar' com 'comandos' "
                   "(ex: 'w;p total;n'): os comandos vao para este card e a resposta volta aqui.")
     return "\n\n".join(blocos)
+
+def _vigia_do_depurador(registo_id):
+    """Vai lendo a saida do depurador a medida que ela chega: escreve no card, em linguagem
+    simples, onde a execucao parou - e avisa o editor da linha, para ele a abrir sozinho."""
+    janela = _linhas_do_card(registo_id)
+    visto = {"paragem": {}}
+
+    def vigia(linha):
+        if depurar.card_da_sessao() != registo_id:
+            return
+        janela.append((linha or "").rstrip())
+        del janela[:-depurar.JANELA_DA_LEITURA]
+        for texto in depurar.leitura_nova("\n".join(janela)):
+            registrar_linha_processo(registo_id, texto)
+        paragem = depurar.paragem_atual()
+        if not paragem:
+            return
+        anterior = visto["paragem"]
+        if anterior and (anterior["arquivo"], anterior["linha"]) == (paragem["arquivo"],
+                                                                     paragem["linha"]):
+            return
+        visto["paragem"] = paragem
+        if not anterior and not paragem["acontecimento"]:
+            return
+        emit_event("debug_stop", pid=registo_id, arquivo=paragem["arquivo"], linha=paragem["linha"])
+
+    return vigia
 
 def _conduzir_depuracao(comandos):
     """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""

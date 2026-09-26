@@ -5,6 +5,7 @@ import { termClear, termFit, termGetSelection, termOnResize, termWrite } from '.
 import { copiarTexto } from '../chat/clipboard.js';
 import { colarNoInputText } from '../chat/inspect.js';
 import { aviso, descartarSelecao, limparCards } from './terminal_cards.js';
+import { pontosDeParagem } from './pontos_paragem.js';
 
 let termStatusTimer = null;
 
@@ -435,6 +436,21 @@ export function desativarShell() {
     if (state.termMode) state.termMode.classList.remove('shell-ativo');
     _renderModoTerminal();
     termFit();
+}
+export function depurarProjeto() {
+    fetch(state.API + '/api/terminal/depurar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pontos: pontosDeParagem(), arquivo: state.currentFile || '' })
+    }).then(r => r.json()).then(data => {
+        if (data && data.error) aviso('[debug] ' + data.error, 'term-err');
+    }).catch(() => aviso('[debug] nao consegui falar com o servidor.', 'term-err'));
+}
+if (state.btnDebug) {
+    state.btnDebug.addEventListener('click', (e) => {
+        e.stopPropagation();
+        depurarProjeto();
+    });
 }
 if (state.btnClear) {
     state.btnClear.addEventListener('click', clearLog);

@@ -31,6 +31,8 @@ export function handleSSE(data) {
         cardFinalizar(data);
     } else if (data.type === 'workspace_activate') {
         state.wsStatus.textContent = 'bootstrap ativo';
+    } else if (data.type === 'debug_stop') {
+        abrirParagemDoDepurador(data);
     } else if (data.type === 'files_changed') {
         scheduleExplorerReload();
         agendarReconciliacaoDeAbas();
@@ -489,6 +491,12 @@ export function openFileAtLine(path, line) {
         return;
     }
     openFileInEditor(path, { line: targetLine });
+}
+
+function abrirParagemDoDepurador(data) {
+    const caminho = String(data.arquivo || '').replace(/\\/g, '/');
+    if (!caminho) return;
+    openFileAtLine(caminho, parseInt(data.linha, 10) || 1);
 }
 
 export function toggleExplorerSearch(forceClose) {

@@ -859,13 +859,57 @@ quadro; a `dv` deu as locais (`argc = 0n1`, `argv`, `jsonPath`, `format`, `engin
   `DraftCAD.exe` sai logo (`|` responde `exited`) sem carregar as DLLs do Qt. A ferramenta passa
   `caminhos_extra` e não sofre disto; um teste à mão sofre — e foi o que aconteceu.
 
+## O botão de depurar na barra do terminal e o ficheiro a abrir sozinho (2026-10-06)
+
+O pedido: "colocar o icone do lado da borracha pra rodar o codigo manualmente no modo debug e abrir
+automaticamente no monaco quando encontrasse" e "algo mais visual e intuitivo como um popup com os
+controlos".
+
+**O BOTÃO.** `#btn-debug` fica na barra do terminal, 8px à esquerda da borrachinha (levou o
+`ml-auto` que era do `#btn-clear`; medido no preview: debug x=362, clear x=394). Ao clicar, manda o
+ficheiro aberto no editor e os pontos marcados na margem para `POST /api/terminal/depurar`, que
+chama `builds.abrir_depuracao`. Sem pontos marcados **corre o programa em modo de depuração e para
+onde ele rebentar** — que era a versão real do "ícone que caça o indetectável". O motor decide-se
+pelos pontos; sem eles, pela extensão do ficheiro aberto.
+
+**O AVISO AO EDITOR.** Evento SSE novo `debug_stop` {pid, arquivo, linha} -> `openFileAtLine`. Quem o
+emite é um VIGIA ligado ao processo (`process.seguir_saida_processo`), que lê cada linha nova à
+medida que chega. Isto corrigiu um defeito de fundo: a leitura em português só aparecia quando eu
+conduzia a sessão; agora sai sempre, mesmo que seja o utilizador a clicar nos botões do card.
+
+**TRÊS DEFEITOS QUE O TESTE APANHOU** (todos medidos, todos corrigidos):
+- o cdb diz a LINHA mas não o FICHEIRO; só um `k` traz os quadros com o caminho. O `k` passou a ir
+  escrito depois do `g` na preparação. Sem isto o C++ encontrava a queda e não tinha o que abrir.
+- num rebentamento o motivo chega ANTES da posição nova (`Uncaught exception` antes do
+  `> ficheiro(linha)`): comparar o estado todo fazia emitir com a posição velha e o aviso apontava a
+  linha 1 quando a queda era na 2. Passou a comparar só (arquivo, linha).
+- uma sessão antiga a morrer escrevia leitura no card da sessão nova; o vigia sai cedo se já não for
+  a sessão dele.
+
+**A LEITURA DEIXOU DE SE REPETIR:** devolvia o bloco inteiro a cada mudança de uma linha; passou a
+devolver só o que ainda não foi escrito.
+
+**PROVADO** com sessões reais (não com dumps guardados): C++ sem pontos -> `main.cpp:17`; Python sem
+pontos -> `quebra.py:2`; Python com ponto marcado na 5 -> `quebra.py:5`. Ficheiro E linha certos nos
+três. O clique dentro da janela ainda não correu — o servidor a correr tinha o código velho (o POST
+deu 404, o que provou a fiação toda; falta o reinício).
+
+**O "99% DOS ERROS", COM FONTE.** Um agente que ache sozinho qualquer bug não existe: os erros
+possíveis não têm fim e muitos não se decidem por cálculo. O degrau seguinte é documentado e tem
+outro nome: **AddressSanitizer** do MSVC (`/fsanitize=address`, VS 2019 16.9+), que apanha
+out-of-bounds, use-after-free e use-after-scope — erros que não rebentam e não dão erro. É uma opção
+de COMPILAÇÃO, não um botão, e não está feito. Fonte:
+https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
+
 ## O que falta (medido, não suposto)
 
 - **Depurador:** a Fase 6a está feita e **provada no DRAFTCAD** (C++ pelo `cdb`, num card: pontos por
   `ficheiro:linha`, pilha, locais, e a sessão conduzida pela própria ferramenta com `comandos`).
-  A **6b** começou pela peça que ela própria elegeu — o clique na margem vira ponto de paragem
-  (feito e provado a 2026-10-06, ver a secção própria); faltam a barra de controlo, a linha acesa e
-  a stack na coluna 3 — e a **6c** (Python/JS pelos adaptadores DAP).
+  A **6b** já tem o clique na margem a marcar o ponto, os botões de controlo dentro do card
+  (Continuar/Passo/Entrar/Sair/Pilha/Variáveis/Terminar), o botão de depurar na barra do terminal e
+  o salto do editor para a linha onde parou (tudo feito e provado a 2026-10-06, ver as secções
+  próprias). Faltam a linha ACESA no código e a stack na coluna 3; a **6c** (Python) já corre pelo
+  `pdb`, no mesmo card e com os mesmos botões.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /
