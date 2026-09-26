@@ -309,6 +309,42 @@
     flex-shrink: 0;
     margin: 0;
 }
+#explorer-tree.files-colunas {
+    --explorer-altura: 240px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+#explorer-tree.files-colunas > ul,
+#explorer-tree.files-colunas .explorer-children > ul {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+}
+#explorer-tree.files-colunas .explorer-item {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+#explorer-tree.files-colunas .explorer-row {
+    width: 200px;
+    flex-shrink: 0;
+}
+#explorer-tree.files-colunas .explorer-children {
+    margin-left: 0;
+    max-height: var(--explorer-altura);
+    overflow-y: auto;
+    border-left: 1px solid var(--border-suave);
+}
+#explorer-tree.files-colunas .explorer-children > ul > .explorer-item::after,
+#explorer-tree.files-colunas .explorer-children > ul > .explorer-item > .explorer-row::before,
+#explorer-tree.files-colunas .explorer-children > ul > .explorer-item:last-child > .explorer-row::after {
+    display: none;
+}
+#explorer-tree.files-colunas .explorer-children > ul > .explorer-item > .explorer-row {
+    padding-left: 8px;
+}
 #explorer-search-box {
     left: 0;
     right: auto;

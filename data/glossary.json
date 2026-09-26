@@ -5175,6 +5175,22 @@
           36268
         ]
       }
+    },
+    {
+      "termo": "arvore em colunas",
+      "aliases": [
+        "colunas por ramo",
+        "uma coluna pra cada pasta aberta",
+        "arvore em colunas na horizontal",
+        "colunas do explorer",
+        "modo colunas da arvore"
+      ],
+      "identificador": "#explorer-tree.files-colunas",
+      "descricao": "Modo da arvore na doc HORIZONTAL quando a lista tem grupos (CMake/sln): cada ramo aberto e uma coluna a direita, cada coluna com a altura do painel e rolagem propria. Escolhido por applyFilesLayout (src/frontend/js/editor/workspace.js) e a altura vem de --explorer-altura escrita por sincronizarAlturaDoExplorer.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/editor.css",
+        "linha": 312
+      }
     }
   ]
 }

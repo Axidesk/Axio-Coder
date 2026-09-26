@@ -1,6 +1,6 @@
 import { findExplorerRow, loadTrash, openFileInEditor, pinPreview, updateExplorerToolbar } from './editor.js';
 import { appendLine, basename, enterDir, updateExplorerPath } from './terminal.js';
-import { aplicarDockDeProjeto, applyTabsVisibility, layoutAllEditors } from './workspace.js';
+import { aplicarDockDeProjeto, applyFilesLayout, applyTabsVisibility, layoutAllEditors, sincronizarAlturaDoExplorer } from './workspace.js';
 import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
 import { abreNoViewer } from './familia_ficheiro.js';
@@ -200,6 +200,12 @@ export function renderExplorer(data) {
     state.wsStatus.textContent = 'explorador: ' + (basename(data.root) || 'raiz');
     updateExplorerPath(data);
 
+    const comGrupos = data.entries.some(e => e.tipo === 'grupo');
+    if (state.arvoreComGrupos !== comGrupos) {
+        state.arvoreComGrupos = comGrupos;
+        applyFilesLayout();
+    }
+
     const caminho = data.path || '';
     const trocouPasta = state.explorerRenderPath !== caminho;
     state.explorerRenderPath = caminho;
@@ -238,6 +244,7 @@ export function renderExplorer(data) {
     highlightSelection();
     applyErrorMarkers();
     atualizarSugestoes(caminho);
+    sincronizarAlturaDoExplorer();
 }
 export function renderEmptyExplorer() {
     state.explorerTree.innerHTML = '';
