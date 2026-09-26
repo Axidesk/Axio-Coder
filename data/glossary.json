@@ -1167,10 +1167,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1613,
+        "linha": 1617,
         "conferido": [
-          1790428506.178,
-          78500
+          1790428833.344,
+          78835
         ]
       }
     },
@@ -2240,10 +2240,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1193,
+        "linha": 1197,
         "conferido": [
-          1790428506.178,
-          78500
+          1790428833.344,
+          78835
         ]
       }
     },
@@ -4440,14 +4440,10 @@
       "termo": "etiquetas do painel de git",
       "aliases": [],
       "identificador": "chipDeEtiquetas",
-      "descricao": "No painel de git, o chip com o icone da etiqueta, a quantidade e a etiqueta vigente e tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
+      "descricao": "No painel de git, o chip com o icone da etiqueta, a etiqueta vigente e a quantidade entre parenteses DEPOIS dela - \"v3.1.3 (7)\". Ate 2026-10-06 o numero vinha a frente do rotulo (\"7 v3.1.3\") e foi trocado a pedido, para o rotulo cair logo a seguir ao icone e a linha da hash de baixo alinhar sozinha com ele (ver a ficha \"ja enviada para o github\"). E tambem o cabecalho do bloco recolhivel que lista as etiquetas abaixo da linha do ramo, aberto por padrao. A vigente fica verde e vem de POST /api/git/versao, servida por git_repo.versao_da_revisao (git describe --tags --abbrev=0): a ultima etiqueta que ja leva a tarefa dentro. As outras ficam cinzentas.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 207,
-        "conferido": [
-          1790394276.627,
-          35545
-        ]
+        "linha": 208
       }
     },
     {
@@ -5032,14 +5028,10 @@
         "marca do aviao no painel"
       ],
       "identificador": "git_panel.js:marcaDoPonto / .git-marca / .git-hash-acesa",
-      "descricao": "Marca do ponto no painel de git: git_panel.js:marcaDoPonto(enviado, valor) devolve O ICONE (.git-marca, com title de popup) seguido do valor (a hash curta). Nao ha mais label escrita - \"Esta tarefa\" e \"Ja enviada para o GitHub\" sairam do ecra e viraram o POPUP dos dois icones (2026-10-06, a pedido). Nascido localmente = o bookmark svgDoPonto + \"Salvo localmente\"; ja no remoto = o aviao svgDoAviao + \"Ja enviada para o GitHub\". Quem decide e enviadaParaOServidor(hash) de cards.js - a MESMA funcao que poe o aviao no card, logo painel e pilha nunca se contradizem. Usado por blocoDaTarefa (.git-grupo-tarefa) e blocoDoPontoEnviado (.git-ponto-enviado).\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (2026-10-06): marcaDoPonto escreve-a com classe .git-hash git-hash-acesa e a regra git.css:.git-hash-acesa { color: var(--oliva) } pinta-a. As outras hashes ficam cinzentas no --git-cor-hash (#6b7280) - a da lista do \"Por subir\" (.git-lista .git-hash) e a do historico mais antigo (.history-antigo-hash). O mapa das cores vive no :root do style.css: --git-cor-hash #6b7280 (hash), --git-cor-tarefa #d1d5db (prefixo \"Tarefa N\"), --git-cor-commit #9ca3af (mensagem).\n\nO AFASTAMENTO PARA ALINHAR: esta linha nao tem contador (o chip do ramo e o da etiqueta tem o numero - \"1\", \"7\" - antes do rotulo), logo a hash precisava de um empurrao para cair debaixo da TERCEIRA COLUNA das linhas de cima, ou seja alinhada com o rotulo (\"main\", \"v3.1.3\"). MEDIDO antes: o rotulo comeca a x=41,2 e a hash caia a x=30 - 11,2px de desencontro. Ficou git.css:.git-ponto-enviado .git-hash, .git-grupo-tarefa .git-hash { margin-left: 11px }. MEDIDO depois: .git-chip-rotulo x=41,2 e .git-hash x=41,0 (0,2px de sub-pixel, do arredondamento), com o icone da marca a x=10 nos dois blocos. O 11 e 10+13+6+6,2+6 menos 24: o valor sai do chip (padding 10 + icone 13 + gap 6 + numero 6,2 + gap 6), nao e um numero de gosto - mexer-lhe parte o alinhamento.\n\nO CORPO do bloco (.git-ponto-nome, que mostra \"Tarefa N - mensagem\") continua a x=10, alinhado com o ICONE e nao com o rotulo.",
+      "descricao": "Marca do ponto no painel de git: git_panel.js:marcaDoPonto(enviado, valor) devolve O ICONE (.git-marca, com title de popup) seguido do valor (a hash curta). Nao ha mais label escrita - \"Esta tarefa\" e \"Ja enviada para o GitHub\" sairam do ecra e viraram o POPUP dos dois icones (2026-10-06, a pedido). Nascido localmente = o bookmark svgDoPonto + \"Salvo localmente\"; ja no remoto = o aviao svgDoAviao + \"Ja enviada para o GitHub\". Quem decide e enviadaParaOServidor(hash) de cards.js - a MESMA funcao que poe o aviao no card, logo painel e pilha nunca se contradizem. Usado por blocoDaTarefa (.git-grupo-tarefa) e blocoDoPontoEnviado (.git-ponto-enviado).\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (2026-10-06): marcaDoPonto escreve-a com classe .git-hash git-hash-acesa e a regra git.css:.git-hash-acesa { color: var(--oliva) } pinta-a. As outras hashes ficam cinzentas no --git-cor-hash (#6b7280) - a da lista do \"Por subir\" (.git-lista .git-hash) e a do historico mais antigo (.history-antigo-hash). O mapa das cores vive no :root do style.css: --git-cor-hash #6b7280 (hash), --git-cor-tarefa #d1d5db (prefixo \"Tarefa N\"), --git-cor-commit #9ca3af (mensagem).\n\nO ALINHAMENTO (medido, e refeito na rodada do contador a direita): o chip do ramo e o da etiqueta mostram o contador DEPOIS do rotulo - \"main (1)\", \"v3.1.3 (7)\", em <span class=\"git-chip-num\">(N)</span> - e nao antes dele (\"1 main\"), que era a ordem ate 2026-10-06. Com o rotulo em segundo lugar ele cai a x=29,0 (chip: padding-esq 10 + icone 13 + gap 6) e esta linha, que nao tem contador, cai logo depois do icone da marca (x=10 + icone 14 + gap 6 = 30): o icone da marca e 14px (h-3.5/w-3.5 do tailwind) e o do chip 13px (git.css:.git-chip svg), e e dai que vem o 1px de diferenca. Ficou git.css:.git-ponto-enviado .git-hash, .git-grupo-tarefa .git-hash { margin-left: -1px }, que poe a hash exatamente a x=29,0, debaixo do rotulo - MEDIDO na pintura, nao estimado. Antes desta mudanca o numero vinha a frente e o mesmo alinhamento exigia margin-left: 11px (10+13+6+6,2+6 menos 24).\n\nO CORPO do bloco (.git-ponto-nome, que mostra \"Tarefa N - mensagem\") continua a x=10, alinhado com o ICONE e nao com o rotulo.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 279,
-        "conferido": [
-          1790394276.627,
-          35545
-        ]
+        "linha": 280
       }
     },
     {
@@ -5052,14 +5044,10 @@
         "salvo localmente"
       ],
       "identificador": "git_panel.js:blocoDaTarefa / marcaDoPonto",
-      "descricao": "Bloco da tarefa no painel de git, DENTRO da seccao do Repositorio e abaixo do chip das etiquetas (desde 2026-10-06 a ordem do painel e Repositorio | Esta tarefa -> separador -> Por subir -> Dependencias). git_panel.js:blocoDaTarefa monta um recolhivel (git-recolhivel git-grupo-tarefa) cujo CABECALHO e a marca do ponto - marcaDoPonto(false, curto ou nomeDaTarefa) -, e o CORPO e a linha do commit (corpoDoCommit).\n\nO CABECALHO NAO TEM LABEL ESCRITA: e o icone + a hash + o '+'. \"Esta tarefa\" e \"Ja enviada para o GitHub\" viraram o POPUP dos icones (title). Tarefa sem commit mostra o NOME no lugar da hash (unico identificador que existe nessa altura); tarefa sem ponto NEM ficheiros fica so com o nome, sem icone nenhum - nao se carimba \"salvo localmente\" o que nunca foi salvo.\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (.git-hash-acesa) e leva margin-left:11px para cair debaixo do ROTULO do chip de cima (\"main\"/\"v3.1.3\"), porque esta linha nao tem contador. Detalhe medido na ficha \"ja enviada para o github\".\n\nO CORPO (git-ponto-nome) mostra a linha do commit em camadas (git_tarefa-nome = prefixo \"Tarefa N\", git_commit_nome = a mensagem), comeca a x=10 - alinhado com o ICONE do chip e nao com o rotulo. O bloco nasce aberto/fechado conforme o estado (recolhivel(cabecalho, corpo, !estado.automatico, ...)).\n\nO LAPIS fica ENCOSTADO ao campo do commit (ordem: prefixo -> input -> lapis -> varinha -> salvar, em corpoDoCommit).",
+      "descricao": "Bloco da tarefa no painel de git, DENTRO da seccao do Repositorio e abaixo do chip das etiquetas (desde 2026-10-06 a ordem do painel e Repositorio | Esta tarefa -> separador -> Por subir -> Dependencias). git_panel.js:blocoDaTarefa monta um recolhivel (git-recolhivel git-grupo-tarefa) cujo CABECALHO e a marca do ponto - marcaDoPonto(false, curto ou nomeDaTarefa) -, e o CORPO e a linha do commit (corpoDoCommit).\n\nO CABECALHO NAO TEM LABEL ESCRITA: e o icone + a hash + o '+'. \"Esta tarefa\" e \"Ja enviada para o GitHub\" viraram o POPUP dos icones (title). Tarefa sem commit mostra o NOME no lugar da hash (unico identificador que existe nessa altura); tarefa sem ponto NEM ficheiros fica so com o nome, sem icone nenhum - nao se carimba \"salvo localmente\" o que nunca foi salvo.\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (.git-hash-acesa). Desde 2026-10-06 o chip de cima mostra o contador DEPOIS do rotulo (\"main (1)\"), logo o rotulo passa a cair logo a seguir ao icone, a x=29,0; esta linha, sem contador, cai a x=30 (icone da marca de 14px + gap 6) e leva git.css:.git-ponto-enviado .git-hash, .git-grupo-tarefa .git-hash { margin-left: -1px } para fechar exatamente em x=29,0, o mesmo x do rotulo. Antes, com o numero a frente do rotulo, o valor era 11px. Detalhe medido na ficha \"ja enviada para o github\".\n\nO CORPO (git-ponto-nome) mostra a linha do commit em camadas (git_tarefa-nome = prefixo \"Tarefa N\", git_commit_nome = a mensagem), comeca a x=10 - alinhado com o ICONE do chip e nao com o rotulo. O bloco nasce aberto/fechado conforme o estado (recolhivel(cabecalho, corpo, !estado.automatico, ...)).\n\nO LAPIS fica ENCOSTADO ao campo do commit (ordem: prefixo -> input -> lapis -> varinha -> salvar, em corpoDoCommit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 277,
-        "conferido": [
-          1790394276.627,
-          35545
-        ]
+        "linha": 278
       }
     },
     {
