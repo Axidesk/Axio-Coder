@@ -294,6 +294,10 @@ _DOM_FALSO_JS = r'''
 //                        //   no documento: `for (const n of dom.html(markup)) document.body.appendChild(n)`
 //   dom.agora()          // corre os requestAnimationFrame pendentes
 //   await dom.aguardar() // deixa correr microtasks/timers e os rAF
+// ARRASTO (mousedown -> mousemove -> mouseup): usa o requestAnimationFrame DESTE dom
+// e dom.agora(), nunca um stub proprio a chamar o callback de imediato. MEDIDO: com o
+// callback imediato o `rafId` volta a null antes do `cancelAnimationFrame` e o arrasto
+// fecha a meio SEM erro nenhum - parece que correu e nao mexeu nada.
 //   await importarProjeto("src/frontend/js/editor/terminal_cards.js")
 // Armadilhas ja resolvidas de raiz: appendChild/insertBefore SOLTAM o no do pai
 // anterior; className e classList sao a mesma fonte (escrever num le-se no outro);
