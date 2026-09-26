@@ -83,7 +83,6 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", 
         return _instalar(caminho, configuracao)
     return f"ERRO: acao desconhecida '{acao}'."
 
-
 def _pasta(pasta):
     alvo = (pasta or "").strip() or estado.get("pasta_raiz") or ""
     if not alvo:
@@ -94,7 +93,6 @@ def _pasta(pasta):
         return "", f"ERRO: '{pasta}' nao e uma pasta."
     return alvo, ""
 
-
 def _preparar(pasta, configuracao):
     plano = construir.preparar(pasta, configuracao)
     falha = _bloqueio(plano)
@@ -102,7 +100,6 @@ def _preparar(pasta, configuracao):
         return falha
     _, texto = _configurar(pasta, plano)
     return _texto_plano(plano) + "\n\n" + texto
-
 
 def _configurar(pasta, plano):
     """Configura o projeto (escreve o cache do CMake) como card do terminal. Devolve (ok, texto)."""
@@ -119,7 +116,6 @@ def _configurar(pasta, plano):
         notificar_mudanca_arquivos()
         return True, f"{prefixo}CONFIGURADO (exit 0).\n{saida}"
     return False, f"{prefixo}ERRO AO CONFIGURAR (exit {resultado.returncode}):\n{saida}"
-
 
 def _construir(pasta, configuracao, alvo):
     plano = construir.preparar(pasta, configuracao)
@@ -154,7 +150,6 @@ def _construir(pasta, configuracao, alvo):
     blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
     return "\n\n".join(blocos)
 
-
 def _bloqueio(plano):
     if plano.get("erro"):
         return f"ERRO: {plano['erro']}"
@@ -162,10 +157,8 @@ def _bloqueio(plano):
         return _texto_faltam(plano)
     return ""
 
-
 def _interrompido(resultado):
     return getattr(resultado, "status", "") == "parado"
-
 
 def _correr(pasta, configuracao):
     plano = construir.preparar(pasta, configuracao)
@@ -192,7 +185,6 @@ def _correr(pasta, configuracao):
     return (f"ABERTO: {executavel} (pid={registo['id']}).\n"
             "A janela do programa aparece no ecra; o card do processo fica no terminal, onde a saida dele "
             "e o botao de parar estao.")
-
 
 def _depurar(pasta, configuracao, breakpoints, comandos=""):
     if comandos and _sessao_viva():
@@ -230,7 +222,6 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
         return texto + "\n\n" + _conduzir_depuracao(comandos)
     return texto
 
-
 def _sessao_viva():
     """Diz se a sessao de depuracao ainda tem um card a correr, e esquece-a quando morreu."""
     if not depurar.sessao_aberta():
@@ -246,7 +237,6 @@ def _sessao_viva():
     if not vivo:
         depurar.esquecer_sessao()
     return vivo
-
 
 def _instalar(pasta, configuracao):
     """Traz do instalador da Qt os componentes que servem os modulos que o projeto pede e faltam."""
@@ -287,10 +277,8 @@ def _instalar(pasta, configuracao):
         return "\n".join(linhas + ["", saida])
     return _texto_instalado(pasta, plano, saida)
 
-
 def _texto_do_processo(resultado):
     return ((resultado.stdout or "") + (resultado.stderr or "")).strip()
-
 
 def _texto_instalado(pasta, plano, saida):
     deteccao = detetar.detetar(pasta)
@@ -309,7 +297,6 @@ def _texto_instalado(pasta, plano, saida):
         linhas += ["", saida]
     return "\n".join(linhas)
 
-
 def _texto_sem_componente(modulos, sem_componente):
     if not sem_componente:
         return (f"NADA A INSTALAR: o instalador ja da os componentes destes modulos "
@@ -322,7 +309,6 @@ def _texto_sem_componente(modulos, sem_componente):
         "o que falta e o kit inteiro, e nao um extra. Veja o que falta com acao='kits'.",
     ])
 
-
 def _texto_faltam(plano):
     linhas = ["NAO DA PARA CONFIGURAR ESTE PROJETO AINDA:", ""]
     linhas += [f"  - {falta}" for falta in plano["faltam"]]
@@ -330,7 +316,6 @@ def _texto_faltam(plano):
     if deteccao:
         linhas += ["", _texto_deteccao(deteccao)]
     return "\n".join(linhas)
-
 
 def _texto_plano(plano):
     deteccao = plano["deteccao"]
@@ -358,7 +343,6 @@ def _texto_plano(plano):
         linhas.append(f"  pasta de build: {escrita['pasta_build']}")
     linhas += [f"  nota: {nota}" for nota in escolha.get("notas", [])]
     return "\n".join(linhas)
-
 
 def _texto_deteccao(dados):
     if dados.get("erro"):
@@ -389,11 +373,9 @@ def _texto_deteccao(dados):
         linhas.append("PASTAS DE BUILD QUE JA EXISTEM: " + ", ".join(dados["pastas_de_build"]))
     return "\n".join(linhas)
 
-
 def _pacote_texto(pacote):
     modulos = f" ({', '.join(pacote['componentes'])})" if pacote["componentes"] else ""
     return pacote["nome"] + modulos + ("" if pacote["obrigatorio"] else " [opcional]")
-
 
 def _texto_kits(pasta):
     deteccao = detetar.detetar(pasta)
@@ -420,14 +402,12 @@ def _texto_kits(pasta):
         linhas += ["", "FALTA:"] + [f"  - {falta}" for falta in escolha["faltam"]]
     return "\n".join(linhas)
 
-
 def _texto_executaveis(produzidos):
     if not produzidos:
         return "Executaveis novos: nenhum (o projeto compilou bibliotecas ou nada mudou)."
     linhas = ["EXECUTAVEIS:"]
     linhas += [f"  {p['caminho']} ({p['mb']} MB)" for p in produzidos[:5]]
     return "\n".join(linhas)
-
 
 def _texto_depuracao(registo_id, executavel, pontos, escritos):
     blocos = [f"DEPURADOR ABERTO (card {registo_id}): {executavel}",
@@ -446,7 +426,6 @@ def _texto_depuracao(registo_id, executavel, pontos, escritos):
                   "(ex: 'k;dv /t /v;?? argc'): os comandos vao para este card e a resposta volta aqui.")
     return "\n\n".join(blocos)
 
-
 def _conduzir_depuracao(comandos):
     """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""
     registo_id = depurar.card_da_sessao()
@@ -454,6 +433,7 @@ def _conduzir_depuracao(comandos):
     if not lista:
         return "ERRO: nenhum comando para enviar."
     blocos = [f"DEPURADOR (card {registo_id}): o que respondeu a cada comando"]
+    _esperar_resposta(registo_id, _tamanho_da_saida(registo_id), teto=8.0)
     for comando in lista:
         desde = _tamanho_da_saida(registo_id)
         ok, motivo = escrever_stdin_processo(registo_id, comando)
@@ -467,15 +447,12 @@ def _conduzir_depuracao(comandos):
                   "ultimas linhas dela saem com tool_listar_processos(saida=N).")
     return "\n".join(blocos)
 
-
 def _tamanho_da_saida(registo_id):
     return len((estado.get("processos", {}).get(registo_id) or {}).get("log") or [])
-
 
 def _linhas_do_card(registo_id, desde=0):
     log = (estado.get("processos", {}).get(registo_id) or {}).get("log") or []
     return [linha.rstrip() for linha in log[desde:]]
-
 
 def _esperar_resposta(registo_id, desde, teto=20.0, quieto=0.8):
     """Espera a saida do depurador: um comando so esta respondido quando ela cresce e volta a parar."""
