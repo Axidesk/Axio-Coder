@@ -282,6 +282,15 @@
 #editor-panel.dock-right #log-dock:has(#panel-log-session.log-recolhido):not(:has(#panel-col-2:not(.panel-col-closed))) + #log-resizer {
     display: none;
 }
+#editor-panel.dock-trocando #dock-bottom-row,
+#editor-panel.dock-trocando #log-dock,
+#editor-panel.dock-trocando #log-resizer,
+#editor-panel.dock-trocando #panel-log-session,
+#editor-panel.dock-trocando #panel-col-2,
+#editor-panel.dock-trocando #explorer-view,
+#editor-panel.dock-trocando #explorer-resizer {
+    transition: none !important;
+}
 #editor-panel.dock-right #panel-log-session,
 #editor-panel.dock-right #panel-col-2 {
     width: 100%;
@@ -303,8 +312,11 @@
     pointer-events: none;
 }
 #editor-panel.dock-right #panel-log-session.log-recolhido {
-    flex: 0 0 auto;
+    flex: 0 0 60px;
     width: 100%;
+}
+#editor-panel.dock-right #log-dock:has(#panel-log-session.log-recolhido):not(:has(#panel-col-2:not(.panel-col-closed))) {
+    flex: 0 0 60px;
 }
 #editor-panel.dock-right #panel-log-session.log-recolhido > div:first-child {
     padding: 1rem;
@@ -324,9 +336,6 @@
 }
 #editor-panel.dock-right #panel-log-session.log-recolhido .log-faixa-icone {
     display: none;
-}
-#editor-panel.dock-right #log-dock:has(#panel-log-session.log-recolhido):not(:has(#panel-col-2:not(.panel-col-closed))) {
-    flex: 0 0 auto;
 }
 #editor-panel.dock-right:has(#log-dock.col2-foco) #explorer-view {
     flex: 0 0 0;
@@ -386,7 +395,7 @@
     flex: 0 0 var(--coluna-largura);
     min-width: 0;
     min-height: 0;
-    padding: 2px 6px 10px;
+    padding: 0 0 10px;
     overflow-x: hidden;
     overflow-y: auto;
     scrollbar-gutter: stable;
@@ -402,13 +411,13 @@
     display: flex;
     flex-direction: column;
     margin: 0;
-    padding: 0;
+    padding: 2px 6px 0;
 }
 #explorer-tree.files-colunas .explorer-coluna-titulo {
     position: sticky;
     top: 0;
     z-index: 2;
-    padding: 2px 8px 6px;
+    padding: 6px 14px 6px;
     font-size: 11px;
     color: var(--text-mutado);
     white-space: nowrap;
@@ -513,7 +522,7 @@ body.theme-espacial .explorer-search-field {
     font-size: 11px;
     line-height: 1;
     color: var(--text-mutado);
-    background: linear-gradient(to bottom, var(--bg-panel-2) 77%, transparent);
+    background: var(--bg-panel-2);
     pointer-events: none;
     white-space: nowrap;
     overflow: hidden;
@@ -522,7 +531,7 @@ body.theme-espacial .explorer-search-field {
     transition: opacity var(--dur-3) var(--ease-fluid);
 }
 body.theme-espacial .explorer-migalha {
-    background: linear-gradient(to bottom, var(--bg-panel) 77%, transparent);
+    background: var(--bg-panel);
 }
 .explorer-migalha.visivel {
     opacity: 1;

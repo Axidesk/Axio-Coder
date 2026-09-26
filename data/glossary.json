@@ -19,8 +19,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 407,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -37,10 +37,10 @@
       "descricao": "Janela/painel do workspace que mostra a arvore de ficheiros",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 454,
+        "linha": 459,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -58,8 +58,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 442,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -76,8 +76,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 441,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -95,8 +95,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 180,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -116,8 +116,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 217,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -135,8 +135,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 90,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -154,8 +154,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 375,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -175,8 +175,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 357,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -192,10 +192,10 @@
       "descricao": "Container que lista os itens apagados dentro do painel da lixeira (distinto do botao #btn-trash)",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 501,
+        "linha": 503,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -219,10 +219,10 @@
       "descricao": "Botao que alterna o dock entre inferior (dock-bottom, padrao, formato horizontal) e lateral direita (dock-right, formato vertical). applyDockLayout (src/frontend/js/editor/workspace.js:208) aplica as classes dock-right/dock-bottom no #editor-panel, no modo direita o eixo redimensionavel passa de height para WIDTH (applyExplorerSize) e o explorer entra em modo arvore (applyFilesLayout remove a classe files-vertical). O layout do Monaco e diferido com setTimeout(layoutAllEditors, DOCK_ANIM_MS) porque a row tem transition de width/height de 0.4s. Estado persistido em localStorage (chave axio-dock-prefs) por persistDockPrefs/initDockPrefs.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 490,
+        "linha": 492,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -240,8 +240,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 243,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -282,8 +282,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 428,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -303,8 +303,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 95,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -323,8 +323,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 367,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -346,8 +346,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 358,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -364,10 +364,10 @@
       "descricao": "Botao com icone de olho nas Configuracoes que alterna entre mostrar (olho aberto) e ocultar (olho riscado) as chaves de API dos inputs",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 670,
+        "linha": 672,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -386,8 +386,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 280,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -424,8 +424,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 186,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -486,8 +486,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 270,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -507,8 +507,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 396,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -586,8 +586,8 @@
         "arquivo": "src/frontend/js/editor/terminal.js",
         "linha": 167,
         "conferido": [
-          1790381764.167,
-          14835
+          1790389374.713,
+          15113
         ]
       }
     },
@@ -627,8 +627,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 439,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -666,8 +666,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 192,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -684,8 +684,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 206,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -723,8 +723,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 290,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -743,8 +743,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 258,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -762,8 +762,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 183,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -979,8 +979,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 252,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -998,10 +998,10 @@
       "descricao": "Painel (nao modal) que desliza da esquerda como o historico, com a largura das colunas 1+2 (35vw): Stack, Linguagens (nome completo + contagem entre parenteses, sem recolher), Dependencias (declaradas + 'usado no codigo', expandiveis com +) e Estrutura (arvore classica com guias continuas, pastas amarelas var(--alerta), contagem apos o nome). Secoes com o resumo ao lado do titulo (ex: 'Estrutura | 108 arquivos, 13 pastas'). Sem icone de recarregar: a medicao e automatica em abrirProjetoInfo. Corpo renderizado por chat/projeto.js, estilo em css/projeto.css.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 622,
+        "linha": 624,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1169,8 +1169,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1565,
         "conferido": [
-          1790383405.233,
-          74741
+          1790387873.257,
+          74766
         ]
       }
     },
@@ -1371,8 +1371,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 425,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1391,8 +1391,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 246,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1411,8 +1411,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 277,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1431,8 +1431,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 136,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1453,8 +1453,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 158,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1475,8 +1475,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 105,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1585,10 +1585,10 @@
       "descricao": "A barra de abas do doc (#ws-top-bar, com #editor-tabs) recolhe sempre que a camada de codigo da coluna 3 do DOCK esta aberta - mostre ela um painel (ferramentas/raciocinio/pergunta/git) ou um FICHEIRO/diff. O predicado e `camadaCol3Aberta()` (a antiga `camadaCol3MostraPaineis` era um caso particular dela e foi apagada em 2026-09-22). No mesmo passo o cabecalho da coluna 3 (#col-3-header, com o caminho do ficheiro) passa a ficar a vista, e o titulo clicado revela o ficheiro na arvore do explorer (files.js:_ligarTituloAoExplorer). Quando a camada sai, as abas voltam. O historico tem a sua propria parcela na mesma funcao (`isHistoryOpen() && !historicoNoEditor`).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/layout.js",
-        "linha": 114,
+        "linha": 108,
         "conferido": [
-          1790290282.136,
-          9658
+          1790387813.388,
+          11142
         ]
       }
     },
@@ -1614,8 +1614,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 387,
         "conferido": [
-          1790122611.779,
-          42746
+          1790387606.187,
+          42820
         ]
       }
     },
@@ -1636,8 +1636,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 173,
         "conferido": [
-          1790122611.779,
-          42746
+          1790387606.187,
+          42820
         ]
       }
     },
@@ -1724,10 +1724,10 @@
       "descricao": "Scrollbar das DUAS vistas de codigo do code view E das COLUNAS do diff (.diff-col, as duas metades do Codigo Substituido - cada uma tem a sua rolagem horizontal e por isso tinha a barra do desenho global). Em css/dock.css, com um seletor :is(#code-view-container, #code-view-container-history) que cobre o contentor e as colunas de uma so vez (as regras das colunas sao as mesmas, com ' .diff-col' no meio). Desenhada igual a que o Monaco pinta no #editor-host: vertical 14px e horizontal 12px, slider a ocupar a barra TODA (sem inset) e QUADRADO (border-radius 0), track transparente e slider que so aparece com o rato por cima. CORES das predefinicoes do tema dark do proprio Monaco (miscColors.js): slider #797979 a 40% (#79797966), hover #646464 a 70% (#646464b3); o track do Monaco e null, logo transparente - era aqui que estava o fundo preto. E O RECUO: o padding esquerdo do contentor e uma BORDER (padding-left 0 + border-left 16 transparente) para a barra horizontal comecar a 16 e nao a 0 - a barra e pintada dentro da padding-box, logo a border empurra-a e o padding nao. MEDIDO no contentor real com o CSS do projeto: barra horizontal x 16..385, vertical 14px em x 386..399, texto a x=16 (400 exatos). LIMITE: a barra horizontal de cada .diff-col vive na base da COLUNA (fim do conteudo), nao no fundo da janela. As restantes barras da interface continuam com o desenho global (style.css: 8px, thumb arredondado a 4px).",
       "localizacao": {
         "arquivo": "src/frontend/css/dock.css",
-        "linha": 445,
+        "linha": 503,
         "conferido": [
-          1790297785.851,
-          13784
+          1790389500.903,
+          15222
         ]
       }
     },
@@ -1746,8 +1746,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 191,
         "conferido": [
-          1790122611.779,
-          42746
+          1790387606.187,
+          42820
         ]
       }
     },
@@ -1765,10 +1765,10 @@
       "descricao": "Botao que ABRE E FECHA (toggle) a camada de notas por cima da area do Monaco: js/chat/projeto_notas.js:alternarCamadaNotas. MUDOU DE SITIO A 2026-10-06: vivia ao lado do titulo do painel de informacoes do projeto e passou para o cabecalho da ARVORE de ficheiros do explorer, como ULTIMO icone da direita, logo depois de #btn-git-doc (o de salvar). MOTIVO: leva-lo para junto do trabalho, em vez de o esconder dentro de um painel que tem de estar aberto. CONSEQUENCIA: deixou de ser preciso abrir o painel de informacoes para chegar as notas, e o painel deixou de as fechar ao fechar-se (a chamada a fecharCamadaNotas saiu de js/chat/projeto.js:fecharProjetoInfo e a funcao foi apagada por ficar orfa). O botao perdeu a classe .projeto-icon-btn (30x30 com radius) e ficou com a medida dos vizinhos do header (icone de 16px, sem caixa), com as cores em #btn-project-notes no css/editor.css: fundo transparente, --text-mutado, hover e .ativo em --oliva. O id NAO mudou, por isso o listener (js/chat/renderer.js) e o realce (_sincronizarBotaoNotas) continuam a funcionar sem tocar. CUSTO MEDIDO do icone no cabecalho a 420px: o caminho #explorer-path passa de 288 para 264px.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 484,
+        "linha": 486,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1786,10 +1786,10 @@
       "descricao": "Campo de escrita da camada de notas: Monaco sem enfeites (markdown, Ctrl+Z/Ctrl+Y, copia com indentacao preservada), flutuante - sem caixa nem contorno, porque o fundo do tema axio-editor (#1e1e1e) e o mesmo do painel. Grava sozinho em .axio/notas.json, por projeto, com varias abas (a versao antiga era uma nota so em .axio/notas.md, migrada na primeira leitura). O recuo de 16px e MARGEM (o Monaco mede clientWidth, que inclui padding). Desde 2026-09-15 vive na camada #panel-col-3-notes, em cima da area do Monaco, e nao dentro do painel de informacoes.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 654,
+        "linha": 656,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1807,10 +1807,10 @@
       "descricao": "Botao do CABECALHO da camada de notas (#project-notes-header, index.html:555), encostado a direita do titulo 'Notas' - deixou de viver na barra das abas em 2026-09-15 (era o que punha titulo e varinha na mesma linha das abas). Traduz o trecho selecionado (ou a nota toda, sem selecao) para o vocabulario tecnico do projeto: o agente casa o glossario, consulta os identificadores reais no codigo e reescreve o texto, sempre com um aviso no fim de que foi reescrito pelo agente e pode conter erros. Enquanto corre, o PROPRIO botao fica desativado com o spinner (.a-trabalhar troca o SVG da varinha pelo .projeto-icone-spinner) e o chat NAO e bloqueado - a traducao corre em paralelo, numa thread propria, com a barra de status silenciada.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 642,
+        "linha": 644,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1829,10 +1829,10 @@
       "descricao": "Barra das abas do caderno dentro do #project-notes-bar (index.html:564), LOGO ABAIXO do cabecalho com o titulo 'Notas': desde 2026-09-15 as abas ja nao partilham a linha com o titulo nem com a varinha. Cada aba e uma nota (titulo + texto) e usa as MESMAS classes das abas do editor de codigo (.editor-tab), de proposito. O titulo renomeia-se no clique duplo; o X fecha e a ultima nunca desaparece (fica uma Nota 1 nova). CLIQUE DIREITO numa aba abre o #notes-context-menu com 'Voltar a abrir a nota fechada': as notas fechadas vao para uma pilha (notasFechadas, em js/chat/projeto_notas.js) e reabrem uma a uma na ordem INVERSA a que foram fechadas (LIFO), sem limite de abas. Ao fechar uma nota o texto e lido do modelo ANTES de o descartar (projeto_notas.js:_guardarFechada chamada dentro de _fecharAba) - a leitura depois do dispose traria texto vazio.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 652,
+        "linha": 654,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1849,10 +1849,10 @@
       "descricao": "Barra das ABAS da camada de notas, com 34px (variavel --projeto-notas-altura, definida em #panel-col-3-notes no css/dock.css): da esquerda para a direita tem o + (#btn-notes-add) e as abas (#project-notes-tabs). Desde 2026-09-15 o titulo 'Notas' e a varinha JA NAO vivem aqui: subiram para o cabecalho de 60px #project-notes-header (index.html:555), que fica LOGO ACIMA desta barra. Geometria medida com o CSS real: cabecalho y 0..60, barra y 60..94, editor a partir de 94, aviso de campo vazio a 110.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 648,
+        "linha": 650,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1891,10 +1891,10 @@
       "descricao": "Icones de copiar ao lado do titulo da coluna 3: #btn-copy-tools-history no historico e #btn-copy-tools na doc (ambos em dom.js). Os dois sao decididos por UMA funcao, layout.js:syncCopyButtons(vista, ativo): mostra so o da vista que tem painel ativo (raciocinio, ferramentas ou pergunta) e esconde os dois quando nao ha painel. E chamada por renderer.js:pintarBotoesCol3(botoes, ativo, vista) - o 3o argumento e a vista e vem de alternarPainelCol3/ligarBotoesCol3/aoFecharCol3 -, por question_panel.js:showQuestionPanel e por setupCol3ForFileView/resetCol3State/files.js:_modoCodigoHistorico. ANTES o icone do historico era escondido num sitio e mostrado noutro (o caminho da PERGUNTA em alternarPainelCol3 devolvia antes dos toggles e deixava-o escondido) e o alternarPainelCol3 nao limpava os isShowing* ao fechar o painel pelo proprio icone, o que estragava a copia (_copiarPainelAtivo escolhe o texto pelo flag). O clique vive em renderer.js:_copiarPainelAtivo.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/layout.js",
-        "linha": 125,
+        "linha": 119,
         "conferido": [
-          1790290282.136,
-          9658
+          1790387813.388,
+          11142
         ]
       }
     },
@@ -1911,10 +1911,10 @@
       "descricao": "Terceira camada que abre POR CIMA da area do Monaco, gemea de #panel-col-3 (doc) e #panel-col-3-history (historico): nasce no #sliding-panel-container e e montada em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace, que tem as tres no MESMO array. Abre/fecha por opacity (position absolute, inset 0, z-index 7) com a classe .panel-col-closed, e a vista (id 'notas', criada em js/chat/projeto_notas.js) entra no mapa de colunas.js - por isso as tres camadas sao EXCLUSIVAS: abrir qualquer uma fecha as outras por colunas.js:fecharOutrasCamadas, e abrir um FICHEIRO pela arvore tambem as fecha (o listener axio-editor-file-open do renderer.js percorre ['dock','historico','notas']). Por dentro, de cima para baixo: cabecalho de 60px com o titulo 'Notas' e a varinha (#project-notes-header), barra das abas de 34px (#project-notes-bar), o Monaco das notas (#project-notes-editor) e o aviso de campo vazio (#project-notes-placeholder). ABRIR a camada RECOLHE a barra de abas do doc (layout.js:syncDocTopBar, parcela camadaNotasAberta). MUDOU A 2026-10-06: a camada DEIXOU de fechar quando o painel de informacoes do projeto se fecha - a chamada a fecharCamadaNotas saiu de js/chat/projeto.js:fecharProjetoInfo (e a propria funcao foi apagada por ficar orfa), porque o botao que a abre passou para o cabecalho do explorer e as notas ja nao pertencem ao painel. Quem a abre e fecha agora e so o #btn-project-notes (alternarCamadaNotas) e o X de fechar dos ficheiros/colunas.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 638,
+        "linha": 640,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -1931,10 +1931,10 @@
       "descricao": "Balao de contexto que abre no CLIQUE DIREITO de uma aba de nota, com uma unica opcao: 'Voltar a abrir a nota fechada'. Mesmo desenho e mesmo mecanismo do #fs-context-menu (classe .balao + .menu-open, css/workspace.css); a logica vive em js/chat/projeto_notas.js (_abrirMenuNotas/_fecharMenuNotas) e o item desativa-se (disabled) quando a pilha de notas fechadas esta vazia. Fecha com um clique em qualquer lado, com Escape ou quando a camada de notas fecha. O item reabre a ULTIMA nota fechada, com o titulo e o texto originais, e a nova aba fica ativa.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 577,
+        "linha": 579,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -2003,8 +2003,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 388,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -2046,8 +2046,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 384,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -2133,10 +2133,10 @@
       "descricao": "Barra de cima do terminal (#ws-shell) que escolhe entre os DOIS modos: dois botoes irmaos, 'Cards' (#ws-mode-cards) e 'Shell' (#ws-shell-label), mais o '>' (#ws-shell-arrow) que expande o menu de shells. Clicar num botao ACENDE-o (--oliva) e apaga o outro; clicar no que ja esta aceso nao repete nada (ativarShell/desativarShell saem cedo se o modo for o mesmo). Cards = todo o comando do #term-input vira card gerido e o #term-log fica INVISIVEL ('#terminal-mode:not(.shell-ativo) #term-log { visibility: hidden }', ver 'janela do shell'). Shell = o mesmo campo manda tudo ao PTY e os cards escondem-se ('#terminal-mode.shell-ativo .term-card'), com a sessao JA carregada - o PTY nasce no arranque do backend, nao ao ligar o modo. O '>' abre o menu com cmd/powershell/pwsh; escolher um shell LIGA o modo com ele, e o item marcado (.ws-shell-item.active) segue state.shellAtual MESMO com o modo desligado - clicar no que ja esta marcado nao repete o POST nem desliga (a saida e o botao Cards). Estado em state.shellAtivo/state.shellAtual (terminal.js:setTerminalShell, ativarShell, desativarShell), NUNCA no texto do rotulo: cdCommandFor e comandoLimparTerminal leem o state para decidir 'cd /d' vs 'cd' e 'cls' vs 'clear'. TODA a fiacao dos botoes vive no FIM do terminal.js (nao em workspace.js, que so importa o que usa); o clique-fora que recolhe o menu (document, fora de #ws-shell) tambem vive la. Se o backend recusar o shell, o modo DESLIGA em vez de ficar aceso a mentir. Em modo shell os avisos .term-aviso CONTINUAM a aparecer, porque texto local nunca pode entrar no buffer do PTY. Ctrl+C sem nada selecionado manda \\x03 pelo socket (interromperShell). Trocar de shell reinicia o PTY e o frontend limpa o buffer da sessao antiga (ver 'banner do shell').",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal.js",
-        "linha": 303,
+        "linha": 313,
         "conferido": [
-          1790381764.167,
-          14835
+          1790389374.713,
+          15113
         ]
       }
     },
@@ -2219,8 +2219,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 379,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -2242,8 +2242,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1145,
         "conferido": [
-          1790383405.233,
-          74741
+          1790387873.257,
+          74766
         ]
       }
     },
@@ -2476,10 +2476,10 @@
       "descricao": "Campo da barra do preview onde se escreve o endereco. preview.js:destinoDaBarra decide entre TRES destinos, nesta ordem: (1) esquema explicito (http://, https://, file://) passa tal e qual; (2) letra de unidade, UNC ou barra inicial -> ficheiro; (3) localhost/127.0.0.1/IP -> web http://; (4) pareceEnderecoWeb (tem ponto e SEM extensao de ficheiro conhecida) -> web https://; (5) tem extensao de ficheiro OU separador de caminho -> ficheiro do projeto; (6) tudo o resto vira BUSCA no Google (https://www.google.com/search?q=...). DESDE 2026-09-25: escrever um endereco NAVEGA A ABA ATIVA (mesmo que ela seja de ficheiro - a aba passa a web), em vez de abrir outra aba ao lado; e se o https falhar por erro de ligacao num host em que o esquema foi escolhido pelo Axio, o preview desce uma vez para http:// (o tibia.com sem www so responde na porta 80). Escrever https:// a mao nunca desce. O 'abrirPreviewDoFicheiro' (pedidos anunciados pela arvore e pelo card) mantem a regra antiga, sem busca. O campo mostra sempre o alvo da aba ativa (preview_abas.js:pintarEndereco, que desiste enquanto o campo esta focado).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 523,
+        "linha": 525,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -2688,10 +2688,10 @@
       "descricao": "Barra de 40px no topo da vista do preview (classes .preview-bar em css/preview.css) com voltar, avancar, recarregar (#preview-reload, o unico recarregar da pagina), o campo de endereco (#preview-address), o zoom, abrir ficheiro do projeto, abrir no navegador e o icone #btn-preview. Sem X desde 2026-09-21: o #preview-close foi removido e o icone do preview, que ja era MOVIDO para ca quando a vista esta ativa (preview.js:posicionarIconeNaBarra, com a classe .preview-btn e appendChild no fim da barra), ficou no lugar dele - e ele que fecha o preview (workspace.js: state.btnPreview click -> fecharPreview quando currentView === 'preview'). Quando a vista do preview esta ativa, a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0 (css/workspace.css), ficando esta barra no TOPO da janela.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 512,
+        "linha": 514,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 88,
         "conferido": [
-          1790386981.776,
-          27156
+          1790389793.415,
+          32394
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 96,
         "conferido": [
-          1790386981.776,
-          27156
+          1790389793.415,
+          32394
         ]
       }
     },
@@ -2858,10 +2858,10 @@
       "descricao": "Barra de abas do preview, no DOM DO AXIO desde 2026-09-24 (antes vivia dentro da pagina do viewer, em #vw-abas, que deixou de existir). Fica ACIMA da #preview-bar, dentro da #preview-view: o '+' (#preview-nova) e o primeiro filho e as abas entram a seguir. Quem manda e src/frontend/js/editor/preview_abas.js (state.previewAbas/state.previewAbaAtiva), com o preview.js a carregar a aba ativa por um callback (definirAoTrocarDeAba). Uma aba e {id, tipo:'ficheiro'|'web', alvo, nome}; o campo #preview-address mostra sempre o alvo da aba ativa. Estar no DOM e o que mantem as abas a vista quando a pagina da vista navega para a web. Visual: abas flutuantes sem bordas, separador de 1px so entre abas inativas, sem scrollbar-width (desliga o ::-webkit-scrollbar).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 509,
+        "linha": 511,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -3143,10 +3143,10 @@
       "descricao": "Botao da barra do editor que alterna a numeracao de linhas E as guias de indentacao (o title e 'Exibir/Ocultar numeracao e linhas de identacao'). Handler em src/frontend/js/editor/workspace.js:~730: chama fadeGutterSwap -> applyLineGutterState + updateLineNumbersButton, e o fadeGutterSwap chama state.editor.layout() no fim (src/frontend/js/editor/scroll.js:~76) - foi esse layout() que 'destravava' o codigo invisivel quando o Monaco ficava com dimensoes obsoletas. Fonte de verdade do estado: state.showLineNumbers.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 480,
+        "linha": 482,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -3226,8 +3226,8 @@
         "arquivo": "src/frontend/js/chat/messages.js",
         "linha": 683,
         "conferido": [
-          1790288362.87,
-          43437
+          1790387639.601,
+          43500
         ]
       }
     },
@@ -3246,8 +3246,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 28,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -3263,10 +3263,10 @@
       "descricao": "Balão fixo que serve de dropdown dos botões #title-bar-exibir e #title-bar-ferramentas. Abre pela classe .menu-open (opacity/visibility/pointer-events em workspace.css). O conteúdo é construído por titulo.js:construirItem a partir das listas itensExibir/itensFerramentas e cada clique manda menu:acao por IPC ao main (filtrado por sender). O menu nativo do Electron continua a ser construído (montarMenu) mas está escondido: existe pelos aceleradores. ATENÇÃO: é position:fixed, logo conta como camada flutuante que esconde a vista nativa do preview (preview.js:camadaFlutuante).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 606,
+        "linha": 608,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -3503,10 +3503,10 @@
       "descricao": "Botao da barra do preview que mostra/oculta a TERCEIRA barra - a do leitor (#vw-ferramentas, na pagina do viewer). Fica a DIREITA do campo de endereco e a ESQUERDA da pasta (#preview-file): a ordem na barra e #preview-opcoes, #preview-file, #preview-external. Nasce DESLIGADO (disabled) e so liga quando a aba ativa e um ficheiro que abre no viewer (preview.js:atualizarOpcoesDoFicheiro). O clique chama preview.js:alternarFerramentasDoFicheiro, que acende a classe .preview-btn-ativo (cor --oliva) e manda a acao 'ferramentas' pelo IPC preview:acao; o main injeta um CustomEvent 'axio-ferramentas' na pagina do viewer, que troca a classe vw-com-ferramentas do body. A barra do leitor nasce oculta por CSS.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 525,
+        "linha": 527,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 141,
         "conferido": [
-          1790386981.776,
-          27156
+          1790389793.415,
+          32394
         ]
       }
     },
@@ -3914,10 +3914,10 @@
       "descricao": "A janela de Configurações (APIs, Cofre): overlay #settings-modal com o painel #settings-modal-content dentro, aberto pelo #btn-settings. As medidas (90vw ate 1200px, 85vh ate 900px) vivem em src/frontend/css/geral.css.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 659,
+        "linha": 661,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -3933,10 +3933,10 @@
       "descricao": "Balao do botao direito sobre qualquer uma das duas colunas do chat: o item limpa AS DUAS colunas de uma vez e apaga so o que esta pintado - a memoria da rodada no backend fica intacta (quem a zera e o X do anel de tokens).",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 599,
+        "linha": 601,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -4157,8 +4157,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 128,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -4310,8 +4310,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 100,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -4390,8 +4390,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 392,
         "conferido": [
-          1790122611.779,
-          42746
+          1790387606.187,
+          42820
         ]
       }
     },
@@ -4466,8 +4466,8 @@
         "arquivo": "src/frontend/css/dock.css",
         "linha": 152,
         "conferido": [
-          1790297785.851,
-          13784
+          1790389500.903,
+          15222
         ]
       }
     },
@@ -4797,8 +4797,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 156,
         "conferido": [
-          1790122611.779,
-          42746
+          1790387606.187,
+          42820
         ]
       }
     },
@@ -4819,8 +4819,8 @@
         "arquivo": "src/frontend/index.html",
         "linha": 101,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -5169,10 +5169,10 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 281,
+        "linha": 294,
         "conferido": [
-          1790382312.955,
-          36515
+          1790389513.164,
+          39186
         ]
       }
     },
@@ -5189,10 +5189,10 @@
       "descricao": "Modo da arvore na doc HORIZONTAL quando a lista tem grupos (CMake/sln): cada NIVEL da navegacao e uma COLUNA a direita, no desenho do Finder - a pasta clicada fica realcada e a coluna seguinte mostra os filhos dela; clicar outra vez na mesma pasta fecha as colunas a direita. Cada coluna rola sozinha (overflow-y auto) e a ULTIMA estica para nao deixar vazio; o painel NAO ganha barra vertical. Ligado por applyFilesLayout (src/frontend/js/editor/workspace.js:applyFilesLayout) e montado por renderColunasExplorer/abrirColunaDePasta (src/frontend/js/editor/explorer.js).",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 295,
+        "linha": 377,
         "conferido": [
-          1790386225.954,
-          27591
+          1790389540.628,
+          30148
         ]
       }
     },
@@ -5208,10 +5208,10 @@
       "descricao": "Cabecalho com o NOME da pasta no topo de cada coluna nascida de uma pasta no doc horizontal. O nome nao se repete como linha dentro da coluna.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 334,
+        "linha": 416,
         "conferido": [
-          1790386225.954,
-          27591
+          1790389540.628,
+          30148
         ]
       }
     },
@@ -5246,10 +5246,10 @@
       "descricao": "A pasta que abriu a coluna seguinte fica com o icone AZUL (o nome nao muda de cor). E o unico azul da arvore.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 352,
+        "linha": 434,
         "conferido": [
-          1790386225.954,
-          27591
+          1790389540.628,
+          30148
         ]
       }
     },
@@ -5268,10 +5268,10 @@
       "descricao": "Faixa de 26px presa ao TOPO da arvore de ficheiros que diz em que pasta estao os itens que se estao a ver, e que MUDA conforme se rola (o desenho do sticky scroll do VS Code). O elemento nasce em #explorer-body (index.html) e e desenhado por js/editor/explorer.js:atualizarMigalhaDaArvore; o desenho vive em css/editor.css (.explorer-migalha, .explorer-migalha-nome, .explorer-migalha-sep). SO APARECE NA DOC VERTICAL (com a indentacao inline): em modo colunas esconde-se, porque cada coluna ja tem o seu titulo proprio (.explorer-coluna-titulo, tambem sticky). COMO DECIDE: percorre as linhas de pasta ABERTAS (.explorer-row.explorer-aberto) e escolhe a mais funda cujo topo ja passou acima do topo visivel da arvore; a partir dela sobe pelos ancestrais (closest('.explorer-item')) e mostra a cadeia ate 4 niveis, separada por '&#8250;'. Uma pasta dentro de um .explorer-children.hidden NUNCA conta. O ultimo nome (o nivel onde se esta) fica em --text-branco e os de cima em --text-suave. O FUNDO E SOLIDO ATE 77% E DESVANECE NO FIM (linear-gradient do --bg-panel-2), e a altura de 26px e escolhida a MEDIDA: a linha .explorer-row tem 25.5px, logo a faixa tapa a linha inteira que fica por baixo - com 22px sobrava texto meio visivel por baixo do gradiente. Recalcula-se no scroll da arvore (listener ligado uma vez por ligarMigalhaDaArvore), no resize da janela e no fim de cada render/expansao. Em modo espacial o fundo vem do --bg-panel. left/width sao escritos pelo JS a partir de arvore.offsetLeft/clientWidth, para a faixa nunca passar por cima da lixeira quando ela esta aberta ao lado.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 496,
+        "linha": 498,
         "conferido": [
-          1790386331.062,
-          81276
+          1790387735.865,
+          81547
         ]
       }
     },
@@ -5281,13 +5281,14 @@
         "faixa do log",
         "tirinha do log",
         "log recolhido na horizontal",
-        "icone do log na faixa"
+        "icone do log na faixa",
+        "faixinha vertical do log"
       ],
-      "identificador": "#panel-log-session.log-recolhido (com .log-faixa-icone)",
-      "descricao": "No dock de baixo (dock-bottom) o Log da Sessao recolhido vira uma faixa de 30px com o icone do log dentro do cabecalho; clicar em qualquer ponto dela expande. No dock vertical o recolhido mantem o cabecalho inteiro (60px) com o titulo e o glifo +.",
+      "identificador": "#panel-log-session.log-recolhido (com .log-faixa-icone) (src/frontend/css/dock.css:240)",
+      "descricao": "Estado recolhido do Log da Sessao NA DOC HORIZONTAL (o painel pode ser movido; a faixa e so a forma que ele toma em dock-bottom). Em vez do cabecalho fica uma tira de 30px de largura com o icone do log centrado; clicar em qualquer ponto dela expande (o listener esta no proprio #panel-log-session e ignora cliques em button). O separador do cabecalho (border-b) desaparece nessa forma. NAO confundir com a versao do dock vertical, onde o recolhido mostra o cabecalho com o titulo.",
       "localizacao": {
         "arquivo": "src/frontend/css/dock.css",
-        "linha": 246
+        "linha": 240
       }
     },
     {
@@ -5302,7 +5303,11 @@
       "descricao": "Botao do cabecalho do Log da Sessao (substituiu o X). Glifo - quando expandido e + quando recolhido; o title acompanha. Alterna a classe .log-recolhido por layout.js:alternarLogSession.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 445
+        "linha": 445,
+        "conferido": [
+          1790387735.865,
+          81547
+        ]
       }
     },
     {
@@ -5317,7 +5322,31 @@
       "descricao": "Barra de 4px (cursor row-resize) entre a arvore e o log no dock vertical; arrastar grava --log-altura no #log-dock e persiste state.logAltura em axio-dock-prefs.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 349
+        "linha": 352,
+        "conferido": [
+          1790389513.164,
+          39186
+        ]
+      }
+    },
+    {
+      "termo": "caminho que acompanha as pastas",
+      "aliases": [
+        "caminho do explorer",
+        "caminho no topo",
+        "explorer path",
+        "breadcrumb do explorer",
+        "caminho da pasta no topo"
+      ],
+      "identificador": "atualizarCaminhoDaArvore",
+      "descricao": "Fila de crumbs no topo do explorer (#explorer-path) que passa a acompanhar a arvore e nao so o cwd real - era a queixa \"o caminho todo do explorer se atualize conforme adentro as pastas pq atualmente sempre fica estatico na pasta raiz\" num projeto agrupado (CMake/VS), cujos nos sao virtuais (@arvore/...) e por isso nunca mudam o cwd. Decide pela vista: com .explorer-colunas escreve a cadeia de colunas (caminhoDasColunas, so com 2+ colunas); na indentacao escreve a cadeia das linhas .explorer-row.explorer-aberto (caminhoDosAbertos, so com 2+ niveis) - ou seja, com nada aberto deixa de pe o caminho REAL escrito por terminal.js:updateExplorerPath. Clicar num crumb volta atras: em colunas fecharColunasDepoisDe (fecha tudo a direita + enterDir se nao for virtual), na indentacao fecharAbertosDentroDe. O desenho e comum: terminal.js:pintarCaminho(itens) com {texto, titulo, clicar}.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/explorer.js",
+        "linha": 653,
+        "conferido": [
+          1790389793.415,
+          32394
+        ]
       }
     }
   ]

@@ -224,29 +224,39 @@ export function handleCrumbClick(seg, isLast, data) {
     }
     changeTerminalCwd(seg.abs);
 }
+export function pintarCaminho(itens) {
+    if (!state.explorerPath) return;
+    state.explorerPath.innerHTML = '';
+    itens.forEach((item, i) => {
+        const ultimo = i === itens.length - 1;
+        const span = document.createElement('span');
+        span.className = 'explorer-crumb' + (ultimo ? ' active' : '');
+        span.textContent = item.texto;
+        span.title = item.titulo || item.texto;
+        span.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (item.clicar) item.clicar();
+        });
+        state.explorerPath.appendChild(span);
+        if (ultimo) return;
+        const sep = document.createElement('span');
+        sep.className = 'explorer-crumb-sep';
+        sep.textContent = '\\';
+        state.explorerPath.appendChild(sep);
+    });
+    state.explorerPath.title = itens.map(i => i.texto).join('\\');
+}
 export function updateExplorerPath(data) {
     if (!state.explorerPath) return;
     const segs = buildExplorerSegments(data);
-    state.explorerPath.innerHTML = '';
-    segs.forEach((seg, i) => {
+    pintarCaminho(segs.map((seg, i) => {
         const isLast = i === segs.length - 1;
-        const span = document.createElement('span');
-        span.className = 'explorer-crumb' + (isLast ? ' active' : '');
-        span.textContent = (i === 0 && data.dentro_da_raiz ? '\\' : '') + seg.label;
-        span.title = seg.abs;
-        span.addEventListener('click', (e) => {
-            e.stopPropagation();
-            handleCrumbClick(seg, isLast, data);
-        });
-        state.explorerPath.appendChild(span);
-        if (!isLast) {
-            const sep = document.createElement('span');
-            sep.className = 'explorer-crumb-sep';
-            sep.textContent = '\\';
-            state.explorerPath.appendChild(sep);
-        }
-    });
-    state.explorerPath.title = segs.map((s, i) => (i === 0 && data.dentro_da_raiz ? '\\' : '') + s.label).join('\\');
+        return {
+            texto: (i === 0 && data.dentro_da_raiz ? '\\' : '') + seg.label,
+            titulo: seg.abs,
+            clicar: () => handleCrumbClick(seg, isLast, data)
+        };
+    }));
 }
 export function changeTerminalCwd(pathArg, recarregar = true) {
     return fetch(state.API + '/api/terminal/cwd', {

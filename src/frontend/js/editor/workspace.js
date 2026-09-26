@@ -254,6 +254,8 @@ export function applyDockLayout() {
     const isRight = state.dockSide === 'right';
     const panel = document.getElementById('editor-panel');
     if (panel) {
+        panel.classList.add('dock-trocando');
+        void panel.offsetWidth;
         panel.classList.toggle('dock-right', isRight);
         panel.classList.toggle('dock-bottom', !isRight);
     }
@@ -262,6 +264,7 @@ export function applyDockLayout() {
     applyFilesLayout();
     applyLogAltura();
     applyExplorerSize(true);
+    if (panel) setTimeout(() => panel.classList.remove('dock-trocando'), 80);
     if (state.btnDockRight) {
         state.btnDockRight.classList.toggle('text-[var(--oliva)]', isRight);
         state.btnDockRight.classList.toggle('text-[var(--text-suave)]', !isRight);
