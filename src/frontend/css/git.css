@@ -99,12 +99,17 @@
 }
 
 .git-grupo-etiquetas > .projeto-filhos > .card-collapsible-clip {
-    padding-left: 4px;
+    padding-left: 23px;
 }
 
 .git-ponto-enviado,
 .git-grupo-tarefa {
     padding-left: 10px;
+}
+
+.git-ponto-enviado > .projeto-filhos > .card-collapsible-clip,
+.git-grupo-tarefa > .projeto-filhos > .card-collapsible-clip {
+    padding-left: 19px;
 }
 
 .git-ponto-enviado > .projeto-linha,
@@ -138,6 +143,11 @@
 
 .git-painel .projeto-cabecalho {
     margin: 0 0 5px;
+    padding-right: 6px;
+}
+
+.git-painel .projeto-mais {
+    margin-left: auto;
 }
 
 .git-cabecalho-clicavel {

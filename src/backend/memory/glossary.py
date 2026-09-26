@@ -40,7 +40,7 @@ def normalizar_lista(aliases):
     if aliases is None:
         return []
     if isinstance(aliases, str):
-        raw = [a for a in aliases.split(",") if a.strip()]
+        raw = [a for a in aliases.replace("\r", "\n").replace("\n", ",").split(",") if a.strip()]
     elif isinstance(aliases, (list, tuple)):
         raw = [str(a) for a in aliases]
     else:
