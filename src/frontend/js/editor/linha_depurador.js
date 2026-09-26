@@ -30,6 +30,13 @@ export function instalarLinhaDoDepurador() {
     state.editor.onDidChangeModel(pintar);
 }
 
+export function mesmoFicheiro(a, b) {
+    const um = chave(a);
+    const outro = chave(b);
+    if (!um || !outro) return false;
+    return um === outro || um.endsWith('/' + outro) || outro.endsWith('/' + um);
+}
+
 export function caminhoDoDepurador(caminho) {
     const procurado = chave(caminho);
     if (!procurado) return '';
@@ -37,6 +44,10 @@ export function caminhoDoDepurador(caminho) {
     for (const aberto of state.openTabs) {
         if (chave(aberto) === procurado) return aberto;
     }
+    for (const aberto of state.openTabs) {
+        if (mesmoFicheiro(aberto, caminho)) return aberto;
+    }
+    if (state.currentFile && mesmoFicheiro(state.currentFile, caminho)) return state.currentFile;
     return String(caminho || '').replace(/\\/g, '/');
 }
 
@@ -46,7 +57,7 @@ function pintar() {
 }
 
 function decoracoes() {
-    if (!alvo || chave(state.currentFile) !== alvo.ficheiro) return [];
+    if (!alvo || !mesmoFicheiro(state.currentFile, alvo.ficheiro)) return [];
     const modelo = state.editor.getModel();
     if (!modelo || alvo.linha > modelo.getLineCount()) return [];
     return [{
