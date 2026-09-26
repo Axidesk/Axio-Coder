@@ -805,8 +805,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 200,
         "conferido": [
-          1790438712.885,
-          44713
+          1790439360.29,
+          44799
         ]
       }
     },
@@ -2026,8 +2026,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 305,
         "conferido": [
-          1790434514.009,
-          20821
+          1790439379.875,
+          20987
         ]
       }
     },
@@ -2067,8 +2067,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 59,
         "conferido": [
-          1790434514.009,
-          20821
+          1790439379.875,
+          20987
         ]
       }
     },
@@ -2087,10 +2087,10 @@
       "descricao": "Cards PAUSADOS que aparecem sozinhos no TOPO da zona dos cards com os comandos de arranque da pasta que o explorer mostra. Criados por atualizarSugestoes(pastaRel), chamada por explorer.js:renderExplorer a cada navegacao de pasta. Chave sintetica 'sug:<comando>' no Map interno (ainda nao tem pid). A bolinha diz 'Executar' e o rotulo do fim (.term-card-fim) mostra a ORIGEM ('scripts.start', 'ponto de entrada', 'Docker Compose'...). O CLIQUE NO CABECALHO de uma sugestao NAO faz nada - nem abre (nao tem corpo) nem seleciona (nao aceita resposta); so a bolinha (play) e o X respondem. PERSISTENTES: nascem com `card.persistente = true` e essa marca SOBREVIVE ao play, por isso limparCards (a borrachinha e o cls) salta-os - o card do modulo continua a vista mesmo depois de correr e terminar. Quem os leva e: o X do card, o Ctrl+R (nao vem do GET /api/processos) e o MUDAR DE PASTA, por _removerSugestoes (que filtra por `persistente` e nao por `sugerido`, e poupa os que ainda correm). NAO RECONSTROI O QUE NAO MUDOU: o fetch corre ANTES de tocar no DOM e _mesmasSugestoes compara com sugestoesAtuais, saindo cedo quando a lista e igual - sem isso a zona piscava a cada renderExplorer (que corre a cada files_changed).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 599,
+        "linha": 600,
         "conferido": [
-          1790434514.009,
-          20821
+          1790439379.875,
+          20987
         ]
       }
     },
@@ -2262,8 +2262,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 235,
         "conferido": [
-          1790434514.009,
-          20821
+          1790439379.875,
+          20987
         ]
       }
     },
@@ -2283,8 +2283,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 428,
         "conferido": [
-          1790434514.009,
-          20821
+          1790439379.875,
+          20987
         ]
       }
     },
@@ -2325,8 +2325,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 347,
         "conferido": [
-          1790438712.885,
-          44713
+          1790439360.29,
+          44799
         ]
       }
     },
@@ -2535,10 +2535,10 @@
       "descricao": "Quando um comando de card imprime um endereco local, o backend anexa essa URL ao evento process_output (tools/process.py:_emitir_saida_processo, deteccao em services/sugestoes.py:detectar_url_na_saida) e o card ganha um botao de preview no cabecalho e ABRE a janela do preview sozinho, uma vez por URL. O anuncio sai por um CustomEvent 'axio-preview-open' com detail.auto (true = automatico), escutado em preview.js; o clique no botao reabre sem recarregar se aquele endereco ja estiver a mostra.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 493,
+        "linha": 494,
         "conferido": [
-          1790434514.009,
-          20821
+          1790439379.875,
+          20987
         ]
       }
     },
@@ -4669,8 +4669,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 375,
         "conferido": [
-          1790438712.885,
-          44713
+          1790439360.29,
+          44799
         ]
       }
     },
@@ -5461,10 +5461,10 @@
       "descricao": "Abre o executavel construido sob o cdb (depurador de consola do Windows SDK, em builds/depurar.py) num CARD do terminal, com os pontos de paragem ficheiro:linha ja marcados. A sessao e conduzida pelo parametro 'comandos' (k, dv /t /v, ?? variavel, l+s, p, t, g, q): sem 'breakpoints', os comandos vao para a sessao que ja esta aberta e a resposta volta no retorno da ferramenta. O cdb e lancado com -lines e a preparacao liga l+t/l+s, por isso cada paragem mostra a linha de origem.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 190,
+        "linha": 195,
         "conferido": [
-          1790438715.813,
-          22944
+          1790440466.981,
+          26664
         ]
       }
     },

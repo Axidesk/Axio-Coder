@@ -41,6 +41,7 @@ def processos():
             "rodando": rodando,
             "cwd": reg.get("cwd", ""),
             "rotulo": reg.get("rotulo", ""),
+            "controles": reg.get("controles", []),
         })
     return jsonify({"processos": lista})
 

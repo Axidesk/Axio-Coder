@@ -49,6 +49,16 @@ COMANDOS_UTEIS_PY = (
 LINHA_DO_CARD_PY = ("[axio] neste card: c continuar | n proxima linha | s entrar na funcao | "
                     "p expr ver valor | w pilha | l codigo | q sair")
 
+CONTROLES = (
+    ("continuar", "Continuar", "g", "c", "segue ate ao proximo ponto de paragem"),
+    ("passo", "Passo", "p", "n", "executa a linha seguinte, sem entrar nas funcoes"),
+    ("entrar", "Entrar", "t", "s", "entra na funcao chamada e para na primeira linha dela"),
+    ("sair", "Sair", "gu", "r", "sai da funcao onde estas e volta a quem a chamou"),
+    ("pilha", "Pilha", "k", "w", "o caminho das chamadas ate aqui"),
+    ("variaveis", "Variaveis", "dv /t /v", "p locals()", "os valores das variaveis deste momento"),
+    ("terminar", "Terminar", "q", "q", "fecha a sessao de depuracao"),
+)
+
 
 def cdb():
     """O depurador de consola do Windows SDK (cdb.exe), preferindo o x64."""
@@ -263,6 +273,15 @@ def texto_dos_comandos():
 
 def texto_dos_comandos_py():
     return "\n".join(f"  {comando}  -  {para_que}" for comando, para_que in COMANDOS_UTEIS_PY)
+
+
+def controles(motor_escolhido):
+    """Os botoes que o card mostra, ja com o comando certo da linguagem desta sessao."""
+    if motor_escolhido not in ("cpp", "python"):
+        return []
+    posicao = 2 if motor_escolhido == "cpp" else 3
+    return [{"id": item[0], "rotulo": item[1], "comando": item[posicao], "dica": item[4]}
+            for item in CONTROLES]
 
 
 def comandos_do_pedido(texto):

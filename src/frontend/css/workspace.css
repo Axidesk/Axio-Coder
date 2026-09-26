@@ -115,6 +115,35 @@
 .term-card-sel .term-card-cabeca {
     background: var(--bg-selecao);
 }
+.term-card-controles {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 0 8px 18px;
+}
+.term-card-sel .term-card-controles {
+    display: flex;
+    animation: term-controles-entra var(--dur-3) ease;
+}
+@keyframes term-controles-entra {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.term-card-controle {
+    padding: 3px 10px;
+    border: none;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-suave);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+.term-card-controle:hover {
+    color: var(--text-branco);
+    background: var(--bg-hover-suave);
+}
 .term-card-ponto {
     width: 10px;
     height: 10px;

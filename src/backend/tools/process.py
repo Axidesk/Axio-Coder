@@ -764,7 +764,7 @@ def _encerrar_sobreviventes(alvos):
     return _esperar_morrer([item["pid"] for item in sobraram])
 
 def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False,
-                     caminhos_extra=None, rotulo=None):
+                     caminhos_extra=None, rotulo=None, controles=None):
     """Abre o comando, registra-o em estado['processos'] e liga o leitor da saida.
     Devolve o registo (com a thread leitora em '_leitor'). Com 'acompanhar' liga tambem o
     monitor que fecha o processo nos eventos quando ele terminar sozinho; quem espera pela
@@ -774,10 +774,10 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
     pid = id_processo()
     reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": cwd,
            "popen": None, "stdin": None, "modo": modo, "nascimento": time.time(),
-           "rotulo": rotulo or ""}
+           "rotulo": rotulo or "", "controles": list(controles or [])}
     estado["processos"][pid] = reg
     emit_event("process_started", pid=pid, comando=comando, modo=modo, cwd=cwd,
-               rotulo=rotulo or "")
+               rotulo=rotulo or "", controles=reg["controles"])
     kwargs = {
         "shell": True,
         "cwd": cwd,

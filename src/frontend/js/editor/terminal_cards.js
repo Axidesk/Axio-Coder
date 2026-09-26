@@ -180,11 +180,12 @@ function _assumirIdentidade(card, comando, rotulo) {
     card.nome.title = comando;
 }
 
-function _fundirCard(card, novoPid, comando, cwd, rotulo) {
+function _fundirCard(card, novoPid, comando, cwd, rotulo, controles) {
     if (!novoPid) return;
     _deixarDeSugerir(card);
     if (cwd) card.cwd = cwd;
     const recem = cards.get(novoPid);
+    const controlesDoRecem = recem && recem.controles && recem.controles.length ? recem.controles : null;
     if (recem && recem !== card) {
         card.texto += (card.pendente || '') + (recem.texto || '') + (recem.pendente || '');
         card.pendente = '';
@@ -197,6 +198,7 @@ function _fundirCard(card, novoPid, comando, cwd, rotulo) {
     _assumirIdentidade(card, comando, rotulo);
     card.el.dataset.pid = novoPid;
     cards.set(novoPid, card);
+    _aplicarControles(card, controles || controlesDoRecem);
     _pintar(card, null);
 }
 
@@ -318,7 +320,7 @@ function _fecharCard(card) {
     if (rodando) _parar(pid);
 }
 
-function _criarCard(pid, comando, sugerido, dica, cwd, rotulo) {
+function _criarCard(pid, comando, sugerido, dica, cwd, rotulo, controles) {
     const z = _zona();
     if (!z || !pid) return null;
     const el = document.createElement('div');
@@ -389,9 +391,12 @@ function _criarCard(pid, comando, sugerido, dica, cwd, rotulo) {
         exitCode: null,
         sugerido: !!sugerido,
         persistente: !!sugerido,
-        dica: dica || ''
+        dica: dica || '',
+        barra: null,
+        controles: []
     };
     cards.set(pid, card);
+    if (controles && controles.length) _aplicarControles(card, controles);
 
     cabeca.addEventListener('click', (e) => {
         if (e.target.closest('.term-card-btn') || e.target.closest('.term-card-ponto')) return;
@@ -425,6 +430,33 @@ function _criarCard(pid, comando, sugerido, dica, cwd, rotulo) {
     return card;
 }
 
+function _barraDeControles(card, controles) {
+    const barra = document.createElement('div');
+    barra.className = 'term-card-controles';
+    controles.forEach((c) => {
+        if (!c || !c.comando) return;
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = 'term-card-controle';
+        botao.textContent = c.rotulo || c.comando;
+        botao.title = (c.dica ? c.dica + ' ' : '') + '(comando: ' + c.comando + ')';
+        botao.addEventListener('click', (e) => {
+            e.stopPropagation();
+            _responderStdin(card, c.comando);
+        });
+        barra.appendChild(botao);
+    });
+    return barra;
+}
+
+function _aplicarControles(card, controles) {
+    if (!controles || !controles.length) return;
+    if (card.barra) card.barra.remove();
+    card.controles = controles;
+    card.barra = _barraDeControles(card, controles);
+    card.el.insertBefore(card.barra, card.saida);
+}
+
 function _cardEmLancamento(comando) {
     for (const [card, cmd] of lancamentos) {
         if (comando && cmd && cmd !== comando) continue;
@@ -440,16 +472,17 @@ export function cardIniciar(data) {
         existente.exitCode = null;
         existente.cwd = data.cwd || existente.cwd;
         if (data.rotulo) existente.nome.textContent = data.rotulo;
+        _aplicarControles(existente, data.controles);
         _aplicarEstado(existente, 'rodando');
         return existente;
     }
     const pendente = _cardEmLancamento(data.comando);
     if (pendente) {
-        _fundirCard(pendente, data.pid, data.comando, data.cwd, data.rotulo);
+        _fundirCard(pendente, data.pid, data.comando, data.cwd, data.rotulo, data.controles);
         _aplicarEstado(pendente, 'rodando');
         return pendente;
     }
-    return _criarCard(data.pid, data.comando, false, '', data.cwd, data.rotulo);
+    return _criarCard(data.pid, data.comando, false, '', data.cwd, data.rotulo, data.controles);
 }
 
 function _avisarPreview(url, automatico, alternar) {
@@ -569,7 +602,8 @@ export async function hidratarCards() {
         return;
     }
     (dados && dados.processos ? dados.processos : []).forEach((reg) => {
-        const card = cardIniciar({ pid: reg.id, comando: reg.comando, cwd: reg.cwd, rotulo: reg.rotulo });
+        const card = cardIniciar({ pid: reg.id, comando: reg.comando, cwd: reg.cwd, rotulo: reg.rotulo,
+                                   controles: reg.controles });
         if (!card) return;
         (reg.log || []).forEach((linha) => {
             card.pendente += String(linha) + '\n';

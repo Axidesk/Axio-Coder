@@ -218,7 +218,8 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
     try:
         registo = iniciar_processo(linha, cwd=pasta, modo="card", stdin_pipe=True, acompanhar=True,
                                    caminhos_extra=plano["escolha"].get("caminhos"),
-                                   rotulo=f"DEPURADOR: {os.path.basename(executavel)}")
+                                   rotulo=f"DEPURADOR: {os.path.basename(executavel)}",
+                                   controles=depurar.controles("cpp"))
     except OSError as e:
         return f"ERRO: nao consegui abrir o depurador ({e})."
     depurar.guardar_sessao(registo["id"], executavel)
@@ -244,7 +245,8 @@ def _depurar_python(pasta, breakpoints, comandos):
     emit_event("executing", function=f"Depurando {os.path.basename(script)}")
     try:
         registo = iniciar_processo(linha, cwd=pasta, modo="card", stdin_pipe=True, acompanhar=True,
-                                   rotulo=f"DEPURADOR: {os.path.basename(script)}")
+                                   rotulo=f"DEPURADOR: {os.path.basename(script)}",
+                                   controles=depurar.controles("python"))
     except OSError as e:
         return f"ERRO: nao consegui abrir o depurador ({e})."
     depurar.guardar_sessao(registo["id"], script)
