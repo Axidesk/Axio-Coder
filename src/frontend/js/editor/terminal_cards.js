@@ -173,14 +173,14 @@ async function _parar(pid) {
     }
 }
 
-function _assumirIdentidade(card, comando) {
+function _assumirIdentidade(card, comando, rotulo) {
     if (card.comando || !comando) return;
     card.comando = comando;
-    card.nome.textContent = comando;
+    card.nome.textContent = rotulo || comando;
     card.nome.title = comando;
 }
 
-function _fundirCard(card, novoPid, comando, cwd) {
+function _fundirCard(card, novoPid, comando, cwd, rotulo) {
     if (!novoPid) return;
     _deixarDeSugerir(card);
     if (cwd) card.cwd = cwd;
@@ -194,7 +194,7 @@ function _fundirCard(card, novoPid, comando, cwd) {
     }
     cards.delete(card.pid);
     card.pid = novoPid;
-    _assumirIdentidade(card, comando);
+    _assumirIdentidade(card, comando, rotulo);
     card.el.dataset.pid = novoPid;
     cards.set(novoPid, card);
     _pintar(card, null);
@@ -318,7 +318,7 @@ function _fecharCard(card) {
     if (rodando) _parar(pid);
 }
 
-function _criarCard(pid, comando, sugerido, dica, cwd) {
+function _criarCard(pid, comando, sugerido, dica, cwd, rotulo) {
     const z = _zona();
     if (!z || !pid) return null;
     const el = document.createElement('div');
@@ -334,7 +334,7 @@ function _criarCard(pid, comando, sugerido, dica, cwd) {
 
     const nome = document.createElement('span');
     nome.className = 'term-card-comando';
-    nome.textContent = comando || pid;
+    nome.textContent = rotulo || comando || pid;
     nome.title = comando || pid;
 
     const fim = document.createElement('span');
@@ -439,16 +439,17 @@ export function cardIniciar(data) {
     if (existente) {
         existente.exitCode = null;
         existente.cwd = data.cwd || existente.cwd;
+        if (data.rotulo) existente.nome.textContent = data.rotulo;
         _aplicarEstado(existente, 'rodando');
         return existente;
     }
     const pendente = _cardEmLancamento(data.comando);
     if (pendente) {
-        _fundirCard(pendente, data.pid, data.comando, data.cwd);
+        _fundirCard(pendente, data.pid, data.comando, data.cwd, data.rotulo);
         _aplicarEstado(pendente, 'rodando');
         return pendente;
     }
-    return _criarCard(data.pid, data.comando, false, '', data.cwd);
+    return _criarCard(data.pid, data.comando, false, '', data.cwd, data.rotulo);
 }
 
 function _avisarPreview(url, automatico, alternar) {
@@ -568,7 +569,7 @@ export async function hidratarCards() {
         return;
     }
     (dados && dados.processos ? dados.processos : []).forEach((reg) => {
-        const card = cardIniciar({ pid: reg.id, comando: reg.comando, cwd: reg.cwd });
+        const card = cardIniciar({ pid: reg.id, comando: reg.comando, cwd: reg.cwd, rotulo: reg.rotulo });
         if (!card) return;
         (reg.log || []).forEach((linha) => {
             card.pendente += String(linha) + '\n';
