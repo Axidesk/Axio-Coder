@@ -1232,7 +1232,7 @@ const criarDomFalso = (opcoes) => {
         const no = doc.createElement(tag);
         for (const [chave, valor] of Object.entries(props || {})) {
             if (chave === "id") no.id = String(valor);
-            else if (chave === "class" || chave === "classe") no.className = String(valor);
+            else if (chave === "class" || chave === "classe" || chave === "className") no.className = String(valor);
             else if (chave === "texto") no.textContent = String(valor);
             else if (chave === "html") no.innerHTML = String(valor);
             else if (chave === "style") Object.assign(no.style, valor);
