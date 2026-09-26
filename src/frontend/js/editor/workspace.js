@@ -1,8 +1,8 @@
 import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogTheme, enterLogMode, enterLogModeWithLines, enterReadonlyLogMode, exitLogMode, updateLineNumbersButton } from './themes.js';
 import { VISTAS_DE_TRABALHO, fecharPreview, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
-import { agendarReconciliacaoDeAbas, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
+import { agendarReconciliacaoDeAbas, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
 import { ALTURA_LINHA } from './metricas.js';
-import { caminhoDoDepurador, marcarLinhaDoDepurador } from './linha_depurador.js';
+import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
 import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
 import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, temCardSelecionado } from './terminal_cards.js';
@@ -475,7 +475,7 @@ export function openFileAtLine(path, line) {
     if (!path) return;
     const targetLine = parseInt(line, 10) || 1;
     ensureWorkspaceReady();
-    if (state.currentFile === path && state.editor) {
+    if (state.currentFile && mesmoFicheiro(state.currentFile, path) && state.editor) {
         setView('editor');
         exitLogMode();
         state.editor.setPosition({ lineNumber: targetLine, column: 1 });
@@ -500,6 +500,7 @@ function abrirParagemDoDepurador(data) {
     const linha = parseInt(data.linha, 10) || 1;
     marcarLinhaDoDepurador(caminho, linha, !!data.erro);
     openFileAtLine(caminho, linha);
+    focarAba(caminho);
 }
 
 export function toggleExplorerSearch(forceClose) {
@@ -872,6 +873,19 @@ document.addEventListener('click', (e) => {
     }
 });
 
+const AREA_DA_ARVORE = '#explorer-view, #explorer-tree, #trash-list';
+let focoNaArvore = false;
+
+document.addEventListener('mousedown', (e) => {
+    const alvo = e.target;
+    const naArvore = !!(alvo && alvo.closest && alvo.closest(AREA_DA_ARVORE));
+    focoNaArvore = naArvore;
+    if (!naArvore) {
+        document.querySelectorAll('.explorer-selected, .explorer-dir-selected')
+            .forEach(r => r.classList.remove('explorer-selected', 'explorer-dir-selected'));
+    }
+}, true);
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (state.fsContextMenu && state.fsContextMenu.classList.contains('menu-open')) { closeFsContextMenu(); return; }
@@ -885,6 +899,7 @@ document.addEventListener('keydown', (e) => {
     } else if (e.key === 'Delete') {
         const tag = (document.activeElement && document.activeElement.tagName) || '';
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (!focoNaArvore) return;
         if (state.trashSelectedId) {
             openFsConfirm('Excluir definitivamente "' + (state.trashSelectedName || basename(state.trashSelectedId)) + '"? Irá para a Lixeira do Windows.', doDeleteTrashPermanent);
             return;

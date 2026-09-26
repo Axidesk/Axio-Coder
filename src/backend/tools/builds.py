@@ -564,6 +564,15 @@ def _avisar_sem_arranque(registo_id, janela, visto):
                              f"[axio] nao arrancou: {alvo['codigo']} em {alvo['ficheiro']}:"
                              f"{alvo['linha']}  ->  {alvo['mensagem']}")
     emit_event("debug_stop", pid=registo_id, arquivo=alvo["caminho"], linha=alvo["linha"], erro=True)
+    if alvo["codigo"] in _ERROS_QUE_IMPEDEM_O_ARRANQUE:
+        _fechar_sessao_sem_arranque(registo_id)
+
+_ERROS_QUE_IMPEDEM_O_ARRANQUE = ("SyntaxError", "IndentationError", "TabError")
+
+def _fechar_sessao_sem_arranque(registo_id):
+    """O ficheiro nao chegou a compilar: nao ha sessao para conduzir, sai do pdb e esquece-a."""
+    escrever_stdin_processo(registo_id, "q")
+    depurar.esquecer_sessao()
 
 def _conduzir_depuracao(comandos):
     """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""

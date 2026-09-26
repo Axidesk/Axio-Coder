@@ -878,10 +878,10 @@
       "descricao": "Revisor automatico de saude da memoria: detecta glossario com alvo desaparecido e notas de knowledge que citam ficheiros inexistentes; o bloco de aviso so aparece na injecao quando ha algo a curar",
       "localizacao": {
         "arquivo": "src/backend/memory/manutencao.py",
-        "linha": 624,
+        "linha": 737,
         "conferido": [
-          1790428692.278,
-          35568
+          1790444986.025,
+          41254
         ]
       }
     },
@@ -897,10 +897,10 @@
       "descricao": "Mede TUDO o que entra no contexto do agente (glossario, notas de knowledge, vetor, busca semantica) e devolve veredito LIMPA ou N pontos a curar; exposto como tool_gerenciar_memoria(acao='diagnostico')",
       "localizacao": {
         "arquivo": "src/backend/memory/manutencao.py",
-        "linha": 723,
+        "linha": 842,
         "conferido": [
-          1790428692.278,
-          35568
+          1790444986.025,
+          41254
         ]
       }
     },
@@ -939,10 +939,10 @@
       "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. ATENCAO, isto MUDOU a 2026-09-19: o radar de atrito ja NAO ignora a rodada fora do Axio - continua a medir e grava o que apanhou no caderno de melhorias adiadas (APP_ROOT/.axio/melhorias_pendentes.json, via _acumular_pendentes em ai/atrito.py), que volta a ser injetado UMA vez por arranque quando a pasta aberta e outra vez a do Axio (_bloco_pendentes). O projeto do utilizador nao recebe ficheiro nenhum.",
       "localizacao": {
         "arquivo": "src/backend/state.py",
-        "linha": 123,
+        "linha": 124,
         "conferido": [
-          1789500532.029,
-          4312
+          1790444392.549,
+          4343
         ]
       }
     },
@@ -1086,8 +1086,8 @@
         "arquivo": "src/backend/routes/chat.py",
         "linha": 38,
         "conferido": [
-          1790284025.377,
-          7615
+          1790444392.59,
+          7697
         ]
       }
     },
@@ -1144,7 +1144,11 @@
       "descricao": "Bloco injetado a cada rodada. Passa por tres cortes antes de entrar: relevancia (transcricao 0,60; nota curada 0,45 - uma pergunta sem relacao devolvia 8 hits entre 0,467 e 0,524, e o limiar antigo de 0,45 deixava passar tudo), conversa viva (transcricao gravada depois do inicio da sessao e eco da conversa de agora) e repeticao (texto ja injetado nesta sessao nao volta; o registo vive em estado['memorias_injetadas'] e morre ao abrir pasta ou limpar a conversa). Limite de 1 transcricao por rodada. A sobra sai declarada na linha '[filtro] fora: ...'.",
       "localizacao": {
         "arquivo": "src/backend/ai/coleta.py",
-        "linha": 240
+        "linha": 240,
+        "conferido": [
+          1790444456.531,
+          15144
+        ]
       }
     },
     {
