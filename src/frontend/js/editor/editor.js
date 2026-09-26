@@ -386,6 +386,7 @@ export function startTabRename(path, tab, nameSpan) {
 export function openFileInEditor(path, opts) {
 
     opts = opts || {};
+    if (state.typingCreatedFile && state.typingCreatedFile !== path) state.typingCreatedFile = null;
     limparAbaApagada(path);
     if (state.currentFile === path && !opts.recarregar) {
         if (!opts.manterVista) setView('editor');
@@ -409,6 +410,7 @@ export function openFileInEditor(path, opts) {
 export function closeTab(path) {
     const allBefore = allTabPaths();
     const idx = allBefore.indexOf(path);
+    if (state.typingCreatedFile === path) state.typingCreatedFile = null;
     if (state.openTabs.includes(path)) state.openTabs.splice(state.openTabs.indexOf(path), 1);
     if (state.previewTabPath === path) state.previewTabPath = null;
     if (state.abaAtiva === path) state.abaAtiva = null;
@@ -774,6 +776,7 @@ export async function trashPath(path) {
             appendLine('[explorer] ' + data.error, 'term-err');
             return;
         }
+        if (state.typingCreatedFile === (data.caminho || path)) state.typingCreatedFile = null;
         marcarAbaApagada(data.caminho || path);
         window.dispatchEvent(new CustomEvent('axio-fs-deleted', { detail: { path: data.caminho || path } }));
         if (state.selectedPath === path) deselectEntry();
