@@ -13,7 +13,11 @@ from src.backend.memory.glossary import (
     localizar_alvos,
 )
 from src.backend.memory.store import coletar_notas_knowledge
-from src.backend.services.session import carregar_marcas_de_restauro
+from src.backend.services.session import (
+    carregar_marcas_de_restauro,
+    carregar_verificacoes_de_restauro,
+    gravar_verificacoes_de_restauro,
+)
 from src.backend.state import estado, registar_aviso_de_mudanca
 
 INTERVALO_MANUTENCAO = 300.0
@@ -48,6 +52,7 @@ _BASENAMES_CACHE_SEGUNDOS = 600.0
 
 _basenames_cache = {"raiz": "", "t": 0.0, "valor": set()}
 _codigo_cache = {"raiz": "", "t": 0.0, "valor": set()}
+_caminhos_cache = {"raiz": "", "t": 0.0, "valor": {}}
 _indice_lock = threading.Lock()
 _indice_em_andamento = threading.Event()
 
@@ -450,7 +455,7 @@ def invalidar_indice():
     o site-packages) e uma nota que o cite aparece como 'REF MORTA' - um aviso
     falso injetado na rodada seguinte.
     """
-    for cache in (_basenames_cache, _codigo_cache):
+    for cache in (_basenames_cache, _codigo_cache, _caminhos_cache):
         cache["t"] = 0.0
 
 
@@ -537,6 +542,9 @@ _RE_ARQUIVO_COM_SIMBOLO_ANTES = re.compile(
     r"([A-Za-z_$][\w$]*)\s*\(\s*([\w./\\-]+\.(?:py|js|ts|css|html))\s*:"
 )
 _LIMITE_VERIFICACOES_SIMBOLO = 120
+_RE_TOKEN_BRUTO = re.compile(r"[A-Za-z_$][\w$-]*")
+_MAX_CAMINHOS_CITADOS = 14
+_LIMITE_BYTES_CONFERENCIA = 512 * 1024
 
 
 def _parece_simbolo(nome):
@@ -582,42 +590,147 @@ def _simbolos_ausentes(conteudo, orcamento):
     return sorted(set(ausentes))
 
 
-def _notas_anteriores_a_restauro(notas):
+def _chave_da_nota(nota):
+    """Identidade do corpo da nota: muda quando a nota e reescrita."""
+    texto = f"{nota.get('nome', '')}\n{nota.get('conteudo', '')}"
+    return hashlib.sha1(texto.encode("utf-8", "replace")).hexdigest()[:16]
+
+
+def _caminhos_por_nome():
+    """{nome em minusculas: [caminhos]} do projeto, para resolver o que a nota cita.
+
+    A conferencia precisa do FICHEIRO e a nota escreve `workspace.js`, que vive
+    em src/frontend/js/editor/workspace.js. Resolver pelo NOME e a diferenca
+    entre conferir 265 notas e nao conferir nenhuma: medido a 2026-09-26, o
+    caminho literal resolvia 17 de 131.
+    """
+    raiz = estado.get("pasta_raiz") or ""
+    if (_caminhos_cache["raiz"] == raiz and _caminhos_cache["valor"]
+            and time.time() - _caminhos_cache["t"] < _BASENAMES_CACHE_SEGUNDOS):
+        return _caminhos_cache["valor"]
+    valor = {}
+    if raiz and os.path.isdir(raiz):
+        for pasta, dirs, arquivos in os.walk(raiz):
+            dirs[:] = [d for d in dirs if d not in _PASTAS_FORA_DO_INDICE and not d.startswith(".")]
+            for arquivo in arquivos:
+                valor.setdefault(arquivo.lower(), []).append(os.path.join(pasta, arquivo))
+    _caminhos_cache.update({"raiz": raiz, "t": time.time(), "valor": valor})
+    return valor
+
+
+def _tokens_do_ficheiro(caminho):
+    try:
+        if os.path.getsize(caminho) > _LIMITE_BYTES_CONFERENCIA:
+            return set()
+        with open(caminho, "r", encoding="utf-8", errors="ignore") as f:
+            return _tokens_de_codigo(f.read())
+    except OSError:
+        return set()
+
+
+def _tokens_de_codigo(texto):
+    """Identificadores, classes CSS e flags - as formas de nome que apontam codigo.
+
+    O `-` entra no token bruto (`--dur-7`, `chat-content-up`,
+    `enable-gpu-rasterization`) e a escolha entre identificador e nome composto
+    por hifen e feita em Python, nunca com um segundo regex: medido a
+    2026-09-26, um regex so de hifens em CSS minificado gastava 7,7s por causa
+    do backtracking, e a conferencia inteira passou de 1,2s para 8,4s.
+    """
+    return {t for t in _RE_TOKEN_BRUTO.findall(texto)
+            if _parece_simbolo(t) or t.count("-") >= 2}
+
+
+def _conferir_nota_no_disco(nota, memoria):
+    """Prova positiva de que a nota ainda descreve o codigo que esta no disco.
+
+    A pergunta e estreita de proposito: algum identificador que a nota nomeia
+    continua vivo num dos ficheiros que ela cita? Um so basta - a nota cita
+    sempre coisas de fora (comandos, libs, outros modulos) e exigir todos
+    acusaria quase todas. Ao contrario dos detetores que ACUSAM, este exige
+    prova para RETIRAR o aviso: sem prova, o aviso fica de pe.
+    """
+    corpo = nota.get("conteudo") or ""
+    indice = _caminhos_por_nome()
+    citados = {os.path.basename(m.replace("\\", "/")).lower() for m in _RE_FICHEIRO.findall(corpo)}
+    caminhos = []
+    for nome in sorted(citados):
+        caminhos.extend(indice.get(nome, ())[:2])
+        if len(caminhos) >= _MAX_CAMINHOS_CITADOS:
+            break
+    if not caminhos:
+        return False
+    tokens = _tokens_de_codigo(corpo)
+    if not tokens:
+        return False
+    for caminho in caminhos[:_MAX_CAMINHOS_CITADOS]:
+        if caminho not in memoria:
+            memoria[caminho] = _tokens_do_ficheiro(caminho)
+        if tokens & memoria[caminho]:
+            return True
+    return False
+
+
+def _notas_anteriores_a_restauro(notas, acusadas=None):
     """Notas escritas ANTES de um restauro que tocou nos ficheiros que elas citam.
 
     Depois de o projeto ser reposto para tras o ficheiro continua a existir e o
     simbolo pode ate existir: a nota e que descreve uma versao que ja nao esta la
     e nada no texto dela o denuncia. O criterio e temporal - conta so a nota
     escrita antes do restauro, porque a reescrita depois ja descreve o codigo de
-    agora. A cura e reescrever a nota, e o aviso desaparece sozinho quando isso
-    acontece.
+    agora.
+
+    O aviso NAO e um pedido de conferencia a mao: cada nota suspeita e conferida
+    aqui contra o disco e a conferencia fica gravada, para nao se repetir na
+    rodada seguinte. Quem sobra no aviso e so o que o codigo nao conseguiu
+    conferir - sem prova, o aviso fica de pe, em vez de se dar por conferido o
+    que ninguem leu.
     """
     marcas = carregar_marcas_de_restauro()
     if not marcas:
         return []
-    afetadas_por_marca = []
+    acusadas = acusadas or set()
+    conferidas = carregar_verificacoes_de_restauro()
+    itens = []
+    for nota in notas:
+        corpo = nota.get("conteudo") or ""
+        citados = {os.path.basename(m.replace("\\", "/")).lower() for m in _RE_FICHEIRO.findall(corpo)}
+        itens.append({"nota": nota, "chave": _chave_da_nota(nota), "citados": citados})
+    vivas = {i["chave"] for i in itens}
+    guardadas = {c: v for c, v in conferidas.items() if c in vivas}
+    memoria = {}
+    novas = 0
+    por_marca = []
     for marca in marcas:
-        repostos = {str(n).lower() for n in marca.get("nomes", [])}
-        if not repostos:
+        ts = float(marca.get("ts") or 0)
+        repostos = {str(n).lower() for n in (marca.get("nomes") or []) if str(n).strip()}
+        if not ts or not repostos:
             continue
         afetadas = []
-        for nota in notas:
-            if (nota.get("mtime") or 0) >= marca.get("ts", 0):
+        for item in itens:
+            nota = item["nota"]
+            if (nota.get("mtime") or 0) >= ts or not (item["citados"] & repostos):
                 continue
-            corpo = nota.get("conteudo", "") or ""
-            citados = {os.path.basename(m.replace("\\", "/")).lower() for m in _RE_FICHEIRO.findall(corpo)}
-            if citados & repostos:
-                afetadas.append(nota.get("nome", ""))
+            if nota.get("nome", "") in acusadas or ts <= (guardadas.get(item["chave"]) or 0):
+                continue
+            if _conferir_nota_no_disco(nota, memoria):
+                guardadas[item["chave"]] = ts
+                novas += 1
+                continue
+            afetadas.append(nota.get("nome", ""))
         if afetadas:
-            afetadas_por_marca.append((marca, afetadas))
+            por_marca.append((ts, afetadas))
+    if guardadas != conferidas:
+        gravar_verificacoes_de_restauro(guardadas)
+    if novas:
+        print(f"[memoria] {novas} nota(s) suspeita(s) de restauro conferida(s) contra o disco")
     avisos = []
-    for marca, afetadas in afetadas_por_marca[-2:]:
-        quando = time.strftime("%d/%m/%Y %H:%M", time.localtime(marca["ts"]))
+    for ts, afetadas in por_marca[-2:]:
+        quando = time.strftime("%d/%m/%Y %H:%M", time.localtime(ts))
         amostra = ", ".join(f'"{a}"' for a in afetadas[:4])
         resto = f" (+{len(afetadas) - 4})" if len(afetadas) > 4 else ""
         avisos.append(f"{len(afetadas)} nota(s) anterior(es) ao restauro de {quando} citam ficheiro(s) repostos "
-                      f"por ele e podem descrever codigo que ja nao esta la: {amostra}{resto} - confirme no disco "
-                      f"e reescreva as que estiverem erradas")
+                      f"por ele e o codigo nao conseguiu conferir: {amostra}{resto} - leia estas antes de as citar")
     return avisos
 
 
@@ -650,20 +763,26 @@ def pendencias_de_memoria(intervalo=INTERVALO_PENDENCIAS):
 
     try:
         notas = coletar_notas_knowledge()
-        linhas.extend(_notas_anteriores_a_restauro(notas))
         orcamento = [_LIMITE_VERIFICACOES_SIMBOLO]
+        acusadas = set()
+        outras = []
         for nota in notas:
+            nome = nota.get("nome", "")
             corpo = nota.get("conteudo", "")
             mortas = _referencias_mortas(corpo)
             if mortas:
+                acusadas.add(nome)
                 amostra = ", ".join(mortas[:5])
                 resto = f" (+{len(mortas) - 5})" if len(mortas) > 5 else ""
-                linhas.append(f'nota "{nota.get("nome", "")}" cita ficheiro(s) inexistente(s): {amostra}{resto}')
+                outras.append(f'nota "{nome}" cita ficheiro(s) inexistente(s): {amostra}{resto}')
             ausentes = _simbolos_ausentes(corpo, orcamento)
             if ausentes:
+                acusadas.add(nome)
                 amostra = ", ".join(ausentes[:5])
                 resto = f" (+{len(ausentes) - 5})" if len(ausentes) > 5 else ""
-                linhas.append(f'nota "{nota.get("nome", "")}" cita simbolo(s) que ja nao existe(m): {amostra}{resto}')
+                outras.append(f'nota "{nome}" cita simbolo(s) que ja nao existe(m): {amostra}{resto}')
+        linhas.extend(_notas_anteriores_a_restauro(notas, acusadas))
+        linhas.extend(outras)
     except Exception:
         pass
 
@@ -772,6 +891,15 @@ def raio_x_da_injecao(query=None, incluir_vetor=False):
         "duplicadas": _notas_duplicadas(notas),
     }
 
+    try:
+        relatorio["restauros"] = {
+            "marcas": len(carregar_marcas_de_restauro()),
+            "conferidas": len(carregar_verificacoes_de_restauro()),
+            "por_conferir": _notas_anteriores_a_restauro(notas, set()),
+        }
+    except Exception:
+        pass
+
     if incluir_vetor:
         try:
             # import-local: puxar o modulo do vetor (chromadb) no topo pesaria o import de instructions
@@ -813,6 +941,7 @@ def raio_x_da_injecao(query=None, incluir_vetor=False):
         + len(relatorio["notas"]["com_ref_morta"])
         + len(relatorio["notas"]["simbolos_ausentes"])
         + len(relatorio["notas"]["duplicadas"])
+        + len((relatorio.get("restauros") or {}).get("por_conferir") or [])
     )
     relatorio["problemas"] = total_problemas
     relatorio["veredito"] = ("LIMPA" if total_problemas == 0
@@ -838,6 +967,12 @@ def formatar_raio_x(relatorio):
         linhas.append(f"  SIMBOLO AUSENTE em '{nome}': {', '.join(ausentes[:6])}")
     for d in n.get("duplicadas") or []:
         linhas.append(f"  REDUNDANTE: {d}")
+    r = relatorio.get("restauros") or {}
+    if r:
+        linhas.append(f"RESTAUROS DE CODIGO: {r.get('marcas', 0)} marca(s), "
+                      f"{r.get('conferidas', 0)} nota(s) conferida(s) contra o disco sozinhas")
+        for a in r.get("por_conferir") or []:
+            linhas.append(f"  POR CONFERIR: {a}")
     if "vetor" in relatorio:
         v = relatorio["vetor"]
         linhas.append(f"VETOR: {v.get('status') or v.get('erro')}")

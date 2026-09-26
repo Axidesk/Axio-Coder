@@ -197,6 +197,48 @@ def registar_restauro_de_codigo(ficheiros):
         return []
     return nomes
 
+VERIFICACOES_RESTAURO_MAX = 2000
+
+def _caminho_verificacao_de_restauro():
+    pasta_logs = pasta_session_logs()
+    if not pasta_logs:
+        return ""
+    return os.path.join(pasta_logs, "verificacoes_restauro.json")
+
+def carregar_verificacoes_de_restauro():
+    """Conferencias ja feitas contra o disco: {chave do corpo da nota: ts da marca}.
+
+    A marca de uma conferencia vale para TODOS os restauros anteriores a ela -
+    conferir contra o disco de agora responde tambem pelas suspeitas antigas.
+    Um restauro posterior tem ts maior e obriga a conferir outra vez, que e o
+    que se quer: o disco mudou.
+    """
+    caminho = _caminho_verificacao_de_restauro()
+    if not caminho:
+        return {}
+    try:
+        with open(caminho, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(dados, dict):
+        return {}
+    return {str(k): float(v) for k, v in dados.items() if isinstance(v, (int, float))}
+
+def gravar_verificacoes_de_restauro(verificacoes):
+    """Grava as conferencias; o chamador ja entregou so as notas que existem."""
+    caminho = _caminho_verificacao_de_restauro()
+    if not caminho:
+        return False
+    itens = dict(list(verificacoes.items())[-VERIFICACOES_RESTAURO_MAX:])
+    try:
+        os.makedirs(os.path.dirname(caminho), exist_ok=True)
+        gravar_json_atomico(caminho, itens)
+    except OSError as e:
+        print(f"[memoria] falha ao gravar as verificacoes de restauro: {e}")
+        return False
+    return True
+
 def ts_de_arquivo_log(nome):
     try:
         return int(nome.replace("sessionlog_", "").replace(".json", ""))
