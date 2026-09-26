@@ -295,13 +295,6 @@ _DOM_FALSO_JS = r'''
 //   dom.agora()          // corre os requestAnimationFrame pendentes
 //   await dom.aguardar() // deixa correr microtasks/timers e os rAF
 //   await importarProjeto("src/frontend/js/editor/terminal_cards.js")
-// ARRASTO (mousedown -> mousemove -> mouseup): usa o requestAnimationFrame DESTE dom
-// e dom.agora(), nunca um stub proprio a chamar o callback de imediato. MEDIDO: com o
-// callback imediato, `rafId = requestAnimationFrame(flush)` deixa o id atribuido DEPOIS
-// de o flush ja ter corrido, logo rafId fica preso num numero e o movimento seguinte
-// nunca e aplicado (o sintoma e o valor parar de mudar a meio do arrasto). E um stub
-// caseiro de listeners guarda a FUNCAO por tipo (`ouvintes[t] = f`), nao um array: quem
-// testa chama `el.ouvintes.mousedown(ev)` directamente - com array da "is not a function".
 // Armadilhas ja resolvidas de raiz: appendChild/insertBefore SOLTAM o no do pai
 // anterior; className e classList sao a mesma fonte (escrever num le-se no outro);
 // classList.toggle respeita o 2o argumento (forca); getBoundingClientRect e
