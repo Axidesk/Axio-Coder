@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 86,
         "conferido": [
-          1790379030.084,
-          16965
+          1790381056.837,
+          17245
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 94,
         "conferido": [
-          1790379030.084,
-          16965
+          1790381056.837,
+          17245
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 139,
         "conferido": [
-          1790379030.084,
-          16965
+          1790381056.837,
+          17245
         ]
       }
     },
@@ -5169,10 +5169,10 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 276,
+        "linha": 291,
         "conferido": [
-          1790379030.003,
-          36268
+          1790381085.111,
+          37019
         ]
       }
     },
@@ -5186,7 +5186,7 @@
         "modo colunas da arvore"
       ],
       "identificador": "#explorer-tree.files-colunas",
-      "descricao": "Modo da arvore na doc HORIZONTAL quando a lista tem grupos (CMake/sln): cada ramo aberto e uma coluna a direita, cada coluna com a altura do painel e rolagem propria. Escolhido por applyFilesLayout (src/frontend/js/editor/workspace.js) e a altura vem de --explorer-altura escrita por sincronizarAlturaDoExplorer.",
+      "descricao": "Modo da arvore na doc HORIZONTAL quando a lista tem grupos (CMake/sln): cada NIVEL da navegacao e uma COLUNA a direita, no desenho do Finder - a pasta clicada fica realcada e a coluna seguinte mostra os filhos dela; clicar outra vez na mesma pasta fecha as colunas a direita. Cada coluna rola sozinha (overflow-y auto) e a ULTIMA estica para nao deixar vazio; o painel NAO ganha barra vertical. Ligado por applyFilesLayout (src/frontend/js/editor/workspace.js:applyFilesLayout) e montado por renderColunasExplorer/abrirColunaDePasta (src/frontend/js/editor/explorer.js).",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
         "linha": 312

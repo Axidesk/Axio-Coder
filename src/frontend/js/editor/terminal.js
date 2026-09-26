@@ -248,7 +248,7 @@ export function updateExplorerPath(data) {
     });
     state.explorerPath.title = segs.map((s, i) => (i === 0 && data.dentro_da_raiz ? '\\' : '') + s.label).join('\\');
 }
-export function changeTerminalCwd(pathArg) {
+export function changeTerminalCwd(pathArg, recarregar = true) {
     return fetch(state.API + '/api/terminal/cwd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -265,7 +265,7 @@ export function changeTerminalCwd(pathArg) {
         state.currentCwd = data.cwd || '';
         state.currentCwdRel = data.dentro_da_raiz ? (data.relativo === '.' ? '' : (data.relativo || '')) : (data.cwd || '');
         state.explorerNavigatedAt = Date.now();
-        return loadExplorer();
+        return recarregar ? loadExplorer() : data;
     }).catch(e => {
         appendLine('[explorer] erro: ' + e.message, 'term-err');
         return null;
@@ -274,9 +274,9 @@ export function changeTerminalCwd(pathArg) {
 export function isAbsolutePath(p) {
     return /^[a-zA-Z]:[\\/]/.test(String(p || '')) || String(p || '').startsWith('/');
 }
-export function enterDir(relPath) {
+export function enterDir(relPath, recarregar = true) {
     const abs = isAbsolutePath(relPath) ? relPath : (relPath ? joinPath(state.rootPath, relPath) : state.rootPath);
-    return changeTerminalCwd(abs);
+    return changeTerminalCwd(abs, recarregar);
 }
 export function loadShellInfo() {
     fetch(state.API + '/api/terminal/shells')

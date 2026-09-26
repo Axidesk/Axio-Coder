@@ -358,6 +358,16 @@ class __DomNo {
         const indice = pai.childNodes.indexOf(this);
         return indice >= 0 && indice < pai.childNodes.length - 1 ? pai.childNodes[indice + 1] : null;
     }
+    get previousElementSibling() {
+        const irmaos = this.parentElement ? this.parentElement.children : [];
+        const indice = irmaos.indexOf(this);
+        return indice > 0 ? irmaos[indice - 1] : null;
+    }
+    get nextElementSibling() {
+        const irmaos = this.parentElement ? this.parentElement.children : [];
+        const indice = irmaos.indexOf(this);
+        return indice >= 0 && indice < irmaos.length - 1 ? irmaos[indice + 1] : null;
+    }
     get textContent() {
         if (this.nodeType === 3) return this.data;
         return this.childNodes.map((no) => no.textContent).join("");

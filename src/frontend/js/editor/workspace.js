@@ -257,7 +257,6 @@ export function applyDockLayout() {
         state.btnDockRight.classList.toggle('text-[var(--text-suave)]', !isRight);
     }
     setTimeout(() => {
-        sincronizarAlturaDoExplorer();
         layoutAllEditors();
     }, DOCK_ANIM_MS);
 }
@@ -266,17 +265,10 @@ export function applyFilesLayout() {
     if (!state.explorerTree) return;
     const horizontal = state.dockSide !== 'right';
     const colunas = horizontal && state.arvoreComGrupos === true;
+    const mudou = state.explorerTree.classList.contains('files-colunas') !== colunas;
     state.explorerTree.classList.toggle('files-colunas', colunas);
     state.explorerTree.classList.toggle('files-vertical', horizontal && !colunas);
-    if (colunas) sincronizarAlturaDoExplorer();
-}
-
-export function sincronizarAlturaDoExplorer() {
-    const arvore = state.explorerTree;
-    if (!arvore || !arvore.classList.contains('files-colunas')) return;
-    const estilo = getComputedStyle(arvore);
-    const util = arvore.clientHeight - (parseFloat(estilo.paddingTop) || 0) - (parseFloat(estilo.paddingBottom) || 0);
-    if (util > 0) arvore.style.setProperty('--explorer-altura', util + 'px');
+    if (mudou) window.dispatchEvent(new CustomEvent('axio-explorer-layout', { detail: { colunas } }));
 }
 
 export function animateDock(dir) {
@@ -927,7 +919,6 @@ export function scheduleEditorLayout() {
     if (state.resizeLayoutRaf !== null) return;
     state.resizeLayoutRaf = requestAnimationFrame(() => {
         state.resizeLayoutRaf = null;
-        sincronizarAlturaDoExplorer();
         layoutAllEditors();
     });
 }

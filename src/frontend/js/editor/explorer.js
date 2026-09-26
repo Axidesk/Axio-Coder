@@ -1,6 +1,6 @@
 import { findExplorerRow, loadTrash, openFileInEditor, pinPreview, updateExplorerToolbar } from './editor.js';
 import { appendLine, basename, enterDir, updateExplorerPath } from './terminal.js';
-import { aplicarDockDeProjeto, applyFilesLayout, applyTabsVisibility, layoutAllEditors, sincronizarAlturaDoExplorer } from './workspace.js';
+import { aplicarDockDeProjeto, applyFilesLayout, applyTabsVisibility, layoutAllEditors } from './workspace.js';
 import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
 import { abreNoViewer } from './familia_ficheiro.js';
@@ -192,6 +192,28 @@ export async function loadExplorer(path) {
         state.wsStatus.textContent = 'explorador: erro';
     }
 }
+function preencherLista(ul, entries) {
+    const anteriores = new Map();
+    Array.from(ul.children).forEach(li => {
+        const row = li.querySelector('.explorer-row');
+        if (row) anteriores.set(row.dataset.path, li);
+    });
+    const novos = [];
+    entries.forEach(entry => {
+        const existente = anteriores.get(entry.path);
+        if (existente) {
+            anteriores.delete(entry.path);
+            existente.classList.add('explorer-item-estatico');
+            ul.appendChild(existente);
+        } else {
+            const li = renderEntry(entry);
+            ul.appendChild(li);
+            novos.push(li);
+        }
+    });
+    anteriores.forEach(li => li.remove());
+    return novos;
+}
 export function renderExplorer(data) {
     aplicarDockDeProjeto(data.agrupada, data.root || '');
     state.rootPath = data.root || '';
@@ -210,41 +232,22 @@ export function renderExplorer(data) {
     const trocouPasta = state.explorerRenderPath !== caminho;
     state.explorerRenderPath = caminho;
 
-    let ul = state.explorerTree.querySelector(':scope > ul');
-    if (trocouPasta || !ul) {
-        state.explorerTree.innerHTML = '';
-        ul = document.createElement('ul');
-        state.explorerTree.appendChild(ul);
-    }
-
-    const anteriores = new Map();
-    Array.from(ul.children).forEach(li => {
-        const row = li.querySelector('.explorer-row');
-        if (row) anteriores.set(row.dataset.path, li);
-    });
-
-    const novos = [];
-    data.entries.forEach(entry => {
-        const existente = anteriores.get(entry.path);
-        if (existente) {
-            anteriores.delete(entry.path);
-            existente.classList.add('explorer-item-estatico');
-            ul.appendChild(existente);
-        } else {
-            const li = renderEntry(entry);
-            ul.appendChild(li);
-            novos.push(li);
+    if (modoColunas()) {
+        renderColunasExplorer(data, trocouPasta);
+    } else {
+        let ul = state.explorerTree.querySelector(':scope > ul');
+        if (trocouPasta || !ul) {
+            state.explorerTree.innerHTML = '';
+            ul = document.createElement('ul');
+            state.explorerTree.appendChild(ul);
         }
-    });
-    anteriores.forEach(li => li.remove());
-
-    if (trocouPasta) staggerExplorerItems(ul);
-    else staggerExplorerItems(novos);
+        const novos = preencherLista(ul, data.entries);
+        if (novos.length) staggerExplorerItems(trocouPasta ? ul : novos);
+    }
 
     highlightSelection();
     applyErrorMarkers();
     atualizarSugestoes(caminho);
-    sincronizarAlturaDoExplorer();
 }
 export function renderEmptyExplorer() {
     state.explorerTree.innerHTML = '';
@@ -272,7 +275,8 @@ export function renderEntry(entry) {
         li.appendChild(childContainer);
         row.addEventListener('click', () => {
             selectEntry(entry.path, 'dir');
-            enterDir(entry.path);
+            if (modoColunas()) abrirColunaDePasta(entry.path, row);
+            else enterDir(entry.path);
         });
     } else {
         row.innerHTML = state.ICON_FILE + '<span>' + entry.nome + '</span>';
@@ -348,11 +352,74 @@ export async function loadDirChildren(path, container) {
         container.dataset.loaded = '1';
         highlightSelection();
         applyErrorMarkers();
-        return true;
+        return data;
     } catch (e) {
         container.innerHTML = '<div class="explorer-loading term-err">' + e.message + '</div>';
         return false;
     }
+}
+function modoColunas() {
+    return !!state.explorerTree && state.explorerTree.classList.contains('files-colunas');
+}
+function garantirCascaColunas() {
+    let casca = state.explorerTree.querySelector(':scope > .explorer-colunas');
+    if (!casca) {
+        state.explorerTree.innerHTML = '';
+        casca = document.createElement('div');
+        casca.className = 'explorer-colunas';
+        state.explorerTree.appendChild(casca);
+    }
+    return casca;
+}
+function criarColuna(path) {
+    const coluna = document.createElement('div');
+    coluna.className = 'explorer-coluna';
+    coluna.dataset.path = path || '';
+    return coluna;
+}
+function limparColunasDepois(casca, coluna) {
+    let el = coluna ? coluna.nextElementSibling : casca.firstElementChild;
+    while (el) {
+        const proximo = el.nextElementSibling;
+        el.remove();
+        el = proximo;
+    }
+}
+function renderColunasExplorer(data, trocouPasta) {
+    const casca = garantirCascaColunas();
+    if (trocouPasta) limparColunasDepois(casca, null);
+    let coluna = casca.firstElementChild;
+    if (!coluna) {
+        coluna = criarColuna(data.path);
+        casca.appendChild(coluna);
+    }
+    coluna.dataset.path = data.path || '';
+    let ul = coluna.querySelector(':scope > ul');
+    if (!ul) {
+        ul = document.createElement('ul');
+        coluna.appendChild(ul);
+    }
+    const novos = preencherLista(ul, data.entries);
+    if (novos.length) staggerExplorerItems(trocouPasta ? ul : novos);
+}
+async function abrirColunaDePasta(path, row) {
+    const coluna = row.closest('.explorer-coluna');
+    if (!coluna) return;
+    const casca = coluna.parentElement;
+    if (!casca || !casca.classList.contains('explorer-colunas')) return;
+    const jaAberta = !!coluna.nextElementSibling && coluna.nextElementSibling.dataset.path === path;
+    limparColunasDepois(casca, coluna);
+    if (jaAberta) return;
+    const nova = criarColuna(path);
+    casca.appendChild(nova);
+    const dados = await loadDirChildren(path, nova);
+    if (!dados) {
+        nova.remove();
+        return;
+    }
+    state.currentCwdRel = dados.path || '';
+    updateExplorerPath(dados);
+    enterDir(path, false);
 }
 export function openFile(path, row) {
     if (!row) row = findExplorerRow(path);
@@ -457,3 +524,4 @@ export function applyErrorMarkers() {
 
 loadExplorerOnce();
 ligarPrefetchDePastas();
+window.addEventListener('axio-explorer-layout', () => { loadExplorer(); });
