@@ -84,7 +84,7 @@ export function ensureEditor() {
         if (state.currentFile === state.typingCreatedFile && state.editor.getValue().trim() === '') {
             const p = state.typingCreatedFile;
             state.typingCreatedFile = null;
-            trashPath(p);
+            if (p.split('/').pop() === 'Novo Ficheiro') trashPath(p);
         }
     });
     installEditorHoverHighlight();

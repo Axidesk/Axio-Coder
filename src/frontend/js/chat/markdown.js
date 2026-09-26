@@ -2,9 +2,6 @@
 import { escapeHtml } from './escape.js';
 
 export function formatMessage(text, escape = false) {
-        if (escape) {
-            text = escapeHtml(text);
-        }
         const parts = text.split(/(```[\s\S]*?```)/g);
         for (let i = 0; i < parts.length; i++) {
             if (parts[i].startsWith('```') && parts[i].endsWith('```')) {
@@ -22,7 +19,7 @@ export function formatMessage(text, escape = false) {
                 const headerHtml = `<div class="flex justify-between items-center px-4 py-2 bg-[var(--bg-hover)] text-xs text-[var(--text-claro)] font-sans border-b border-[var(--border)]"><span class="capitalize">${displayLang}</span><button class="copy-code-btn text-[var(--text-suave)] hover:text-[var(--text-branco)] transition-colors focus:outline-none" title="Copiar código"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg></button></div>`;
                 parts[i] = `<div class="code-block-container bg-[var(--bg-panel)] rounded-xl overflow-hidden mt-0 mb-1">${headerHtml}<div class="p-4 overflow-x-auto custom-scrollbar"><pre><code class="language-${lang}">${code}</code></pre></div></div>`;
                 } else {
-                    parts[i] = formatInlineText(parts[i]);
+                    parts[i] = formatInlineText(escape ? escapeHtml(parts[i]) : parts[i]);
                 }
         }
         return parts.join('');

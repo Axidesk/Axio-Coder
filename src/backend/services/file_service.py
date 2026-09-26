@@ -498,7 +498,18 @@ def _dirs_vazios_lixeira(ts_path):
             vazios.add(root)
     return sorted(d for d in vazios if os.path.dirname(d) not in vazios)
 
+_CACHE_LIXEIRA = {"instante": 0.0, "itens": None}
+
 def listar_lixeira():
+    agora = time.time()
+    if _CACHE_LIXEIRA["itens"] is not None and agora - _CACHE_LIXEIRA["instante"] < 0.5:
+        return list(_CACHE_LIXEIRA["itens"])
+    itens = _listar_lixeira_bruto()
+    _CACHE_LIXEIRA["instante"] = agora
+    _CACHE_LIXEIRA["itens"] = itens
+    return list(itens)
+
+def _listar_lixeira_bruto():
     lixeira_raiz = raiz_lixeira()
     if not lixeira_raiz or not os.path.isdir(lixeira_raiz):
         return []
