@@ -218,6 +218,22 @@ const dependenciasDeDisco = (rel, ...nomes) => {
 // commits, tags ou o repo real passa a ser uma linha:
 //   const linhas = gitDoDisco(["log", "--pretty=format:%H|%cI", "-n", "500"]).split("\\n");
 const gitDoDisco = (args) => execFileSync("git", args, { encoding: "utf8", cwd: process.cwd() });
+
+// A MESMA extracao das funcoes, mas de uma REVISAO do repositorio em vez do disco:
+// e o que permite comparar o ANTES e o DEPOIS de uma mudanca com o codigo real das
+// duas versoes, em vez de reescrever a regra antiga de memoria (e sem o modelo ter
+// de inventar um balanceador de chaves para a arrancar do texto do git show).
+//   const velha = funcoesDoGit("HEAD", "src/frontend/js/x.js", "nomear");
+//   const nova  = funcoesDoDisco("src/frontend/js/x.js", "nomear");
+const funcaoDoGit = (rev, rel, nome) => {
+    const ficheiro = rel.split(path.sep).join("/");
+    const texto = gitDoDisco(["show", rev + ":" + ficheiro]);
+    const corpo = __corpoDeFuncao(texto, nome);
+    if (!corpo) throw new Error("funcao nao encontrada em " + rev + ": " + nome + " (" + ficheiro + ")");
+    return corpo;
+};
+
+const funcoesDoGit = (rev, rel, ...nomes) => nomes.map((n) => funcaoDoGit(rev, rel, n)).join(String.fromCharCode(10));
 '''
 
 _DOM_FALSO_JS = r'''
@@ -1578,7 +1594,10 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "node:path, node:assert e node:child_process, e top-level await; os caminhos relativos sao a raiz "
     "do projeto aberto. Para ler o repositorio git do projeto use gitDoDisco(['log', ...]) - corre o git "
     "SEM shell, por isso o '%' de um --pretty=format:%cI chega intacto (num execSync do Windows o cmd.exe "
-    "come-o e o erro nao aponta para o formato). "
+    "come-o e o erro nao aponta para o formato). Para comparar o MESMO codigo antes e depois de uma "
+    "mudanca use funcoesDoGit('HEAD', 'src/x.js', 'nomear') - extrai a funcao da revisao do git com o "
+    "mesmo balanceamento do funcaoDoDisco, e assim o modelo testa a regra antiga lida do git em vez de "
+    "a reescrever de memoria. "
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
     "appendChild soltam o no do pai, className e classList sao a mesma fonte, toggle respeita a "
