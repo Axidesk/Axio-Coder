@@ -74,7 +74,7 @@ function _candidatos(linha) {
     _varredura(linha, RE_ARROBA).forEach((a) => {
         const bruto = a.m[1];
         const inicio = a.m.index + 1 + (bruto.length - bruto.trimStart().length);
-        juntar(inicio, a.fim, bruto.trim(), parseInt(a.m[2], 10), 0);
+        juntar(inicio, inicio + bruto.length, bruto.trim(), parseInt(a.m[2], 10), 0);
     });
     _varredura(linha, RE_TRACO).forEach((a) => {
         juntar(a.inicio, a.fim, a.m[1], parseInt(a.m[3], 10), 0);

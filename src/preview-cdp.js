@@ -1203,6 +1203,10 @@ function mensagemTapado(alvo, topo) {
   return 'O alvo ' + alvo + ' esta tapado por ' + quem + ' no ponto onde o gesto cairia, logo o clique iria para esse elemento. Feche, mova ou role o que esta por cima e repita.';
 }
 
+function mensagemInvisivel(alvo) {
+  return 'O alvo ' + alvo + ' nao esta pintado (sem caixa ou escondido): nao ha onde clicar, e um clique as cegas cairia no canto da pagina. Abra ou torne visivel o painel que o contem e repita.';
+}
+
 async function assinarPagina(depurador, seletor) {
   const expressao = SNIPPET_ASSINATURA + '(' + JSON.stringify({ seletor: String(seletor || '') }) + ')';
   const resposta = await avaliarNaPagina(depurador, expressao).catch(() => null);
@@ -1630,6 +1634,9 @@ async function acaoClicar(view, params) {
       x = novoX;
       y = novoY;
       if (aVista) await desenharCursor(depurador, x, y, 1, 1);
+    }
+    if (seletor && agora.pintado === false) {
+      return { ok: false, erro: mensagemInvisivel(onde), x: x, y: y, onde: onde };
     }
     if (seletor && agora.tapado_por) {
       if (aVista) {
