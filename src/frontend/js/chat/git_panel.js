@@ -5,7 +5,7 @@ import { escapeHtml } from './messages.js';
 import { btnGitEnviarHistory, btnGitAutoHistory, lblStatus } from './dom.js';
 import { svgDoPonto, svgDoAviao } from './icones.js';
 import { showConfirm } from './ui.js';
-import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
+import { requestGitRestore, requestRestoreTask, registrarAtualizacaoDoGit } from './historico/restauro.js';
 import { esquecerIntencaoManual, marcarProximoComoManual } from './historico/marcas_envio.js';
 import { nomeDaTarefaDoCommit, partesDoTituloDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, enviadaParaOServidor, commitForaDoCheckpoint, reagruparPilhaDoDia } from './historico/cards.js';
 
@@ -505,6 +505,14 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
             }
         });
     }
+    async function atualizarDepoisDoRestauro() {
+        state.porSubirLido = false;
+        await carregarPorSubir(true);
+        const vista = vistaDe('historico');
+        if (!state.isShowingGit || !vista || typeof vista.col3Aberta !== 'function' || !vista.col3Aberta()) return;
+        await renderGitPanel(vista);
+    }
+    registrarAtualizacaoDoGit(atualizarDepoisDoRestauro);
     async function alternarAutomatico(vista, botao) {
         const ligado = !(botao && botao.classList.contains('on'));
         const dados = await pedirGit('/api/git/automatico', { ligado });

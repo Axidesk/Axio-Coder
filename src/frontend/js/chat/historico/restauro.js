@@ -223,6 +223,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
                 }
                 restMsgHtml += _pontoGravadoHtml(data.commit);
                 showRestoreResult(restMsgHtml);
+                _anunciarMudancaNoGit();
             } else if (data.status === 'empty') {
                 showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--text-inline);">' + (data.message || 'Esta sessão não possui checkpoint de código para restaurar.') + '</div>');
             } else if (data.status === 'blocked') {
@@ -344,6 +345,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
                 }
                 restMsgHtml += _pontoGravadoHtml(data.commit);
                 showRestoreResult(restMsgHtml);
+                _anunciarMudancaNoGit();
             } else if (data.status === 'blocked') {
                 let bloqueadoHtml = '<div style="text-align:center;font-weight:700;font-size:1rem;color:var(--perigo);">Restauracao cancelada</div>';
                 bloqueadoHtml += '<div style="height:8px;"></div>';
@@ -361,6 +363,18 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
             showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--perigo);">Erro ao conectar para restaurar este commit.</div>');
         }
     }
+    let atualizacaoDoGit = null;
+    function registrarAtualizacaoDoGit(fn) {
+        atualizacaoDoGit = fn;
+    }
+    async function _anunciarMudancaNoGit() {
+        if (!atualizacaoDoGit) return;
+        try {
+            await atualizacaoDoGit();
+        } catch (e) {
+            console.error('Erro ao atualizar o git depois do restauro:', e);
+        }
+    }
     function countLabelHtml(count, singularLabel, pluralLabel) {
         const label = count === 1 ? singularLabel : pluralLabel;
         const padded = String(count).padStart(2, '0');
@@ -372,5 +386,6 @@ export {
     closeRestoreConfirmPopup,
     requestGitRestore,
     requestRestoreTask,
-    performSessionRestore
+    performSessionRestore,
+    registrarAtualizacaoDoGit
 };
