@@ -2,6 +2,7 @@ import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogThem
 import { VISTAS_DE_TRABALHO, fecharPreview, garantirVistaVisivel, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
 import { agendarReconciliacaoDeAbas, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
 import { ALTURA_LINHA } from './metricas.js';
+import { iniciarBarrasDoEditor } from './barras.js';
 import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
 import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
@@ -67,6 +68,7 @@ function preloadTerminal() {
 }
 
 export function ensureWorkspaceReady() {
+    iniciarBarrasDoEditor();
     ensureMonacoReady(function () {
         ensureEditor();
         if (state.pendingDiffData) {
@@ -139,10 +141,14 @@ function emVistaDeTrabalho() {
     return VISTAS_DE_TRABALHO.includes(state.currentView);
 }
 
+function terminalNaVista() {
+    return !!state.termMode && !state.termMode.classList.contains('hidden');
+}
+
 export function applyTopBarVisibility() {
     if (!state.workspaceActive && !emVistaDeTrabalho()) return;
     if (state.wsTopBar) state.wsTopBar.classList.toggle('ws-top-bar-collapsed', state.topBarHidden);
-    if (state.termTopBar) state.termTopBar.classList.toggle('term-top-bar-collapsed', state.termTopBarHidden);
+    if (state.termTopBar) state.termTopBar.classList.toggle('term-top-bar-collapsed', state.termTopBarHidden && !terminalNaVista());
 }
 
 export function applyTabsVisibility() {

@@ -164,13 +164,15 @@
 }
 #editor-host .monaco-scrollable-element > .scrollbar.vertical,
 #editor-host .monaco-scrollable-element > .scrollbar.horizontal {
-    opacity: 0 !important;
     transition: opacity var(--dur-5) var(--ease-fluid) !important;
     background: transparent !important;
 }
 #editor-host:hover .monaco-scrollable-element > .scrollbar.vertical,
-#editor-host:hover .monaco-scrollable-element > .scrollbar.horizontal {
+#editor-host:hover .monaco-scrollable-element > .scrollbar.horizontal,
+#editor-host.editor-barras-acesas .monaco-scrollable-element > .scrollbar.vertical,
+#editor-host.editor-barras-acesas .monaco-scrollable-element > .scrollbar.horizontal {
     opacity: 1 !important;
+    pointer-events: auto !important;
 }
 #editor-host .monaco-editor .decorationsOverviewRuler {
     border-left: none !important;
@@ -861,13 +863,15 @@ body.theme-espacial #editor-view { background: var(--bg-panel); }
 #diff-host.hidden { display: none !important; }
 #diff-host .monaco-scrollable-element > .scrollbar.vertical,
 #diff-host .monaco-scrollable-element > .scrollbar.horizontal {
-    opacity: 0 !important;
     transition: opacity var(--dur-5) var(--ease-fluid) !important;
     background: transparent !important;
 }
 #diff-host:hover .monaco-scrollable-element > .scrollbar.vertical,
-#diff-host:hover .monaco-scrollable-element > .scrollbar.horizontal {
+#diff-host:hover .monaco-scrollable-element > .scrollbar.horizontal,
+#diff-host.editor-barras-acesas .monaco-scrollable-element > .scrollbar.vertical,
+#diff-host.editor-barras-acesas .monaco-scrollable-element > .scrollbar.horizontal {
     opacity: 1 !important;
+    pointer-events: auto !important;
 }
 #diff-host .monaco-scrollable-element > .scrollbar.vertical .slider {
     width: 6px !important;
