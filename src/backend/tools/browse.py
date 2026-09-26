@@ -29,12 +29,13 @@ def _formato_tamanho(num):
 
 @register(
     "tool_listar_pasta",
-    "Lista o conteúdo de uma pasta. Use sem argumentos para a raiz ou passe 'caminho_relativo' para explorar subpastas.",
+    "Lista o conteúdo de uma pasta. Use sem argumentos para a raiz ou passe 'caminho_relativo' para explorar subpastas. Ignora por predefinicao pastas de build/sistema (Release, Debug, obj, node_modules, .git, nomes com ponto inicial) e binarios, mas DIZ quantos ficaram de fora: com incluir_ocultos=true lista-os tambem, marcados.",
     {
         'caminho_relativo': {"tipo": "STRING", "desc": 'Subpasta opcional', "padrao": ""},
+        'incluir_ocultos': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Mostra tambem o que a listagem esconde por predefinicao (pastas de build/sistema, nomes com ponto inicial, binarios), cada item marcado com (oculto). E o caminho para auditar uma pasta de build sem ela deixar de estar fora das varreduras normais."},
     },
 )
-def tool_listar_pasta(caminho_relativo=""):
+def tool_listar_pasta(caminho_relativo="", incluir_ocultos=False):
     emit_event("executing", function=f"Listando: {caminho_relativo or 'Raiz'}")
     
     caminho_alvo, erro_caminho = resolver_caminho(caminho_relativo, permitir_extra=True)
@@ -45,15 +46,19 @@ def tool_listar_pasta(caminho_relativo=""):
         return f"ERRO: O caminho '{caminho_relativo}' não existe."
 
     try:
-        entradas, ocultos = resumo_entradas(caminho_alvo)
+        entradas, ocultos = resumo_entradas(caminho_alvo, incluir_ocultos=incluir_ocultos)
         entradas.sort(key=lambda e: (e["tipo"] != "dir", e["nome"].lower()))
         resumo = f"{len(entradas)} itens"
-        if ocultos:
-            resumo += f" (+{ocultos} oculto(s): pastas de build/sistema e binarios ficam fora da listagem)"
+        if ocultos and not incluir_ocultos:
+            resumo += f" (+{ocultos} oculto(s) fora da listagem: pastas de build/sistema e binarios - repita com incluir_ocultos=true para os ver)"
+        elif ocultos:
+            resumo += f" ({ocultos} ocultos por predefinicao, marcados)"
         linhas = [f"Caminho: {caminho_relativo or os.path.basename(caminho_alvo.rstrip(os.sep)) or caminho_alvo}",
                   resumo]
         for e in entradas:
             nome = e["nome"] + "/" if e["tipo"] == "dir" else e["nome"]
+            if e.get("oculto"):
+                nome += "  (oculto)"
             try:
                 st = os.stat(os.path.join(caminho_alvo, e["nome"]))
                 tam = _formato_tamanho(st.st_size)
