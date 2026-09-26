@@ -333,6 +333,9 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
     ficheiros = [f.strip() for f in (css or "").split(",") if f.strip()] or _css_do_frontend()
     em_falta = [f for f in ficheiros if not os.path.exists(f)]
     if em_falta:
+        if any("{" in f or "\n" in f for f in em_falta):
+            return ("ERRO: em 'css' vao CAMINHOS de ficheiros CSS, um por virgula - o TEXTO das regras "
+                    "vai no parametro 'estilo' (ex: estilo=':root{--bg-panel-2:#141414}').")
         return "ERRO: CSS nao encontrado: " + ", ".join(em_falta)
 
     tmp = tempfile.mkdtemp(prefix="axio_pintura_")
