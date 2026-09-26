@@ -830,8 +830,9 @@ quadro; a `dv` deu as locais (`argc = 0n1`, `argv`, `jsonPath`, `format`, `engin
 
 - **Depurador:** a Fase 6a está feita e **provada no DRAFTCAD** (C++ pelo `cdb`, num card: pontos por
   `ficheiro:linha`, pilha, locais, e a sessão conduzida pela própria ferramenta com `comandos`).
-  Falta a **6b** (o Monaco ligado ao motor: clique na margem vira breakpoint, barra de controlo,
-  linha acesa, stack na coluna 3) e a **6c** (Python/JS pelos adaptadores DAP).
+  A **6b** começou pela peça que ela própria elegeu — o clique na margem vira ponto de paragem
+  (feito e provado a 2026-10-06, ver a secção própria); faltam a barra de controlo, a linha acesa e
+  a stack na coluna 3 — e a **6c** (Python/JS pelos adaptadores DAP).
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /
@@ -850,6 +851,37 @@ quadro; a `dv` deu as locais (`argc = 0n1`, `argv`, `jsonPath`, `format`, `engin
   de falhar em silêncio. O `.sln` já é lido para a árvore; falta-o para as flags.
 
 - **Motor de jogo** (Unreal/Unity) fica de fora: tem pipeline próprio.
+
+## O ponto de paragem na margem do editor — a 6b começou (2026-10-06)
+
+Medido **antes** de escrever a peça, no editor real da janela a correr (`layoutInfo`): `contentLeft`
+é **16** e vem TODO da faixa fina do folding (`lineNumbersWidth` 0, `glyphMarginWidth` 0,
+`decorationsWidth` 16). Foi isso que decidiu o desenho — **não se ligou a margem de glifos**: ligá-la
+acrescentaria ~20px e empurraria o código para a direita, num editor cujo recuo é uma escolha medida.
+
+Com as duas larguras a zero, um clique nos 16px da margem **só pode** responder como
+`MouseTargetType.GUTTER_LINE_DECORATIONS` (=4, lido na fonte instalada do monaco-editor 0.56.0) — a
+faixa que já existe serve, sem um pixel novo. O ponto pinta-se por `linesDecorationsClassName`, o
+irmão do glyph margin que desenha nessa mesma faixa; a bolinha é o `::after` do CSS (o
+`background-color` de `.margin *` já era forçado a transparente por uma regra antiga, e o
+pseudo-elemento não é atingido por ela).
+
+Guardado **por projeto** (chave `state.rootPath`, localStorage `axio-pontos-paragem`): marcar pontos
+no Axio não deixa nada no DRAFTCAD. O clique no chevron do folding é ignorado (`closest('.codicon')`),
+tal como o clique na numeração de linha e no texto — os três provados.
+
+Prova (`tool_executar_js`, módulo lido do disco e dirigido por um editor falso): 16 verificações —
+dois cliques marcam dois pontos, o segundo clique no mesmo sítio tira, o gravado é
+`{src/main.cpp: [14,19]}`, a troca de ficheiro pinta só as linhas dele e a troca de projeto limpa e
+devolve os pontos do disco.
+
+**Armadilha (minha, e do mesmo tipo da que abriu esta rodada):** a declaração era `projectoAnotado` e
+um uso escreveu `projetoAnotado` — a sintaxe passa e o módulo rebenta em execução. Foi o teste
+dirigido que o apanhou; é a razão de ele existir.
+
+A lista sai por `pontosDeParagem()` (formato que o motor já lê: `nome:linha;nome:linha`) e
+`window.__axioPontosDeParagem()` devolve-a ao vivo — é por aí que a sessão do `cdb` a recebe, sem
+endpoint novo.
 
 ## O que NÃO se faz
 

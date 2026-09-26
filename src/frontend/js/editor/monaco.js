@@ -3,6 +3,7 @@ import { defineEditorTheme, defineLogTheme } from './themes.js';
 import { installEditorHoverHighlight, installUrlWordSelection } from './highlight.js';
 import { installFindToggle, wireMonacoFindPush } from './findbar.js';
 import { instalarDestaqueCsv } from './destacar_csv.js';
+import { instalarPontosDeParagem } from './pontos_paragem.js';
 import { refreshErrorMarkers } from './explorer.js';
 import { createFileFromTyping, scheduleAutoSave } from './scroll.js';
 import { appendLine } from './terminal.js';
@@ -91,6 +92,7 @@ export function ensureEditor() {
     wireMonacoFindPush(state.diffHost);
     installFindToggle();
     instalarDestaqueCsv();
+    instalarPontosDeParagem();
     updateEditorWatermark();
 }
 export function updateEditorWatermark() {

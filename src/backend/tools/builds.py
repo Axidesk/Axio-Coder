@@ -429,8 +429,8 @@ def _texto_executaveis(produzidos):
     return "\n".join(linhas)
 
 
-def _texto_depuracao(registro_id, executavel, pontos, escritos):
-    blocos = [f"DEPURADOR ABERTO (card {registro_id}): {executavel}",
+def _texto_depuracao(registo_id, executavel, pontos, escritos):
+    blocos = [f"DEPURADOR ABERTO (card {registo_id}): {executavel}",
               "Comandos ja escritos: " + " | ".join(escritos)]
     if pontos:
         blocos.append("Pontos de paragem: " + ", ".join(pontos))

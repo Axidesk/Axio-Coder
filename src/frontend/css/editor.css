@@ -175,6 +175,26 @@
 #editor-host .monaco-editor .decorationsOverviewRuler {
     border-left: none !important;
 }
+#editor-host .monaco-editor .margin .ponto-paragem {
+    position: relative;
+    width: 16px;
+    cursor: pointer;
+}
+#editor-host .monaco-editor .margin .ponto-paragem::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    margin-top: -4.5px;
+    border-radius: 50%;
+    background: var(--vermelho, #e5484d);
+    transition: transform var(--dur-3) var(--ease-fluid);
+}
+#editor-host .monaco-editor .margin .ponto-paragem:hover::after {
+    transform: scale(1.25);
+}
 #editor-image-host {
     pointer-events: none;
 }

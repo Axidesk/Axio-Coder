@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790396458.424,
-          12443
+          1790434403.603,
+          12641
         ]
       }
     },
@@ -805,8 +805,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 200,
         "conferido": [
-          1790371293.277,
-          43973
+          1790434833.123,
+          44717
         ]
       }
     },
@@ -2024,10 +2024,10 @@
       "descricao": "Botao redondo de 10px no header do card de processo, e E o ligar/desligar (nao ha botao separado). Verde a pulsar = a correr, cinzento = parado, vermelho = erro (a classe .term-card-erro vive no card). Clicar com o processo a correr manda parar (POST /api/processo/<pid>/parar) e o card fica parado; clicar com ele parado REINICIA O COMANDO DE ARRANQUE DO CARD - `_alternarExecucao` chama `_executarNoCard(card)` sem comando, logo o alvo e `card.comando`, a IDENTIDADE do card (imutavel, ver 'card selecionado'). Era aqui o defeito de 2026-09-16: como o `_fundirCard` reescrevia `card.comando` com o ultimo comando escrito no card, o reload reexecutava o texto que o utilizador tinha escrito por engano em vez de reiniciar o modulo. O title do botao muda entre 'Parar o processo' e 'Executar de novo'; o botao do repetir (.term-card-repetir) faz exatamente o mesmo que a bolinha parada.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 300,
+        "linha": 305,
         "conferido": [
-          1790114413.2,
-          20309
+          1790434514.009,
+          20821
         ]
       }
     },
@@ -2065,10 +2065,10 @@
       "descricao": "Card que recebe o que for escrito no #term-input. Seleciona-se clicando no CABECALHO (que tambem abre o card, se ele tiver saida) ou no CORPO. Um card de SUGESTAO nao seleciona nem abre (o clique no cabecalho sai cedo por card.sugerido). Desceleciona de TRES formas: clicando no corpo outra vez, clicando em QUALQUER lugar fora do card (o clique-fora e o Esc vivem no fim de terminal_cards.js, em listeners de document; ficam isentos apenas o proprio .term-card e o #term-input-footer, para clicar no input nao perder a selecao - ATENCAO: a isencao e por CARD e nao pela zona #term-cards, porque a zona em modo cards ocupa a janela toda e isenta-la tornava a selecao impossivel de largar), ou com o Esc em qualquer lugar (o listener e de document, nao do campo). O selecionado ganha FUNDO no header (.term-card-sel .term-card-cabeca, o branco a 8%). Com um card selecionado o Enter NAO cria card nenhum: se ele CORRE a linha vai para o stdin do processo (POST /api/processo/<pid>/input, com eco dentro do card); se ele JA TERMINOU o comando corre NESSE card (_executarNoCard) e o corpo ganha a linha '> comando' - mas o card NAO muda de nome nem de identidade (`card.comando` e imutavel, ver 'bolinha do card'), logo o reload continua a reiniciar o modulo. O guard e temCardSelecionado(). Ligar o modo shell descarta a selecao (terminal.js:ativarShell).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 58,
+        "linha": 59,
         "conferido": [
-          1790114413.2,
-          20309
+          1790434514.009,
+          20821
         ]
       }
     },
@@ -2087,10 +2087,10 @@
       "descricao": "Cards PAUSADOS que aparecem sozinhos no TOPO da zona dos cards com os comandos de arranque da pasta que o explorer mostra. Criados por atualizarSugestoes(pastaRel), chamada por explorer.js:renderExplorer a cada navegacao de pasta. Chave sintetica 'sug:<comando>' no Map interno (ainda nao tem pid). A bolinha diz 'Executar' e o rotulo do fim (.term-card-fim) mostra a ORIGEM ('scripts.start', 'ponto de entrada', 'Docker Compose'...). O CLIQUE NO CABECALHO de uma sugestao NAO faz nada - nem abre (nao tem corpo) nem seleciona (nao aceita resposta); so a bolinha (play) e o X respondem. PERSISTENTES: nascem com `card.persistente = true` e essa marca SOBREVIVE ao play, por isso limparCards (a borrachinha e o cls) salta-os - o card do modulo continua a vista mesmo depois de correr e terminar. Quem os leva e: o X do card, o Ctrl+R (nao vem do GET /api/processos) e o MUDAR DE PASTA, por _removerSugestoes (que filtra por `persistente` e nao por `sugerido`, e poupa os que ainda correm). NAO RECONSTROI O QUE NAO MUDOU: o fetch corre ANTES de tocar no DOM e _mesmasSugestoes compara com sugestoesAtuais, saindo cedo quando a lista e igual - sem isso a zona piscava a cada renderExplorer (que corre a cada files_changed).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 592,
+        "linha": 599,
         "conferido": [
-          1790114413.2,
-          20309
+          1790434514.009,
+          20821
         ]
       }
     },
@@ -2176,8 +2176,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790396458.424,
-          12443
+          1790434403.603,
+          12641
         ]
       }
     },
@@ -2260,10 +2260,10 @@
       "descricao": "O corpo do card deixa de ser substituido a cada execucao: quando um card selecionado ja terminou e o utilizador escreve nele, `_executarNoCard` chama `_registarComando(card, comando)`, que escreve a linha `> comando` (constante PREFIXO_ECO, linha 12) e deixa a saida nova acumular por baixo - o card passa a ser o registo das execucoes dele. `_registarComando` despeja primeiro o output pendente (`_despejar`) e so depois acrescenta, para a ordem do texto e a do <pre> nao divergirem. MOTIVO: antes o `_executarNoCard` zerava `card.texto`/`card.saida.textContent`, o que fazia um card ABERTO esvaziar (colapsar) e voltar a encher - o utilizador via isso como piscar. Se a rota recusar o comando, `_executarNoCard` restaura o texto anterior e pinta-o.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 230,
+        "linha": 235,
         "conferido": [
-          1790114413.2,
-          20309
+          1790434514.009,
+          20821
         ]
       }
     },
@@ -2281,10 +2281,10 @@
       "descricao": "Tres causas distintas do terminal dos cards piscar, todas corrigidas em 2026-09-16. (1) CARD FANTASMA (a principal, ao mandar comando com um card selecionado): o backend emite `process_started` DENTRO de `iniciar_processo` (tools/process.py:446), logo o SSE chega ANTES de a rota responder com o pid; o `cardIniciar` nao conhecia o pid novo e criava um card do zero, que o `_fundirCard` apagava quando a resposta chegava. Corrigido com o Map `lancamentos` (preenchido em `_lancar`, limpo num finally) e por `_cardEmLancamento(comando)`, que funde o evento no card com um POST em curso em vez de criar outro. (2) CORPO ESVAZIADO no reuso do card (ver 'pilha do card'). (3) SUGESTOES RECRIADAS: `atualizarSugestoes` removia os cards ANTES do fetch e recriava-os depois, com o browser a pintar o vazio no meio - agora o fetch corre primeiro e `_mesmasSugestoes` faz sair cedo quando a lista e a mesma (o explorer e re-renderizado a cada files_changed, ou seja enquanto o agente trabalha).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 422,
+        "linha": 428,
         "conferido": [
-          1790114413.2,
-          20309
+          1790434514.009,
+          20821
         ]
       }
     },
@@ -2325,8 +2325,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 347,
         "conferido": [
-          1790371293.277,
-          43973
+          1790434833.123,
+          44717
         ]
       }
     },
@@ -2535,10 +2535,10 @@
       "descricao": "Quando um comando de card imprime um endereco local, o backend anexa essa URL ao evento process_output (tools/process.py:_emitir_saida_processo, deteccao em services/sugestoes.py:detectar_url_na_saida) e o card ganha um botao de preview no cabecalho e ABRE a janela do preview sozinho, uma vez por URL. O anuncio sai por um CustomEvent 'axio-preview-open' com detail.auto (true = automatico), escutado em preview.js; o clique no botao reabre sem recarregar se aquele endereco ja estiver a mostra.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 486,
+        "linha": 493,
         "conferido": [
-          1790114413.2,
-          20309
+          1790434514.009,
+          20821
         ]
       }
     },
@@ -4669,8 +4669,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 375,
         "conferido": [
-          1790371293.277,
-          43973
+          1790434833.123,
+          44717
         ]
       }
     },
@@ -5227,10 +5227,10 @@
       "descricao": "Pasta amarela cheia (nao vazada) para o no de projeto e para o alvo; o nome fica na cor do nivel (branco+bold no projeto, text-corpo no alvo), nunca azul.",
       "localizacao": {
         "arquivo": "src/frontend/css/workspace.css",
-        "linha": 243,
+        "linha": 252,
         "conferido": [
-          1790396458.424,
-          12443
+          1790434403.603,
+          12641
         ]
       }
     },
@@ -5434,7 +5434,11 @@
       "descricao": "Linha da saida de um card de terminal que traz um ficheiro:linha (ficheiro.cpp(12), ficheiro.cpp:12:34, CMakeLists.txt:3, ou um traceback de Python). O clique abre o ficheiro naquela linha no Monaco. So fica clicavel o que EXISTE no disco (resolucao contra o cwd do card + fs.existsSync); o resto fica texto normal. A saida e pintada por linha COMPLETA: uma linha cortada a meio entre dois pedacos do processo nao acende metade.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/diagnosticos.js",
-        "linha": 126
+        "linha": 126,
+        "conferido": [
+          1790434486.481,
+          5344
+        ]
       }
     },
     {
@@ -5448,13 +5452,35 @@
         "parar no codigo",
         "ler a pilha",
         "call stack",
-        "ver as variaveis"
+        "ver as variaveis",
+        "conduzir a sessao de depuracao"
       ],
-      "identificador": "tool_gerir_projeto(acao='depurar') / _depurar",
-      "descricao": "Abre o executavel construido sob o cdb (depurador de consola do Windows SDK, em builds/depurar.py) num CARD do terminal, com os pontos de paragem ficheiro:linha ja marcados. Os comandos vao pelo STDIN do cdb (o -c NAO funciona: medido) e a sessao conduz-se escrevendo no campo do terminal com o card selecionado: g continuar, p passo, t entrar, gu sair da funcao, k stack, dv locais, q sair. tool_listar_processos(saida=N) le as ultimas N linhas da resposta.",
+      "identificador": "tool_gerir_projeto(acao='depurar') / _depurar / _conduzir_depuracao",
+      "descricao": "Abre o executavel construido sob o cdb (depurador de consola do Windows SDK, em builds/depurar.py) num CARD do terminal, com os pontos de paragem ficheiro:linha ja marcados. A sessao e conduzida pelo parametro 'comandos' (k, dv /t /v, ?? variavel, l+s, p, t, g, q): sem 'breakpoints', os comandos vao para a sessao que ja esta aberta e a resposta volta no retorno da ferramenta. O cdb e lancado com -lines e a preparacao liga l+t/l+s, por isso cada paragem mostra a linha de origem.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 188
+        "linha": 197,
+        "conferido": [
+          1790435206.369,
+          22782
+        ]
+      }
+    },
+    {
+      "termo": "bolinha vermelha do editor",
+      "aliases": [
+        "ponto de paragem",
+        "breakpoint",
+        "marcar ponto",
+        "margem do editor",
+        "clicar na margem",
+        "ponto de interrupcao"
+      ],
+      "identificador": "ponto-paragem",
+      "descricao": "Clicar nos 16px da margem do editor marca/tira um ponto de paragem (bolinha vermelha). Vive na faixa do folding que ja existia - nada de glyph margin, logo o recuo do codigo nao muda. Por projeto (state.rootPath). A lista sai em pontosDeParagem() no formato nome:linha;nome:linha, lido por builds/depurar.py:pontos.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/pontos_paragem.js",
+        "linha": 4
       }
     }
   ]
