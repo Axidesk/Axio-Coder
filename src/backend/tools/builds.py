@@ -236,6 +236,9 @@ def _depurar(pasta, configuracao, breakpoints, comandos="", alvo=""):
         return texto + "\n\n" + _conduzir_depuracao(comandos)
     return texto
 
+_AVISO_AXIO_NO_DEPURADOR = ("[axio] e o arranque do proprio Axio: nao escreva 'c' aqui - uma segunda "
+                            "instancia dele abriria por cima desta. olhe com p/n/w e saia com q")
+
 def _depurar_python(pasta, breakpoints, comandos, alvo=""):
     pontos = depurar.pontos_python(breakpoints, pasta)
     script = pontos[0]["ficheiro"] if pontos else depurar.script_de_arranque(alvo, pasta)
@@ -255,6 +258,8 @@ def _depurar_python(pasta, breakpoints, comandos, alvo=""):
         return f"ERRO: nao consegui abrir o depurador ({e})."
     depurar.guardar_sessao(registo["id"], script)
     registrar_linha_processo(registo["id"], depurar.LINHA_DO_CARD_PY)
+    if _sobe_o_axio(pasta, script):
+        registrar_linha_processo(registo["id"], _AVISO_AXIO_NO_DEPURADOR)
     seguir_saida_processo(registo["id"], _vigia_do_depurador(registo["id"]))
     escritos = depurar.preparacao_python(pontos, script)
     for escrito in escritos:
@@ -518,7 +523,7 @@ def _vigia_do_depurador(registo_id):
     """Vai lendo a saida do depurador a medida que ela chega: escreve no card, em linguagem
     simples, onde a execucao parou - e avisa o editor da linha, para ele a abrir sozinho."""
     janela = _linhas_do_card(registo_id)
-    visto = {"paragem": {}}
+    visto = {"paragem": {}, "erro": None}
 
     def vigia(linha):
         if depurar.card_da_sessao() != registo_id:
@@ -529,6 +534,7 @@ def _vigia_do_depurador(registo_id):
             registrar_linha_processo(registo_id, texto)
         paragem = depurar.paragem_atual()
         if not paragem:
+            _avisar_sem_arranque(registo_id, janela, visto)
             return
         anterior = visto["paragem"]
         if anterior and (anterior["arquivo"], anterior["linha"]) == (paragem["arquivo"],
@@ -540,6 +546,23 @@ def _vigia_do_depurador(registo_id):
         emit_event("debug_stop", pid=registo_id, arquivo=paragem["arquivo"], linha=paragem["linha"])
 
     return vigia
+
+def _avisar_sem_arranque(registo_id, janela, visto):
+    """Um erro de sintaxe impede o ficheiro de arrancar, e quem sabe a linha e o interpretador."""
+    alvo = None
+    for item in diagnosticos.analisar("\n".join(janela)):
+        if item.get("caminho") and item.get("linha"):
+            alvo = item
+    if not alvo:
+        return
+    chave = (alvo["caminho"], alvo["linha"])
+    if visto.get("erro") == chave:
+        return
+    visto["erro"] = chave
+    registrar_linha_processo(registo_id,
+                             f"[axio] nao arrancou: {alvo['codigo']} em {alvo['ficheiro']}:"
+                             f"{alvo['linha']}  ->  {alvo['mensagem']}")
+    emit_event("debug_stop", pid=registo_id, arquivo=alvo["caminho"], linha=alvo["linha"])
 
 def _conduzir_depuracao(comandos):
     """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""

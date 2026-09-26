@@ -20,8 +20,11 @@ _RE_SEM_LOCAL = re.compile(
     r"^\s*(?:\S+:\s*)?(?P<gravidade>" + _GRAVIDADE + r")\s+"
     r"(?P<codigo>[A-Z]{1,4}\d{3,6})\s*:\s*(?P<mensagem>.+)$"
 )
+_RE_PY_LOCAL = re.compile(r'^\s*File "(?P<ficheiro>.+?)", line (?P<linha>\d+)')
+_RE_PY_EXCECAO = re.compile(r"^(?P<nome>SyntaxError|IndentationError|TabError):\s*(?P<mensagem>.*)$")
 
 LIMITE_MENSAGEM = 300
+_LINHAS_ATE_A_EXCECAO = 5
 
 
 def analisar(texto, raiz=""):
@@ -62,6 +65,9 @@ def _linhas(texto):
 def _da_linha(linha, linhas, indice, raiz):
     if not linha.strip():
         return None
+    achado = _python_sintaxe(linha, linhas, indice, raiz)
+    if achado:
+        return achado
     achado = _RE_CMAKE.match(linha)
     if achado:
         return _montar(achado, _mensagem_seguinte(linhas, indice), linha, raiz)
@@ -78,6 +84,29 @@ def _da_linha(linha, linhas, indice, raiz):
             "gravidade": _gravidade(achado.group("gravidade")),
             "codigo": (achado.group("codigo") or "").upper(),
             "mensagem": achado.group("mensagem").strip()[:LIMITE_MENSAGEM],
+            "bruto": linha.strip()[:LIMITE_MENSAGEM],
+        }
+    return None
+
+
+def _python_sintaxe(linha, linhas, indice, raiz):
+    """Le um erro de sintaxe do Python - so os de compilacao, que impedem o ficheiro de correr."""
+    achado = _RE_PY_LOCAL.match(linha)
+    if not achado:
+        return None
+    for seguinte in linhas[indice + 1:indice + _LINHAS_ATE_A_EXCECAO]:
+        excecao = _RE_PY_EXCECAO.match(seguinte.strip())
+        if not excecao:
+            continue
+        ficheiro = _limpar(achado.group("ficheiro"))
+        return {
+            "ficheiro": ficheiro,
+            "caminho": _resolver(ficheiro, raiz),
+            "linha": int(achado.group("linha")),
+            "coluna": 0,
+            "gravidade": "erro",
+            "codigo": excecao.group("nome"),
+            "mensagem": excecao.group("mensagem").strip()[:LIMITE_MENSAGEM],
             "bruto": linha.strip()[:LIMITE_MENSAGEM],
         }
     return None

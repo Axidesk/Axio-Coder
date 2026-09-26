@@ -314,6 +314,7 @@ function _fecharCard(card) {
     const rodando = _estaRodando(card);
     const pid = card.pid;
     if (selecionado === card) _soltarSelecao();
+    _soltarControles(card);
     cards.delete(pid);
     card.el.remove();
     _atualizarVazio();
@@ -392,7 +393,6 @@ function _criarCard(pid, comando, sugerido, dica, cwd, rotulo, controles) {
         sugerido: !!sugerido,
         persistente: !!sugerido,
         dica: dica || '',
-        barra: null,
         controles: []
     };
     cards.set(pid, card);
@@ -430,31 +430,41 @@ function _criarCard(pid, comando, sugerido, dica, cwd, rotulo, controles) {
     return card;
 }
 
-function _barraDeControles(card, controles) {
-    const barra = document.createElement('div');
-    barra.className = 'term-card-controles';
+let cardComControles = null;
+
+function _aplicarControles(card, controles) {
+    if (!controles || !controles.length) return;
+    card.controles = controles;
+    cardComControles = card;
+    _pintarControles();
+}
+
+function _pintarControles() {
+    const alvo = document.getElementById('term-controles');
+    const linha = alvo ? alvo.querySelector('.term-controles-linha') : null;
+    if (!linha) return;
+    linha.textContent = '';
+    const controles = cardComControles ? cardComControles.controles : [];
     controles.forEach((c) => {
         if (!c || !c.comando) return;
         const botao = document.createElement('button');
         botao.type = 'button';
-        botao.className = 'term-card-controle';
+        botao.className = 'term-controle';
         botao.textContent = c.rotulo || c.comando;
         botao.title = (c.dica ? c.dica + ' ' : '') + '(comando: ' + c.comando + ')';
         botao.addEventListener('click', (e) => {
             e.stopPropagation();
-            _responderStdin(card, c.comando);
+            if (cardComControles) _responderStdin(cardComControles, c.comando);
         });
-        barra.appendChild(botao);
+        linha.appendChild(botao);
     });
-    return barra;
+    alvo.classList.toggle('term-controles-visivel', !!cardComControles);
 }
 
-function _aplicarControles(card, controles) {
-    if (!controles || !controles.length) return;
-    if (card.barra) card.barra.remove();
-    card.controles = controles;
-    card.barra = _barraDeControles(card, controles);
-    card.el.insertBefore(card.barra, card.saida);
+function _soltarControles(card) {
+    if (cardComControles !== card) return;
+    cardComControles = null;
+    _pintarControles();
 }
 
 function _cardEmLancamento(comando) {
@@ -569,6 +579,7 @@ export function cardFinalizar(data) {
     if (!card) return;
     card.exitCode = data.exit_code;
     _aplicarEstado(card, data.status);
+    _soltarControles(card);
 }
 
 export function aviso(texto, cls) {
@@ -585,6 +596,7 @@ export function limparCards() {
     _soltarSelecao();
     cards.forEach((card) => {
         if (card.persistente || _estaRodando(card)) return;
+        _soltarControles(card);
         cards.delete(card.pid);
         card.el.remove();
     });

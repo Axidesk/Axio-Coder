@@ -115,21 +115,23 @@
 .term-card-sel .term-card-cabeca {
     background: var(--bg-selecao);
 }
-.term-card-controles {
-    display: none;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0 0 8px 18px;
+.term-controles {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-5) var(--ease-fluid);
+    pointer-events: none;
 }
-.term-card-sel .term-card-controles {
+.term-controles-visivel {
+    grid-template-rows: 1fr;
+    pointer-events: auto;
+}
+.term-controles-linha {
+    overflow: hidden;
     display: flex;
-    animation: term-controles-entra var(--dur-3) ease;
+    flex-wrap: wrap;
+    column-gap: 6px;
 }
-@keyframes term-controles-entra {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-.term-card-controle {
+.term-controle {
     padding: 3px 10px;
     border: none;
     border-radius: 9999px;
@@ -140,7 +142,7 @@
     cursor: pointer;
     transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
 }
-.term-card-controle:hover {
+.term-controle:hover {
     color: var(--text-branco);
     background: var(--bg-hover-suave);
 }
