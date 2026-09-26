@@ -474,12 +474,18 @@ let cacheDoUltimoEnviadoValida = false;
             if (!logsPorDia.has(dia)) logsPorDia.set(dia, []);
             logsPorDia.get(dia).push(...logs);
         }
-        logsPorDia.forEach((logs) => {
-            const ordem = [...logs].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
-            ordem.forEach((log, idx) => {
-                log.displayName = log.name || ('Tarefa ' + (idx + 1));
-            });
+        logsPorDia.forEach(nomearTurnosDoDia);
+    }
+    function nomearTurnosDoDia(logs) {
+        [...logs].sort(_ordemDaRodada).forEach((log, idx) => {
+            log.displayName = log.name || ('Tarefa ' + (idx + 1));
         });
+    }
+    function _ordemDaRodada(a, b) {
+        const ea = epochDeId(a.id);
+        const eb = epochDeId(b.id);
+        if (ea && eb) return ea - eb;
+        return String(a.timestamp || '').localeCompare(String(b.timestamp || ''));
     }
     function _nomearTurnos() {
         if (!_haTurnoSemNome()) return;
@@ -652,11 +658,8 @@ let cacheDoUltimoEnviadoValida = false;
             body.innerHTML = '<div class="p-3 text-xs text-[var(--text-mutado)] font-mono">Nenhuma rodada de edição neste dia.</div>';
             return;
         }
+        nomearTurnosDoDia(savedLogs);
         const groups = savedLogs.map(saved => rebuildGroupFromSaved(saved));
-        const ordemCronológica = [...groups].sort((a, b) => epochDeId(a.id) - epochDeId(b.id));
-        ordemCronológica.forEach((g, idx) => {
-            g.displayName = g.name || ('Tarefa ' + (idx + 1));
-        });
         groups.sort((a, b) => epochDeId(b.id) - epochDeId(a.id));
         const visiveis = aplicarAbsorvidos(groups);
         body.innerHTML = '';
