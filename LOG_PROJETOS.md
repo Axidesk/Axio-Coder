@@ -687,8 +687,9 @@ motor de depuração.
       build), com os breakpoints por `ficheiro:linha` e uma lista de comandos. Não é gráfico: é
       depuração a sério, com zero janela nova, e serve primeiro para MIM, que sou quem procura o
       crash. Prova a exigir: parar no breakpoint, ler a stack, ler o valor de uma variável.
-      **Feito (2026-10-06)** — `builds/depurar.py` + ação `depurar` de `tool_gerir_projeto`; prova e
-      a armadilha do `-c` na secção "O depurador: o que ficou provado".
+      **Feito (2026-10-06)** — `builds/depurar.py` + ação `depurar` de `tool_gerir_projeto`; prova
+      (dois breakpoints, pilha e locais no DRAFTCAD) e a armadilha do `-c` na secção "O depurador: o
+      que ficou provado". A sessão é conduzida pela própria ferramenta, com o parâmetro `comandos`.
 - [ ] **Fase 6b — ligar o Monaco ao motor.** O clique na margem vira breakpoint, a barra de controlo
       entra, a linha actual acende e a stack/variáveis aparecem na coluna 3 — tudo por cima do motor
       que a 6a provou.
@@ -802,16 +803,35 @@ Três cuidados que a prova fixou:
 - **Pontos por `ficheiro:linha`**, com o nome reduzido ao basename (a forma provada); `modulo!ficheiro:linha`
   passa intacto para o caso de o nome se repetir.
 
-**O que isto ainda NÃO prova:** a sessão a correr dentro do card do Axio, contra o DRAFTCAD, com a
-interface a mostrar a saída a vivo. Isso exige o backend reiniciado (a ação `depurar` nasce nesta
-rodada) e é o passo seguinte — a cobaia é o `DraftCAD.exe` que já está construído em
-`DRAFTCAD/build/axio-debug/`.
+**PROVADO a 2026-10-06, no DRAFTCAD.** Com o backend reiniciado, a sessão correu dentro do card,
+contra o `DraftCAD.exe` de `DRAFTCAD/build/axio-debug/`: `Breakpoint 0 hit` em `main.cpp @ 14`, e
+depois de `g`, `Breakpoint 1 hit` em `main.cpp @ 19`. A `k` deu a pilha com ficheiro e linha em cada
+quadro; a `dv` deu as locais (`argc = 0n1`, `argv`, `jsonPath`, `format`, `engine`, `app` — `app` e
+`engine` já construídos, porque já se passou por eles); a `?? argc` devolveu `int 0n1`; a
+`x DraftCAD!main` achou o símbolo.
+
+**O que o DRAFTCAD ensinou, e que passou a valer no código:**
+- **`-lines` na linha de comandos do `cdb`**, mais `l+t` e `l+s` na preparação. Sem a flag, o `.lines`
+  enviado pelo stdin chega tarde: a sessão para e mostra só assembly (`mov r9d,60A00h`). Com ela, o
+  prompt mostra a origem — `>   14:     QGuiApplication app(argc, argv);`. Fonte oficial: "Enables
+  source line debugging" (cdb-command-line-options). ARMADILHA: **sem `l+t` o `p`/`t` anda por
+  INSTRUÇÃO, não por linha** — a lista de comandos dizia "passo a passo por linha" e mentia.
+- **A lista de comandos estava pobre**: não tinha como ver ONDE se está (`l+s`) nem como avaliar uma
+  expressão (`??`), que é o comando mais pedido de todos. Corrigida.
+- **A sessão passou a ser conduzida pela ferramenta**: `acao='depurar'` aceita `comandos`
+  (ex: `'k;dv /t /v;?? argc'`); sem `breakpoints`, vão para a sessão que JÁ está aberta. Antes disto,
+  o agente não tinha por onde conduzir a sessão que ele próprio abria — só o utilizador, pelo campo
+  do terminal do card.
+- **ARMADILHA DE PROVA:** lançar o `cdb` pela rota `/api/terminal/exec` NÃO passa o PATH do kit, e o
+  `DraftCAD.exe` sai logo (`|` responde `exited`) sem carregar as DLLs do Qt. A ferramenta passa
+  `caminhos_extra` e não sofre disto; um teste à mão sofre — e foi o que aconteceu.
 
 ## O que falta (medido, não suposto)
 
-- **Depurador:** a Fase 6a está feita (C++ pelo `cdb`, num card). Falta a **6b** (o Monaco ligado ao
-  motor: clique na margem vira breakpoint, barra de controlo, linha acesa, stack na coluna 3) e a
-  **6c** (Python/JS pelos adaptadores DAP).
+- **Depurador:** a Fase 6a está feita e **provada no DRAFTCAD** (C++ pelo `cdb`, num card: pontos por
+  `ficheiro:linha`, pilha, locais, e a sessão conduzida pela própria ferramenta com `comandos`).
+  Falta a **6b** (o Monaco ligado ao motor: clique na margem vira breakpoint, barra de controlo,
+  linha acesa, stack na coluna 3) e a **6c** (Python/JS pelos adaptadores DAP).
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /

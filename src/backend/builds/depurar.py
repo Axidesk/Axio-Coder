@@ -4,15 +4,23 @@ _PASTA_DEPURADORES = ("Windows Kits/10/Debuggers", "Windows Kits/11/Debuggers")
 _ARQUITETURAS = ("x64", "x86", "arm64", "arm")
 
 COMANDOS_UTEIS = (
-    ("g", "continuar ate ao proximo ponto de paragem"),
-    ("p", "passo a passo por linha, sem entrar em funcoes"),
-    ("t", "passo a passo por linha, entrando em funcoes"),
-    ("gu", "sair da funcao atual"),
-    ("k", "a pilha de chamadas (quem chamou quem)"),
-    ("dv", "as variaveis locais deste quadro"),
-    ("dv /t /v", "as variaveis locais com o tipo e os valores"),
+    ("l+s", "a linha de origem onde a execucao parou"),
+    ("k", "a pilha de chamadas, com ficheiro e linha"),
+    ("dv /t /v", "as variaveis locais deste quadro, com o tipo e o valor"),
+    ("?? expressao", "avalia uma expressao ou variavel C++ (ex: ?? argc)"),
+    ("x modulo!simbolo", "procura um simbolo pelo nome"),
+    ("p", "salta para a linha seguinte, sem entrar em funcoes"),
+    ("t", "entra na funcao chamada e para na primeira linha dela"),
+    ("gu", "sai da funcao atual"),
+    ("g", "continua ate ao proximo ponto de paragem"),
+    ("bp ficheiro:linha", "marca um ponto de paragem novo, a quente"),
+    ("bl", "lista os pontos de paragem marcados"),
+    ("r", "os registos do processador"),
+    ("u", "o assembly a volta da linha atual"),
+    ("l-t", "passa a andar por instrucao de assembly em vez de linha"),
+    ("l+t", "volta a andar por linha de origem"),
     ("lm", "os modulos carregados"),
-    ("q", "sair do depurador"),
+    ("q", "sai do depurador e fecha o programa"),
 )
 
 
@@ -43,6 +51,7 @@ def comando(exe, pastas=()):
     juntos = ";".join(caminhos)
     return " ".join([
         f'"{depurador}"',
+        "-lines",
         "-y", f'"{juntos}"',
         "-srcpath", f'"{juntos}"',
         f'"{exe}"',
@@ -50,8 +59,8 @@ def comando(exe, pastas=()):
 
 
 def preparacao(breakpoints):
-    """Os comandos que abrem a sessao: carregar as linhas, marcar os pontos e seguir."""
-    linhas = [".lines"]
+    """Os comandos que abrem a sessao: fonte por linha, os pontos marcados e seguir."""
+    linhas = ["l+t", "l+s"]
     for ponto in breakpoints:
         linhas.append(f"bp `{ponto}`")
     linhas.append("g")
@@ -75,5 +84,39 @@ def pontos(texto):
     return limpos
 
 
+SESSAO = {"id": "", "executavel": ""}
+
+
+def guardar_sessao(registo_id, executavel):
+    """Anota a sessao aberta, para os comandos seguintes irem para o mesmo card."""
+    SESSAO["id"] = registo_id
+    SESSAO["executavel"] = executavel
+
+
+def esquecer_sessao():
+    SESSAO["id"] = ""
+    SESSAO["executavel"] = ""
+
+
+def sessao_aberta():
+    """Diz se ha uma sessao anotada (se ainda corre, quem confirma e o processo)."""
+    return bool(SESSAO["id"])
+
+
+def card_da_sessao():
+    """O card onde a sessao de depuracao esta aberta."""
+    return SESSAO["id"]
+
+
 def texto_dos_comandos():
     return "\n".join(f"  {comando}  -  {para_que}" for comando, para_que in COMANDOS_UTEIS)
+
+
+def comandos_do_pedido(texto):
+    """Le os comandos a enviar na sessao: um por linha, ou separados por ';'."""
+    linhas = []
+    for pedaco in (texto or "").replace("\r", "\n").replace(";", "\n").split("\n"):
+        comando = pedaco.strip()
+        if comando:
+            linhas.append(comando)
+    return linhas

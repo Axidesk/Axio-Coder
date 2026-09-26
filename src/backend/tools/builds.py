@@ -52,9 +52,18 @@ from src.backend.tools.registry import register
                     "separados por ';'). Aceita modulo!ficheiro:linha quando o nome se repete.",
             "padrao": "",
         },
+        "comandos": {
+            "tipo": "STRING",
+            "desc": "Comandos para conduzir a sessao de 'depurar' (um por linha ou separados por ';'): "
+                    "k, dv /t /v, ?? variavel, l+s, p, t, g, bp ficheiro:linha, q. Comandos sem "
+                    "breakpoints vao para a sessao que ja esta aberta e a resposta volta aqui.",
+            "padrao": "",
+        },
     },
 )
-def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", breakpoints=""):
+def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", breakpoints="", comandos=""):
+    if acao == "depurar" and comandos and not breakpoints:
+        return _depurar("", configuracao, breakpoints, comandos)
     caminho, erro = _pasta(pasta)
     if erro:
         return erro
@@ -69,7 +78,7 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", 
     if acao == "correr":
         return _correr(caminho, configuracao)
     if acao == "depurar":
-        return _depurar(caminho, configuracao, breakpoints)
+        return _depurar(caminho, configuracao, breakpoints, comandos)
     if acao == "instalar":
         return _instalar(caminho, configuracao)
     return f"ERRO: acao desconhecida '{acao}'."
@@ -185,7 +194,12 @@ def _correr(pasta, configuracao):
             "e o botao de parar estao.")
 
 
-def _depurar(pasta, configuracao, breakpoints):
+def _depurar(pasta, configuracao, breakpoints, comandos=""):
+    if comandos and _sessao_viva():
+        return _conduzir_depuracao(comandos)
+    if comandos and not breakpoints:
+        return ("NAO HA SESSAO DE DEPURACAO ABERTA: a ultima fechou (o programa terminou ou o card foi "
+                "parado). Abra outra com acao='depurar' e os 'breakpoints'.")
     if not depurar.cdb():
         return ("ERRO: nao encontrei o depurador de consola do Windows SDK (cdb.exe), que vem com os "
                 "\"Debugging Tools for Windows\". Sem ele nao ha como depurar C++ nesta maquina.")
@@ -206,11 +220,32 @@ def _depurar(pasta, configuracao, breakpoints):
                                    caminhos_extra=plano["escolha"].get("caminhos"))
     except OSError as e:
         return f"ERRO: nao consegui abrir o depurador ({e})."
+    depurar.guardar_sessao(registo["id"], executavel)
     escritos = depurar.preparacao(pontos_de_paragem)
-    for comando in escritos:
-        escrever_stdin_processo(registo["id"], comando)
-    return _texto_depuracao(registro_id=registo["id"], executavel=executavel,
-                            pontos=pontos_de_paragem, escritos=escritos)
+    for escrito in escritos:
+        escrever_stdin_processo(registo["id"], escrito)
+    texto = _texto_depuracao(registo_id=registo["id"], executavel=executavel,
+                             pontos=pontos_de_paragem, escritos=escritos)
+    if comandos:
+        return texto + "\n\n" + _conduzir_depuracao(comandos)
+    return texto
+
+
+def _sessao_viva():
+    """Diz se a sessao de depuracao ainda tem um card a correr, e esquece-a quando morreu."""
+    if not depurar.sessao_aberta():
+        return False
+    reg = estado.get("processos", {}).get(depurar.card_da_sessao()) or {}
+    popen = reg.get("popen")
+    vivo = popen is not None
+    if vivo:
+        try:
+            vivo = popen.poll() is None
+        except Exception:
+            vivo = False
+    if not vivo:
+        depurar.esquecer_sessao()
+    return vivo
 
 
 def _instalar(pasta, configuracao):
@@ -407,4 +442,55 @@ def _texto_depuracao(registro_id, executavel, pontos, escritos):
                   + depurar.texto_dos_comandos())
     blocos.append("A saida do depurador aparece no card. tool_listar_processos(saida=N) devolve as "
                   "ultimas N linhas dela quando precisar de ler o que o depurador respondeu.")
+    blocos.append("Para conduzir a sessao sem sair daqui, chame de novo acao='depurar' com 'comandos' "
+                  "(ex: 'k;dv /t /v;?? argc'): os comandos vao para este card e a resposta volta aqui.")
     return "\n\n".join(blocos)
+
+
+def _conduzir_depuracao(comandos):
+    """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""
+    registo_id = depurar.card_da_sessao()
+    lista = depurar.comandos_do_pedido(comandos)
+    if not lista:
+        return "ERRO: nenhum comando para enviar."
+    blocos = [f"DEPURADOR (card {registo_id}): o que respondeu a cada comando"]
+    for comando in lista:
+        desde = _tamanho_da_saida(registo_id)
+        ok, motivo = escrever_stdin_processo(registo_id, comando)
+        if not ok:
+            blocos.append(f'  "{comando}" -> NAO ENVIOU: {motivo}')
+            break
+        resposta = _esperar_resposta(registo_id, desde)
+        blocos.append(f"  > {comando}")
+        blocos += [f"    {linha}" for linha in resposta] or ["    (sem resposta)"]
+    blocos.append("Se um comando deixar o programa a correr, a resposta continua a chegar ao card: as "
+                  "ultimas linhas dela saem com tool_listar_processos(saida=N).")
+    return "\n".join(blocos)
+
+
+def _tamanho_da_saida(registo_id):
+    return len((estado.get("processos", {}).get(registo_id) or {}).get("log") or [])
+
+
+def _linhas_do_card(registo_id, desde=0):
+    log = (estado.get("processos", {}).get(registo_id) or {}).get("log") or []
+    return [linha.rstrip() for linha in log[desde:]]
+
+
+def _esperar_resposta(registo_id, desde, teto=20.0, quieto=0.8):
+    """Espera a saida do depurador: um comando so esta respondido quando ela cresce e volta a parar."""
+    inicio = time.time()
+    time.sleep(0.4)
+    ultimo = _tamanho_da_saida(registo_id)
+    estavel = 0.0
+    while time.time() - inicio < teto:
+        time.sleep(0.15)
+        agora = _tamanho_da_saida(registo_id)
+        if agora > ultimo:
+            ultimo = agora
+            estavel = 0.0
+            continue
+        estavel += 0.15
+        if estavel >= quieto:
+            break
+    return _linhas_do_card(registo_id, desde)
