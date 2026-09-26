@@ -631,14 +631,22 @@ def registrar_linha_processo(pid, linha):
     _guardar_linha(pid, linha)
 
 def seguir_saida_processo(pid, vigia):
-    """Liga um vigia a cada linha NOVA deste processo: quem tem de ler a saida a medida que
-    chega (o depurador, que precisa de saber onde a execucao parou) recebe-a por aqui. O que
-    o vigia escrever no card vai por registrar_linha_processo, que nao volta a chama-lo -
-    sem isso a linha que ele escreve voltava a entrar no vigia."""
+    """Liga um vigia a cada linha deste processo: o que ja saiu passa-lhe primeiro, e a partir
+    dai cada linha nova. Sem o passado, um vigia ligado depois do arranque perdia tudo o que o
+    processo escreveu antes de ele existir - e um depurador que morre logo (um erro de sintaxe)
+    escreve o traceback inteiro nesse intervalo e nunca mais diz nada, deixando o vigia mudo
+    para sempre. O que o vigia escrever no card vai por registrar_linha_processo, que nao volta
+    a chama-lo - sem isso a linha que ele escreve voltava a entrar no vigia."""
     reg = estado.get("processos", {}).get(pid)
     if reg is None:
         return False
+    anteriores = list(reg.get("log") or [])
     reg["vigia"] = vigia
+    for linha in anteriores:
+        try:
+            vigia(linha)
+        except Exception:
+            pass
     return True
 
 def _guardar_linha(pid, linha):

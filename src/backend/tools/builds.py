@@ -526,7 +526,7 @@ def _texto_depuracao_py(registo_id, script, pontos, escritos, fora):
 def _vigia_do_depurador(registo_id):
     """Vai lendo a saida do depurador a medida que ela chega: escreve no card, em linguagem
     simples, onde a execucao parou - e avisa o editor da linha, para ele a abrir sozinho."""
-    janela = _linhas_do_card(registo_id)
+    janela = []
     visto = {"paragem": {}, "erro": None, "terminou": False}
 
     def vigia(linha):
