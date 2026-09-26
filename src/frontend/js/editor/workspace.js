@@ -314,49 +314,17 @@ export function aplicarDockDeProjeto(agrupada, raiz) {
 export function initExplorerResizer() {
     if (!state.explorerResizer) return;
     state.explorerResizer.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const dockRow = document.getElementById('dock-bottom-row');
         const right = state.dockSide === 'right';
-        const startPos = right ? e.clientX : e.clientY;
-        const startSize = state.explorerSize;
-        let rafId = null;
-        let pendingSize = null;
-        if (dockRow) dockRow.classList.add('resizing');
-
-        function flush() {
-            rafId = null;
-            if (pendingSize === null) return;
-            state.explorerSize = pendingSize;
-            pendingSize = null;
-            applyExplorerSize(true);
-        }
-
-        function onMove(ev) {
-            const delta = (right ? ev.clientX : ev.clientY) - startPos;
-            let newSize = startSize - delta;
-            newSize = Math.max(80, Math.min(700, newSize));
-            pendingSize = newSize;
-            if (rafId === null) rafId = requestAnimationFrame(flush);
-        }
-
-        function onUp() {
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-                rafId = null;
-            }
-            if (pendingSize !== null) {
-                state.explorerSize = pendingSize;
-                pendingSize = null;
-            }
-            applyExplorerSize();
-            persistDockPrefs();
-            if (dockRow) dockRow.classList.remove('resizing');
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-        }
-
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
+        const inicio = right ? e.clientX : e.clientY;
+        const tamanhoInicial = state.explorerSize;
+        arrastarResizer(e, (ev) => {
+            const delta = (right ? ev.clientX : ev.clientY) - inicio;
+            const novo = Math.max(80, Math.min(700, tamanhoInicial - delta));
+            return () => {
+                state.explorerSize = novo;
+                applyExplorerSize(true);
+            };
+        }, () => applyExplorerSize());
     });
 }
 
@@ -366,48 +334,58 @@ export function initLogResizer() {
         const dock = state.logDock;
         const dockRow = document.getElementById('dock-bottom-row');
         if (!dock || !dockRow || state.dockSide !== 'right') return;
-        e.preventDefault();
-        const inicioY = e.clientY;
+        const inicio = e.clientY;
         const alturaInicial = dock.getBoundingClientRect().height;
-        let rafId = null;
-        let pendente = null;
-        dockRow.classList.add('resizing');
-
-        function flush() {
-            rafId = null;
-            if (pendente === null) return;
-            state.logAltura = pendente;
-            pendente = null;
-            applyLogAltura();
-        }
-
-        function onMove(ev) {
+        arrastarResizer(e, (ev) => {
             const coluna = dockRow.getBoundingClientRect().height;
-            if (!coluna) return;
-            const nova = alturaInicial - (ev.clientY - inicioY);
-            pendente = Math.max(0.1, Math.min(0.9, nova / coluna));
-            if (rafId === null) rafId = requestAnimationFrame(flush);
-        }
-
-        function onUp() {
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-                rafId = null;
-            }
-            if (pendente !== null) {
-                state.logAltura = pendente;
-                pendente = null;
-            }
-            applyLogAltura();
-            persistDockPrefs();
-            dockRow.classList.remove('resizing');
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-        }
-
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
+            if (!coluna) return null;
+            const nova = alturaInicial - (ev.clientY - inicio);
+            const fracao = Math.max(0.1, Math.min(0.9, nova / coluna));
+            return () => {
+                state.logAltura = fracao;
+                applyLogAltura();
+            };
+        }, () => applyLogAltura());
     });
+}
+
+function arrastarResizer(e, calcular, concluir) {
+    e.preventDefault();
+    const dockRow = document.getElementById('dock-bottom-row');
+    let rafId = null;
+    let pendente = null;
+    if (dockRow) dockRow.classList.add('resizing');
+
+    function flush() {
+        rafId = null;
+        if (!pendente) return;
+        const aplicar = pendente;
+        pendente = null;
+        aplicar();
+    }
+
+    function onMove(ev) {
+        const aplicar = calcular(ev);
+        if (!aplicar) return;
+        pendente = aplicar;
+        if (rafId === null) rafId = requestAnimationFrame(flush);
+    }
+
+    function onUp() {
+        if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
+        flush();
+        concluir();
+        persistDockPrefs();
+        if (dockRow) dockRow.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
 }
 
 export function openFileFromLog(path, snippet, diffData, asReadonly) {
