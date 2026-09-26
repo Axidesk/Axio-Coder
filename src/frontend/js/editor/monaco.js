@@ -4,6 +4,7 @@ import { installEditorHoverHighlight, installUrlWordSelection } from './highligh
 import { installFindToggle, wireMonacoFindPush } from './findbar.js';
 import { instalarDestaqueCsv } from './destacar_csv.js';
 import { instalarPontosDeParagem } from './pontos_paragem.js';
+import { instalarLinhaDoDepurador } from './linha_depurador.js';
 import { refreshErrorMarkers } from './explorer.js';
 import { createFileFromTyping, scheduleAutoSave } from './scroll.js';
 import { appendLine } from './terminal.js';
@@ -93,6 +94,7 @@ export function ensureEditor() {
     installFindToggle();
     instalarDestaqueCsv();
     instalarPontosDeParagem();
+    instalarLinhaDoDepurador();
     updateEditorWatermark();
 }
 export function updateEditorWatermark() {

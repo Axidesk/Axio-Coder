@@ -118,18 +118,32 @@
 .term-controles {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows var(--dur-5) var(--ease-fluid);
+    width: fit-content;
+    margin: 0 auto;
+    transition: grid-template-rows var(--dur-5) var(--ease-fluid),
+                margin-bottom var(--dur-5) var(--ease-fluid);
     pointer-events: none;
 }
 .term-controles-visivel {
     grid-template-rows: 1fr;
+    margin-bottom: 8px;
     pointer-events: auto;
 }
 .term-controles-linha {
     overflow: hidden;
     display: flex;
     flex-wrap: wrap;
-    column-gap: 6px;
+    justify-content: center;
+    column-gap: 4px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    background: var(--cinza-escuro);
+    opacity: 0;
+    transition: padding var(--dur-5) var(--ease-fluid), opacity var(--dur-5) var(--ease-fluid);
+}
+.term-controles-visivel .term-controles-linha {
+    padding: 5px 10px;
+    opacity: 1;
 }
 .term-controle {
     padding: 3px 10px;

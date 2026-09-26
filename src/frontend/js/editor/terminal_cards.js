@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { fragmentoDeSaida } from './diagnosticos.js';
+import { limparLinhaDoDepurador } from './linha_depurador.js';
 
 const LIMITE_SAIDA = 300000;
 const VARREDURA_MS = 120;
@@ -464,6 +465,7 @@ function _pintarControles() {
 function _soltarControles(card) {
     if (cardComControles !== card) return;
     cardComControles = null;
+    limparLinhaDoDepurador();
     _pintarControles();
 }
 

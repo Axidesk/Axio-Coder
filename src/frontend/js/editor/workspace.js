@@ -2,6 +2,7 @@ import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogThem
 import { VISTAS_DE_TRABALHO, fecharPreview, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
 import { agendarReconciliacaoDeAbas, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
 import { ALTURA_LINHA } from './metricas.js';
+import { caminhoDoDepurador, marcarLinhaDoDepurador } from './linha_depurador.js';
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
 import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
 import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, temCardSelecionado } from './terminal_cards.js';
@@ -494,9 +495,11 @@ export function openFileAtLine(path, line) {
 }
 
 function abrirParagemDoDepurador(data) {
-    const caminho = String(data.arquivo || '').replace(/\\/g, '/');
+    const caminho = caminhoDoDepurador(data.arquivo);
     if (!caminho) return;
-    openFileAtLine(caminho, parseInt(data.linha, 10) || 1);
+    const linha = parseInt(data.linha, 10) || 1;
+    marcarLinhaDoDepurador(caminho, linha, !!data.erro);
+    openFileAtLine(caminho, linha);
 }
 
 export function toggleExplorerSearch(forceClose) {

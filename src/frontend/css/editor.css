@@ -847,6 +847,14 @@ body.theme-espacial #editor-view { background: var(--bg-panel); }
 .monaco-dim-text { color: var(--text-mutado) !important; }
 .monaco-snippet-text { color: var(--oliva) !important; font-weight: bold; }
 .monaco-hover-line { background: var(--bg-hover) !important; }
+.monaco-linha-erro {
+    background: var(--perigo-suave) !important;
+    box-shadow: inset 3px 0 0 0 var(--perigo);
+}
+.monaco-linha-paragem {
+    background: var(--bg-selecao) !important;
+    box-shadow: inset 3px 0 0 0 var(--azul-acao);
+}
 .monaco-diff-deleted-text { color: var(--perigo) !important; }
 .monaco-diff-added-text { color: var(--oliva) !important; font-weight: bold; }
 #diff-host { display: flex; flex-direction: row; }

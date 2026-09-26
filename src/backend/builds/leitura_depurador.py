@@ -13,6 +13,7 @@ _VARIAVEL = re.compile(r"^[0-9a-f`]{16,}\s+(?P<resto>.+)$")
 _QUADRO_CDB = re.compile(r"\[(?P<ficheiro>[A-Za-z]:[^\]]*?)\s+@\s+(?P<linha>\d+)\]")
 
 _CODIGO_DE_ARRANQUE = "80000003"
+_PREFIXO_DE_QUEDA = "rebentou"
 _MOTIVO_NAO_TRATADA = "rebentou: excecao nao tratada (o programa parou nesta linha)"
 _ENCHIMENTO = "padrao repetido - enchimento de memoria por usar, nao um valor do programa"
 _TRADUCOES = {
@@ -95,6 +96,11 @@ def linhas(sobre):
         cadeia = " <- ".join(f"{q['nome']}:{q['linha']}" for q in quadros[:_LIMITE_DE_QUADROS])
         saida.append(f"[axio] quem chamou: {cadeia}")
     return saida
+
+
+def e_queda(motivo):
+    """Diz se um motivo desta leitura e uma queda: o programa rebentou a correr."""
+    return (motivo or "").strip().lower().startswith(_PREFIXO_DE_QUEDA)
 
 
 def _nome_curto(caminho):

@@ -312,6 +312,7 @@ def paragem_atual():
         return {}
     return {"arquivo": os.path.realpath(caminho) if os.path.isfile(caminho) else caminho,
             "linha": linha,
+            "queda": leitura_depurador.e_queda(motivo),
             "acontecimento": bool(motivo) and not motivo.startswith("arranque do programa")}
 
 

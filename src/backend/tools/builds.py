@@ -543,7 +543,8 @@ def _vigia_do_depurador(registo_id):
         visto["paragem"] = paragem
         if not anterior and not paragem["acontecimento"]:
             return
-        emit_event("debug_stop", pid=registo_id, arquivo=paragem["arquivo"], linha=paragem["linha"])
+        emit_event("debug_stop", pid=registo_id, arquivo=paragem["arquivo"], linha=paragem["linha"],
+                   erro=paragem.get("queda", False))
 
     return vigia
 
@@ -562,7 +563,7 @@ def _avisar_sem_arranque(registo_id, janela, visto):
     registrar_linha_processo(registo_id,
                              f"[axio] nao arrancou: {alvo['codigo']} em {alvo['ficheiro']}:"
                              f"{alvo['linha']}  ->  {alvo['mensagem']}")
-    emit_event("debug_stop", pid=registo_id, arquivo=alvo["caminho"], linha=alvo["linha"])
+    emit_event("debug_stop", pid=registo_id, arquivo=alvo["caminho"], linha=alvo["linha"], erro=True)
 
 def _conduzir_depuracao(comandos):
     """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""

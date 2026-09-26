@@ -908,8 +908,8 @@ https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
   A **6b** já tem o clique na margem a marcar o ponto, os botões de controlo dentro do card
   (Continuar/Passo/Entrar/Sair/Pilha/Variáveis/Terminar), o botão de depurar na barra do terminal e
   o salto do editor para a linha onde parou (tudo feito e provado a 2026-10-06, ver as secções
-  próprias). Faltam a linha ACESA no código e a stack na coluna 3; a **6c** (Python) já corre pelo
-  `pdb`, no mesmo card e com os mesmos botões.
+  próprias). A linha ACESA no código entrou a seguir (ver "A linha do erro acesa no editor"); falta a
+  stack na coluna 3; a **6c** (Python) já corre pelo `pdb`, no mesmo card e com os mesmos botões.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /
@@ -1048,11 +1048,60 @@ O leitor vive em `src/backend/builds/leitura_depurador.py` (só texto entra, só
   a janela são as últimas 80 linhas do card, não só a resposta do último comando: foi uma prova que
   mostrou que um `w` que chega depois do tempo de espera se perdia por completo.
 
-### O que continua a faltar
+### O que ainda faltava quando isto foi escrito (já não falta)
 
-A leitura aparece quando **eu** conduzo a sessão. Se o utilizador escrever no campo do card com o card
-selecionado, só o depurador responde — falta o controlo à mão (continuar/passo/entrar/sair) que leia o
-card a toda a hora. É a peça seguinte, já pedida por ele.
+Quando esta leitura nasceu, ela só saía quando **eu** conduzia a sessão. Feito depois: os botões de
+controlo (primeiro dentro do card, depois numa barra acima do campo do terminal), o botão de depurar na
+barra do terminal, o ficheiro a abrir sozinho na linha da paragem e a leitura a sair venha o comando de
+onde vier. O que resta do depurador está em "O que falta (medido, não suposto)".
+
+## A linha do erro acesa no editor e a barra de controlo arrumada (2026-10-06)
+
+O utilizador correu a bateria numa pasta dele ("Nova pasta", em Downloads) e voltou com três queixas
+medidas — não supostas: o erro só aparecia no card, o editor não pintava a linha, e a barra de controlo
+estava encostada à esquerda e sem fundo.
+
+**O QUE JÁ FUNCIONAVA.** O editor **abre mesmo**, sozinho, na linha certa: disparado o evento à mão na
+janela a correr, em 400ms o `ws-status` dizia `editor: .../depurar.py` e o cursor estava na linha 30.
+O que faltava era só o vermelho.
+
+**A LINHA ACESA.** O evento `debug_stop` passou a levar `erro=True/False`; quem sabe se foi queda é
+`leitura_depurador.e_queda(motivo)`, o módulo que escreve o motivo — a ligação fica lá, nunca numa
+comparação de texto espalhada por dois ficheiros. No editor, `linha_depurador.js` pinta a linha inteira:
+vermelha (`rgba(244,63,94,.15)` + barra sólida de 3px `#f43f5e`) quando foi queda, neutra quando foi só
+um ponto de paragem. A marca sai quando a sessão acaba e volta sozinha ao trocar de aba
+(`onDidChangeModel`).
+
+**O CAMINHO DO FICHEIRO.** O `pdb` do Python 3.14 escreve o caminho em minúsculas (`os.path.normcase`)
+e o explorador guarda-o na grafia real: comparados byte a byte davam **duas abas para o mesmo ficheiro**.
+`caminhoDoDepurador` resolve o caminho contra o ficheiro aberto e as abas, sem distinguir maiúsculas nem
+`\` de `/`.
+
+**A BARRA.** Virou uma pill centrada sobre o campo do terminal (medido: centro 550.0 contra 550.0 do
+campo), fundo `#3a3a3a`, canto arredondado, 8px acima do campo — e **0px quando recolhida**, medido, para
+o truque do `grid-template-rows: 0fr` não deixar uma faixa de padding à vista. Sem bordas, como ele pede.
+
+### O que a prova apanhou (pdb real, não exemplo inventado)
+
+Seis variantes do mesmo ficheiro, cada uma corrida em `pdb` a sério e passada pelo vigia do card:
+
+| o que se estragou | o card | o editor |
+| --- | --- | --- |
+| nada (programa bom) | nada | nada |
+| `"Carla": []` | parou em teste.py:5 | linha 5, vermelho |
+| falta a vírgula | não arrancou (SyntaxError) | linha 9 |
+| aspas abertas | não arrancou (SyntaxError) | linha 10 |
+| indentação trocada | não arrancou (IndentationError) | linha 5 |
+| linhas apagadas (5 variantes) | não arrancou | linha certa nas 5 |
+
+**O CASO QUE NÃO APONTA, e não é defeito:** apagar só o `return` deixa o programa correr e imprimir
+`None`. Não há erro nenhum, logo não há nada a apontar: é a terceira gaveta (dá a resposta errada e não
+se queixa) e a única que continua a exigir um ponto de paragem marcado à mão.
+
+### Duplicação que já cá estava (alertada, não mexida)
+
+`editor.js` tem dois blocos de 9 linhas iguais (`applyContent` contra `aplicar`) e `terminal_cards.js`
+repete 11 linhas de `preview.js`. São de antes desta rodada; ficam como candidatos a mesclar.
 
 ## O que NÃO se faz
 
