@@ -29,6 +29,7 @@ from src.backend.tools import (
     computador,
     cpp,
     cpp_auditoria,
+    depurador_auditoria,
     edit,
     environment,
     espera,

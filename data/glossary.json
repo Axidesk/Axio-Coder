@@ -2029,8 +2029,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 308,
         "conferido": [
-          1790457972.248,
-          24581
+          1790461406.183,
+          24585
         ]
       }
     },
@@ -2070,8 +2070,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 60,
         "conferido": [
-          1790457972.248,
-          24581
+          1790461406.183,
+          24585
         ]
       }
     },
@@ -2092,8 +2092,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 680,
         "conferido": [
-          1790457972.248,
-          24581
+          1790461406.183,
+          24585
         ]
       }
     },
@@ -2265,8 +2265,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 238,
         "conferido": [
-          1790457972.248,
-          24581
+          1790461406.183,
+          24585
         ]
       }
     },
@@ -2286,8 +2286,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 484,
         "conferido": [
-          1790457972.248,
-          24581
+          1790461406.183,
+          24585
         ]
       }
     },
@@ -2540,8 +2540,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 551,
         "conferido": [
-          1790457972.248,
-          24581
+          1790461406.183,
+          24585
         ]
       }
     },
@@ -5174,8 +5174,8 @@
         "arquivo": "src/frontend/js/editor/workspace.js",
         "linha": 302,
         "conferido": [
-          1790458587.194,
-          38525
+          1790460166.274,
+          38577
         ]
       }
     },
@@ -5468,7 +5468,11 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 526
+        "linha": 526,
+        "conferido": [
+          1790460161.649,
+          32539
+        ]
       }
     },
     {
@@ -5525,6 +5529,18 @@
           1790447385.708,
           2349
         ]
+      }
+    },
+    {
+      "termo": "auditoria do depurador",
+      "aliases": [
+        "testar o debug a serio; provar o debug; auditar o depurador; testar sem chutar; varios ficheiros com erro"
+      ],
+      "identificador": "tool_auditar_depurador",
+      "descricao": "Corre o pdb real em pastas temporarias com erros conhecidos e compara o que cada corrida aponta (ficheiro e linha) com o esperado.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/depurador_auditoria.py",
+        "linha": 167
       }
     }
   ]
