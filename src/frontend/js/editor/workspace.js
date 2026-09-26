@@ -213,6 +213,13 @@ export function applyExplorerSize(diferirLayout) {
     else layoutAllEditors();
 }
 
+export function applyLogAltura() {
+    const dock = document.getElementById('log-dock');
+    if (!dock) return;
+    if (state.logAltura > 0) dock.style.setProperty('--log-altura', state.logAltura + 'px');
+    else dock.style.removeProperty('--log-altura');
+}
+
 export function collapseDockForFocus() {
     if (state.dockCollapsedForFocus) return;
     const row = document.getElementById('dock-bottom-row');
@@ -250,7 +257,10 @@ export function applyDockLayout() {
         panel.classList.toggle('dock-right', isRight);
         panel.classList.toggle('dock-bottom', !isRight);
     }
+    const dockEl = document.getElementById('log-dock');
+    if (dockEl) dockEl.classList.remove('col2-foco');
     applyFilesLayout();
+    applyLogAltura();
     applyExplorerSize(true);
     if (state.btnDockRight) {
         state.btnDockRight.classList.toggle('text-[var(--oliva)]', isRight);
@@ -327,6 +337,57 @@ export function initExplorerResizer() {
             applyExplorerSize();
             persistDockPrefs();
             if (dockRow) dockRow.classList.remove('resizing');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+}
+
+export function initLogResizer() {
+    const resizer = document.getElementById('log-resizer');
+    const dock = document.getElementById('log-dock');
+    if (!resizer || !dock) return;
+    resizer.addEventListener('mousedown', (e) => {
+        if (state.dockSide !== 'right') return;
+        e.preventDefault();
+        const row = document.getElementById('dock-bottom-row');
+        const coluna = dock.parentElement;
+        const startY = e.clientY;
+        const startAltura = dock.offsetHeight;
+        const maximo = Math.max(120, (coluna ? coluna.clientHeight : 0) - 120);
+        let rafId = null;
+        let pendente = null;
+        if (row) row.classList.add('resizing');
+
+        function flush() {
+            rafId = null;
+            if (pendente === null) return;
+            state.logAltura = pendente;
+            dock.style.setProperty('--log-altura', pendente + 'px');
+            pendente = null;
+        }
+
+        function onMove(ev) {
+            const altura = Math.max(60, Math.min(maximo, startAltura - (ev.clientY - startY)));
+            pendente = altura;
+            if (rafId === null) rafId = requestAnimationFrame(flush);
+        }
+
+        function onUp() {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            if (pendente !== null) {
+                state.logAltura = pendente;
+                dock.style.setProperty('--log-altura', pendente + 'px');
+                pendente = null;
+            }
+            persistDockPrefs();
+            if (row) row.classList.remove('resizing');
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
         }
@@ -875,7 +936,7 @@ const DOCK_PREFS_KEY = 'axio-dock-prefs';
 
 export function persistDockPrefs() {
     try {
-        localStorage.setItem(DOCK_PREFS_KEY, JSON.stringify({ side: state.dockSide, size: state.explorerSize }));
+        localStorage.setItem(DOCK_PREFS_KEY, JSON.stringify({ side: state.dockSide, size: state.explorerSize, logAltura: state.logAltura }));
     } catch (e) {}
 }
 
@@ -886,6 +947,8 @@ export function initDockPrefs() {
     if (saved.side === 'right' || saved.side === 'bottom') state.dockSide = saved.side;
     const tamanho = parseInt(saved.size, 10);
     if (!isNaN(tamanho)) state.explorerSize = Math.max(80, Math.min(700, tamanho));
+    const alturaLog = parseInt(saved.logAltura, 10);
+    if (!isNaN(alturaLog) && alturaLog > 0) state.logAltura = Math.max(60, Math.min(900, alturaLog));
 }
 
 export function applyDockTheme(theme) {
@@ -911,6 +974,7 @@ initDockPrefs();
 
 applyDockLayout();
 initExplorerResizer();
+initLogResizer();
 
 
 export function scheduleEditorLayout() {

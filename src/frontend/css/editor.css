@@ -260,8 +260,27 @@
 #editor-panel.dock-right #log-dock {
     flex-direction: column;
     width: 100%;
-    flex: 1 1 0;
+    flex: 0 0 var(--log-altura, 50%);
     min-height: 0;
+    order: 1;
+}
+#editor-panel.dock-right #log-resizer {
+    display: block;
+    order: 0;
+    flex: 0 0 4px;
+    width: 100%;
+    background: transparent;
+    cursor: row-resize;
+    transition: background var(--dur-1);
+}
+#editor-panel.dock-right #log-resizer:hover {
+    background: var(--azul-acao);
+}
+#editor-panel.dock-right #dock-bottom-row.resizing #log-dock {
+    transition: none;
+}
+#editor-panel.dock-right #log-dock:has(#panel-log-session.log-recolhido):not(:has(#panel-col-2:not(.panel-col-closed))) + #log-resizer {
+    display: none;
 }
 #editor-panel.dock-right #panel-log-session,
 #editor-panel.dock-right #panel-col-2 {
@@ -282,6 +301,60 @@
     min-height: 0;
     opacity: 0;
     pointer-events: none;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido {
+    flex: 0 0 auto;
+    width: 100%;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido > div:first-child {
+    padding: 1rem;
+    justify-content: space-between;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido .log-titulo {
+    display: block;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido .btn-log-toggle {
+    display: inline-flex;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido .log-ic-minus {
+    display: none;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido .log-ic-plus {
+    display: block;
+}
+#editor-panel.dock-right #panel-log-session.log-recolhido .log-faixa-icone {
+    display: none;
+}
+#editor-panel.dock-right #log-dock:has(#panel-log-session.log-recolhido):not(:has(#panel-col-2:not(.panel-col-closed))) {
+    flex: 0 0 auto;
+}
+#editor-panel.dock-right:has(#log-dock.col2-foco) #explorer-view {
+    flex: 0 0 0;
+    min-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+#editor-panel.dock-right #log-dock.col2-foco {
+    flex: 1 1 auto;
+}
+#editor-panel.dock-right #log-dock.col2-foco #panel-log-session {
+    flex: 0 0 auto;
+    height: auto;
+}
+#editor-panel.dock-right #log-dock.col2-foco #panel-log-session #current-logs-list {
+    display: none;
+}
+#editor-panel.dock-right #log-dock.col2-foco #panel-log-session .log-ic-minus {
+    display: none;
+}
+#editor-panel.dock-right #log-dock.col2-foco #panel-log-session .log-ic-plus {
+    display: block;
+}
+#editor-panel.dock-right #log-dock.col2-foco #panel-col-2 {
+    flex: 1 1 0;
+}
+#editor-panel:has(#log-dock.col2-foco) #log-resizer {
+    display: none;
 }
 #editor-panel.dock-right #explorer-view {
     order: -1;

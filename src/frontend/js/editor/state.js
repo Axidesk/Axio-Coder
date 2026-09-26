@@ -104,6 +104,7 @@ state.monacoLoading = false;
 state.monacoInitQueue = [];
 state.dockSide = 'bottom';
 state.explorerSize = 240;
+state.logAltura = 0;
 state.dockCollapsedForFocus = false;
 state.dockCollapsedSavedSize = null;
 state.explorerSearchActive = false;

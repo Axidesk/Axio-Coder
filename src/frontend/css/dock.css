@@ -206,6 +206,9 @@
     opacity: 0;
     pointer-events: none;
 }
+#log-resizer {
+    display: none;
+}
 #panel-log-session,
 #panel-col-2 {
     overflow: hidden;
@@ -225,6 +228,40 @@
     opacity: 0;
     border-right-width: 0;
     pointer-events: none;
+}
+.btn-log-toggle {
+    display: inline-flex;
+    align-items: center;
+}
+.log-ic-plus,
+.log-faixa-icone {
+    display: none;
+}
+.log-faixa-icone {
+    align-items: center;
+    justify-content: center;
+    color: var(--text-suave);
+    transition: color var(--dur-1) var(--ease-fluid);
+}
+#panel-log-session.log-recolhido {
+    width: 30px;
+    cursor: pointer;
+}
+#panel-log-session.log-recolhido > div:first-child {
+    height: 60px;
+    padding: 0;
+    justify-content: center;
+}
+#panel-log-session.log-recolhido #current-logs-list,
+#panel-log-session.log-recolhido .log-titulo,
+#panel-log-session.log-recolhido .btn-log-toggle {
+    display: none;
+}
+#panel-log-session.log-recolhido .log-faixa-icone {
+    display: flex;
+}
+#panel-log-session.log-recolhido:hover .log-faixa-icone {
+    color: var(--text-branco);
 }
 #panel-col-2-history {
     overflow: hidden;

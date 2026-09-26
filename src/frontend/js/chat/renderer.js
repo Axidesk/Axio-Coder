@@ -15,8 +15,7 @@ import {
     btnAiSelect,
     aiSubmenu,
     panelLogSession,
-    btnCloseLogSession,
-    btnDockLogSession,
+    btnLogToggle,
     btnDockFiles,
     btnDockCode,
     btnSessionHistory,
@@ -97,7 +96,7 @@ import { registrarRepinturaCol3 } from './historico/acoes.js';
 import { registrarRestauroDaTarefa, registrarSincronizacaoDoEnvio } from './historico/cards.js';
 import { closeRestoreConfirmPopup, performSessionRestore } from './historico/restauro.js';
 import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderInspectTooltip, executarItemInspect, ligarInspectAoMenu, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
-import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
+import { alternarLogSession, closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, col2EmFoco, expandirLogSession, isHistoryOpen, isLogDockOpen, logSessionRecolhido, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
 import { renderThoughts, renderTools, sendMessage, showQuestionPanel, sortToolArgsKeys, startSSE } from './messages.js';
 import { aplicarEstadoReveal, aplicarEstadoToggleDeepseek, aplicarEstadoToggleGemini, aplicarEstadoToggleNav, aplicarEstadoToggleVertex, atualizarBotaoLimparVertex, closeSettingsModal, limparErroDeepseek, limparErroGemini, mostrarErroDeepseek, mostrarErroGemini, mostrarErroTavily, openSettingsModal, salvarConfiguracoes, validarChaveDeepseek, validarChaveStudio, validarChaveTavily } from './settings.js';
 import { applyGlossaryChip, clearContextMemory, closeClearContextPopup, confirmarEscolha, contextPopupVisivel, esconderChip, esconderIconTooltip, fecharConfirmPopup, loadGlossary, mostrarIconTooltip, openClearContextPopup, posicionarContextUsageUI, posicionarIconTooltip, recolherContextPopup, renderCurrentSessionLogs, resizeChatInput, showAlert, showGlossaryChip, syncMenuIcons, syncWorkspaceTopBar, toggleWorkspaceView } from './ui.js';
@@ -488,14 +487,20 @@ import './busca_chat.js';
         syncWorkspaceTopBar();
     });
     
-    if (btnCloseLogSession) {
-        btnCloseLogSession.addEventListener('click', () => {
-            closePanelCol(panelLogSession);
-            closePanelCol(panelCol2);
-            closeCol3();
-            closeLogDock();
+    if (btnLogToggle) {
+        btnLogToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (col2EmFoco()) expandirLogSession();
+            else alternarLogSession();
             syncMenuIcons();
             syncWorkspaceTopBar();
+        });
+    }
+
+    if (panelLogSession) {
+        panelLogSession.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            if (col2EmFoco() || logSessionRecolhido()) expandirLogSession();
         });
     }
 
@@ -543,7 +548,6 @@ import './busca_chat.js';
         if (vista) vista.fecharCol3();
     });
 
-    if (btnDockLogSession) btnDockLogSession.addEventListener('click', () => toggleLogColumn(panelLogSession));
     if (btnDockFiles) btnDockFiles.addEventListener('click', () => toggleLogColumn(panelCol2));
     if (btnDockCode) btnDockCode.addEventListener('click', () => toggleLogColumn(panelCol3));
 
