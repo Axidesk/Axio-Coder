@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790379033.502,
-          12082
+          1790384492.048,
+          12110
         ]
       }
     },
@@ -2176,8 +2176,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790379033.502,
-          12082
+          1790384492.048,
+          12110
         ]
       }
     },
@@ -2757,8 +2757,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 88,
         "conferido": [
-          1790383300.325,
-          21258
+          1790384339.773,
+          23320
         ]
       }
     },
@@ -2777,8 +2777,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 96,
         "conferido": [
-          1790383300.325,
-          21258
+          1790384339.773,
+          23320
         ]
       }
     },
@@ -3834,8 +3834,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 141,
         "conferido": [
-          1790383300.325,
-          21258
+          1790384339.773,
+          23320
         ]
       }
     },
@@ -5194,6 +5194,51 @@
           1790383293.01,
           25778
         ]
+      }
+    },
+    {
+      "termo": "titulo da coluna da arvore",
+      "aliases": [
+        "nome da pasta no topo da coluna",
+        "cabecalho da coluna",
+        "titulo da coluna",
+        "nome da pasta aberta no topo"
+      ],
+      "identificador": ".explorer-coluna-titulo (criado por tituloDaColuna em explorer.js)",
+      "descricao": "Cabecalho com o NOME da pasta no topo de cada coluna nascida de uma pasta no doc horizontal. O nome nao se repete como linha dentro da coluna.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/editor.css",
+        "linha": 334
+      }
+    },
+    {
+      "termo": "pasta preenchida da arvore",
+      "aliases": [
+        "pasta amarela cheia",
+        "pasta cheia",
+        "pasta do projeto preenchida",
+        "pasta do alvo preenchida"
+      ],
+      "identificador": ".explorer-grupo.explorer-alvo .explorer-folder-icon { fill: currentColor }",
+      "descricao": "Pasta amarela cheia (nao vazada) para o no de projeto e para o alvo; o nome fica na cor do nivel (branco+bold no projeto, text-corpo no alvo), nunca azul.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/workspace.css",
+        "linha": 243
+      }
+    },
+    {
+      "termo": "pasta azul da arvore",
+      "aliases": [
+        "pasta pintada de azul",
+        "pasta aberta azul",
+        "pasta que abriu a coluna",
+        "linha acesa da coluna"
+      ],
+      "identificador": ".explorer-row.explorer-coluna-acesa .explorer-folder-icon",
+      "descricao": "A pasta que abriu a coluna seguinte fica com o icone AZUL (o nome nao muda de cor). E o unico azul da arvore.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/editor.css",
+        "linha": 352
       }
     }
   ]

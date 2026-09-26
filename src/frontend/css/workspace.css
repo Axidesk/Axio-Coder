@@ -240,9 +240,10 @@
 .explorer-dir { color: var(--text-corpo); }
 .explorer-grupo { color: var(--text-suave); }
 .explorer-grupo.explorer-pasta { color: var(--text-corpo); }
-.explorer-grupo.explorer-alvo { color: var(--azul-acao); }
+.explorer-grupo.explorer-alvo { color: var(--text-corpo); }
 .explorer-grupo.explorer-projeto { color: var(--text-branco); font-weight: 600; }
-.explorer-grupo-icon { flex-shrink: 0; }
+.explorer-grupo.explorer-projeto .explorer-folder-icon,
+.explorer-grupo.explorer-alvo .explorer-folder-icon { fill: currentColor; }
 .explorer-file { color: var(--text-escuro); }
 .explorer-row.explorer-error { color: var(--vermelho-vivo); }
 .explorer-row.explorer-error .explorer-file-icon,

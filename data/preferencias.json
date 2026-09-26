@@ -89,6 +89,11 @@
       "area": "arvore",
       "texto": "Guias de indentacao da arvore (explorer do doc e painel de informacoes do projeto): um fio vertical de 1px por nivel, um traco horizontal de 20px a ligar o fio ao icone - o MESMO comprimento nos dois paineis, medido, nunca um traco curto de 8px que se le como expremido - e um cotovelo no ultimo filho (o fio vertical para ai): o desenho |, |- e L do Qt Creator. O fio alinha com o CENTRO do icone da pasta-mae, nunca com a borda dela, e e isso que fixa a geometria: o recuo do nivel (margin-left do container de filhos) = traco + metade do icone (28px = 20 + 8) e o padding-esquerdo da linha = traco; so assim o fio cai no centro do icone do nivel seguinte. Geometria sempre por PERCENTAGENS (top:50% no traco, height:50% no cotovelo) e nunca px fixos, para nao depender da altura da linha. Cor --border-suave, 1px, e os tracos ficam por CIMA do fundo de hover. Nunca um simples border-left no container.",
       "atualizado": "2026-09-26 00:31:33"
+    },
+    {
+      "area": "arvore-pastas",
+      "texto": "Na arvore do explorer o nivel separa-se pela COR DA PASTA e pelo PESO do nome, nunca por um glifo diferente (o icone e sempre a mesma pasta): pasta de projeto/alvo = pasta amarela PREENCHIDA, com o nome na cor do nivel (branco a negrito no projeto, normal no alvo); pasta real/grupo = pasta amarela vazada, nome na cor do nivel; a pasta que ABRIU a coluna da direita = pasta AZUL (so o icone, o nome continua normal). Nenhum nome fica azul.",
+      "atualizado": "2026-09-26 02:17:30"
     }
   ]
 }

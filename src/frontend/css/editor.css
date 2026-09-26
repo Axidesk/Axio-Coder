@@ -331,8 +331,26 @@
     margin: 0;
     padding: 0;
 }
+#explorer-tree.files-colunas .explorer-coluna-titulo {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 2px 8px 6px;
+    font-size: 11px;
+    color: var(--text-mutado);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--bg-panel-2);
+}
+body.theme-espacial #explorer-tree.files-colunas .explorer-coluna-titulo {
+    background: var(--bg-panel);
+}
 #explorer-tree.files-colunas .explorer-row.explorer-coluna-acesa {
     background: var(--bg-hover);
+}
+#explorer-tree.files-colunas .explorer-row.explorer-coluna-acesa .explorer-folder-icon {
+    color: var(--azul-acao);
 }
 #explorer-search-box {
     left: 0;

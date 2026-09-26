@@ -216,6 +216,11 @@ function preencherLista(ul, entries, raiz) {
     anteriores.forEach(li => li.remove());
     return novos;
 }
+function montarLista(entries) {
+    const ul = document.createElement('ul');
+    (entries || []).forEach(e => ul.appendChild(renderEntry(e)));
+    return ul;
+}
 export function renderExplorer(data) {
     aplicarDockDeProjeto(data.agrupada, data.root || '');
     state.rootPath = data.root || '';
@@ -288,12 +293,9 @@ export function renderEntry(entry, raiz) {
     }
     return li;
 }
-function iconeDoNivel(nivel) {
-    return nivel === 'pasta' ? state.ICON_FOLDER : state.ICON_GRUPO;
-}
 function renderGrupo(entry, li, row) {
     const nivel = entry.nivel || 'grupo';
-    row.innerHTML = iconeDoNivel(nivel) + '<span>' + entry.nome + '</span>';
+    row.innerHTML = state.ICON_FOLDER + '<span>' + entry.nome + '</span>';
     row.classList.add('explorer-dir', 'explorer-grupo', 'explorer-' + nivel);
     row.title = entry.detalhe ? entry.nome + ' - ' + entry.detalhe : entry.nome;
     li.appendChild(row);
@@ -337,30 +339,23 @@ export function staggerExplorerItems(container) {
 export async function loadDirChildren(path, container) {
     container.innerHTML = '<div class="explorer-loading">carregando...</div>';
     container.classList.remove('hidden');
-    try {
-        const resp = await fetch(state.API + '/api/explorer?path=' + encodeURIComponent(path));
-        const data = await resp.json();
-        if (data.sem_raiz) {
-            container.innerHTML = '';
-            return false;
-        }
-        if (data.error) {
-            container.innerHTML = '<div class="explorer-loading term-err">' + data.error + '</div>';
-            return false;
-        }
+    const data = await pedirLista(path).catch(() => null);
+    if (!data || data.sem_raiz) {
         container.innerHTML = '';
-        const ul = document.createElement('ul');
-        data.entries.forEach(e => ul.appendChild(renderEntry(e)));
-        container.appendChild(ul);
-        staggerExplorerItems(ul);
-        container.dataset.loaded = '1';
-        highlightSelection();
-        applyErrorMarkers();
-        return data;
-    } catch (e) {
-        container.innerHTML = '<div class="explorer-loading term-err">' + e.message + '</div>';
         return false;
     }
+    if (data.error) {
+        container.innerHTML = '<div class="explorer-loading term-err">' + data.error + '</div>';
+        return false;
+    }
+    container.innerHTML = '';
+    const ul = montarLista(data.entries);
+    container.appendChild(ul);
+    staggerExplorerItems(ul);
+    container.dataset.loaded = '1';
+    highlightSelection();
+    applyErrorMarkers();
+    return data;
 }
 function modoColunas() {
     return !!state.explorerTree && state.explorerTree.classList.contains('files-colunas');
@@ -381,6 +376,14 @@ function criarColuna(path) {
     coluna.dataset.path = path || '';
     return coluna;
 }
+function tituloDaColuna(nome, caminho) {
+    const titulo = document.createElement('div');
+    titulo.className = 'explorer-coluna-titulo';
+    titulo.textContent = nome;
+    titulo.title = caminho || nome;
+    return titulo;
+}
+
 function limparColunasDepois(casca, coluna) {
     let el = coluna ? coluna.nextElementSibling : casca.firstElementChild;
     while (el) {
@@ -422,21 +425,37 @@ async function abrirColunaDePasta(path, row) {
         return;
     }
     if (jaAberta) return;
-    row.classList.add('explorer-coluna-acesa');
-    const nova = criarColuna(path);
-    casca.appendChild(nova);
-    const dados = await loadDirChildren(path, nova);
-    if (!dados) {
-        nova.remove();
-        row.classList.remove('explorer-coluna-acesa');
-        return;
+    const dados = await pedirLista(path).catch(() => null);
+    if (!dados || dados.sem_raiz || dados.error) return;
+    fecharInlineDaColuna(coluna, row);
+    const lista = montarLista(dados.entries);
+    if (filhosSaoPastas(dados.entries)) {
+        const container = containerDeFilhos(row);
+        container.innerHTML = '';
+        container.appendChild(lista);
+        container.classList.remove('hidden');
+        container.dataset.loaded = '1';
+    } else {
+        row.classList.add('explorer-coluna-acesa');
+        const nova = criarColuna(path);
+        nova.appendChild(tituloDaColuna(nomeDaPasta(row, path), path));
+        nova.appendChild(lista);
+        casca.appendChild(nova);
+        ajustarLimiteDeColunas(casca);
     }
-    if (filhosSaoPastas(dados.entries)) absorverColuna(nova);
-    else ajustarLimiteDeColunas(casca);
+    staggerExplorerItems(lista);
+    highlightSelection();
+    applyErrorMarkers();
+    state.explorerRenderPath = dados.path || state.explorerRenderPath;
     if (path.startsWith(PREFIXO_ARVORE)) return;
     state.currentCwdRel = dados.path || '';
     updateExplorerPath(dados);
     enterDir(path, false);
+}
+function nomeDaPasta(row, path) {
+    const rotulo = row.querySelector('span');
+    const texto = rotulo ? (rotulo.textContent || '').trim() : '';
+    return texto || basename(path);
 }
 function larguraDaColuna(casca) {
     const medida = parseFloat(getComputedStyle(casca).getPropertyValue('--coluna-largura'));
@@ -473,6 +492,16 @@ function filhosInlineAbertos(row) {
     const container = li.querySelector(':scope > .explorer-children');
     if (!container || container.classList.contains('hidden')) return null;
     return container;
+}
+function fecharInlineDaColuna(coluna, excepto) {
+    if (!coluna) return;
+    coluna.querySelectorAll(':scope > ul > .explorer-item > .explorer-children').forEach(container => {
+        const li = container.parentElement;
+        const row = li ? li.querySelector(':scope > .explorer-row') : null;
+        if (row === excepto) return;
+        container.classList.add('hidden');
+        if (row) row.classList.remove('explorer-aberto');
+    });
 }
 function linhaDaColuna(coluna, path) {
     if (!coluna || !path) return null;
