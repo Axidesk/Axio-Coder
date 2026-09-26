@@ -1,4 +1,4 @@
-"""Cliente da ponte HTTP que o processo principal do Electron abre para o preview.
+"""Cliente da ponte HTTP que o processo principal do Electron abre para o preview e para a janela do Axio.
 
 A pagina do preview vive numa WebContentsView do processo principal, fora do
 alcance do Flask. O main.js abre em 127.0.0.1 uma ponte autenticada por token e
@@ -15,23 +15,24 @@ import os
 TEMPO_DA_PONTE = 25.0
 TETO_RESPOSTA = 12 * 1024 * 1024
 SEM_PONTE = (
-    "o preview nao esta ligado a este backend. A ponte entre o servidor e a janela nasce no"
+    "a janela do Axio nao esta ligada a este backend. A ponte entre o servidor e a janela nasce no"
     " arranque do Axio: feche e reabra o programa (Ctrl+Shift+B nao chega, porque nao refaz"
     " o processo principal)"
 )
 
 
-def pedir(acao, **params):
+def pedir(acao, tela="", **params):
     """(resposta, erro) de um pedido a ponte aberta pelo processo principal do Electron.
 
     Devolve (None, motivo) em vez de levantar quando a ponte nao existe ou nao
     responde: sem janela nao ha gesto possivel, e quem chama tem de poder dizer
-    isso ao utilizador em vez de morrer a meio.
+    isso ao utilizador em vez de morrer a meio. 'tela' escolhe o alvo: vazio ou
+    'preview' e a pagina do visualizador, 'janela' e a propria interface do Axio.
     """
     porta = (os.environ.get("AXIO_PONTE_PORTA") or "").strip()
     if not porta:
         return None, SEM_PONTE
-    corpo = json.dumps({"acao": acao, "params": params}, ensure_ascii=False).encode("utf-8")
+    corpo = json.dumps({"acao": acao, "tela": tela, "params": params}, ensure_ascii=False).encode("utf-8")
     cabecalhos = {
         "Content-Type": "application/json; charset=utf-8",
         "Content-Length": str(len(corpo)),

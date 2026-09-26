@@ -1186,7 +1186,11 @@
       "descricao": "Rotulo curto (#endpoints http) a direita de cada pasta/ficheiro na arvore do painel de informacoes do projeto, dentro de uma coluna de largura fixa (--projeto-coluna-tags, 180px) separada por um fio vertical. A coluna e reservada em TODA a linha, tenha ela etiqueta ou nao: aplicarEtiquetas (js/chat/projeto_etiquetas.js) poe um .projeto-tag VAZIO nas linhas sem rotulo - sem esse span o nome e a contagem correm por baixo do fio (medido: a contagem terminava 19px depois da linha; com o span para 5px antes). Fonte 10.72px peso 600, cor --text-mutado, com reticencias. O olho recolhe-as com animacao (width da etiqueta e opacity em 0.3s) e o texto completo so aparece em tooltip quando a etiqueta esta mesmo cortada. Gravado em .axio/etiquetas.json (assinatura = mtime do ficheiro, nomes dos filhos da pasta) e gerado por src/backend/services/etiquetas.py. A primeira etiquetagem dispara sozinha ao abrir a arvore de um projeto novo.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 498
+        "linha": 498,
+        "conferido": [
+          1790394685.807,
+          13476
+        ]
       }
     },
     {
@@ -1205,8 +1209,8 @@
         "arquivo": "src/frontend/js/chat/projeto_etiquetas.js",
         "linha": 66,
         "conferido": [
-          1789601695.002,
-          9054
+          1790430244.772,
+          9159
         ]
       }
     },
@@ -1225,8 +1229,8 @@
         "arquivo": "src/frontend/js/chat/projeto_etiquetas.js",
         "linha": 96,
         "conferido": [
-          1789601695.002,
-          9054
+          1790430244.772,
+          9159
         ]
       }
     },
@@ -3220,10 +3224,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 683,
+        "linha": 672,
         "conferido": [
-          1790391058.831,
-          43437
+          1790431001.689,
+          42990
         ]
       }
     },
@@ -5372,6 +5376,44 @@
           1790428506.183,
           28310
         ]
+      }
+    },
+    {
+      "termo": "janela que muda sozinha pra o editor",
+      "aliases": [
+        "alterna sozinho pro editor",
+        "muda pra janela do editor enquanto vc trabdaha",
+        "pular pra o editor",
+        "salto pra o editor",
+        "janela mudando sozinha"
+      ],
+      "identificador": "repintarCol3Aberta / openCol3Panel",
+      "descricao": "A troca automatica de vista tem duas portas: `openCol3Panel` (chat/layout.js) chama `showEditor()` e `abrirCol3()` das vistas passa por ele. O caminho automatico era o SSE: `tratar_tool_used_ai_thought` e `tratar_tool_sources` (chat/messages.js) faziam `state.isShowingTools = false; btnShowTools.click()`, e com o estado a false o `alternarPainelCol3` (renderer.js) cai no `vista.abrirCol3()` em vez de fechar. Agora os dois handlers chamam `repintarCol3Aberta` (chat/historico/acoes.js), que pinta a coluna aberta sem tocar na vista e com throttle de 250ms.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/historico/acoes.js",
+        "linha": 48,
+        "conferido": [
+          1790430988.064,
+          3503
+        ]
+      }
+    },
+    {
+      "termo": "medir os frames da própria janela",
+      "aliases": [
+        "fluidez da interface",
+        "fps da interface",
+        "travamento dos efeitos",
+        "medir quadros",
+        "interface lenta enquanto a ia roda",
+        "efeitos a 20fps",
+        "olhar para a propria janela"
+      ],
+      "identificador": "tool_observar_preview",
+      "descricao": "A ponte do preview ganhou um SEGUNDO ALVO: tela='janela' aponta as MESMAS acoes a PROPRIA interface do Axio (mainWindow.webContents) em vez da pagina do visualizador - com isso o mapa, a consola, a rede, o estilo, o print, o avaliar e o quadros passam a funcionar na janela, sem ferramenta nova. A acao 'quadros' mede o desenho a serio por requestAnimationFrame e devolve quadros, fps, intervalo medio/mediano, p95, pior e quantos passaram dos 32 ms: e o que transforma 'parece lento' em numero. O alvo escolhe-se no parametro 'tela' das duas ferramentas; sem ele tudo continua no preview, como antes.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/preview.py",
+        "linha": 848
       }
     }
   ]

@@ -25,6 +25,8 @@ const TOKEN = crypto.randomBytes(24).toString('hex');
 let servidor = null;
 let porta = 0;
 let obterPreview = () => null;
+let obterJanela = () => null;
+let donoDoRegisto = 0;
 let acoesDeFora = {};
 let aoUsar = null;
 let aoInspecionar = null;
@@ -39,6 +41,7 @@ const vigiados = new WeakSet();
 const escolhedores = new Map();
 
 const SEM_PAGINA = new Set(['estado', 'consola', 'rede', 'carregar', 'mostrar']);
+const SO_PREVIEW = new Set(['carregar', 'mostrar']);
 const ACOES_QUE_AGEM = new Set(['carregar', 'mostrar', 'clicar', 'escrever', 'teclar', 'arrastar', 'roda', 'recarregar', 'ficheiro']);
 
 const TECLAS = {
@@ -902,11 +905,11 @@ function guardarNaLista(lista, entrada, teto) {
 }
 
 function registarEntrada(entrada) {
-  consolaDescartada += guardarNaLista(consola, entrada, TETO_CONSOLA);
+  consolaDescartada += guardarNaLista(consola, Object.assign({ dono: donoDoRegisto }, entrada), TETO_CONSOLA);
 }
 
 function registarRede(entrada) {
-  redeDescartada += guardarNaLista(rede, entrada, TETO_REDE);
+  redeDescartada += guardarNaLista(rede, Object.assign({ dono: donoDoRegisto }, entrada), TETO_REDE);
 }
 
 function limparConsola() {
@@ -1067,14 +1070,17 @@ function depuradorDisponivel(view) {
   return !!(wc && !wc.isDestroyed() && wc.debugger);
 }
 
-function prepararDepurador(view) {
-  limparRegistos();
+function prepararDepurador(view, leve) {
   const depurador = depuradorDe(view);
   if (!depurador) return false;
   const wc = view.webContents;
+  donoDoRegisto = wc.id;
   if (!vigiados.has(wc)) {
     vigiados.add(wc);
-    depurador.on('message', (evento, metodo, params) => aoMensagemDoDepurador(depurador, metodo, params, wc));
+    depurador.on('message', (evento, metodo, params) => {
+      donoDoRegisto = wc.id;
+      aoMensagemDoDepurador(depurador, metodo, params, wc);
+    });
     depurador.on('detach', () => registarEntrada({
       nivel: 'aviso',
       origem: 'depurador',
@@ -1086,10 +1092,13 @@ function prepararDepurador(view) {
     wc.on('did-navigate', () => { limparRegistos(); reinjetarInspecaoAposNavegar(view); });
     wc.on('did-navigate-in-page', () => { limparRegistos(); reinjetarInspecaoAposNavegar(view); });
   }
-  for (const dominio of ['Runtime.enable', 'Log.enable', 'Page.enable', 'Network.enable', 'DOM.enable']) {
+  const dominios = leve
+    ? ['Runtime.enable', 'Log.enable']
+    : ['Runtime.enable', 'Log.enable', 'Page.enable', 'Network.enable', 'DOM.enable'];
+  for (const dominio of dominios) {
     enviarComando(depurador, dominio).catch(() => {});
   }
-  enviarComando(depurador, 'Page.setInterceptFileChooserDialog', { enabled: true }).catch(() => {});
+  if (!leve) enviarComando(depurador, 'Page.setInterceptFileChooserDialog', { enabled: true }).catch(() => {});
   return true;
 }
 
@@ -1228,17 +1237,28 @@ function identidadeDaView(view) {
   let visivel = null;
   let url = '';
   let titulo = '';
-  try { visivel = view.getVisible(); } catch (e) { visivel = null; }
+  visivel = visibilidadeDe(view);
   try { url = wc.getURL(); } catch (e) { url = ''; }
   try { titulo = wc.getTitle(); } catch (e) { titulo = ''; }
   return { aba: view.__axioAlvo || '', id: wc.id, url: url, titulo: titulo, visivel: visivel };
 }
 
+function idDaView(view) {
+  const wc = view && view.webContents;
+  return wc && !wc.isDestroyed() ? wc.id : 0;
+}
+
+function visibilidadeDe(view) {
+  if (!view) return null;
+  if (typeof view.getVisible === 'function') return view.getVisible();
+  if (typeof view.isVisible === 'function') return view.isVisible() && !view.isMinimized();
+  return null;
+}
+
 function acaoEstado(view) {
   if (!view) return { ok: true, tem_pagina: false };
   const wc = view.webContents;
-  let visivel = null;
-  try { visivel = view.getVisible(); } catch (e) { visivel = null; }
+  const visivel = visibilidadeDe(view);
   return {
     ok: true,
     tem_pagina: true,
@@ -1250,10 +1270,11 @@ function acaoEstado(view) {
   };
 }
 
-function lerBuffer(lista, descartadas, params, teto) {
+function lerBuffer(lista, descartadas, params, teto, dono) {
   const nivel = String(params.nivel || '').trim().toLowerCase();
   const limite = Math.max(1, Math.min(Number(params.limite) || 100, teto));
-  const base = nivel ? lista.filter((e) => e.nivel === nivel) : lista;
+  const minha = dono ? lista.filter((e) => e.dono === dono) : lista;
+  const base = nivel ? minha.filter((e) => e.nivel === nivel) : minha;
   return {
     ok: true,
     entradas: base.slice(-limite),
@@ -1263,13 +1284,13 @@ function lerBuffer(lista, descartadas, params, teto) {
 }
 
 function acaoConsola(view, params) {
-  const resposta = lerBuffer(consola, consolaDescartada, params, TETO_CONSOLA);
+  const resposta = lerBuffer(consola, consolaDescartada, params, TETO_CONSOLA, idDaView(view));
   if (params.limpar) limparConsola();
   return resposta;
 }
 
 function acaoRede(view, params) {
-  const resposta = lerBuffer(rede, redeDescartada, params, TETO_REDE);
+  const resposta = lerBuffer(rede, redeDescartada, params, TETO_REDE, idDaView(view));
   if (params.limpar) limparRede();
   return resposta;
 }
@@ -1375,6 +1396,51 @@ async function acaoCanvas(view, params) {
     return { ok: false, erro: 'A pagina nao devolveu o quadro do canvas.' };
   }
   return resultado;
+}
+
+async function acaoQuadros(view, params) {
+  const depurador = depuradorDe(view);
+  if (!depurador) return { ok: false, erro: 'A pagina nao esta a falar com o depurador.' };
+  const ms = Math.max(300, Math.min(Number(params.durante) || 2000, 10000));
+  const expressao = '(async function(){'
+    + 'var t0=performance.now(),fim=t0+' + ms + ',d=[],ultimo=null,longos=0,pior=0;'
+    + 'await new Promise(function(r){'
+    + 'function passo(t){'
+    + 'if(ultimo!==null){var dt=t-ultimo;d.push(dt);if(dt>pior)pior=dt;if(dt>32)longos++;}'
+    + 'ultimo=t;'
+    + 'if(t>=fim){r();return;}'
+    + 'requestAnimationFrame(passo);}'
+    + 'requestAnimationFrame(passo);});'
+    + 'var n=d.length;if(!n)return {quadros:0,ms:Math.round(performance.now()-t0)};'
+    + 'if(n>1)d.shift();'
+    + 'var ord=d.slice().sort(function(a,b){return a-b}),soma=0;'
+    + 'for(var i=0;i<d.length;i++)soma+=d[i];'
+    + 'var gasto=performance.now()-t0;'
+    + 'return {quadros:d.length,ms:Math.round(gasto),'
+    + 'fps:Math.round(d.length*1000/gasto*10)/10,'
+    + 'medio:Math.round(soma/d.length*100)/100,'
+    + 'mediano:Math.round(ord[Math.floor(ord.length/2)]*100)/100,'
+    + 'p95:Math.round(ord[Math.min(ord.length-1,Math.floor(ord.length*0.95))]*100)/100,'
+    + 'pior:Math.round(pior*100)/100,longos:longos};})()';
+  const resposta = await enviarComando(depurador, 'Runtime.evaluate', {
+    expression: expressao,
+    returnByValue: true,
+    awaitPromise: true,
+    userGesture: false
+  });
+  if (resposta && resposta.exceptionDetails) {
+    return { ok: false, erro: descreverExcecao(resposta.exceptionDetails) };
+  }
+  const resultado = (resposta && resposta.result) || {};
+  const valor = resultado.value || {};
+  if (!valor.quadros) {
+    return {
+      ok: false,
+      erro: 'A pagina nao desenhou um unico quadro em ' + ms + ' ms: a linha principal esta bloqueada por'
+        + ' codigo sincrono, ou a janela esta minimizada e o Chromium parou o desenho dela.'
+    };
+  }
+  return Object.assign({ ok: true }, valor);
 }
 
 async function prepararAlvo(view, params) {
@@ -1827,6 +1893,7 @@ const ACOES = {
   avaliar: (view, params) => acaoAvaliar(view, params),
   estilo: (view, params) => acaoEstilo(view, params),
   canvas: (view, params) => acaoCanvas(view, params),
+  quadros: (view, params) => acaoQuadros(view, params),
   print: (view, params) => acaoPrint(view, params),
   clicar: (view, params) => acaoClicar(view, params),
   arrastar: (view, params) => acaoArrastar(view, params),
@@ -1884,26 +1951,34 @@ function tratarPedido(req, res) {
 async function executar(dados) {
   const acao = String((dados && dados.acao) || '').trim();
   const params = (dados && dados.params) || {};
+  const naJanela = String((dados && dados.tela) || '').trim().toLowerCase() === 'janela';
   const tabela = Object.assign({}, ACOES, acoesDeFora);
   const escolhida = tabela[acao];
   if (!escolhida) {
     return { ok: false, erro: 'Acao desconhecida: ' + acao, acoes: Object.keys(tabela) };
   }
+  if (naJanela && SO_PREVIEW.has(acao)) {
+    return { ok: false, erro: 'A acao ' + acao + ' so existe no preview - na janela do Axio nao se aplica.' };
+  }
   try {
-    const view = obterPreview();
+    const view = naJanela ? obterJanela() : obterPreview();
     if (!view && !SEM_PAGINA.has(acao)) {
       return {
         ok: false,
         sem_pagina: true,
-        erro: 'Nao ha pagina no preview. Carregue um endereco ou um ficheiro primeiro.'
+        erro: naJanela
+          ? 'A janela do Axio nao esta a responder (fechada, minimizada ou a recarregar).'
+          : 'Nao ha pagina no preview. Carregue um endereco ou um ficheiro primeiro.'
       };
     }
-    if (aoUsar) {
+    if (aoUsar && !naJanela) {
       try { aoUsar(acao, ACOES_QUE_AGEM.has(acao)); } catch (e) {}
     }
+    if (naJanela && view) prepararDepurador(view, acao !== 'ficheiro');
     const resultado = await escolhida(view, params);
     if (resultado && typeof resultado === 'object' && !resultado.alvo) {
       resultado.alvo = identidadeDaView(view);
+      if (naJanela && resultado.alvo) resultado.alvo.aba = 'janela do Axio';
     }
     return resultado;
   } catch (e) {
@@ -1913,6 +1988,7 @@ async function executar(dados) {
 
 function iniciarPonte(opcoes, aoPronto) {
   obterPreview = (opcoes && opcoes.obterPreview) || (() => null);
+  obterJanela = (opcoes && opcoes.obterJanela) || (() => null);
   acoesDeFora = (opcoes && opcoes.acoesDeFora) || {};
   aoUsar = (opcoes && opcoes.aoUsar) || null;
   aoInspecionar = (opcoes && opcoes.aoInspecionar) || null;

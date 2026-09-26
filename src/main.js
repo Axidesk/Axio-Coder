@@ -1259,6 +1259,7 @@ app.on('ready', () => {
 
   iniciarPonte({
     obterPreview: () => previewVivo(),
+    obterJanela: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null),
     aoUsar: (acao, interage) => {
       avisarPreview('preview:uso', { acao: acao, interage: !!interage });
       mostrarRaciocinioView();

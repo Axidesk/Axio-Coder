@@ -22,7 +22,7 @@ from src.backend.state import emit_event
 from src.backend.tools.projeto_comum import caminho_relativo
 from src.backend.tools.registry import register
 
-ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "canvas", "print")
+ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "canvas", "quadros", "print")
 CARACTERES_DE_LUZ = " .:-=+*#%@"
 ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
 LIMITE_PASSOS_ROTEIRO = 12
@@ -83,7 +83,16 @@ def _endereco_do_ficheiro(alvo):
     return origem + "/vendor/viewer/index.html#f=" + quote(caminho, safe=""), None
 
 
-def _renovar_pagina_local(destino):
+class _Ponte:
+    def __init__(self, tela="preview"):
+        self._tela = tela
+
+    def pedir(self, acao, **params):
+        return ponte_preview.pedir(acao, tela=self._tela, **params)
+
+
+def _renovar_pagina_local(destino, tela="preview"):
+    ponte_preview = _Ponte(tela)
     if not _endereco_local(destino):
         return ""
     for _ in range(20):
@@ -217,7 +226,7 @@ def _argumento_ignorado(pedido, valores):
     return ""
 
 
-def _correr_roteiro(passos):
+def _correr_roteiro(passos, tela="preview"):
     """Corre os gestos em serie pela mesma ferramenta de um gesto isolado.
 
     Nao ha caminho alternativo: cada passo entra por tool_operar_preview, logo
@@ -231,6 +240,7 @@ def _correr_roteiro(passos):
         if passo.get("espera"):
             time.sleep(passo["espera"] / 1000.0)
         resultado = tool_operar_preview(
+            tela=tela,
             acao=passo["acao"],
             seletor=str(passo.get("seletor") or ""),
             ponto=str(passo.get("ponto") or ""),
@@ -633,18 +643,19 @@ def _texto_do_canvas(dados):
     return "\n".join(linhas)
 
 
-def _aviso_de_vista_escondida():
+def _aviso_de_vista_escondida(tela="preview"):
     """Avisa que a serie esta a correr numa vista escondida, onde o Chromium congela animacoes."""
+    ponte_preview = _Ponte(tela)
     dados, erro = ponte_preview.pedir("estado")
     if erro or not isinstance(dados, dict) or not dados.get("tem_pagina"):
         return ""
     if dados.get("visivel", True):
         return ""
+    onde = "a janela do Axio" if tela == "janela" else "a vista do preview"
     return (
-        "AVISO: a vista do preview esta escondida (outra vista do editor esta a frente) - o "
-        "Chromium congela animacoes e transicoes numa vista escondida, logo esta serie pode "
-        "mostrar patamares que no ecra nao existem. Traga a vista a frente com acao='mostrar' "
-        "antes de medir."
+        f"AVISO: {onde} esta escondida ou minimizada - o Chromium congela animacoes e transicoes "
+        "numa vista escondida, logo esta serie pode mostrar patamares que no ecra nao existem. "
+        "Traga-a a frente antes de medir."
     )
 
 
@@ -664,15 +675,37 @@ def _texto_das_amostras(js, total, amostras):
     return "\n".join(linhas)
 
 
-def _print_do_preview(seletor, regiao):
+def _texto_dos_quadros(dados):
+    """O ritmo de desenho em numeros: media, mediana, p95 e quadros acima de 32 ms."""
+    linhas = [
+        f"Quadros desenhados: {dados.get('quadros')} em {dados.get('ms')} ms"
+        f" ({dados.get('fps')} por segundo).",
+        f"Intervalo entre quadros: medio {dados.get('medio')} ms, mediano {dados.get('mediano')} ms,"
+        f" p95 {dados.get('p95')} ms, pior {dados.get('pior')} ms.",
+    ]
+    quadros = max(1, int(dados.get("quadros") or 1))
+    longos = int(dados.get("longos") or 0)
+    if longos:
+        linhas.append(
+            f"{longos} quadro(s) acima de 32 ms ({100.0 * longos / quadros:.0f}% do total): e nesses"
+            " que o olho ve o travamento."
+        )
+    else:
+        linhas.append("Nenhum quadro acima de 32 ms - o desenho acompanhou o ecra o tempo todo.")
+    return "\n".join(linhas)
+
+
+def _print_do_preview(seletor, regiao, tela="preview"):
+    ponte_preview = _Ponte(tela)
+    nome = "da janela do Axio" if tela == "janela" else "do preview"
     dados, erro = ponte_preview.pedir("print", seletor=seletor, regiao=regiao)
     if erro:
         return f"ERRO: {erro}."
     if not dados.get("ok"):
-        return f"ERRO: {dados.get('erro') or 'o preview nao devolveu imagem'}."
+        return f"ERRO: {dados.get('erro') or 'a pagina nao devolveu imagem'}."
     bruto = base64.b64decode(dados.get("base64") or "")
     if not bruto:
-        return "ERRO: o preview devolveu uma imagem vazia."
+        return "ERRO: a pagina devolveu uma imagem vazia."
     base64_img, mime, entregue = codificar_para_envio(bruto)
     dimensoes = dimensoes_da_imagem(bruto) or (0, 0)
     alvo = f" de {dados['onde']}" if dados.get("onde") else ""
@@ -681,13 +714,13 @@ def _print_do_preview(seletor, regiao):
         aviso = f" A API reduz a imagem a ~800x800 equivalentes, por isso chegou com {entregue[0]}x{entregue[1]} px."
     return {
         "texto": _com_alvo(
-            f"Print do preview{alvo}: {dimensoes[0]}x{dimensoes[1]} px."
+            f"Print {nome}{alvo}: {dimensoes[0]}x{dimensoes[1]} px."
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
             f"{aviso}",
             dados,
             print_em_segundo_plano=True,
         ),
-        "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Print do preview{alvo}]"},
+        "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Print {nome}{alvo}]"},
     }
 
 
@@ -737,8 +770,11 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
 
 @register(
     "tool_observar_preview",
-    "Olha para a pagina que esta no preview do Axio (o Chromium embutido) e devolve o que ela "
-    "diz de si propria, sem depender dos olhos do utilizador e sem capturar o ecra. acao="
+    "Olha para uma pagina do Axio e devolve o que ela diz de si propria, sem depender dos olhos "
+    "do utilizador e sem capturar o ecra. O alvo e o preview (por omissao) ou a PROPRIA JANELA "
+    "do Axio, com 'tela'='janela' - e nessa que se mede a fluidez dos efeitos (acao='quadros', "
+    "devolve fps, mediana, p95 e quantos quadros passaram dos 32 ms) e se le a consola de JS da "
+    "interface. acao="
     "'mapa' e o INDICE DA PAGINA: devolve de uma so vez todos os botoes, ligacoes e campos ao "
     "alcance de um gesto, com o seletor, o que dizem e a coordenada - comece por aqui, em vez "
     "de perguntar elemento a elemento; 'estado' diz o que esta carregado; 'consola' devolve os erros e avisos da pagina com "
@@ -802,9 +838,15 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
             "tipo": "INTEGER", "obrig": False, "padrao": 0,
             "desc": "Maximo de elementos a listar em 'elemento' (padrao 20) e em 'mapa' (padrao 120). Aumente se a pagina for densa e faltarem botoes no retorno.",
         },
+        "tela": {
+            "tipo": "STRING", "obrig": False, "padrao": "preview",
+            "enum": ["preview", "janela"],
+            "desc": "ONDE olhar: 'preview' (a pagina aberta no visualizador, por omissao) ou 'janela' (a propria interface do Axio - o mesmo mapa, consola, JS, estilo e print, mas no Chromium que desenha a aplicacao). Use 'janela' para medir a fluidez dos efeitos, ler os erros de JS do proprio Axio ou conferir um elemento do ecra.",
+        },
     },
 )
-def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0):
+def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0, tela="preview"):
+    ponte_preview = _Ponte(tela)
     pedido = str(acao or "estado").strip().lower()
     if pedido not in ACOES_DE_OBSERVACAO:
         return f"ERRO: acao desconhecida '{acao}'. Use uma de: {', '.join(ACOES_DE_OBSERVACAO)}."
@@ -818,6 +860,8 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         emit_event("executing", function="Lendo o desenho da pagina do preview")
     elif pedido == "canvas":
         emit_event("executing", function="Lendo o quadro do canvas do preview")
+    elif pedido == "quadros":
+        emit_event("executing", function="Medindo o ritmo de desenho")
     elif pedido == "print":
         emit_event("executing", function="Imprimindo o preview")
 
@@ -879,7 +923,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         resultado = dados.get("resultado")
         if total and isinstance(resultado, list):
             texto = _texto_das_amostras(js, total, resultado)
-            aviso = _aviso_de_vista_escondida()
+            aviso = _aviso_de_vista_escondida(tela)
             return _com_alvo(f"{aviso}\n{texto}" if aviso else texto, dados)
         if resultado is None:
             return _com_alvo(
@@ -898,7 +942,15 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             return f"ERRO: {dados.get('erro') or 'a pagina nao respondeu'}."
         return _quadro_do_canvas(dados)
 
-    return _print_do_preview(seletor, regiao)
+    if pedido == "quadros":
+        dados, erro = ponte_preview.pedir("quadros", durante=int(durante or 0))
+        if erro:
+            return f"ERRO: {erro}."
+        if not dados.get("ok"):
+            return f"ERRO: {dados.get('erro') or 'a pagina nao desenhou nada'}."
+        return _com_alvo(_texto_dos_quadros(dados), dados)
+
+    return _print_do_preview(seletor, regiao, tela)
 
 
 def _quadro_do_canvas(dados):
@@ -926,8 +978,9 @@ def _quadro_do_canvas(dados):
 
 @register(
     "tool_operar_preview",
-    "Age na pagina que esta no preview do Axio com eventos a serio, nao simulados por "
-    "JavaScript: o clique e um evento de rato do Chromium e o texto entra pelo caminho de "
+    "Age numa pagina do Axio com eventos a serio, nao simulados por JavaScript - no preview "
+    "(por omissao) ou, com 'tela'='janela', na propria interface do Axio, com a mesma mecanica "
+    "e o mesmo relato de efeito. O clique e um evento de rato do Chromium e o texto entra pelo caminho de "
     "insercao do browser, por isso funciona com React, Vue e ouvintes nativos. Use "
     "tool_observar_preview primeiro para saber ONDE esta o elemento (la, acao='mapa' devolve o "
     "indice da pagina inteira de uma so vez). acao='clicar' (por "
@@ -981,9 +1034,15 @@ def _quadro_do_canvas(dados):
             "tipo": "STRING", "obrig": False, "padrao": "",
             "desc": "Em 'roteiro': a lista JSON dos gestos, na ordem, cada um com 'acao' e os seus argumentos. Ex: [{\"acao\":\"clicar\",\"seletor\":\"#btn-x\"},{\"acao\":\"escrever\",\"seletor\":\"#campo\",\"texto\":\"oi\",\"limpar\":true},{\"acao\":\"teclar\",\"tecla\":\"Enter\"}]. Corre tudo numa so chamada e para no primeiro gesto que falhar. Cada passo aceita 'espera' em milissegundos (ate 5000), aguardada ANTES do gesto: use quando o passo anterior abre ou fecha algo com animacao, para o gesto seguinte agir na pagina ja parada.",
         },
+        "tela": {
+            "tipo": "STRING", "obrig": False, "padrao": "preview",
+            "enum": ["preview", "janela"],
+            "desc": "ONDE agir: 'preview' (a pagina aberta no visualizador, por omissao) ou 'janela' (a propria interface do Axio - o mesmo clique, texto, teclas e roteiro, mas no Chromium que desenha a aplicacao). Use 'janela' para exercitar a interface do proprio Axio, com o mesmo relato de efeito.",
+        },
     },
 )
-def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar=False, tecla="", passos=""):
+def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar=False, tecla="", passos="", tela="preview"):
+    ponte_preview = _Ponte(tela)
     pedido = str(acao or "").strip().lower()
     if pedido not in ACOES_DE_OPERACAO:
         return f"ERRO: acao desconhecida '{acao}'. Use uma de: {', '.join(ACOES_DE_OPERACAO)}."
@@ -1118,7 +1177,7 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         if falha:
             return f"ERRO: {falha}."
         emit_event("executing", function=f"Correndo roteiro de {len(lista)} gesto(s)")
-        return _correr_roteiro(lista)
+        return _correr_roteiro(lista, tela)
 
     if pedido == "ficheiro":
         caminho = (alvo or texto).strip()

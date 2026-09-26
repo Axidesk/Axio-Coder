@@ -94,6 +94,11 @@
       "area": "arvore-pastas",
       "texto": "Na arvore do explorer o nivel separa-se pela COR DA PASTA e pelo PESO do nome, nunca por um glifo diferente (o icone e sempre a mesma pasta): pasta de projeto/alvo = pasta amarela PREENCHIDA, com o nome na cor do nivel (branco a negrito no projeto, normal no alvo); pasta real/grupo = pasta amarela vazada, nome na cor do nivel; a pasta que ABRIU a coluna da direita = pasta AZUL (so o icone, o nome continua normal). Nenhum nome fica azul.",
       "atualizado": "2026-09-26 02:17:30"
+    },
+    {
+      "area": "janela",
+      "texto": "A vista do doc NAO muda sozinha - nem para o editor nem para o preview. O que corre por SSE/timer atualiza o painel por dentro (repintarCol3Aberta) e nunca abre a camada; abrir a coluna 3 (abrirCol3/openCol3Panel) arrasta a vista para o editor, logo so pode partir de um clique do utilizador. O terminal continua a aparecer sozinho quando a IA usa processos (showWorkspaceView), mas nunca enquanto ele escreve no input do chat.",
+      "atualizado": "2026-09-26 14:57:23"
     }
   ]
 }
