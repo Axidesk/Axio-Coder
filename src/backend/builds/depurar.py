@@ -1,3 +1,4 @@
+import ast
 import os
 import sys
 import threading
@@ -9,6 +10,11 @@ _ARQUITETURAS = ("x64", "x86", "arm64", "arm")
 _VENVS = (".venv", "venv", "env")
 _EXTENSOES_CPP = (".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx")
 _EXTENSOES_PY = (".py", ".pyw")
+_PASTAS_A_FORA = ("venv", "env", "node_modules", "__pycache__", "build", "dist", "gerados")
+_MARCAS_NATIVAS = ("cmakelists.txt", "meson.build", "makefile", "gnumakefile")
+_SUFIXOS_NATIVOS = (".sln", ".vcxproj", ".pro", ".pri")
+_NOMES_DE_ENTRADA = ("main.py", "app.py", "run.py", "__main__.py")
+_MAX_FICHEIROS_PY = 200
 
 COMANDOS_UTEIS = (
     ("l+s", "a linha de origem onde a execucao parou"),
@@ -152,12 +158,15 @@ def motor(breakpoints):
     return "cpp"
 
 
-def motor_do_alvo(breakpoints, alvo):
-    """O depurador que sabe ler o que foi pedido: pelos pontos marcados, e sem eles pelo
-    ficheiro que esta aberto no editor (e o que decide o botao de depurar da barra)."""
+def motor_do_alvo(breakpoints, alvo, raiz=""):
+    """O depurador que sabe ler o que foi pedido: pelos pontos marcados, sem eles pelo ficheiro
+    aberto no editor e, sem ficheiro nenhum, pelo que a pasta tem la dentro - e isto que faz o
+    botao de depurar trabalhar com a janela do codigo fechada."""
     if _pedacos(breakpoints):
         return motor(breakpoints)
-    return "python" if _extensao_do_ponto(alvo or "") in _EXTENSOES_PY else "cpp"
+    if alvo:
+        return "python" if _extensao_do_ponto(alvo) in _EXTENSOES_PY else "cpp"
+    return "python" if _entrada_do_projeto(raiz) else "cpp"
 
 
 def pontos_de_outra_linguagem(breakpoints, escolhido):
@@ -207,15 +216,75 @@ def _ficheiro_de(nome, raiz):
     return os.path.realpath(achados[0])
 
 
-def script_de_arranque(alvo, raiz):
-    """O ficheiro Python que a sessao corre quando nao ha nenhum ponto marcado."""
-    if alvo:
-        return _ficheiro_de(alvo, raiz)
-    for nome in ("main.py", "app.py", "run.py", "__main__.py"):
+def _tem_projeto_nativo(raiz):
+    """Diz se a pasta tem um projeto nativo a vista: onde ele manda, o Python nao e o alvo."""
+    try:
+        nomes = [nome.lower() for nome in os.listdir(raiz)]
+    except OSError:
+        return False
+    if any(nome in _MARCAS_NATIVAS for nome in nomes):
+        return True
+    return any(nome.endswith(_SUFIXOS_NATIVOS) for nome in nomes)
+
+
+def _ficheiros_python(raiz):
+    """Os .py da pasta, sem descer a venvs, pastas de build nem pastas escondidas."""
+    achados = []
+    for pasta, subpastas, ficheiros in os.walk(raiz):
+        subpastas[:] = [s for s in subpastas
+                        if not s.startswith(".") and s.lower() not in _PASTAS_A_FORA]
+        achados += [os.path.join(pasta, f) for f in ficheiros
+                    if f.lower().endswith(_EXTENSOES_PY) and f != "__init__.py"]
+        if len(achados) > _MAX_FICHEIROS_PY:
+            break
+    return achados
+
+
+def _importados_por(caminho):
+    """Os nomes de modulo que um ficheiro importa, pelo primeiro pedaco de cada um."""
+    try:
+        with open(caminho, "r", encoding="utf-8", errors="replace") as ficheiro:
+            arvore = ast.parse(ficheiro.read())
+    except (OSError, SyntaxError, ValueError):
+        return set()
+    nomes = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Import):
+            nomes |= {apelido.name.split(".")[0].lower() for apelido in no.names}
+        elif isinstance(no, ast.ImportFrom) and no.module and not no.level:
+            nomes.add(no.module.split(".")[0].lower())
+    return nomes
+
+
+def _entrada_do_projeto(raiz):
+    """O ficheiro Python por onde a pasta arranca quando ninguem abriu nenhum: um nome classico
+    de entrada, ou o modulo que nenhum outro importa - quem importa os outros e o programa,
+    quem e importado e biblioteca. Pasta com projeto nativo la dentro nao tem entrada Python."""
+    if not raiz or not os.path.isdir(raiz) or _tem_projeto_nativo(raiz):
+        return ""
+    for nome in _NOMES_DE_ENTRADA:
         caminho = os.path.join(raiz, nome)
         if os.path.isfile(caminho):
             return os.path.realpath(caminho)
-    return ""
+    ficheiros = _ficheiros_python(raiz)
+    if not ficheiros:
+        return ""
+    importados = set()
+    for caminho in ficheiros:
+        importados |= _importados_por(caminho)
+    livres = [caminho for caminho in ficheiros
+              if os.path.splitext(os.path.basename(caminho))[0].lower() not in importados]
+    if not livres:
+        return ""
+    livres.sort(key=lambda caminho: (caminho.count(os.sep), len(caminho)))
+    return os.path.realpath(livres[0])
+
+
+def script_de_arranque(alvo, raiz):
+    """O ficheiro Python que a sessao corre: o indicado, ou o que a pasta tem por entrada."""
+    if alvo:
+        return _ficheiro_de(alvo, raiz)
+    return _entrada_do_projeto(raiz)
 
 
 def pontos_python(texto, raiz):

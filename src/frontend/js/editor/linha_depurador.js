@@ -4,6 +4,7 @@ const CLASSE_ERRO = 'monaco-linha-erro';
 const CLASSE_PARAGEM = 'monaco-linha-paragem';
 
 let colecao = null;
+let modelo = null;
 let alvo = null;
 let instalado = false;
 
@@ -18,8 +19,9 @@ export function marcarLinhaDoDepurador(ficheiro, linha, erro) {
     pintar();
 }
 
-export function limparLinhaDoDepurador() {
+export function limparLinhaDoDepurador(manterErro) {
     if (!alvo) return;
+    if (manterErro && alvo.erro) return;
     alvo = null;
     pintar();
 }
@@ -53,6 +55,10 @@ export function caminhoDoDepurador(caminho) {
 
 function pintar() {
     if (!state.editor || !state.monaco) return;
+    if (state.editor.getModel() !== modelo) {
+        colecao = null;
+        modelo = state.editor.getModel();
+    }
     colecao = state.editor.deltaDecorations(colecao || [], decoracoes());
 }
 

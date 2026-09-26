@@ -435,6 +435,7 @@ let cardComControles = null;
 
 function _aplicarControles(card, controles) {
     if (!controles || !controles.length) return;
+    if (cardComControles !== card) limparLinhaDoDepurador();
     card.controles = controles;
     cardComControles = card;
     _pintarControles();
@@ -467,7 +468,7 @@ function _pintarControles() {
 function _soltarControles(card) {
     if (cardComControles !== card) return;
     cardComControles = null;
-    limparLinhaDoDepurador();
+    limparLinhaDoDepurador(true);
     _pintarControles();
 }
 

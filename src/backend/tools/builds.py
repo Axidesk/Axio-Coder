@@ -6,7 +6,8 @@ from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
 from src.backend.tools.process import (correr_como_card, escrever_stdin_processo, iniciar_processo,
-                                       registrar_linha_processo, seguir_saida_processo)
+                                       parar_processo_reg, registrar_linha_processo,
+                                       seguir_saida_processo)
 from src.backend.tools.registry import register
 
 
@@ -200,7 +201,7 @@ def _depurar(pasta, configuracao, breakpoints, comandos="", alvo=""):
     if comandos and not breakpoints:
         return ("NAO HA SESSAO DE DEPURACAO ABERTA: a ultima fechou (o programa terminou ou o card foi "
                 "parado). Abra outra com acao='depurar' e os 'breakpoints'.")
-    if depurar.motor_do_alvo(breakpoints, alvo) == "python":
+    if depurar.motor_do_alvo(breakpoints, alvo, pasta) == "python":
         return _depurar_python(pasta, breakpoints, comandos, alvo)
     if not depurar.cdb():
         return ("ERRO: nao encontrei o depurador de consola do Windows SDK (cdb.exe), que vem com os "
@@ -243,9 +244,12 @@ def _depurar_python(pasta, breakpoints, comandos, alvo=""):
     pontos = depurar.pontos_python(breakpoints, pasta)
     script = pontos[0]["ficheiro"] if pontos else depurar.script_de_arranque(alvo, pasta)
     if not script:
-        return (f"ERRO: nenhum destes pontos aponta para um ficheiro dentro de '{pasta}': "
-                f"{breakpoints}. Abra um ficheiro .py no editor ou indique o ficheiro "
-                f"(ex: app.py:62).")
+        if pontos:
+            return (f"ERRO: nenhum destes pontos aponta para um ficheiro dentro de '{pasta}': "
+                    f"{breakpoints}. Abra um ficheiro .py no editor ou indique o ficheiro "
+                    f"(ex: app.py:62).")
+        return (f"ERRO: nao encontrei nenhum ficheiro .py para arrancar em '{pasta}'. Abra no "
+                "editor o ficheiro que quer depurar e carregue outra vez no botao.")
     linha = depurar.comando_python(script, pasta)
     if not linha:
         return f"ERRO: nao consegui montar o depurador para '{script}'."
@@ -580,9 +584,11 @@ def _avisar_sem_arranque(registo_id, janela, visto):
 _ERROS_QUE_IMPEDEM_O_ARRANQUE = ("SyntaxError", "IndentationError", "TabError")
 
 def _fechar_sessao_sem_arranque(registo_id):
-    """O ficheiro nao chegou a compilar: nao ha sessao para conduzir, sai do pdb e esquece-a."""
-    escrever_stdin_processo(registo_id, "q")
+    """O ficheiro nao chegou a compilar: nao ha sessao para conduzir. Esquece a sessao e fecha o
+    card - o 'q' sozinho nao chega, porque o pdb reinicia o programa em vez de sair e o card
+    ficava aberto a repetir o mesmo traceback, com botoes que ja nao andam."""
     depurar.esquecer_sessao()
+    parar_processo_reg(registo_id, estado.get("processos", {}).get(registo_id) or {})
 
 def _conduzir_depuracao(comandos):
     """Escreve os comandos na sessao aberta e devolve, por comando, o que o depurador respondeu."""
