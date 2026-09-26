@@ -1167,10 +1167,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1559,
+        "linha": 1565,
         "conferido": [
-          1790381840.629,
-          74434
+          1790383405.233,
+          74741
         ]
       }
     },
@@ -2240,10 +2240,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1139,
+        "linha": 1145,
         "conferido": [
-          1790381840.629,
-          74434
+          1790383405.233,
+          74741
         ]
       }
     },
@@ -2755,10 +2755,10 @@
       "descricao": "O icone do editor e o TOGGLE DO DOC e lembra-se do estado: vista chat abre a vista de trabalho memorizada (state.vistaDeTrabalho = editor|preview), vista editor ou preview fecha o doc indo para chat - por isso fechar com o preview ativo e reabrir volta ao preview (alternarDoc() em explorer.js). fecharPreview() e o gesto de fechar o preview (X #preview-close e o icone #btn-preview com o preview ativo) e volta SEMPRE ao editor, nunca ao chat: e determinista de proposito, sem memoria de regresso, porque a antiga state.vistaAnterior era deturpada pelo vaivem do icone do editor e atirava o utilizador para o chat. abrirDoc(vista) em workspace.js faz ensureWorkspaceReady + setActive(true) + setView. Fechar o terminal NAO muda a vista do doc.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/explorer.js",
-        "linha": 87,
+        "linha": 88,
         "conferido": [
-          1790382312.875,
-          20008
+          1790383300.325,
+          21258
         ]
       }
     },
@@ -2775,10 +2775,10 @@
       "descricao": "Pinta o #btn-editor com a classe sidebar-active (color var(--oliva), rgb(144,160,21)). Aceso APENAS quando a vista atual e de trabalho (editor OU preview); no chat fica sempre apagado, mesmo que o preview esteja memorizado em state.vistaDeTrabalho. A memoria de reabertura e outra coisa e continua a existir: alternarDoc() reabre na vista memorizada. Era uma assimetria antiga (no chat com preview memorizado o botao ficava verde) que o utilizador pediu para tirar, e foi o que matou a funcao docComEditorAceso.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/explorer.js",
-        "linha": 95,
+        "linha": 96,
         "conferido": [
-          1790382312.875,
-          20008
+          1790383300.325,
+          21258
         ]
       }
     },
@@ -3832,10 +3832,10 @@
       "descricao": "Cache de listagens de pasta (VALIDADE_DA_LISTA_MS=6000, MAX_PASTAS_LISTADAS=24) e prefetch no hover com intencao de 90ms; com a lista em cache o clique em loadExplorer desenha sem pedido de rede. Consumidores: loadExplorer, reloadExplorer, ligarPrefetchDePastas.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/explorer.js",
-        "linha": 140,
+        "linha": 141,
         "conferido": [
-          1790382312.875,
-          20008
+          1790383300.325,
+          21258
         ]
       }
     },
@@ -5191,8 +5191,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 295,
         "conferido": [
-          1790382316.144,
-          25716
+          1790383293.01,
+          25778
         ]
       }
     }

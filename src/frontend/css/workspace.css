@@ -259,7 +259,7 @@
     background: var(--border-suave);
 }
 .explorer-children > ul > .explorer-item:last-child::after { display: none; }
-.explorer-children > ul > .explorer-item > .explorer-row { position: relative; padding-left: 20px; }
+.explorer-children > ul > .explorer-item > .explorer-row { position: relative; padding-left: 20px; border-radius: 0 4px 4px 0; }
 .explorer-children > ul > .explorer-item > .explorer-row::before {
     content: "";
     position: absolute;

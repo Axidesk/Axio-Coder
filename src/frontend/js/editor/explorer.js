@@ -413,9 +413,14 @@ async function abrirColunaDePasta(path, row) {
     if (!coluna) return;
     const casca = coluna.parentElement;
     if (!casca || !casca.classList.contains('explorer-colunas')) return;
+    const expandida = filhosInlineAbertos(row);
     const jaAberta = !!coluna.nextElementSibling && coluna.nextElementSibling.dataset.path === path;
     limparColunasDepois(casca, coluna);
     coluna.querySelectorAll('.explorer-coluna-acesa').forEach(r => r.classList.remove('explorer-coluna-acesa'));
+    if (expandida) {
+        expandida.classList.add('hidden');
+        return;
+    }
     if (jaAberta) return;
     row.classList.add('explorer-coluna-acesa');
     const nova = criarColuna(path);
@@ -426,7 +431,8 @@ async function abrirColunaDePasta(path, row) {
         row.classList.remove('explorer-coluna-acesa');
         return;
     }
-    ajustarLimiteDeColunas(casca);
+    if (filhosSaoPastas(dados.entries)) absorverColuna(nova);
+    else ajustarLimiteDeColunas(casca);
     if (path.startsWith(PREFIXO_ARVORE)) return;
     state.currentCwdRel = dados.path || '';
     updateExplorerPath(dados);
@@ -445,7 +451,57 @@ function ajustarLimiteDeColunas(casca) {
     if (!casca) return;
     const maximo = maximoDeColunas(casca);
     if (!maximo) return;
-    while (casca.children.length > maximo) casca.firstElementChild.remove();
+    let voltas = 0;
+    while (casca.children.length > maximo && voltas++ < 40) {
+        if (!absorverColuna(casca.lastElementChild)) break;
+    }
+}
+function containerDeFilhos(row) {
+    const li = row.closest('.explorer-item');
+    if (!li) return null;
+    let container = li.querySelector(':scope > .explorer-children');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'explorer-children hidden';
+        li.appendChild(container);
+    }
+    return container;
+}
+function filhosInlineAbertos(row) {
+    const li = row.closest('.explorer-item');
+    if (!li) return null;
+    const container = li.querySelector(':scope > .explorer-children');
+    if (!container || container.classList.contains('hidden')) return null;
+    return container;
+}
+function linhaDaColuna(coluna, path) {
+    if (!coluna || !path) return null;
+    const linhas = coluna.querySelectorAll('.explorer-row');
+    for (let i = 0; i < linhas.length; i++) {
+        if (linhas[i].dataset.path === path) return linhas[i];
+    }
+    return null;
+}
+function filhosSaoPastas(entries) {
+    if (!entries || !entries.length) return false;
+    return entries.every(e => e.tipo === 'dir' || e.tipo === 'grupo');
+}
+function absorverColuna(coluna) {
+    if (!coluna || !coluna.parentElement) return false;
+    const irmaos = Array.from(coluna.parentElement.children);
+    const indice = irmaos.indexOf(coluna);
+    if (indice < 1) return false;
+    const ul = coluna.querySelector(':scope > ul');
+    const row = ul ? linhaDaColuna(irmaos[indice - 1], coluna.dataset.path) : null;
+    if (!row) return false;
+    const container = containerDeFilhos(row);
+    if (!container) return false;
+    container.innerHTML = '';
+    container.appendChild(ul);
+    container.classList.remove('hidden');
+    container.dataset.loaded = '1';
+    coluna.remove();
+    return true;
 }
 function vigiarLarguraDasColunas() {
     if (observadorDeLargura || typeof ResizeObserver !== 'function' || !state.explorerTree) return;
