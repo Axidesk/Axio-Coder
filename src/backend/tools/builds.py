@@ -523,15 +523,16 @@ def _vigia_do_depurador(registo_id):
     """Vai lendo a saida do depurador a medida que ela chega: escreve no card, em linguagem
     simples, onde a execucao parou - e avisa o editor da linha, para ele a abrir sozinho."""
     janela = _linhas_do_card(registo_id)
-    visto = {"paragem": {}, "erro": None}
+    visto = {"paragem": {}, "erro": None, "terminou": False}
 
     def vigia(linha):
         if depurar.card_da_sessao() != registo_id:
             return
         janela.append((linha or "").rstrip())
         del janela[:-depurar.JANELA_DA_LEITURA]
-        for texto in depurar.leitura_nova("\n".join(janela)):
+        for texto in depurar.leitura_nova(linha or ""):
             registrar_linha_processo(registo_id, texto)
+        _avisar_do_fim(registo_id, visto)
         paragem = depurar.paragem_atual()
         if not paragem:
             _avisar_sem_arranque(registo_id, janela, visto)
@@ -547,6 +548,15 @@ def _vigia_do_depurador(registo_id):
                    erro=paragem.get("queda", False))
 
     return vigia
+
+def _avisar_do_fim(registo_id, visto):
+    """Diz ao frontend que o programa chegou ao fim. Andar por um programa que ja terminou nao
+    leva a lado nenhum, e os botoes tem de o dizer em vez de ficarem a fingir que andam."""
+    terminou = depurar.programa_terminou()
+    if terminou == visto.get("terminou", False):
+        return
+    visto["terminou"] = terminou
+    emit_event("debug_fim", pid=registo_id, terminou=terminou)
 
 def _avisar_sem_arranque(registo_id, janela, visto):
     """Um erro de sintaxe impede o ficheiro de arrancar, e quem sabe a linha e o interpretador."""
@@ -582,6 +592,7 @@ def _conduzir_depuracao(comandos):
         return "ERRO: nenhum comando para enviar."
     blocos = [f"DEPURADOR (card {registo_id}): o que respondeu a cada comando"]
     _esperar_resposta(registo_id, _tamanho_da_saida(registo_id), teto=8.0)
+    inicial = _tamanho_da_saida(registo_id)
     for comando in lista:
         desde = _tamanho_da_saida(registo_id)
         ok, motivo = escrever_stdin_processo(registo_id, comando)
@@ -591,20 +602,19 @@ def _conduzir_depuracao(comandos):
         resposta = _esperar_resposta(registo_id, desde)
         blocos.append(f"  > {comando}")
         blocos += [f"    {linha}" for linha in resposta] or ["    (sem resposta)"]
-    lida = _mostrar_leitura(registo_id)
+    lida = _mostrar_leitura(registo_id, inicial)
     if lida:
         blocos.append("Em linguagem simples:\n" + "\n".join(f"  {linha}" for linha in lida))
     blocos.append("Se um comando deixar o programa a correr, a resposta continua a chegar ao card: as "
                   "ultimas linhas dela saem com tool_listar_processos(saida=N).")
     return "\n".join(blocos)
 
-def _mostrar_leitura(registo_id):
-    """Poe no card, em linguagem simples, o que a saida recente do depurador diz."""
-    desde = _tamanho_da_saida(registo_id) - depurar.JANELA_DA_LEITURA
-    lida = depurar.leitura_nova("\n".join(_linhas_do_card(registo_id, desde)))
-    for linha in lida:
-        registrar_linha_processo(registo_id, linha)
-    return lida
+def _mostrar_leitura(registo_id, desde=0):
+    """A leitura em linguagem simples que ja foi para o card desde um ponto. Quem a escreve e o
+    vigia do depurador, que le a saida a medida que ela chega - aqui colhe-se o que ele escreveu,
+    para nao voltar a interpretar saida ja interpretada (era por aqui que um motivo antigo voltava
+    a valer a cada comando)."""
+    return [linha for linha in _linhas_do_card(registo_id, desde) if linha.startswith("[axio]")]
 
 
 def _tamanho_da_saida(registo_id):

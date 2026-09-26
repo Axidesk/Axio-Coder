@@ -1290,6 +1290,7 @@ const criarDomFalso = (opcoes) => {
             else if (chave === "style") Object.assign(no.style, valor);
             else if (chave === "dataset") for (const [k, v] of Object.entries(valor)) no.dataset[k] = v;
             else if (chave === "attrs") for (const [k, v] of Object.entries(valor)) no.setAttribute(k, v);
+            else if (chave in no && typeof no[chave] !== "function") no[chave] = valor;
             else if (typeof valor === "string" || typeof valor === "number" || typeof valor === "boolean") no.setAttribute(chave, valor);
             else no[chave] = valor;
         }
@@ -1640,7 +1641,9 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "verbatim do disco - e recusa as que nao cabem numa linha - em vez de as reescrever a mao no teste. "
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
-    "appendChild soltam o no do pai, className e classList sao a mesma fonte, toggle respeita a "
+    "appendChild soltam o no do pai, a chave de props que ja existe no no cai em PROPRIEDADE "
+    "(dom.el('div', {className: 'x'}) poe mesmo a classe, nunca um atributo 'classname' que o "
+    "seletor depois nao encontra), className e classList sao a mesma fonte, toggle respeita a "
     "forca, getBoundingClientRect e calculado no pedido a partir de offset*/dom.medir, "
     "replaceWith/before/after existem nos dois tipos de no, e dispatchEvent propaga em "
     "captura->alvo->bolha; o que ele NAO tem e TreeWalker/NodeFilter, por isso para percorrer os "

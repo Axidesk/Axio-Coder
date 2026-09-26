@@ -253,22 +253,27 @@ def preparacao_python(pontos, script):
 
 SESSAO = {"id": "", "executavel": ""}
 JANELA_DA_LEITURA = 80
-_LEITURA = {"sobre": {}, "linhas": []}
+_LIMITE_DE_ESCRITAS = 5000
+_LEITURA = {"sobre": {}, "escritas": set()}
 
 
 def guardar_sessao(registo_id, executavel):
     """Anota a sessao aberta, para os comandos seguintes irem para o mesmo card."""
     SESSAO["id"] = registo_id
     SESSAO["executavel"] = executavel
-    _LEITURA["sobre"] = {}
-    _LEITURA["linhas"] = []
+    _limpar_leitura()
 
 
 def esquecer_sessao():
     SESSAO["id"] = ""
     SESSAO["executavel"] = ""
+    _limpar_leitura()
+
+
+def _limpar_leitura():
+    """Comeca um retrato novo: o que ja foi dito pertence a sessao que acabou."""
     _LEITURA["sobre"] = {}
-    _LEITURA["linhas"] = []
+    _LEITURA["escritas"] = set()
 
 
 def sessao_aberta():
@@ -285,15 +290,24 @@ _LEITURA_TRANCA = threading.Lock()
 
 
 def leitura_nova(texto):
-    """Le a saida do depurador e devolve, em linguagem simples, o que ela diz de NOVO: as
-    linhas que ja foram escritas no card nao se repetem a cada passo da sessao."""
+    """Le a saida NOVA do depurador e devolve, em linguagem simples, o que ainda nao foi dito
+    nesta sessao. O que ja saiu uma vez nao volta a sair: uma linha que reaparece (o reinicio
+    do pdb, um motivo ja lido) fica calada em vez de encher o card."""
     with _LEITURA_TRANCA:
         _LEITURA["sobre"] = leitura_depurador.leitura(texto, _LEITURA["sobre"])
         atuais = leitura_depurador.linhas(_LEITURA["sobre"])
-        anteriores = _LEITURA["linhas"]
-        novas = [linha for linha in atuais if linha not in anteriores]
-        _LEITURA["linhas"] = atuais
+        escritas = _LEITURA["escritas"]
+        if len(escritas) > _LIMITE_DE_ESCRITAS:
+            escritas.clear()
+        novas = [linha for linha in atuais if linha not in escritas]
+        escritas.update(novas)
         return novas
+
+
+def programa_terminou():
+    """Diz se o programa depurado ja correu ate ao fim."""
+    with _LEITURA_TRANCA:
+        return bool((_LEITURA["sobre"] or {}).get("terminou"))
 
 
 def paragem_atual():

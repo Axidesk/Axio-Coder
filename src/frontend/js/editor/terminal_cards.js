@@ -453,6 +453,8 @@ function _pintarControles() {
         botao.className = 'term-controle';
         botao.textContent = c.rotulo || c.comando;
         botao.title = (c.dica ? c.dica + ' ' : '') + '(comando: ' + c.comando + ')';
+        botao.disabled = !!c.passivo;
+        if (c.passivo) botao.title = 'O programa terminou - escreva no campo do terminal para conduzir a sessao';
         botao.addEventListener('click', (e) => {
             e.stopPropagation();
             if (cardComControles) _responderStdin(cardComControles, c.comando);
@@ -466,6 +468,15 @@ function _soltarControles(card) {
     if (cardComControles !== card) return;
     cardComControles = null;
     limparLinhaDoDepurador();
+    _pintarControles();
+}
+
+export function marcarDepuracaoTerminada(terminou) {
+    if (!cardComControles || !cardComControles.controles) return;
+    cardComControles.controles = cardComControles.controles.map((c) => ({
+        ...c,
+        passivo: c.id === 'terminar' ? false : !!terminou
+    }));
     _pintarControles();
 }
 

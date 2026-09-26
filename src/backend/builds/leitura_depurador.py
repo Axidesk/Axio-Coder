@@ -11,6 +11,14 @@ _NAO_TRATADA = re.compile(r"^Uncaught exception", re.IGNORECASE)
 _PONTO = re.compile(r"^Breakpoint (?P<numero>\d+) hit")
 _VARIAVEL = re.compile(r"^[0-9a-f`]{16,}\s+(?P<resto>.+)$")
 _QUADRO_CDB = re.compile(r"\[(?P<ficheiro>[A-Za-z]:[^\]]*?)\s+@\s+(?P<linha>\d+)\]")
+_FIM_DO_PROGRAMA = re.compile(r"^The program finished", re.IGNORECASE)
+_RECUSA = re.compile(r"^\*\*\*\s*(?P<nome>[A-Za-z_.]*[Ee]rror|[A-Za-z_.]+):\s*(?P<texto>.*)$")
+_TRACEBACK = re.compile(r"^Traceback \(most recent call last\):")
+_QUADRO_DO_TRACEBACK = re.compile(r'^\s*File "(?P<ficheiro>[^"]+)", line (?P<linha>\d+), in (?P<nome>.*)$')
+_MOTIVO_DO_TRACEBACK = re.compile(r"^(?P<nome>[A-Za-z_][A-Za-z0-9_.]*): ?(?P<texto>.*)$")
+
+_FICHEIROS_DO_MOTOR = ("pdb.py", "bdb.py", "cmd.py", "code.py", "runpy.py", "<string>",
+                       "<command-line>")
 
 _CODIGO_DE_ARRANQUE = "80000003"
 _PREFIXO_DE_QUEDA = "rebentou"
@@ -24,53 +32,106 @@ _LIMITE_DE_QUADROS = 4
 
 
 def leitura(texto, antes=None):
-    """O que a saida de um depurador diz: onde parou, porque, o que se ve e quem chamou."""
-    sobre = {"parou": None, "motivo": "", "variaveis": [], "quadros": []}
+    """Le as linhas NOVAS de um depurador e acumula o retrato: onde parou, porque, o que se ve
+    e quem chamou. So as linhas novas entram - e o que impede um motivo que ja passou (uma
+    excecao que ficou escrita na janela do card) de voltar a valer a cada passo."""
+    sobre = _retrato(antes)
     for linha in (texto or "").splitlines():
-        limpa = _PROMPTS.sub("", linha.rstrip())
-        achado = _PAROU_CDB.match(limpa)
-        if achado:
-            _parou_em(sobre, "", int(achado.group("linha")), achado.group("codigo"))
-            continue
-        achado = _MARCADA_PDB.match(limpa)
-        if achado:
-            _parou_em(sobre, "", int(achado.group("linha")), achado.group("codigo"))
-            continue
-        achado = _QUADRO.match(limpa)
-        if achado:
-            if achado.group("marca"):
-                _parou_em(sobre, achado.group("ficheiro"), int(achado.group("linha")), "")
-            else:
-                _juntar_quadro(sobre, achado.group("ficheiro"), achado.group("linha"))
-            continue
-        achado = _CODIGO_PDB.match(limpa)
-        if achado:
-            if sobre["parou"] and not sobre["parou"]["codigo"]:
-                sobre["parou"]["codigo"] = achado.group("codigo").strip()
-            continue
-        achado = _NAO_TRATADA.match(limpa)
-        if achado:
-            sobre["motivo"] = _MOTIVO_NAO_TRATADA
-            continue
-        achado = _EXCECAO.match(limpa)
-        if achado:
-            sobre["motivo"] = _motivo(achado.group("nome"), achado.group("codigo"))
-            continue
-        achado = _PONTO.match(limpa)
-        if achado:
-            sobre["motivo"] = f"ponto de paragem {achado.group('numero')}"
-            continue
-        achado = _QUADRO_CDB.search(limpa)
+        _ler_linha(sobre, linha)
+    _nomear_pelo_quadro(sobre)
+    return sobre
+
+
+def _retrato(antes):
+    """O retrato que ja se tinha, pronto a receber as linhas novas."""
+    if not antes:
+        return {"parou": None, "motivo": "", "recusa": "", "variaveis": [], "quadros": [],
+                "terminou": False, "pendente": False, "traceback": False, "motivo_novo": False}
+    return {"parou": dict(antes["parou"]) if antes.get("parou") else None,
+            "motivo": antes.get("motivo", ""),
+            "recusa": antes.get("recusa", ""),
+            "variaveis": list(antes.get("variaveis") or []),
+            "quadros": list(antes.get("quadros") or []),
+            "terminou": bool(antes.get("terminou")),
+            "pendente": bool(antes.get("pendente")),
+            "traceback": bool(antes.get("traceback")),
+            "motivo_novo": bool(antes.get("motivo_novo"))}
+
+
+def _ler_linha(sobre, linha):
+    """Aplica a UMA linha da saida as regras do que ela quer dizer."""
+    sobre["pendente"] = False
+    limpa = _PROMPTS.sub("", linha.rstrip())
+    achado = _FIM_DO_PROGRAMA.match(limpa)
+    if achado:
+        sobre["terminou"] = True
+        sobre["recusa"] = ""
+        return
+    achado = _RECUSA.match(limpa)
+    if achado:
+        sobre["recusa"] = f"{achado.group('nome')}: {achado.group('texto')}".strip()
+        return
+    achado = _TRACEBACK.match(limpa)
+    if achado:
+        sobre["traceback"] = True
+        return
+    if sobre.get("traceback"):
+        achado = _QUADRO_DO_TRACEBACK.match(limpa)
         if achado:
             _juntar_quadro(sobre, achado.group("ficheiro"), achado.group("linha"))
-            continue
-        achado = _VARIAVEL.match(limpa)
+            return
+        achado = _MOTIVO_DO_TRACEBACK.match(limpa)
         if achado:
-            variavel = _da_variavel(achado.group("resto"))
-            if variavel:
-                sobre["variaveis"].append(variavel)
-    _nomear_pelo_quadro(sobre)
-    return _com_o_que_ja_se_sabia(sobre, antes)
+            sobre["motivo"] = _motivo_da_excecao(achado.group("nome"), achado.group("texto"))
+            sobre["motivo_novo"] = True
+            sobre["traceback"] = False
+            return
+    achado = _PAROU_CDB.match(limpa)
+    if achado:
+        _parou_em(sobre, "", int(achado.group("linha")), achado.group("codigo"))
+        return
+    achado = _MARCADA_PDB.match(limpa)
+    if achado:
+        _parou_em(sobre, "", int(achado.group("linha")), achado.group("codigo"))
+        return
+    achado = _QUADRO.match(limpa)
+    if achado:
+        if achado.group("marca"):
+            if _do_programa(achado.group("ficheiro")):
+                _parou_em(sobre, achado.group("ficheiro"), int(achado.group("linha")), "")
+        else:
+            _juntar_quadro(sobre, achado.group("ficheiro"), achado.group("linha"))
+        return
+    achado = _CODIGO_PDB.match(limpa)
+    if achado:
+        parou = sobre.get("parou")
+        if parou and not parou["codigo"]:
+            parou["codigo"] = achado.group("codigo").strip()
+        return
+    achado = _NAO_TRATADA.match(limpa)
+    if achado:
+        sobre["motivo"] = sobre.get("motivo") or _MOTIVO_NAO_TRATADA
+        sobre["motivo_novo"] = True
+        return
+    achado = _EXCECAO.match(limpa)
+    if achado:
+        sobre["motivo"] = _motivo(achado.group("nome"), achado.group("codigo"))
+        sobre["motivo_novo"] = True
+        return
+    achado = _PONTO.match(limpa)
+    if achado:
+        sobre["motivo"] = f"ponto de paragem {achado.group('numero')}"
+        sobre["motivo_novo"] = True
+        return
+    achado = _QUADRO_CDB.search(limpa)
+    if achado:
+        _juntar_quadro(sobre, achado.group("ficheiro"), achado.group("linha"))
+        return
+    achado = _VARIAVEL.match(limpa)
+    if achado:
+        variavel = _da_variavel(achado.group("resto"))
+        if variavel:
+            sobre["variaveis"].append(variavel)
 
 
 def linhas(sobre):
@@ -79,7 +140,7 @@ def linhas(sobre):
         return []
     saida = []
     parou = sobre.get("parou") or {}
-    if parou:
+    if parou and not sobre.get("pendente"):
         onde = (f"{parou['ficheiro']}:{parou['linha']}" if parou["ficheiro"]
                 else f"linha {parou['linha']}")
         codigo = parou.get("codigo") or ""
@@ -92,9 +153,13 @@ def linhas(sobre):
         resto = len(variaveis) - _LIMITE_DE_VARIAVEIS
         saida.append(f"[axio] valores: {mostradas}" + (f"  (+{resto} mais)" if resto > 0 else ""))
     quadros = sobre.get("quadros") or []
-    if quadros:
+    if quadros and not sobre.get("pendente") and not sobre.get("traceback"):
         cadeia = " <- ".join(f"{q['nome']}:{q['linha']}" for q in quadros[:_LIMITE_DE_QUADROS])
         saida.append(f"[axio] quem chamou: {cadeia}")
+    if sobre.get("recusa"):
+        saida.append(f"[axio] o depurador nao aceitou: {sobre['recusa']}")
+    if sobre.get("terminou"):
+        saida.append("[axio] o programa correu ate ao fim")
     return saida
 
 
@@ -109,12 +174,25 @@ def _nome_curto(caminho):
 
 
 def _parou_em(sobre, ficheiro, linha, codigo):
-    """Marca onde a execucao parou, e mantem o ficheiro e o codigo ja sabidos desta linha."""
+    """Marca onde a execucao parou, e mantem o ficheiro e o codigo ja sabidos desta linha.
+
+    Um programa que ja correu ate ao fim nao volta a andar so porque o pdb reiniciou: a posicao
+    que chega depois disso e ignorada, e o editor fica onde a execucao terminou de facto.
+
+    O codigo da linha chega numa linha seguinte do depurador, por isso a paragem nasce PENDENTE
+    e o card so a mostra quando a linha fica completa - era isto que fazia sair cada paragem
+    duas vezes, uma sem o codigo e outra com ele."""
+    if sobre.get("terminou"):
+        return
     antes = sobre.get("parou") or {}
-    mesma = antes.get("linha") == linha
+    mesma = antes.get("linha") == linha and _mesmo_sitio(antes.get("caminho"), ficheiro)
     if not mesma:
         sobre["variaveis"] = []
         sobre["quadros"] = []
+        if not sobre.pop("motivo_novo", False):
+            sobre["motivo"] = ""
+        sobre["recusa"] = ""
+    sobre["pendente"] = not codigo
     sobre["parou"] = {
         "ficheiro": _nome_curto(ficheiro) or (antes.get("ficheiro", "") if mesma else ""),
         "caminho": (ficheiro or "").strip() or (antes.get("caminho", "") if mesma else ""),
@@ -125,9 +203,30 @@ def _parou_em(sobre, ficheiro, linha, codigo):
 
 def _juntar_quadro(sobre, ficheiro, linha):
     """Anota um quadro da pilha, uma unica vez por ficheiro e linha."""
+    if not _do_programa(ficheiro):
+        return
     quadro = {"nome": _nome_curto(ficheiro), "caminho": (ficheiro or "").strip(), "linha": int(linha)}
     if quadro not in sobre["quadros"]:
         sobre["quadros"].append(quadro)
+        sobre["pendente"] = True
+
+
+def _do_programa(caminho):
+    """Diz se o ficheiro e do programa que esta a ser depurado, e nao do motor do depurador nem
+    da biblioteca do Python - a pilha do pdb, do bdb e do codecs nao e a pilha do utilizador."""
+    if not caminho:
+        return True
+    if _nome_curto(caminho).lower() in _FICHEIROS_DO_MOTOR:
+        return False
+    normalizado = "/" + caminho.replace("\\", "/").lower().strip("/") + "/"
+    return "/lib/" not in normalizado and "/lib64/" not in normalizado
+
+
+def _mesmo_sitio(antes, agora):
+    """Diz se dois caminhos sao o mesmo ficheiro (um deles pode vir sem caminho nenhum)."""
+    if not antes or not agora:
+        return True
+    return _nome_curto(antes).lower() == _nome_curto(agora).lower()
 
 
 def _nomear_pelo_quadro(sobre):
@@ -140,6 +239,11 @@ def _nomear_pelo_quadro(sobre):
             parou["ficheiro"] = quadro["nome"]
             parou["caminho"] = quadro.get("caminho", "")
             return
+
+
+def _motivo_da_excecao(nome, texto):
+    """Nomeia a excecao do fim de um traceback do Python, em linguagem simples."""
+    return f"rebentou: {nome}: {texto}".rstrip(": ")
 
 
 def _motivo(nome, codigo):
@@ -182,13 +286,3 @@ def _texto_da_variavel(variavel):
     nota = f" ({variavel['nota']})" if variavel["nota"] else ""
     return f"{variavel['nome']} = {variavel['valor']}{nota}"
 
-
-def _com_o_que_ja_se_sabia(sobre, antes):
-    """Completa a leitura nova com o sitio onde ja se sabia que a execucao estava."""
-    if not antes:
-        return sobre
-    if not sobre["parou"] and antes.get("parou"):
-        sobre["parou"] = dict(antes["parou"])
-    if not sobre["motivo"]:
-        sobre["motivo"] = antes.get("motivo", "")
-    return sobre

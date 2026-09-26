@@ -160,6 +160,14 @@
     color: var(--text-branco);
     background: var(--bg-hover-suave);
 }
+.term-controle:disabled {
+    color: var(--text-mutado);
+    cursor: default;
+}
+.term-controle:disabled:hover {
+    color: var(--text-mutado);
+    background: transparent;
+}
 .term-card-ponto {
     width: 10px;
     height: 10px;

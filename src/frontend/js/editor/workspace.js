@@ -5,7 +5,7 @@ import { ALTURA_LINHA } from './metricas.js';
 import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
 import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
-import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, temCardSelecionado } from './terminal_cards.js';
+import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, marcarDepuracaoTerminada, temCardSelecionado } from './terminal_cards.js';
 import { ensureTerminal, termFit } from './xterm.js';
 import { captureDiffExitScroll, computeLineDiff, enterDiffMode, exitDiffMode, revealDiffExitScroll } from './diff.js';
 import { fadeEditorSwap, fadeGutterSwap, revelarLinhaComRolagem, scheduleExplorerReload, smoothRevealLine } from './scroll.js';
@@ -34,6 +34,8 @@ export function handleSSE(data) {
         state.wsStatus.textContent = 'bootstrap ativo';
     } else if (data.type === 'debug_stop') {
         abrirParagemDoDepurador(data);
+    } else if (data.type === 'debug_fim') {
+        marcarDepuracaoTerminada(data.terminou);
     } else if (data.type === 'files_changed') {
         scheduleExplorerReload();
         agendarReconciliacaoDeAbas();
