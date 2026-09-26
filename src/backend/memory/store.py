@@ -243,18 +243,23 @@ def buscar_knowledge_textual(query, limite=8):
     if not relevantes:
         recentes = sorted(notas, key=lambda n: n["mtime"], reverse=True)[:LIMITE_NOTAS_FALLBACK]
         trechos = [
-            f"[{n['nome']}]\n{n['conteudo'][:LIMITE_TRECHO_FALLBACK]}" for n in recentes
+            f"{_rotulo_nota(n)}\n{n['conteudo'][:LIMITE_TRECHO_FALLBACK]}" for n in recentes
         ]
         return (
             "Fallback textual do ChromaDB: nada casou com esta consulta. Abaixo as notas MAIS RECENTES "
             "(estado atual do projeto, nao necessariamente relacionadas):\n\n"
             + "\n\n".join(trechos)
         )
-    trechos = [f"[{n['nome']}]\n{n['conteudo']}" for n in relevantes[:limite]]
+    trechos = [f"{_rotulo_nota(n)}\n{n['conteudo']}" for n in relevantes[:limite]]
     return (
         "Contexto recuperado por busca textual (fallback do ChromaDB):\n\n"
         + "\n\n".join(trechos)
     )
+
+def _rotulo_nota(nota):
+    """Rotulo de uma nota do fallback: origem, data real e idade."""
+    quando = nota.get("mtime")
+    return f"[nota curada | {nota['nome']} | {data_legivel(quando)} ({idade_legivel(quando)})]"
 
 def buscar_titulos_parecidos(titulo, quantos=3):
     """Titulos de notas proximos do pedido - evita perder a nota por um sufixo a mais no titulo."""

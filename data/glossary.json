@@ -1183,14 +1183,10 @@
         "rotulos da arvore"
       ],
       "identificador": ".projeto-tag",
-      "descricao": "Rotulo curto (#endpoints http) a direita de cada pasta/ficheiro na arvore do painel de informacoes do projeto, dentro de uma coluna de largura fixa (--projeto-coluna-tags, 180px) separada por um fio vertical. Fonte 10.72px peso 600, cor --text-mutado, com reticencias. O olho recolhe-as com animacao (width da etiqueta e opacity em 0.3s, mais o gap da coluna e a margem do titulo) e o texto completo so aparece em tooltip quando a etiqueta esta mesmo cortada (medido no hover). Gravado em .axio/etiquetas.json (assinatura = mtime do ficheiro, nomes dos filhos da pasta) e gerado por src/backend/services/etiquetas.py. A primeira etiquetagem dispara sozinha ao abrir a arvore de um projeto novo.",
+      "descricao": "Rotulo curto (#endpoints http) a direita de cada pasta/ficheiro na arvore do painel de informacoes do projeto, dentro de uma coluna de largura fixa (--projeto-coluna-tags, 180px) separada por um fio vertical. A coluna e reservada em TODA a linha, tenha ela etiqueta ou nao: aplicarEtiquetas (js/chat/projeto_etiquetas.js) poe um .projeto-tag VAZIO nas linhas sem rotulo - sem esse span o nome e a contagem correm por baixo do fio (medido: a contagem terminava 19px depois da linha; com o span para 5px antes). Fonte 10.72px peso 600, cor --text-mutado, com reticencias. O olho recolhe-as com animacao (width da etiqueta e opacity em 0.3s) e o texto completo so aparece em tooltip quando a etiqueta esta mesmo cortada. Gravado em .axio/etiquetas.json (assinatura = mtime do ficheiro, nomes dos filhos da pasta) e gerado por src/backend/services/etiquetas.py. A primeira etiquetagem dispara sozinha ao abrir a arvore de um projeto novo.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 498,
-        "conferido": [
-          1790394685.807,
-          13476
-        ]
+        "linha": 498
       }
     },
     {
@@ -5035,7 +5031,11 @@
       "descricao": "Marca do ponto no painel de git: git_panel.js:marcaDoPonto(enviado, valor) devolve O ICONE (.git-marca, com title de popup) seguido do valor (a hash curta). Nao ha mais label escrita - \"Esta tarefa\" e \"Ja enviada para o GitHub\" sairam do ecra e viraram o POPUP dos dois icones (2026-10-06, a pedido). Nascido localmente = o bookmark svgDoPonto + \"Salvo localmente\"; ja no remoto = o aviao svgDoAviao + \"Ja enviada para o GitHub\". Quem decide e enviadaParaOServidor(hash) de cards.js - a MESMA funcao que poe o aviao no card, logo painel e pilha nunca se contradizem. Usado por blocoDaTarefa (.git-grupo-tarefa) e blocoDoPontoEnviado (.git-ponto-enviado).\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (2026-10-06): marcaDoPonto escreve-a com classe .git-hash git-hash-acesa e a regra git.css:.git-hash-acesa { color: var(--oliva) } pinta-a. As outras hashes ficam cinzentas no --git-cor-hash (#6b7280) - a da lista do \"Por subir\" (.git-lista .git-hash) e a do historico mais antigo (.history-antigo-hash). O mapa das cores vive no :root do style.css: --git-cor-hash #6b7280 (hash), --git-cor-tarefa #d1d5db (prefixo \"Tarefa N\"), --git-cor-commit #9ca3af (mensagem).\n\nO ALINHAMENTO, medido com o CSS real num #code-view-container-history de 620px (o container tem p-4 = 16px, por isso o x DE FORA e sempre 16 maior que o de dentro da seccao). O chip do ramo e o da etiqueta mostram o contador DEPOIS do rotulo - \"main (1)\", \"v3.1.3 (7)\", em <span class=\"git-chip-num\">(N)</span> - e nao antes dele (\"1 main\"), que era a ordem ate 2026-10-06; com o rotulo em segundo lugar o .git-chip-rotulo cai a x=45,0 (16 + padding-esq 10 + icone 13 + gap 6) e esta linha, que nao tem contador, cai logo depois do icone da marca (16 + 14 + 6 = 36, o icone da marca e 14px contra 13px do chip) - dai o git.css:.git-ponto-enviado .git-hash, .git-grupo-tarefa .git-hash { margin-left: -1px }, que fecha a hash exatamente a x=45,0, debaixo do rotulo. Antes desta mudanca o numero vinha a frente e o mesmo alinhamento exigia margin-left: 11px - esse numero nao volta.\n\nA INDENTACAO DO CORPO (2026-10-06, a pedido: \"faz com q o conteudo abaixo tanto da tarefa quanto das tags fiquem identados com as labels e n com o icone\"): a linha do commit (.git-ponto-enviado/.git-grupo-tarefa > .projeto-filhos > .card-collapsible-clip { padding-left: 19px }) e a lista das etiquetas (.git-grupo-etiquetas > .projeto-filhos > .card-collapsible-clip { padding-left: 29px }, contando o padding-esq 6 da propria linha da etiqueta) comecam no x DO ROTULO. O valor sai da conta: o grupo da tarefa ja tem padding-left 10 (16+10 = 26, o icone), logo o clip leva os 19 que faltam; o das etiquetas nao tem padding nenhum. MEDIDO na pintura depois: git-chip-rotulo, git-hash, git-tag-nome e git-ponto-nome todos a x=45,0 (antes, os dois corpos ficavam a x=26,0).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 280
+        "linha": 280,
+        "conferido": [
+          1790429041.127,
+          35567
+        ]
       }
     },
     {
@@ -5051,7 +5051,11 @@
       "descricao": "Bloco da tarefa no painel de git, DENTRO da seccao do Repositorio e abaixo do chip das etiquetas (desde 2026-10-06 a ordem do painel e Repositorio | Esta tarefa -> separador -> Por subir -> Dependencias). git_panel.js:blocoDaTarefa monta um recolhivel (git-recolhivel git-grupo-tarefa) cujo CABECALHO e a marca do ponto - marcaDoPonto(false, curto ou nomeDaTarefa) -, e o CORPO e a linha do commit (corpoDoCommit).\n\nO CABECALHO NAO TEM LABEL ESCRITA: e o icone + a hash + o '+'. \"Esta tarefa\" e \"Ja enviada para o GitHub\" viraram o POPUP dos icones (title). Tarefa sem commit mostra o NOME no lugar da hash (unico identificador que existe nessa altura); tarefa sem ponto NEM ficheiros fica so com o nome, sem icone nenhum - nao se carimba \"salvo localmente\" o que nunca foi salvo.\n\nA HASH DESTE BLOCO E A UNICA VERDE OLIVA do painel (.git-hash-acesa). O chip de cima mostra o contador DEPOIS do rotulo (\"main (1)\"), logo o rotulo cai logo a seguir ao icone; esta linha, sem contador, cai 9px antes dele e leva git.css:.git-ponto-enviado .git-hash, .git-grupo-tarefa .git-hash { margin-left: -1px } para fechar no MESMO x. Medido com o CSS real: os dois a x=45,0 num contentor de 620px (16 do p-4 + rotulo ou hash). Detalhe na ficha \"ja enviada para o github\".\n\nO CORPO (git-ponto-nome) mostra a linha do commit em camadas (git_tarefa-nome = prefixo \"Tarefa N\", git_commit_nome = a mensagem) e desde 2026-10-06 comeca no x DO ROTULO, nao no do icone - git.css:.git-ponto-enviado > .projeto-filhos > .card-collapsible-clip e .git-grupo-tarefa > .projeto-filhos > .card-collapsible-clip { padding-left: 19px } (o grupo ja tem padding-left 10). O bloco nasce aberto/fechado conforme o estado (recolhivel(cabecalho, corpo, !estado.automatico, ...)).\n\nO SINAL +/- e uma COLUNA unica no fim da linha: git.css:.git-painel .projeto-mais { margin-left: auto } empurra-o para o bordo direito do painel (e git.css:.git-painel .projeto-cabecalho { padding-right: 6px } poe o das seccoes no mesmo x das linhas, que ja tem padding 1px 6px). MEDIDO: os quatro +/- a x=584,0; sem os 6px o das seccoes ficava a x=590,0. Antes disto o +/- caia logo a seguir ao conteudo, ou seja a um x diferente em cada linha.\n\nO LAPIS fica ENCOSTADO ao campo do commit (ordem: prefixo -> input -> lapis -> varinha -> salvar, em corpoDoCommit).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 278
+        "linha": 278,
+        "conferido": [
+          1790429041.127,
+          35567
+        ]
       }
     },
     {

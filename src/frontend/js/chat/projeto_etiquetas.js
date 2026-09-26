@@ -143,20 +143,21 @@ export function aplicarEtiquetas(nos) {
     if (!corpo) return;
     _ligarTooltipTruncado();
     const mapa = nos || {};
+    const temEtiquetas = Object.keys(mapa).length > 0;
     corpo.querySelectorAll('[data-caminho]').forEach(function (linha) {
         const tag = (mapa[linha.dataset.caminho] || {}).tag;
         const atual = linha.querySelector('.projeto-tag');
-        if (!tag) {
+        if (!temEtiquetas) {
             if (atual) atual.remove();
             return;
         }
+        // o span vazio reserva a coluna: sem ele o nome e a contagem invadem o fio
         const span = atual || document.createElement('span');
         span.className = 'projeto-tag';
-        span.textContent = '#' + tag;
+        span.textContent = tag ? '#' + tag : '';
         if (!atual) linha.appendChild(span);
     });
 
-    const temEtiquetas = Object.keys(mapa).length > 0;
     corpo.classList.toggle('tem-etiquetas', temEtiquetas);
     if (atualizarEl) {
         atualizarEl.dataset.info = temEtiquetas ? 'Atualizar etiquetas' : 'Etiquetar a arvore';
