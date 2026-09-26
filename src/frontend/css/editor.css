@@ -300,6 +300,7 @@
     scrollbar-gutter: auto;
 }
 #explorer-tree.files-colunas > .explorer-colunas {
+    --coluna-largura: 210px;
     display: flex;
     flex-direction: row;
     flex: 1 1 auto;
@@ -309,7 +310,7 @@
     overflow-y: hidden;
 }
 #explorer-tree.files-colunas .explorer-coluna {
-    flex: 0 0 210px;
+    flex: 0 0 var(--coluna-largura);
     min-width: 0;
     min-height: 0;
     padding: 2px 6px 10px;
@@ -318,7 +319,7 @@
     scrollbar-gutter: stable;
 }
 #explorer-tree.files-colunas .explorer-coluna:last-child {
-    flex: 1 1 210px;
+    flex: 1 1 var(--coluna-largura);
     min-width: 150px;
 }
 #explorer-tree.files-colunas .explorer-coluna + .explorer-coluna {

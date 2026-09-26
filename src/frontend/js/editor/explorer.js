@@ -13,6 +13,7 @@ const listasDePastas = new Map();
 const listasEmVoo = new Map();
 let prefetchTimer = null;
 let prefetchAgendado = null;
+let observadorDeLargura = null;
 
 function listaGuardada(chave) {
     const guardada = listasDePastas.get(chave);
@@ -193,7 +194,7 @@ export async function loadExplorer(path) {
         state.wsStatus.textContent = 'explorador: erro';
     }
 }
-function preencherLista(ul, entries) {
+function preencherLista(ul, entries, raiz) {
     const anteriores = new Map();
     Array.from(ul.children).forEach(li => {
         const row = li.querySelector('.explorer-row');
@@ -207,7 +208,7 @@ function preencherLista(ul, entries) {
             existente.classList.add('explorer-item-estatico');
             ul.appendChild(existente);
         } else {
-            const li = renderEntry(entry);
+            const li = renderEntry(entry, raiz);
             ul.appendChild(li);
             novos.push(li);
         }
@@ -251,7 +252,7 @@ export function renderEmptyExplorer() {
     if (state.explorerPath) state.explorerPath.textContent = 'nenhuma pasta selecionada';
     state.wsStatus.textContent = 'explorador: nenhuma pasta selecionada';
 }
-export function renderEntry(entry) {
+export function renderEntry(entry, raiz) {
     const li = document.createElement('li');
     li.className = 'explorer-item';
     const row = document.createElement('div');
@@ -259,6 +260,7 @@ export function renderEntry(entry) {
     row.title = entry.path;
     row.dataset.path = entry.path;
     row.dataset.tipo = entry.tipo;
+    if (raiz) row.dataset.raiz = '1';
     if (entry.tipo === 'grupo') {
         return renderGrupo(entry, li, row);
     }
@@ -295,7 +297,8 @@ function renderGrupo(entry, li, row) {
     row.classList.add('explorer-dir', 'explorer-grupo', 'explorer-' + nivel);
     row.title = entry.detalhe ? entry.nome + ' - ' + entry.detalhe : entry.nome;
     li.appendChild(row);
-    if (modoColunas()) {
+    const raiz = row.dataset.raiz === '1';
+    if (modoColunas() && !raiz) {
         row.addEventListener('click', () => abrirColunaDePasta(entry.path, row));
         return li;
     }
@@ -303,6 +306,7 @@ function renderGrupo(entry, li, row) {
     childContainer.className = 'explorer-children hidden';
     li.appendChild(childContainer);
     row.addEventListener('click', () => alternarGrupo(entry.path, row, childContainer));
+    if (raiz) alternarGrupo(entry.path, row, childContainer);
     return li;
 }
 
@@ -399,8 +403,10 @@ function renderColunasExplorer(data, trocouPasta) {
         ul = document.createElement('ul');
         coluna.appendChild(ul);
     }
-    const novos = preencherLista(ul, data.entries);
+    const novos = preencherLista(ul, data.entries, !!data.agrupada);
     if (novos.length) staggerExplorerItems(trocouPasta ? ul : novos);
+    ajustarLimiteDeColunas(casca);
+    vigiarLarguraDasColunas();
 }
 async function abrirColunaDePasta(path, row) {
     const coluna = row.closest('.explorer-coluna');
@@ -420,10 +426,33 @@ async function abrirColunaDePasta(path, row) {
         row.classList.remove('explorer-coluna-acesa');
         return;
     }
+    ajustarLimiteDeColunas(casca);
     if (path.startsWith(PREFIXO_ARVORE)) return;
     state.currentCwdRel = dados.path || '';
     updateExplorerPath(dados);
     enterDir(path, false);
+}
+function larguraDaColuna(casca) {
+    const medida = parseFloat(getComputedStyle(casca).getPropertyValue('--coluna-largura'));
+    return medida > 0 ? medida : 210;
+}
+function maximoDeColunas(casca) {
+    const largura = casca.clientWidth;
+    if (!largura) return 0;
+    return Math.max(2, Math.floor(largura / larguraDaColuna(casca)));
+}
+function ajustarLimiteDeColunas(casca) {
+    if (!casca) return;
+    const maximo = maximoDeColunas(casca);
+    if (!maximo) return;
+    while (casca.children.length > maximo) casca.firstElementChild.remove();
+}
+function vigiarLarguraDasColunas() {
+    if (observadorDeLargura || typeof ResizeObserver !== 'function' || !state.explorerTree) return;
+    observadorDeLargura = new ResizeObserver(() => {
+        ajustarLimiteDeColunas(state.explorerTree.querySelector(':scope > .explorer-colunas'));
+    });
+    observadorDeLargura.observe(state.explorerTree);
 }
 export function openFile(path, row) {
     if (!row) row = findExplorerRow(path);

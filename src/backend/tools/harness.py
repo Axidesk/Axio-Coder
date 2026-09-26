@@ -628,7 +628,7 @@ class __DomElemento extends __DomNo {
         for (const [chave, valor] of Object.entries(this._dados)) lista.push({ name: "data-" + __domKebab(chave), value: valor });
         return lista;
     }
-    matches(seletor) { return __domAnalisar(seletor).some((partes) => __domCorresponde(this, partes)); }
+    matches(seletor) { return __domAnalisar(seletor).some((partes) => __domCorresponde(this, partes, this)); }
     closest(seletor) {
         let no = this;
         while (no && no.nodeType === 1) {
@@ -837,6 +837,11 @@ const __domAnalisar = (seletor) => __domDividir(String(seletor), ",").map((grupo
     for (const pedaco of bruto.split(" ")) {
         if (!pedaco) continue;
         if (pedaco === ">") { combinador = ">"; continue; }
+        if (pedaco === ":scope") {
+            partes.push({ comp: { escopo: true }, combinador: combinador || " " });
+            combinador = null;
+            continue;
+        }
         partes.push({ comp: __domComposto(pedaco), combinador: combinador || " " });
         combinador = null;
     }
@@ -862,8 +867,9 @@ const __domPosicao = (el, pos) => {
     return Number.isFinite(numero) && indice === numero;
 };
 
-const __domTestar = (el, comp) => {
+const __domTestar = (el, comp, escopo) => {
     if (!el || el.nodeType !== 1) return false;
+    if (comp.escopo) return el === escopo;
     if (comp.tag && comp.tag !== "*" && el.localName !== comp.tag) return false;
     for (const pos of comp.posicoes || []) if (!__domPosicao(el, pos)) return false;
     for (const classe of comp.classes) if (!el.classList.contains(classe)) return false;
@@ -874,25 +880,25 @@ const __domTestar = (el, comp) => {
         if (atual === null || atual === undefined) return false;
         if (valor !== null && atual !== valor) return false;
     }
-    for (const nao of comp.negativo) if (__domTestar(el, nao)) return false;
+    for (const nao of comp.negativo) if (__domTestar(el, nao, escopo)) return false;
     return true;
 };
 
-const __domAntecessores = (el, partes, indice) => {
+const __domAntecessores = (el, partes, indice, escopo) => {
     if (indice === 0) return true;
     const combinador = partes[indice].combinador;
     let pai = el.parentElement;
     while (pai) {
-        if (__domTestar(pai, partes[indice - 1].comp) && __domAntecessores(pai, partes, indice - 1)) return true;
+        if (__domTestar(pai, partes[indice - 1].comp, escopo) && __domAntecessores(pai, partes, indice - 1, escopo)) return true;
         if (combinador === ">") return false;
         pai = pai.parentElement;
     }
     return false;
 };
 
-const __domCorresponde = (el, partes) => {
-    if (!__domTestar(el, partes[partes.length - 1].comp)) return false;
-    return __domAntecessores(el, partes, partes.length - 1);
+const __domCorresponde = (el, partes, escopo) => {
+    if (!__domTestar(el, partes[partes.length - 1].comp, escopo)) return false;
+    return __domAntecessores(el, partes, partes.length - 1, escopo);
 };
 
 const __domProcurar = (raiz, seletor, soPrimeiro) => {
@@ -902,7 +908,7 @@ const __domProcurar = (raiz, seletor, soPrimeiro) => {
         if (soPrimeiro && achados.length) return;
         for (const filho of no.childNodes) {
             if (filho.nodeType !== 1) continue;
-            if (grupos.some((partes) => __domCorresponde(filho, partes))) achados.push(filho);
+            if (grupos.some((partes) => __domCorresponde(filho, partes, raiz))) achados.push(filho);
             if (soPrimeiro && achados.length) return;
             visitar(filho);
             if (soPrimeiro && achados.length) return;
