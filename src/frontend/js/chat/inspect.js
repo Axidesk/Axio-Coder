@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { escapeHtml } from './messages.js';
+import { copiarTexto } from './clipboard.js';
 
 const { bpEl, inputText, inspectTooltip, termInputEl, terminalMode } = dom;
 const titulosNativos = new Map();
@@ -318,6 +319,7 @@ const titulosNativos = new Map();
     function recolherDoPreview(info) {
         const texto = textoDaInspecaoDoPreview(info);
         if (!texto) return;
+        copiarTexto(texto);
         const prefixo = inputText && inputText.value.trim() ? '\n' : '';
         colarNoInputText(prefixo + texto);
     }

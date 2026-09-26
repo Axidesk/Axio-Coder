@@ -422,10 +422,6 @@ export function alternarCamadaNotas() {
     editorNotas.focus();
 }
 
-export function fecharCamadaNotas() {
-    if (vistaNotas.col3Aberta()) vistaNotas.fecharCol3();
-}
-
 async function _carregarNotas() {
     const doc = await _pedirNotas();
     if (!doc) {

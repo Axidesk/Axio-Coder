@@ -417,6 +417,56 @@ body.theme-espacial .explorer-search-field {
     transform: scale(0.4);
     pointer-events: none;
 }
+#btn-project-notes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-mutado);
+    transition: color var(--dur-1) ease;
+}
+#btn-project-notes:hover,
+#btn-project-notes.ativo {
+    color: var(--oliva);
+}
+.explorer-migalha {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 8px;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--text-mutado);
+    background: linear-gradient(to bottom, var(--bg-panel-2) 77%, transparent);
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    opacity: 0;
+    z-index: 3;
+    transition: opacity var(--dur-3) var(--ease-fluid);
+}
+body.theme-espacial .explorer-migalha {
+    background: linear-gradient(to bottom, var(--bg-panel) 77%, transparent);
+}
+.explorer-migalha.visivel {
+    opacity: 1;
+}
+.explorer-migalha .explorer-migalha-nome {
+    color: var(--text-suave);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.explorer-migalha .explorer-migalha-nome:last-child {
+    color: var(--text-branco);
+}
+.explorer-migalha .explorer-migalha-sep {
+    color: var(--text-mutado);
+    opacity: 0.55;
+}
 .explorer-path .explorer-crumb {
     color: var(--text-mutado);
     cursor: pointer;

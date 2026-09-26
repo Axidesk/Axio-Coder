@@ -16,6 +16,7 @@ state.termTopBar = document.getElementById('term-top-bar');
 state.termMode = document.getElementById('terminal-mode');
 state.explorerView = document.getElementById('explorer-view');
 state.explorerTree = document.getElementById('explorer-tree');
+state.explorerMigalha = document.getElementById('explorer-migalha');
 state.editorView = document.getElementById('editor-view');
 state.chatView = document.getElementById('chat-view');
 state.editorHost = document.getElementById('editor-host');

@@ -546,8 +546,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 12,
         "conferido": [
-          1790384492.048,
-          12110
+          1790385336.133,
+          12203
         ]
       }
     },
@@ -1762,14 +1762,10 @@
         "abrir a camada de notas"
       ],
       "identificador": "#btn-project-notes",
-      "descricao": "Icone ao lado do titulo do painel de informacoes do projeto que ABRE E FECHA (toggle) a camada de notas por cima da area do Monaco: js/chat/projeto_notas.js:alternarCamadaNotas. Deixou de ser o toggle de uma pagina dentro do painel em 2026-09-15 - o painel fica SEMPRE na pagina de informacoes e o #project-panel-title nunca muda de texto. Acende (classe .ativo) enquanto a camada esta aberta e, nesse estado, so muda a COR do icone para --oliva: o fundo --bg-hover-suave foi retirado de .projeto-icon-btn.ativo (css/projeto.css) para ficar igual ao hover dos botoes do historico.",
+      "descricao": "Botao que ABRE E FECHA (toggle) a camada de notas por cima da area do Monaco: js/chat/projeto_notas.js:alternarCamadaNotas. MUDOU DE SITIO A 2026-10-06: vivia ao lado do titulo do painel de informacoes do projeto e passou para o cabecalho da ARVORE de ficheiros do explorer, como ULTIMO icone da direita, logo depois de #btn-git-doc (o de salvar). MOTIVO: leva-lo para junto do trabalho, em vez de o esconder dentro de um painel que tem de estar aberto. CONSEQUENCIA: deixou de ser preciso abrir o painel de informacoes para chegar as notas, e o painel deixou de as fechar ao fechar-se (a chamada a fecharCamadaNotas saiu de js/chat/projeto.js:fecharProjetoInfo e a funcao foi apagada por ficar orfa). O botao perdeu a classe .projeto-icon-btn (30x30 com radius) e ficou com a medida dos vizinhos do header (icone de 16px, sem caixa), com as cores em #btn-project-notes no css/editor.css: fundo transparente, --text-mutado, hover e .ativo em --oliva. O id NAO mudou, por isso o listener (js/chat/renderer.js) e o realce (_sincronizarBotaoNotas) continuam a funcionar sem tocar. CUSTO MEDIDO do icone no cabecalho a 420px: o caminho #explorer-path passa de 288 para 264px.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 623,
-        "conferido": [
-          1790301839.148,
-          81161
-        ]
+        "linha": 484
       }
     },
     {
@@ -1908,14 +1904,10 @@
         "segunda pagina do painel de informacoes que saiu do painel"
       ],
       "identificador": "#panel-col-3-notes (vistaDe('notas'))",
-      "descricao": "Terceira camada que abre POR CIMA da area do Monaco, gemea de #panel-col-3 (doc) e #panel-col-3-history (historico): nasce no #sliding-panel-container e e montada em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace, que tem as tres no MESMO array. Abre/fecha por opacity (position absolute, inset 0, z-index 7) com a classe .panel-col-closed, e a vista (id 'notas', criada em js/chat/projeto_notas.js) entra no mapa de colunas.js - por isso as tres camadas sao EXCLUSIVAS: abrir qualquer uma fecha as outras por colunas.js:fecharOutrasCamadas, e abrir um FICHEIRO pela arvore tambem as fecha (o listener axio-editor-file-open do renderer.js percorre ['dock','historico','notas']), senao o ficheiro recem-aberto ficava tapado por elas. Por dentro, de cima para baixo: cabecalho de 60px com o titulo 'Notas' e a varinha (#project-notes-header), barra das abas de 34px (#project-notes-bar), o Monaco das notas (#project-notes-editor) e o aviso de campo vazio (#project-notes-placeholder). ABRIR a camada RECOLHE a barra de abas do doc (layout.js:syncDocTopBar, parcela camadaNotasAberta). A camada mantem o #project-panel-container visivel e fecha quando o painel de informacoes fecha (js/chat/projeto.js:fecharProjetoInfo chama projeto_notas.js:fecharCamadaNotas).",
+      "descricao": "Terceira camada que abre POR CIMA da area do Monaco, gemea de #panel-col-3 (doc) e #panel-col-3-history (historico): nasce no #sliding-panel-container e e montada em #editor-host-wrap por editor/workspace.js:mountLogDockIntoWorkspace, que tem as tres no MESMO array. Abre/fecha por opacity (position absolute, inset 0, z-index 7) com a classe .panel-col-closed, e a vista (id 'notas', criada em js/chat/projeto_notas.js) entra no mapa de colunas.js - por isso as tres camadas sao EXCLUSIVAS: abrir qualquer uma fecha as outras por colunas.js:fecharOutrasCamadas, e abrir um FICHEIRO pela arvore tambem as fecha (o listener axio-editor-file-open do renderer.js percorre ['dock','historico','notas']). Por dentro, de cima para baixo: cabecalho de 60px com o titulo 'Notas' e a varinha (#project-notes-header), barra das abas de 34px (#project-notes-bar), o Monaco das notas (#project-notes-editor) e o aviso de campo vazio (#project-notes-placeholder). ABRIR a camada RECOLHE a barra de abas do doc (layout.js:syncDocTopBar, parcela camadaNotasAberta). MUDOU A 2026-10-06: a camada DEIXOU de fechar quando o painel de informacoes do projeto se fecha - a chamada a fecharCamadaNotas saiu de js/chat/projeto.js:fecharProjetoInfo (e a propria funcao foi apagada por ficar orfa), porque o botao que a abre passou para o cabecalho do explorer e as notas ja nao pertencem ao painel. Quem a abre e fecha agora e so o #btn-project-notes (alternarCamadaNotas) e o X de fechar dos ficheiros/colunas.",
       "localizacao": {
         "arquivo": "src/frontend/index.html",
-        "linha": 637,
-        "conferido": [
-          1790301839.148,
-          81161
-        ]
+        "linha": 638
       }
     },
     {
@@ -2176,8 +2168,8 @@
         "arquivo": "src/frontend/css/workspace.css",
         "linha": 2,
         "conferido": [
-          1790384492.048,
-          12110
+          1790385336.133,
+          12203
         ]
       }
     },
@@ -2757,8 +2749,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 88,
         "conferido": [
-          1790384339.773,
-          23320
+          1790385336.053,
+          24420
         ]
       }
     },
@@ -2777,8 +2769,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 96,
         "conferido": [
-          1790384339.773,
-          23320
+          1790385336.053,
+          24420
         ]
       }
     },
@@ -3834,8 +3826,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 141,
         "conferido": [
-          1790384339.773,
-          23320
+          1790385336.053,
+          24420
         ]
       }
     },
@@ -5191,8 +5183,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 295,
         "conferido": [
-          1790383293.01,
-          25778
+          1790385336.123,
+          26322
         ]
       }
     },
@@ -5208,7 +5200,11 @@
       "descricao": "Cabecalho com o NOME da pasta no topo de cada coluna nascida de uma pasta no doc horizontal. O nome nao se repete como linha dentro da coluna.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 334
+        "linha": 334,
+        "conferido": [
+          1790385336.123,
+          26322
+        ]
       }
     },
     {
@@ -5223,7 +5219,11 @@
       "descricao": "Pasta amarela cheia (nao vazada) para o no de projeto e para o alvo; o nome fica na cor do nivel (branco+bold no projeto, text-corpo no alvo), nunca azul.",
       "localizacao": {
         "arquivo": "src/frontend/css/workspace.css",
-        "linha": 243
+        "linha": 243,
+        "conferido": [
+          1790385336.133,
+          12203
+        ]
       }
     },
     {
@@ -5238,7 +5238,29 @@
       "descricao": "A pasta que abriu a coluna seguinte fica com o icone AZUL (o nome nao muda de cor). E o unico azul da arvore.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 352
+        "linha": 352,
+        "conferido": [
+          1790385336.123,
+          26322
+        ]
+      }
+    },
+    {
+      "termo": "nome da pasta que acompanha a rolagem",
+      "aliases": [
+        "migalha da arvore",
+        "faixa da pasta",
+        "pasta presa no topo",
+        "nome da pasta fixo",
+        "cabecalho que acompanha a rolagem",
+        "saber em que pasta estou ao rolar",
+        "titulo da pasta enquanto rolo"
+      ],
+      "identificador": "#explorer-migalha",
+      "descricao": "Faixa de 26px presa ao TOPO da arvore de ficheiros que diz em que pasta estao os itens que se estao a ver, e que MUDA conforme se rola (o desenho do sticky scroll do VS Code). O elemento nasce em #explorer-body (index.html) e e desenhado por js/editor/explorer.js:atualizarMigalhaDaArvore; o desenho vive em css/editor.css (.explorer-migalha, .explorer-migalha-nome, .explorer-migalha-sep). SO APARECE NA DOC VERTICAL (com a indentacao inline): em modo colunas esconde-se, porque cada coluna ja tem o seu titulo proprio (.explorer-coluna-titulo, tambem sticky). COMO DECIDE: percorre as linhas de pasta ABERTAS (.explorer-row.explorer-aberto) e escolhe a mais funda cujo topo ja passou acima do topo visivel da arvore; a partir dela sobe pelos ancestrais (closest('.explorer-item')) e mostra a cadeia ate 4 niveis, separada por '&#8250;'. Uma pasta dentro de um .explorer-children.hidden NUNCA conta. O ultimo nome (o nivel onde se esta) fica em --text-branco e os de cima em --text-suave. O FUNDO E SOLIDO ATE 77% E DESVANECE NO FIM (linear-gradient do --bg-panel-2), e a altura de 26px e escolhida a MEDIDA: a linha .explorer-row tem 25.5px, logo a faixa tapa a linha inteira que fica por baixo - com 22px sobrava texto meio visivel por baixo do gradiente. Recalcula-se no scroll da arvore (listener ligado uma vez por ligarMigalhaDaArvore), no resize da janela e no fim de cada render/expansao. Em modo espacial o fundo vem do --bg-panel. left/width sao escritos pelo JS a partir de arvore.offsetLeft/clientWidth, para a faixa nunca passar por cima da lixeira quando ela esta aberta ao lado.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 496
       }
     }
   ]

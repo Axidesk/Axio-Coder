@@ -247,6 +247,7 @@ export function renderExplorer(data) {
         if (novos.length) staggerExplorerItems(trocouPasta ? ul : novos);
     }
 
+    atualizarMigalhaDaArvore();
     highlightSelection();
     applyErrorMarkers();
     atualizarSugestoes(caminho);
@@ -316,11 +317,13 @@ function alternarGrupo(path, row, container) {
     if (row.classList.contains('explorer-aberto')) {
         row.classList.remove('explorer-aberto');
         container.classList.add('hidden');
+        atualizarMigalhaDaArvore();
         return;
     }
     row.classList.add('explorer-aberto');
     if (container.dataset.loaded === '1') {
         container.classList.remove('hidden');
+        atualizarMigalhaDaArvore();
         return;
     }
     loadDirChildren(path, container);
@@ -353,6 +356,7 @@ export async function loadDirChildren(path, container) {
     container.appendChild(ul);
     staggerExplorerItems(ul);
     container.dataset.loaded = '1';
+    atualizarMigalhaDaArvore();
     highlightSelection();
     applyErrorMarkers();
     return data;
@@ -444,6 +448,7 @@ async function abrirColunaDePasta(path, row) {
         ajustarLimiteDeColunas(casca);
     }
     staggerExplorerItems(lista);
+    atualizarMigalhaDaArvore();
     highlightSelection();
     applyErrorMarkers();
     state.explorerRenderPath = dados.path || state.explorerRenderPath;
@@ -456,6 +461,62 @@ function nomeDaPasta(row, path) {
     const rotulo = row.querySelector('span');
     const texto = rotulo ? (rotulo.textContent || '').trim() : '';
     return texto || basename(path);
+}
+function pastasPresas(arvore) {
+    const topo = arvore.getBoundingClientRect().top;
+    const linhas = arvore.querySelectorAll('.explorer-row.explorer-aberto');
+    let funda = null;
+    for (let i = 0; i < linhas.length; i++) {
+        const row = linhas[i];
+        if (row.closest('.explorer-children.hidden')) continue;
+        if (row.getBoundingClientRect().top < topo) funda = row;
+    }
+    const cadeia = [];
+    let atual = funda;
+    while (atual && cadeia.length < 4) {
+        cadeia.unshift(nomeDaPasta(atual, atual.dataset.path));
+        const li = atual.closest('.explorer-item');
+        const pai = li && li.parentElement ? li.parentElement.closest('.explorer-item') : null;
+        atual = pai ? pai.querySelector(':scope > .explorer-row') : null;
+    }
+    return cadeia;
+}
+export function atualizarMigalhaDaArvore() {
+    const faixa = state.explorerMigalha;
+    const arvore = state.explorerTree;
+    if (!faixa || !arvore) return;
+    if (modoColunas()) {
+        faixa.classList.remove('visivel');
+        return;
+    }
+    const cadeia = pastasPresas(arvore);
+    if (!cadeia.length) {
+        faixa.classList.remove('visivel');
+        return;
+    }
+    faixa.style.left = arvore.offsetLeft + 'px';
+    faixa.style.width = arvore.clientWidth + 'px';
+    faixa.textContent = '';
+    cadeia.forEach(function (nome, i) {
+        if (i) {
+            const separador = document.createElement('span');
+            separador.className = 'explorer-migalha-sep';
+            separador.textContent = '›';
+            faixa.appendChild(separador);
+        }
+        const parte = document.createElement('span');
+        parte.className = 'explorer-migalha-nome';
+        parte.textContent = nome;
+        faixa.appendChild(parte);
+    });
+    faixa.classList.add('visivel');
+}
+function ligarMigalhaDaArvore() {
+    const arvore = state.explorerTree;
+    if (!arvore || arvore.dataset.migalha === '1') return;
+    arvore.dataset.migalha = '1';
+    arvore.addEventListener('scroll', atualizarMigalhaDaArvore, { passive: true });
+    window.addEventListener('resize', atualizarMigalhaDaArvore);
 }
 function larguraDaColuna(casca) {
     const medida = parseFloat(getComputedStyle(casca).getPropertyValue('--coluna-largura'));
@@ -642,4 +703,5 @@ export function applyErrorMarkers() {
 
 loadExplorerOnce();
 ligarPrefetchDePastas();
+ligarMigalhaDaArvore();
 window.addEventListener('axio-explorer-layout', () => { loadExplorer(); });
