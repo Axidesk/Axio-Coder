@@ -24,18 +24,23 @@ from src.backend.tools.projeto_comum import (
     arquivos_de_codigo,
     contar_linhas,
     eh_arquivo_de_codigo,
+    eh_arquivo_texto,
     gravar_cache_projeto,
     ler_cache_projeto,
 )
 
 MAX_PROF_ARVORE = 4
 MAX_NO_ARVORE = 1500
+MAX_NO_ARVORE_OCULTOS = 4000
 MAX_ARQUIVOS_CONTEXTO = 600
+LIMITE_PODA_OCULTOS = 400
+LIMITE_LINHAS_OCULTOS = 512000
 _cache_contexto = {"texto": "", "ts": 0.0}
 _estado_info = {"raiz": "", "correndo": False, "ts": 0.0, "assinatura": "",
-                "dados": None, "erro": ""}
+                "dados": None, "erro": "", "assinatura_ocultos": "",
+                "dados_ocultos": None}
 _trava_info = threading.Lock()
-_VERSAO_INFO_PROJETO = 2
+_VERSAO_INFO_PROJETO = 3
 
 
 _MARCADORES_STACK = (
@@ -192,14 +197,53 @@ def _stats_codigo(arquivos):
         resumo += f" | {topo}"
     return resumo
 
-def _arvore_estruturada(raiz, max_prof=MAX_PROF_ARVORE, max_nos=MAX_NO_ARVORE):
-    """Arvore de pastas e ficheiros de codigo com linhas e totais por pasta.
+def _contar_ficheiros(pasta):
+    """Quantos ficheiros existem dentro desta pasta, em qualquer nivel."""
+    total = 0
+    for _, _, ficheiros in os.walk(pasta):
+        total += len(ficheiros)
+    return total
+
+def _tamanho(caminho):
+    try:
+        return os.path.getsize(caminho)
+    except OSError:
+        return 0
+
+def _no_oculto(nome, caminho):
+    """No de um ficheiro que o painel esconde: linhas quando e texto, peso quando nao.
+
+    Contar linhas de um binario daria um numero sem sentido e ler um ficheiro
+    enorme so para o contar atrasa a medicao: nesses dois casos o que se mostra e
+    o tamanho, que e a informacao verdadeira que existe.
+    """
+    no = {"nome": nome, "tipo": "ficheiro", "oculto": True,
+          "ext": os.path.splitext(nome)[1].lower() if eh_arquivo_de_codigo(nome) else "",
+          "linhas": 0}
+    tamanho = _tamanho(caminho)
+    if eh_arquivo_texto(nome) and tamanho <= LIMITE_LINHAS_OCULTOS:
+        no["linhas"] = contar_linhas(caminho)
+    else:
+        no["tamanho"] = tamanho
+    return no
+
+def _arvore_estruturada(raiz, com_ocultos=False, max_prof=MAX_PROF_ARVORE, max_nos=None):
+    """Arvore de pastas e ficheiros com linhas e totais por pasta.
 
     Devolve DADOS (nao texto) porque o painel de informacoes do workspace precisa
     de recolher e expandir cada no; `_arvore_resumida` continua a ser a versao em
     texto injetada no contexto do prompt.
+
+    Com `com_ocultos` (o olho do explorer) entram tambem os ficheiros que o painel
+    esconde - pastas de build e de cache, nomes com ponto inicial, binarios e o que
+    nao e codigo -, todos marcados com `oculto`. Uma pasta oculta com milhares de
+    ficheiros dentro (node_modules, .git, .axio) entra fechada, com o numero de
+    ficheiros que tem: o que interessa e saber que la esta e quanto ocupa, nao
+    abrir a tripa de meio projeto nem ler ficheiros que ninguem vai ler.
     """
     contador = {"nos": 0}
+    if max_nos is None:
+        max_nos = MAX_NO_ARVORE_OCULTOS if com_ocultos else MAX_NO_ARVORE
 
     def _no_pasta(caminho, prof):
         try:
@@ -215,17 +259,30 @@ def _arvore_estruturada(raiz, max_prof=MAX_PROF_ARVORE, max_nos=MAX_NO_ARVORE):
             if contador["nos"] >= max_nos:
                 break
             completo = os.path.join(caminho, nome)
+            escondido = nome in PASTAS_IGNORADAS or nome.startswith(".")
             if os.path.isdir(completo):
-                if nome in PASTAS_IGNORADAS or nome.startswith(".") or prof >= max_prof:
+                if prof >= max_prof or (escondido and not com_ocultos):
                     continue
+                if escondido:
+                    total = _contar_ficheiros(completo)
+                    if total > LIMITE_PODA_OCULTOS:
+                        contador["nos"] += 1
+                        filhos.append({"nome": nome, "tipo": "pasta", "linhas": 0,
+                                       "oculto": True, "omitidos": total, "filhos": []})
+                        continue
                 filho = _no_pasta(completo, prof + 1)
-                if filho and filho["filhos"]:
+                if filho and (filho["filhos"] or escondido):
+                    if escondido:
+                        filho["oculto"] = True
                     filhos.append(filho)
             elif eh_arquivo_de_codigo(nome):
                 contador["nos"] += 1
                 filhos.append({"nome": nome, "tipo": "ficheiro",
                                "ext": os.path.splitext(nome)[1].lower(),
                                "linhas": contar_linhas(completo)})
+            elif com_ocultos:
+                contador["nos"] += 1
+                filhos.append(_no_oculto(nome, completo))
         return {"nome": os.path.basename(caminho) or caminho, "tipo": "pasta",
                 "linhas": sum(f["linhas"] for f in filhos), "filhos": filhos}
 
@@ -241,7 +298,10 @@ def _agregar_arvore(no, acc):
         else:
             acc["arquivos"] += 1
             acc["linhas"] += f["linhas"]
-            item = acc["extensoes"].setdefault(f["ext"], {"arquivos": 0, "linhas": 0})
+            ext = f.get("ext") or ""
+            if not ext:
+                continue
+            item = acc["extensoes"].setdefault(ext, {"arquivos": 0, "linhas": 0})
             item["arquivos"] += 1
             item["linhas"] += f["linhas"]
 
@@ -269,14 +329,14 @@ def _assinatura_projeto(raiz):
     partes.sort()
     return hashlib.sha1("\n".join(partes).encode("utf-8")).hexdigest()
 
-def _retrato_projeto(raiz):
+def _retrato_projeto(raiz, com_ocultos=False):
     """Mede o projeto inteiro: arvore, linguagens, stack, manifests e dependencias.
 
     Reusa as mesmas medicoes do contexto do prompt (`_detectar_stack` e
     `manifests_do_projeto`) e mede aqui o que so o painel precisa: arvore de
     codigo com linhas por ficheiro e por pasta.
     """
-    arvore = _arvore_estruturada(raiz)
+    arvore = _arvore_estruturada(raiz, com_ocultos)
     acc = {"arquivos": 0, "linhas": 0, "pastas": 0, "extensoes": {}}
     _agregar_arvore(arvore, acc)
     linguagens = [{"ext": ext, "arquivos": v["arquivos"], "linhas": v["linhas"]}
@@ -290,20 +350,26 @@ def _retrato_projeto(raiz):
         "totais": {"arquivos": acc["arquivos"], "linhas": acc["linhas"],
                    "pastas": acc["pastas"], "linguagens": len(linguagens)},
         "arvore": arvore,
+        "com_ocultos": bool(com_ocultos),
     }
 
-def _medir_info_projeto(raiz, assinatura):
-    dados = _retrato_projeto(raiz)
+def _medir_info_projeto(raiz, assinatura, com_ocultos=False):
+    dados = _retrato_projeto(raiz, com_ocultos)
     with _trava_info:
-        _estado_info.update({"ts": time.time(), "assinatura": assinatura,
-                             "dados": dados, "erro": ""})
-    gravar_cache_projeto("projeto_info.json",
-                          {"versao": _VERSAO_INFO_PROJETO, "assinatura": assinatura,
-                           "dados": dados})
+        if com_ocultos:
+            _estado_info.update({"assinatura_ocultos": assinatura,
+                                 "dados_ocultos": dados, "erro": ""})
+        else:
+            _estado_info.update({"ts": time.time(), "assinatura": assinatura,
+                                 "dados": dados, "erro": ""})
+    if not com_ocultos:
+        gravar_cache_projeto("projeto_info.json",
+                              {"versao": _VERSAO_INFO_PROJETO, "assinatura": assinatura,
+                               "dados": dados})
 
-def _medir_info_em_fundo(raiz, assinatura):
+def _medir_info_em_fundo(raiz, assinatura, com_ocultos=False):
     try:
-        _medir_info_projeto(raiz, assinatura)
+        _medir_info_projeto(raiz, assinatura, com_ocultos)
     except Exception as e:
         with _trava_info:
             _estado_info["erro"] = str(e)
@@ -311,17 +377,23 @@ def _medir_info_em_fundo(raiz, assinatura):
         with _trava_info:
             _estado_info["correndo"] = False
 
-def _garantir_info_projeto(raiz):
+def _garantir_info_projeto(raiz, com_ocultos=False):
     """Hidrata a cache (memoria -> disco) e remede em fundo se algo mudou.
 
     A cache e validada pela ASSINATURA do projeto e nao por tempo: um retrato de
     ontem continua bom se nenhum ficheiro mudou, e um de agora mesmo esta velho se
     um ficheiro acabou de ser gravado (o agente edita este projeto o tempo todo).
+
+    Sao DUAS medicoes independentes guardadas lado a lado: a normal (so o projeto)
+    e a do olho (`com_ocultos`). A pesada nunca e paga sem alguem a pedir, e nunca
+    passa por cima da normal - quem abre o painel sem o olho recebe sempre a leve,
+    mesmo que a outra esteja a ser medida naquele instante.
     """
     with _trava_info:
         if _estado_info["raiz"] != raiz:
             _estado_info.update({"raiz": raiz, "correndo": False, "ts": 0.0,
-                                 "assinatura": "", "dados": None, "erro": ""})
+                                 "assinatura": "", "dados": None, "erro": "",
+                                 "assinatura_ocultos": "", "dados_ocultos": None})
         if not _estado_info["assinatura"]:
             disco = ler_cache_projeto("projeto_info.json", ("assinatura", "dados"),
                                        versao=_VERSAO_INFO_PROJETO)
@@ -335,25 +407,31 @@ def _garantir_info_projeto(raiz):
     with _trava_info:
         if _estado_info["correndo"]:
             return
-        if assinatura == _estado_info["assinatura"] and _estado_info["dados"]:
+        chave = "assinatura_ocultos" if com_ocultos else "assinatura"
+        guardado = "dados_ocultos" if com_ocultos else "dados"
+        if assinatura == _estado_info[chave] and _estado_info[guardado]:
             return
         _estado_info["correndo"] = True
-    threading.Thread(target=_medir_info_em_fundo, args=(raiz, assinatura), daemon=True).start()
+    threading.Thread(target=_medir_info_em_fundo, args=(raiz, assinatura, com_ocultos),
+                     daemon=True).start()
 
-def dados_projeto():
+def dados_projeto(com_ocultos=False):
     """Retrato estruturado do projeto para o painel de informacoes (JSON).
 
     Responde SEMPRE com o que tem em cache e mede o resto num fio de fundo: o
     retrato completo custa 0,6-0,9s (abre cada ficheiro para contar linhas e
     extrair imports), o que fazia o painel abrir em \"A medir o projeto...\" a cada
     consulta. A cache so e invalidada quando um ficheiro de codigo muda.
+
+    `com_ocultos` serve o olho do explorer: devolve a arvore COM o que o painel
+    esconde (e os totais a contar isso), que e uma medicao a parte e mais cara.
     """
     raiz = estado.get("pasta_raiz", "")
     if not raiz or not os.path.isdir(raiz):
         return {"erro": MSG_SEM_PASTA}
-    _garantir_info_projeto(raiz)
+    _garantir_info_projeto(raiz, com_ocultos)
     with _trava_info:
-        dados = _estado_info["dados"]
+        dados = _estado_info["dados_ocultos" if com_ocultos else "dados"]
         correndo = _estado_info["correndo"]
         erro = _estado_info["erro"]
     if dados is None:

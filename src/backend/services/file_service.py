@@ -221,33 +221,45 @@ def buscar_em_revisao(termo, revisao, raiz_projeto):
                 resultados.append(f"{rel} (Linha {i+1}): {linha.strip()}")
     return resultados, None
 
-_DIRS_FORA_DA_LISTAGEM = {'.git', 'node_modules', 'build', '__pycache__', '.vs', 'Intermediate', 'Binaries', 'Saved'}
+_DIRS_FORA_DA_LISTAGEM = {'.git', 'node_modules', 'build', '__pycache__', '.vs', 'Intermediate',
+                          'Binaries', 'Saved', 'Release', 'Debug', 'x64', 'x86', 'obj', 'ipch',
+                          'CMakeFiles', 'out'}
 _EXT_BINARIAS = ('.exe', '.dll', '.obj', '.lib', '.o', '.so', '.a', '.dylib', '.png', '.jpg', '.pdb')
 
-def resumo_entradas(caminho_alvo):
+def e_item_oculto(nome, eh_pasta):
+    """Verdadeiro para o que a listagem esconde: pasta de sistema/build, ponto inicial ou binario."""
+    if nome in _DIRS_FORA_DA_LISTAGEM or nome.startswith('.'):
+        return True
+    return (not eh_pasta) and nome.endswith(_EXT_BINARIAS)
+
+def resumo_entradas(caminho_alvo, incluir_ocultos=False):
     """Varre o diretorio UMA vez e devolve (entradas visiveis, quantos itens ficaram ocultos).
 
     A listagem esconde pastas de sistema/build e binarios. Sem o contador, uma pasta
     com um .o dentro parecia igual antes e depois de compilar, e a conclusao errada
     era "o compilador nao produziu nada". Nada fica oculto sem aviso.
+
+    Com `incluir_ocultos` (o olho do explorer), os mesmos itens entram na lista
+    marcados com `oculto`, para o frontend os pintar apagados - o que existe
+    passa a estar a vista, sem deixar de se distinguir do que e do projeto.
     """
     entradas = []
     ocultos = 0
     for item in os.listdir(caminho_alvo):
-        if item in _DIRS_FORA_DA_LISTAGEM or item.startswith('.'):
+        eh_pasta = os.path.isdir(os.path.join(caminho_alvo, item))
+        escondido = e_item_oculto(item, eh_pasta)
+        if escondido:
             ocultos += 1
-            continue
-        caminho_item = os.path.join(caminho_alvo, item)
-        if os.path.isdir(caminho_item):
-            entradas.append({"nome": item, "tipo": "dir"})
-        elif item.endswith(_EXT_BINARIAS):
-            ocultos += 1
-        else:
-            entradas.append({"nome": item, "tipo": "file"})
+            if not incluir_ocultos:
+                continue
+        entrada = {"nome": item, "tipo": "dir" if eh_pasta else "file"}
+        if escondido:
+            entrada["oculto"] = True
+        entradas.append(entrada)
     return entradas, ocultos
 
-def entradas_diretorio(caminho_alvo):
-    return resumo_entradas(caminho_alvo)[0]
+def entradas_diretorio(caminho_alvo, incluir_ocultos=False):
+    return resumo_entradas(caminho_alvo, incluir_ocultos)[0]
 
 def normalizar_unicode(texto: str) -> str:
     """Normaliza para NFC e decodifica escapes Unicode literais (ex: 'ú' -> 'u').

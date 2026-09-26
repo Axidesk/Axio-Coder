@@ -2,6 +2,7 @@ import * as dom from './dom.js';
 import { closeHistoryPanel, isHistoryOpen } from './layout.js';
 import { esconderIconTooltip, mostrarIconTooltip } from './ui.js';
 import { anexarOlho, carregarEtiquetas, criarControlesEstrutura } from './projeto_etiquetas.js';
+import { aoMudarOcultos, mostrandoOcultos } from '../pastas_ocultas.js';
 
 const SVG_PASTA = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>';
 const NOMES_LINGUAGEM = {
@@ -53,6 +54,19 @@ function _numero(n) {
 
 function _linhas(n) {
     return '(' + _numero(n) + ')';
+}
+
+function _peso(bytes) {
+    const n = Number(bytes || 0);
+    if (n >= 1048576) return '(' + (n / 1048576).toFixed(1) + ' MB)';
+    if (n >= 1024) return '(' + Math.round(n / 1024) + ' KB)';
+    return '(' + _numero(n) + ' B)';
+}
+
+function _contagemDoNo(no) {
+    if (no.omitidos) return _numero(no.omitidos) + ' ficheiros';
+    if (no.tamanho !== undefined) return _peso(no.tamanho);
+    return _linhas(no.linhas);
 }
 
 function _nomeLinguagem(ext) {
@@ -163,19 +177,21 @@ function _noDaArvore(no, ehRaiz, caminho) {
     if (no.tipo === 'ficheiro') {
         const linha = _el('div', 'projeto-linha projeto-linha-ficheiro');
         linha.dataset.caminho = caminho;
+        if (no.oculto) linha.classList.add('projeto-oculto');
         linha.appendChild(_el('span', 'projeto-nome', no.nome));
-        linha.appendChild(_el('span', 'projeto-contagem', _linhas(no.linhas)));
+        linha.appendChild(_el('span', 'projeto-contagem', _contagemDoNo(no)));
         return linha;
     }
     const pasta = _el('div', ehRaiz ? 'projeto-pasta projeto-pasta-raiz' : 'projeto-pasta');
     if (!ehRaiz) pasta.classList.add('projeto-aberto');
     const linha = _el('div', 'projeto-linha projeto-linha-clicavel');
     linha.dataset.caminho = caminho;
+    if (no.oculto) linha.classList.add('projeto-oculto');
     const icone = _el('span', 'projeto-icone-pasta');
     icone.innerHTML = SVG_PASTA;
     linha.appendChild(icone);
     linha.appendChild(_el('span', 'projeto-nome projeto-nome-pasta', no.nome));
-    linha.appendChild(_el('span', 'projeto-contagem', _linhas(no.linhas)));
+    linha.appendChild(_el('span', 'projeto-contagem', _contagemDoNo(no)));
     linha.addEventListener('click', function () {
         pasta.classList.toggle('projeto-aberto');
     });
@@ -333,8 +349,9 @@ export async function carregarProjetoInfo() {
 
         let esqueleto = false;
 
+        const rota = '/api/projeto/info' + (mostrandoOcultos() ? '?ocultos=1' : '');
         const [dados, etiquetas] = await Promise.all([
-            _insistir('/api/projeto/info',
+            _insistir(rota,
                 function (d) { return d.estado !== 'a_medir' || !!d.erro; },
                 function (d) {
                     if (esqueleto || d.estado !== 'a_medir' || d.erro) return;
@@ -366,3 +383,7 @@ export async function carregarProjetoInfo() {
         carregando = false;
     }
 }
+
+aoMudarOcultos(function () {
+    if (projetoInfoAberto()) carregarProjetoInfo();
+});

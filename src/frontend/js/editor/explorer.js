@@ -4,11 +4,14 @@ import { aplicarDockDeProjeto, applyTabsVisibility, layoutAllEditors } from './w
 import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
 import { abreNoViewer } from './familia_ficheiro.js';
+import { alternarOcultos, aoMudarOcultos, mostrandoOcultos } from '../pastas_ocultas.js';
 
 const VALIDADE_DA_LISTA_MS = 6000;
 const MAX_PASTAS_LISTADAS = 24;
 const INTENCAO_DE_HOVER_MS = 90;
 const PREFIXO_ARVORE = '@arvore';
+const SVG_OLHO_RISCADO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+const SVG_OLHO_ABERTO = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 const listasDePastas = new Map();
 const listasEmVoo = new Map();
 let prefetchTimer = null;
@@ -36,8 +39,14 @@ function guardarLista(chave, dados) {
     }
 }
 
-function pedirLista(chave) {
-    const pedido = fetch(state.API + '/api/explorer?path=' + encodeURIComponent(chave))
+function chaveDaLista(caminho) {
+    return (mostrandoOcultos() ? 'ocultos:' : 'essencial:') + caminho;
+}
+
+function pedirLista(caminho) {
+    const chave = chaveDaLista(caminho);
+    const sufixo = mostrandoOcultos() ? '&ocultos=1' : '';
+    const pedido = fetch(state.API + '/api/explorer?path=' + encodeURIComponent(caminho) + sufixo)
         .then(r => r.json())
         .then(data => {
             if (!data.sem_raiz && !data.error) guardarLista(chave, data);
@@ -139,10 +148,42 @@ export function reloadExplorer() {
     listasDePastas.clear();
     return loadExplorer();
 }
-export function prefetchPasta(chave) {
-    if (chave === undefined || chave === null) return;
+
+function pintarBotaoDeOcultos() {
+    const botao = state.btnExplorerOcultos;
+    if (!botao) return;
+    const mostrando = mostrandoOcultos();
+    botao.innerHTML = mostrando ? SVG_OLHO_ABERTO : SVG_OLHO_RISCADO;
+    botao.classList.toggle('ativo', mostrando);
+    botao.title = mostrando
+        ? 'Ocultar pastas e ficheiros ocultos'
+        : 'Mostrar pastas e ficheiros ocultos';
+}
+
+export function ligarBotaoDeOcultos() {
+    if (!state.btnExplorerOcultos) return;
+    state.btnExplorerOcultos.addEventListener('click', () => {
+        alternarPastasOcultas();
+    });
+    aoMudarOcultos(pintarBotaoDeOcultos);
+    pintarBotaoDeOcultos();
+}
+
+export async function alternarPastasOcultas() {
+    const caminho = caminhoDaArvore();
+    alternarOcultos();
+    listasDePastas.clear();
+    dadosDaArvore = null;
+    state.explorerRenderPath = null;
+    state.explorerTree.innerHTML = '';
+    await loadExplorer(caminho);
+}
+
+export function prefetchPasta(caminho) {
+    if (caminho === undefined || caminho === null) return;
+    const chave = chaveDaLista(caminho);
     if (listaGuardada(chave) || listasEmVoo.has(chave)) return;
-    pedirLista(chave).catch(() => {});
+    pedirLista(caminho).catch(() => {});
 }
 export function ligarPrefetchDePastas() {
     const arvore = state.explorerTree;
@@ -172,7 +213,7 @@ function cancelarPrefetch() {
 }
 export async function loadExplorer(path) {
     const queryPath = path !== undefined ? path : caminhoDaArvore();
-    const guardada = listaGuardada(queryPath);
+    const guardada = listaGuardada(chaveDaLista(queryPath));
     if (guardada) {
         renderExplorer(guardada);
         return;
@@ -271,6 +312,7 @@ export function renderEntry(entry, raiz) {
     row.dataset.path = entry.path;
     row.dataset.tipo = entry.tipo;
     if (raiz) row.dataset.raiz = '1';
+    if (entry.oculto) row.classList.add('explorer-oculto');
     if (entry.tipo === 'grupo') {
         return renderGrupo(entry, li, row);
     }
@@ -841,5 +883,6 @@ export function applyErrorMarkers() {
 
 loadExplorerOnce();
 ligarPrefetchDePastas();
+ligarBotaoDeOcultos();
 ligarMigalhaDaArvore();
 window.addEventListener('axio-explorer-layout', () => { loadExplorer(); });

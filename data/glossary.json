@@ -4431,8 +4431,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 245,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -4445,8 +4445,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 207,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -4838,8 +4838,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 112,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -4876,10 +4876,10 @@
       "descricao": "Botao de varinha da linha da mensagem do commit, no painel de git: pede a sugestao da mensagem a IA e escreve-a no campo (guardando o rascunho). Aparece nos dois estados em que o campo e EDITAVEL - tarefa nova por commitar e tarefa com ponto ainda por subir (amend) - e NAO aparece quando o commit ja esta no GitHub, porque ai nao ha mensagem para mudar. O campo trancado do amend foi o que a fez desaparecer durante um tempo; o amend esta em git_panel.js:htmlDaTarefa (podeCorrigir).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/git_panel.js",
-        "linha": 554,
+        "linha": 562,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -4935,8 +4935,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 117,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -5037,8 +5037,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 279,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -5057,8 +5057,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 277,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -5313,8 +5313,8 @@
         "arquivo": "src/frontend/js/chat/git_panel.js",
         "linha": 245,
         "conferido": [
-          1790391752.154,
-          35126
+          1790394276.627,
+          35545
         ]
       }
     },
@@ -5335,6 +5335,25 @@
           1790393700.881,
           32641
         ]
+      }
+    },
+    {
+      "termo": "olhinho dos ficheiros ocultos",
+      "aliases": [
+        "mostrar ocultos",
+        "olho do explorer",
+        "mostrar tudo na arvore",
+        "exibir ficheiros ocultos",
+        "pastas ocultas",
+        "olho das pastas ocultas",
+        "ficheiros ocultos na arvore",
+        "mostrar o lixo"
+      ],
+      "identificador": "#btn-explorer-ocultos (estado em src/frontend/js/pastas_ocultas.js)",
+      "descricao": "Botao com olho RISCADO (repouso) no cabecalho da arvore do doc, logo depois de #btn-git-doc (o de salvar). Comeca DESLIGADO e nao persiste entre sessoes. Aceso, revela na arvore o que a listagem esconde (pasta de build/cache, nome com ponto inicial, binario) pintado a 45% de opacidade (.explorer-oculto), e o painel de informacoes do projeto passa a mostrar o mesmo na arvore dele (.projeto-oculto) com os totais a contar isso. O estado e UM so, no modulo pastas_ocultas.js (mostrandoOcultos/alternarOcultos/aoMudarOcultos) e e o que mantem doc e painel sincronizados. Quem esconde e file_service.e_item_oculto; as rotas aceitam &ocultos=1 (/api/explorer) e ?ocultos=1 (/api/projeto/info).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 484
       }
     }
   ]

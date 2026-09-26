@@ -14,7 +14,7 @@ projeto_bp = Blueprint("projeto", __name__)
 
 @projeto_bp.route('/api/projeto/info')
 def projeto_info():
-    return jsonify(dados_projeto())
+    return jsonify(dados_projeto(com_ocultos=request.args.get("ocultos") == "1"))
 
 
 @projeto_bp.route('/api/projeto/outdated')

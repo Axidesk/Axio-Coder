@@ -54,6 +54,7 @@ state.btnDockRight = document.getElementById('btn-dock-right');
 state.editorWatermark = document.getElementById('editor-watermark');
 state.btnTrash = document.getElementById('btn-trash');
 state.btnLineNumbers = document.getElementById('btn-line-numbers');
+state.btnExplorerOcultos = document.getElementById('btn-explorer-ocultos');
 state.btnCreateFile = document.getElementById('btn-create-file');
 state.editorTabs = document.getElementById('editor-tabs');
 state.trashList = document.getElementById('trash-list');

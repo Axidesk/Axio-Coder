@@ -428,6 +428,17 @@ body.theme-espacial .explorer-search-field {
 #btn-project-notes.ativo {
     color: var(--oliva);
 }
+#btn-explorer-ocultos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-mutado);
+    transition: color var(--dur-1) ease;
+}
+#btn-explorer-ocultos:hover,
+#btn-explorer-ocultos.ativo {
+    color: var(--oliva);
+}
 .explorer-migalha {
     position: absolute;
     top: 0;

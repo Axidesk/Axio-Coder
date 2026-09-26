@@ -173,6 +173,13 @@
 .projeto-linha:hover {
     background: var(--bg-hover-suave);
 }
+.projeto-linha.projeto-oculto {
+    opacity: 0.45;
+    transition: opacity var(--dur-1) ease;
+}
+.projeto-linha.projeto-oculto:hover {
+    opacity: 0.9;
+}
 .projeto-linha-clicavel {
     cursor: pointer;
 }

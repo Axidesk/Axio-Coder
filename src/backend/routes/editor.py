@@ -81,8 +81,9 @@ def explorer():
         return jsonify({"error": erro}), 400
     if not os.path.isdir(caminho_alvo):
         return jsonify({"error": "não é uma pasta"}), 404
+    incluir_ocultos = request.args.get("ocultos") == "1"
     items = []
-    for e in entradas_diretorio(caminho_alvo):
+    for e in entradas_diretorio(caminho_alvo, incluir_ocultos):
         item = {
             "nome": e["nome"],
             "tipo": e["tipo"],
@@ -90,13 +91,15 @@ def explorer():
         }
         if e["tipo"] == "file":
             item["ext"] = os.path.splitext(e["nome"])[1].lstrip('.').lower()
+        if e.get("oculto"):
+            item["oculto"] = True
         items.append(item)
     items.sort(key=lambda x: (_ORDEM_DE_ENTRADAS.get(x["tipo"], 1), x["nome"].lower()))
     agrupada = None
     if not caminho_rel:
         nos = arvore.entradas_raiz(raiz)
         agrupada = bool(nos)
-        if arvore.tem_projeto(raiz):
+        if arvore.tem_projeto(raiz) and not incluir_ocultos:
             items = nos
         else:
             agrupados = arvore.ficheiros_agrupados(raiz)

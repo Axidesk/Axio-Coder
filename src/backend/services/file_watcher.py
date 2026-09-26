@@ -24,7 +24,8 @@ ARQUIVOS_SEM_EXT = {
 PASTAS_IGNORADAS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv", ".axio",
     "dist", "build", ".idea", ".vscode", ".next", ".nuxt", "target",
-    ".ruff_cache", ".ai_memory",
+    ".ruff_cache", ".ai_memory", "Release", "Debug", "x64", "x86", "obj",
+    "ipch", "CMakeFiles", "out",
 }
 
 ARQUIVOS_IGNORADOS = {"busca.txt"}

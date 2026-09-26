@@ -26,6 +26,17 @@ PASTAS_IGNORADAS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv", "env",
     "dist", "build", "vendor", ".axio", ".mempalace", "target", ".next",
     ".idea", ".vscode", "coverage", ".tox", ".nox", ".pytest_cache",
+    "Release", "Debug", "x64", "x86", "obj", "ipch", "CMakeFiles", "out",
+}
+EXTENSOES_TEXTO = (
+    ".txt", ".json", ".xml", ".ini", ".cfg", ".conf", ".env", ".log", ".csv",
+    ".bat", ".cmd", ".ps1", ".cmake", ".props", ".filters", ".vcxproj", ".sln",
+    ".pro", ".ui", ".tsv", ".example", ".sample",
+)
+NOMES_TEXTO_SEM_EXTENSAO = {
+    ".env", ".gitignore", ".gitattributes", ".editorconfig", ".dockerignore",
+    ".npmrc", ".babelrc", ".eslintrc", "dockerfile", "makefile", "license",
+    "readme", "version", "notice", "authors",
 }
 NOMES_MANIFESTO = {
     "requirements.txt", "package.json", "pyproject.toml", "Pipfile",
@@ -71,6 +82,20 @@ def eh_arquivo_de_codigo(nome):
     if nome in NOMES_MANIFESTO:
         return True
     return os.path.splitext(nome)[1].lower() in EXTENSOES_CODIGO
+
+def eh_arquivo_texto(nome):
+    """Legivel para contar linhas: o codigo do projeto e os formatos de configuracao.
+
+    Nao confundir com `eh_arquivo_de_codigo`: um `.env`, um `.gitignore` ou um
+    `.log` contam-se em linhas mas nao sao codigo do projeto. O que nao for texto
+    (imagem, executavel, .obj) nao se conta - mostra-se o tamanho.
+    """
+    if eh_arquivo_de_codigo(nome):
+        return True
+    ext = os.path.splitext(nome)[1].lower()
+    if ext:
+        return ext in EXTENSOES_TEXTO
+    return nome.lower() in NOMES_TEXTO_SEM_EXTENSAO
 
 def varrer_por_extensao(raiz, extensoes, maximo=MAX_ARQUIVOS_INDEX):
     """Ficheiros de uma pasta (recursivo) cuja extensao esta na lista, ordenados.
