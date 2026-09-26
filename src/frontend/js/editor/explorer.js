@@ -14,6 +14,7 @@ const listasEmVoo = new Map();
 let prefetchTimer = null;
 let prefetchAgendado = null;
 let observadorDeLargura = null;
+let dadosDaArvore = null;
 
 function listaGuardada(chave) {
     const guardada = listasDePastas.get(chave);
@@ -227,6 +228,7 @@ export function renderExplorer(data) {
     state.currentCwd = data.cwd || '';
     state.currentCwdRel = data.path || '';
     state.wsStatus.textContent = 'explorador: ' + (basename(data.root) || 'raiz');
+    dadosDaArvore = data;
     updateExplorerPath(data);
 
 
@@ -256,6 +258,7 @@ export function renderExplorer(data) {
 export function renderEmptyExplorer() {
     state.explorerTree.innerHTML = '';
     state.explorerRenderPath = null;
+    dadosDaArvore = null;
     if (state.explorerPath) state.explorerPath.textContent = 'nenhuma pasta selecionada';
     state.wsStatus.textContent = 'explorador: nenhuma pasta selecionada';
 }
@@ -322,15 +325,15 @@ function alternarGrupo(path, row, container) {
     if (row.classList.contains('explorer-aberto')) {
         row.classList.remove('explorer-aberto');
         container.classList.add('hidden');
-        atualizarCaminhoDaArvore();
         atualizarMigalhaDaArvore();
+        atualizarCaminhoDaArvore();
         return;
     }
     row.classList.add('explorer-aberto');
     if (container.dataset.loaded === '1') {
         container.classList.remove('hidden');
-        atualizarCaminhoDaArvore();
         atualizarMigalhaDaArvore();
+        atualizarCaminhoDaArvore();
         return;
     }
     loadDirChildren(path, container);
@@ -363,8 +366,8 @@ export async function loadDirChildren(path, container) {
     container.appendChild(ul);
     staggerExplorerItems(ul);
     container.dataset.loaded = '1';
-    atualizarCaminhoDaArvore();
     atualizarMigalhaDaArvore();
+    atualizarCaminhoDaArvore();
     highlightSelection();
     applyErrorMarkers();
     return data;
@@ -375,6 +378,99 @@ function modoColunas() {
 function caminhoDaArvore() {
     if (modoColunas()) return state.explorerRenderPath || '';
     return state.currentCwdRel || '';
+}
+function irParaCrumb(row, casca) {
+    if (!row) return;
+    const path = row.dataset.path || '';
+    if (casca) {
+        const coluna = row.closest('.explorer-coluna');
+        if (coluna) limparColunasDepois(casca, coluna);
+        if (path && !path.startsWith(PREFIXO_ARVORE)) enterDir(path, false);
+    }
+    fecharDentroDaRow(row);
+    atualizarCaminhoDaArvore();
+}
+function linhasDoCaminho(casca) {
+    const linhas = [];
+    casca.querySelectorAll('.explorer-row').forEach(row => {
+        if (row.dataset.raiz === '1') return;
+        if (row.closest('.explorer-children.hidden')) return;
+        if (!row.classList.contains('explorer-coluna-acesa') && !row.classList.contains('explorer-aberto')) return;
+        linhas.push(row);
+    });
+    return linhas;
+}
+function irParaRaiz(casca) {
+    const coluna = casca.firstElementChild;
+    if (coluna) {
+        limparColunasDepois(casca, coluna);
+        coluna.querySelectorAll('.explorer-row').forEach(r => {
+            if (r.dataset.raiz === '1') return;
+            fecharDentroDaRow(r, true);
+        });
+    }
+    const path = state.rootPath || '';
+    if (path && !path.startsWith(PREFIXO_ARVORE)) enterDir(path, false);
+    atualizarCaminhoDaArvore();
+}
+function caminhoDasColunas(casca) {
+    const linhas = linhasDoCaminho(casca);
+    if (!linhas.length) return [];
+    const itens = [];
+    const raiz = linhaDaRaizDaColuna(casca);
+    if (raiz) {
+        itens.push({
+            texto: nomeDaPasta(raiz, state.rootPath),
+            titulo: state.rootPath || '',
+            clicar: () => irParaCrumb(raiz, casca)
+        });
+    } else if (state.rootPath) {
+        itens.push({
+            texto: basename(state.rootPath),
+            titulo: state.rootPath,
+            clicar: () => irParaRaiz(casca)
+        });
+    }
+    linhas.forEach(row => {
+        itens.push({
+            texto: nomeDaPasta(row, row.dataset.path),
+            titulo: row.dataset.path || '',
+            clicar: () => irParaCrumb(row, casca)
+        });
+    });
+    return itens;
+}
+function caminhoDosAbertos(arvore) {
+    const linhas = arvore.querySelectorAll('.explorer-row.explorer-aberto');
+    let funda = null;
+    for (let i = 0; i < linhas.length; i++) {
+        if (!linhas[i].closest('.explorer-children.hidden')) funda = linhas[i];
+    }
+    if (!funda) return [];
+    const rows = [];
+    let atual = funda;
+    while (atual) {
+        rows.unshift(atual);
+        const li = atual.closest('.explorer-item');
+        const pai = li && li.parentElement ? li.parentElement.closest('.explorer-item') : null;
+        atual = pai ? pai.querySelector(':scope > .explorer-row') : null;
+    }
+    if (rows.length < 2) return [];
+    return rows.map(row => ({
+        texto: nomeDaPasta(row, row.dataset.path),
+        titulo: row.dataset.path || '',
+        clicar: () => irParaCrumb(row, null)
+    }));
+}
+export function atualizarCaminhoDaArvore() {
+    if (!state.explorerPath || !state.explorerTree) return;
+    const casca = state.explorerTree.querySelector(':scope > .explorer-colunas');
+    const itens = casca ? caminhoDasColunas(casca) : caminhoDosAbertos(state.explorerTree);
+    if (itens.length) {
+        pintarCaminho(itens);
+        return;
+    }
+    if (dadosDaArvore) updateExplorerPath(dadosDaArvore);
 }
 function garantirCascaColunas() {
     let casca = state.explorerTree.querySelector(':scope > .explorer-colunas');
@@ -426,7 +522,6 @@ function renderColunasExplorer(data, trocouPasta) {
     if (novos.length) staggerExplorerItems(trocouPasta ? ul : novos);
     ajustarLimiteDeColunas(casca);
     vigiarLarguraDasColunas();
-    atualizarCaminhoDaArvore();
 }
 async function abrirColunaDePasta(path, row) {
     const coluna = row.closest('.explorer-coluna');
@@ -439,6 +534,7 @@ async function abrirColunaDePasta(path, row) {
     coluna.querySelectorAll('.explorer-coluna-acesa').forEach(r => r.classList.remove('explorer-coluna-acesa'));
     if (expandida) {
         expandida.classList.add('hidden');
+        row.classList.remove('explorer-aberto');
         atualizarCaminhoDaArvore();
         return;
     }
@@ -471,6 +567,7 @@ async function abrirColunaDePasta(path, row) {
     applyErrorMarkers();
     if (!path.startsWith(PREFIXO_ARVORE)) {
         state.currentCwdRel = dados.path || '';
+        dadosDaArvore = dados;
         updateExplorerPath(dados);
         enterDir(path, false);
     }
@@ -537,131 +634,6 @@ function ligarMigalhaDaArvore() {
     arvore.addEventListener('scroll', atualizarMigalhaDaArvore, { passive: true });
     window.addEventListener('resize', atualizarMigalhaDaArvore);
 }
-function nomeDaColuna(coluna, indice) {
-    if (indice === 0) return basename(state.rootPath) || 'raiz';
-    const titulo = coluna.querySelector(':scope > .explorer-coluna-titulo');
-    return titulo ? (titulo.textContent || '').trim() : '';
-}
-function desenharCaminho(partes) {
-    pintarCaminho(partes.map((parte, i) => ({
-        texto: (i === 0 ? '\\' : '') + parte.nome,
-        titulo: parte.nome,
-        clicar: parte.clicar
-    })));
-}
-function fecharColunasDepoisDe(casca, coluna) {
-    limparColunasDepois(casca, coluna);
-    coluna.querySelectorAll('.explorer-coluna-acesa').forEach(r => r.classList.remove('explorer-coluna-acesa'));
-    atualizarCaminhoDaArvore();
-    atualizarMigalhaDaArvore();
-    highlightSelection();
-    const caminho = coluna.dataset.path || '';
-    if (!caminho.startsWith(PREFIXO_ARVORE)) enterDir(caminho, false);
-}
-function ancestraisInline(row, coluna) {
-    const cadeia = [];
-    let atual = row;
-    while (atual && coluna.contains(atual)) {
-        cadeia.unshift(atual);
-        const li = atual.closest('.explorer-item');
-        const pai = li && li.parentElement ? li.parentElement.closest('.explorer-item') : null;
-        atual = pai ? pai.querySelector(':scope > .explorer-row') : null;
-    }
-    return cadeia;
-}
-function nomesInlineDaColuna(coluna) {
-    const funda = linhaFundaAberta(coluna);
-    const li = funda ? funda.closest('.explorer-item') : null;
-    if (!li || !li.closest('.explorer-children')) return [];
-    return ancestraisInline(funda, coluna)
-        .filter(row => row.closest('.explorer-children'))
-        .map(row => ({
-            nome: nomeDaPasta(row, row.dataset.path),
-            clicar: () => fecharAbertosDentroDe(row)
-        }));
-}
-function caminhoDasColunas(casca) {
-    const colunas = Array.from(casca.children);
-    const partes = [];
-    colunas.forEach((coluna, i) => {
-        if (i > 0) {
-            const anterior = colunas[i - 1];
-            const row = linhaDaColuna(anterior, coluna.dataset.path);
-            if (row) {
-                ancestraisInline(row, anterior).slice(0, -1).forEach(r => partes.push({
-                    nome: nomeDaPasta(r, r.dataset.path),
-                    clicar: () => fecharAbertosDentroDe(r)
-                }));
-            }
-        }
-        partes.push({
-            nome: nomeDaColuna(coluna, i),
-            clicar: () => fecharColunasDepoisDe(casca, coluna)
-        });
-    });
-    const ultima = colunas[colunas.length - 1];
-    if (ultima) partes.push(...nomesInlineDaColuna(ultima));
-    return partes;
-}
-function profundidadeDaLinha(row) {
-    let nivel = 0;
-    let li = row.closest('.explorer-item');
-    while (li) {
-        nivel++;
-        li = li.parentElement ? li.parentElement.closest('.explorer-item') : null;
-    }
-    return nivel;
-}
-function linhaFundaAberta(arvore) {
-    const linhas = arvore.querySelectorAll('.explorer-row.explorer-aberto');
-    let funda = null;
-    let profundidade = -1;
-    for (let i = 0; i < linhas.length; i++) {
-        const row = linhas[i];
-        if (row.closest('.explorer-children.hidden')) continue;
-        const nivel = profundidadeDaLinha(row);
-        if (nivel > profundidade) {
-            profundidade = nivel;
-            funda = row;
-        }
-    }
-    return funda;
-}
-function fecharAbertosDentroDe(row) {
-    const li = row.closest('.explorer-item');
-    if (!li) return;
-    li.querySelectorAll('.explorer-children').forEach(container => container.classList.add('hidden'));
-    li.querySelectorAll('.explorer-children .explorer-row.explorer-aberto').forEach(r => r.classList.remove('explorer-aberto'));
-    atualizarCaminhoDaArvore();
-    atualizarMigalhaDaArvore();
-    highlightSelection();
-}
-function caminhoDosAbertos(arvore) {
-    const partes = [];
-    let row = linhaFundaAberta(arvore);
-    while (row) {
-        partes.unshift({
-            nome: nomeDaPasta(row, row.dataset.path),
-            clicar: () => fecharAbertosDentroDe(row)
-        });
-        const li = row.closest('.explorer-item');
-        const pai = li && li.parentElement ? li.parentElement.closest('.explorer-item') : null;
-        row = pai ? pai.querySelector(':scope > .explorer-row') : null;
-    }
-    return partes;
-}
-export function atualizarCaminhoDaArvore() {
-    const arvore = state.explorerTree;
-    if (!arvore || !state.explorerPath) return;
-    const casca = arvore.querySelector(':scope > .explorer-colunas');
-    if (casca) {
-        const colunas = caminhoDasColunas(casca);
-        if (colunas.length > 1) desenharCaminho(colunas);
-        return;
-    }
-    const abertos = caminhoDosAbertos(arvore);
-    if (abertos.length > 1) desenharCaminho(abertos);
-}
 function larguraDaColuna(casca) {
     const medida = parseFloat(getComputedStyle(casca).getPropertyValue('--coluna-largura'));
     return medida > 0 ? medida : 210;
@@ -712,6 +684,20 @@ function fecharInlineDaColuna(coluna, row) {
         irmaoRow.classList.remove('explorer-aberto');
     });
 }
+function fecharDentroDaRow(row, incluirPropria) {
+    const li = row ? row.closest('.explorer-item') : null;
+    if (!li) return;
+    li.querySelectorAll('.explorer-row.explorer-coluna-acesa').forEach(r => {
+        if (r !== row || incluirPropria) r.classList.remove('explorer-coluna-acesa');
+    });
+    li.querySelectorAll('.explorer-row.explorer-aberto').forEach(r => {
+        if (r === row && !incluirPropria) return;
+        r.classList.remove('explorer-aberto');
+        const item = r.closest('.explorer-item');
+        const container = item ? item.querySelector(':scope > .explorer-children') : null;
+        if (container) container.classList.add('hidden');
+    });
+}
 function linhaDaColuna(coluna, path) {
     if (!coluna || !path) return null;
     const linhas = coluna.querySelectorAll('.explorer-row');
@@ -719,6 +705,9 @@ function linhaDaColuna(coluna, path) {
         if (linhas[i].dataset.path === path) return linhas[i];
     }
     return null;
+}
+function linhaDaRaizDaColuna(casca) {
+    return casca ? casca.querySelector('.explorer-row[data-raiz="1"]') : null;
 }
 function filhosSaoPastas(entries) {
     if (!entries || !entries.length) return false;

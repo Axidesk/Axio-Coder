@@ -226,35 +226,39 @@ export function handleCrumbClick(seg, isLast, data) {
 }
 export function pintarCaminho(itens) {
     if (!state.explorerPath) return;
+    const lista = itens || [];
     state.explorerPath.innerHTML = '';
-    itens.forEach((item, i) => {
-        const ultimo = i === itens.length - 1;
+    lista.forEach((item, i) => {
+        const isLast = i === lista.length - 1;
         const span = document.createElement('span');
-        span.className = 'explorer-crumb' + (ultimo ? ' active' : '');
+        span.className = 'explorer-crumb' + (isLast ? ' active' : '');
         span.textContent = item.texto;
         span.title = item.titulo || item.texto;
-        span.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (item.clicar) item.clicar();
-        });
+        if (typeof item.clicar === 'function') {
+            span.addEventListener('click', (e) => {
+                e.stopPropagation();
+                item.clicar();
+            });
+        }
         state.explorerPath.appendChild(span);
-        if (ultimo) return;
-        const sep = document.createElement('span');
-        sep.className = 'explorer-crumb-sep';
-        sep.textContent = '\\';
-        state.explorerPath.appendChild(sep);
+        if (!isLast) {
+            const sep = document.createElement('span');
+            sep.className = 'explorer-crumb-sep';
+            sep.textContent = '\\';
+            state.explorerPath.appendChild(sep);
+        }
     });
-    state.explorerPath.title = itens.map(i => i.texto).join('\\');
+    state.explorerPath.title = lista.map(item => item.titulo || item.texto).join('\\');
 }
 export function updateExplorerPath(data) {
-    if (!state.explorerPath) return;
+    if (!state.explorerPath || !data) return;
     const segs = buildExplorerSegments(data);
     pintarCaminho(segs.map((seg, i) => {
-        const isLast = i === segs.length - 1;
+        const prefixo = i === 0 && data.dentro_da_raiz ? '\\' : '';
         return {
-            texto: (i === 0 && data.dentro_da_raiz ? '\\' : '') + seg.label,
-            titulo: seg.abs,
-            clicar: () => handleCrumbClick(seg, isLast, data)
+            texto: prefixo + seg.label,
+            titulo: seg.abs || prefixo + seg.label,
+            clicar: () => handleCrumbClick(seg, i === segs.length - 1, data)
         };
     }));
 }
