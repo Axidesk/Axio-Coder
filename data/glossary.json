@@ -1167,10 +1167,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1565,
+        "linha": 1592,
         "conferido": [
-          1790391058.782,
-          74741
+          1790393883.843,
+          76902
         ]
       }
     },
@@ -2240,10 +2240,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1145,
+        "linha": 1172,
         "conferido": [
-          1790391058.782,
-          74741
+          1790393883.843,
+          76902
         ]
       }
     },
@@ -4348,10 +4348,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 478,
+        "linha": 502,
         "conferido": [
-          1790391740.69,
-          31755
+          1790393700.881,
+          32641
         ]
       }
     },
@@ -4409,10 +4409,10 @@
       "descricao": "Botao que vive NO CARD da pilha (2026-10): cards.js:_injectMarcas cria-o ao lado do marcador do ponto sempre que git_panel.js:podeRestaurar(grupo) deixa (commit OU __session), e o CSS troca-o pelo marcador quando o card esta selecionado - por isso ele aparece APENAS no card selecionado. A troca e PURA CSS em style.css: .history-round-restore-icon nasce display:none, .history-round-card.history-round-selected esconde o .history-round-saved-icon e mostra o restaurar. Nao ha repintura por JS na selecao. O clique faz stopPropagation (para nao cair no clique do card, que seleciona/abre) e chama a API registada em cards.js:registrarRestauroDaTarefa, ligada em renderer.js a git_panel.js:restaurarTarefa(grupo) - que escolhe o MOTOR: com commit -> requestGitRestore (previa + modal), sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o #btn-git-restore-history do cabecalho da coluna 1, REMOVIDO a 2026-10; com ele sairam sincronizarBotaoRestauro (git_panel.js), btnGitRestoreHistory (dom.js) e o registo registrarSincronizacaoDeRestauro (acoes.js). O registo novo existe pelo ciclo de imports: git_panel importa cards, logo cards nao pode importar git_panel. MEDIDO (tool_medir_pintura, CSS real): card fechado pinta o marcador 14x14 e o restaurar 0x0; selecionado, o marcador vai a 0x0 e o restaurar pinta 14x14 na MESMA posicao - o icone nao salta.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 232,
+        "linha": 231,
         "conferido": [
-          1790391740.69,
-          31755
+          1790393700.881,
+          32641
         ]
       }
     },
@@ -4897,10 +4897,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 612,
+        "linha": 636,
         "conferido": [
-          1790391740.69,
-          31755
+          1790393700.881,
+          32641
         ]
       }
     },
@@ -4952,10 +4952,10 @@
       "descricao": "REGRA (2026-10, ampliada): o card mostra o AVIAO sempre que o commit esta fora do por_subir (cards.js:enviadaParaOServidor) OU foi registado num envio manual (marcas_envio.js porCommit) - deixou de ser so o ultimo ponto enviado. Todos os restantes (so no PC) mostram o bookmark com o popup \"Salvo localmente\", sem parenteses: o hash e o \"por enviar\" sairam do popup. E assim que as anteriores ja enviadas continuam com o aviao e as novas nascem com o bookmark.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 232,
+        "linha": 231,
         "conferido": [
-          1790391740.69,
-          31755
+          1790393700.881,
+          32641
         ]
       }
     },
@@ -5330,7 +5330,11 @@
       "descricao": "Calcula o \"Tarefa N - \" que aparece antes da mensagem no Por subir e no historico mais antigo: casa o hash com o log da sessao e le o numero do dia (nomeDoTurno), e corta o prefixo do resumo quando o commit ja o traz escrito a mao. Nada disto esta gravado no git - a mensagem do commit so tem o texto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 442
+        "linha": 442,
+        "conferido": [
+          1790393700.881,
+          32641
+        ]
       }
     }
   ]
