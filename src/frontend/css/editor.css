@@ -292,23 +292,6 @@
     border-left: none;
     border-top: 1px solid var(--border);
 }
-#explorer-tree.files-vertical {
-    overflow-x: auto;
-    overflow-y: hidden;
-}
-#explorer-tree.files-vertical > ul {
-    display: flex;
-    flex-direction: column;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    height: 100%;
-    gap: 2px 4px;
-}
-#explorer-tree.files-vertical .explorer-item {
-    width: 150px;
-    flex-shrink: 0;
-    margin: 0;
-}
 #explorer-tree.files-colunas {
     display: flex;
     min-width: 0;
@@ -347,8 +330,8 @@
     margin: 0;
     padding: 0;
 }
-#explorer-tree.files-colunas .explorer-coluna .explorer-children {
-    border-left: 1px solid var(--border-suave);
+#explorer-tree.files-colunas .explorer-row.explorer-coluna-acesa {
+    background: var(--bg-hover);
 }
 #explorer-search-box {
     left: 0;

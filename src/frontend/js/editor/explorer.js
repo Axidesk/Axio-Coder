@@ -1,6 +1,6 @@
 import { findExplorerRow, loadTrash, openFileInEditor, pinPreview, updateExplorerToolbar } from './editor.js';
 import { appendLine, basename, enterDir, updateExplorerPath } from './terminal.js';
-import { aplicarDockDeProjeto, applyFilesLayout, applyTabsVisibility, layoutAllEditors } from './workspace.js';
+import { aplicarDockDeProjeto, applyTabsVisibility, layoutAllEditors } from './workspace.js';
 import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
 import { abreNoViewer } from './familia_ficheiro.js';
@@ -8,6 +8,7 @@ import { abreNoViewer } from './familia_ficheiro.js';
 const VALIDADE_DA_LISTA_MS = 6000;
 const MAX_PASTAS_LISTADAS = 24;
 const INTENCAO_DE_HOVER_MS = 90;
+const PREFIXO_ARVORE = '@arvore';
 const listasDePastas = new Map();
 const listasEmVoo = new Map();
 let prefetchTimer = null;
@@ -222,11 +223,6 @@ export function renderExplorer(data) {
     state.wsStatus.textContent = 'explorador: ' + (basename(data.root) || 'raiz');
     updateExplorerPath(data);
 
-    const comGrupos = data.entries.some(e => e.tipo === 'grupo');
-    if (state.arvoreComGrupos !== comGrupos) {
-        state.arvoreComGrupos = comGrupos;
-        applyFilesLayout();
-    }
 
     const caminho = data.path || '';
     const trocouPasta = state.explorerRenderPath !== caminho;
@@ -299,6 +295,10 @@ function renderGrupo(entry, li, row) {
     row.classList.add('explorer-dir', 'explorer-grupo', 'explorer-' + nivel);
     row.title = entry.detalhe ? entry.nome + ' - ' + entry.detalhe : entry.nome;
     li.appendChild(row);
+    if (modoColunas()) {
+        row.addEventListener('click', () => abrirColunaDePasta(entry.path, row));
+        return li;
+    }
     const childContainer = document.createElement('div');
     childContainer.className = 'explorer-children hidden';
     li.appendChild(childContainer);
@@ -409,14 +409,18 @@ async function abrirColunaDePasta(path, row) {
     if (!casca || !casca.classList.contains('explorer-colunas')) return;
     const jaAberta = !!coluna.nextElementSibling && coluna.nextElementSibling.dataset.path === path;
     limparColunasDepois(casca, coluna);
+    coluna.querySelectorAll('.explorer-coluna-acesa').forEach(r => r.classList.remove('explorer-coluna-acesa'));
     if (jaAberta) return;
+    row.classList.add('explorer-coluna-acesa');
     const nova = criarColuna(path);
     casca.appendChild(nova);
     const dados = await loadDirChildren(path, nova);
     if (!dados) {
         nova.remove();
+        row.classList.remove('explorer-coluna-acesa');
         return;
     }
+    if (path.startsWith(PREFIXO_ARVORE)) return;
     state.currentCwdRel = dados.path || '';
     updateExplorerPath(dados);
     enterDir(path, false);

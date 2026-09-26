@@ -16,7 +16,6 @@ state.termTopBar = document.getElementById('term-top-bar');
 state.termMode = document.getElementById('terminal-mode');
 state.explorerView = document.getElementById('explorer-view');
 state.explorerTree = document.getElementById('explorer-tree');
-state.arvoreComGrupos = false;
 state.editorView = document.getElementById('editor-view');
 state.chatView = document.getElementById('chat-view');
 state.editorHost = document.getElementById('editor-host');

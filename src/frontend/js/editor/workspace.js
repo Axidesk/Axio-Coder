@@ -263,11 +263,9 @@ export function applyDockLayout() {
 
 export function applyFilesLayout() {
     if (!state.explorerTree) return;
-    const horizontal = state.dockSide !== 'right';
-    const colunas = horizontal && state.arvoreComGrupos === true;
+    const colunas = state.dockSide !== 'right';
     const mudou = state.explorerTree.classList.contains('files-colunas') !== colunas;
     state.explorerTree.classList.toggle('files-colunas', colunas);
-    state.explorerTree.classList.toggle('files-vertical', horizontal && !colunas);
     if (mudou) window.dispatchEvent(new CustomEvent('axio-explorer-layout', { detail: { colunas } }));
 }
 
