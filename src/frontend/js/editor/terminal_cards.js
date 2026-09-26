@@ -606,7 +606,8 @@ export function aviso(texto, cls) {
     _atualizarVazio();
 }
 
-export function limparCards() {
+export async function limparCards() {
+    await reconciliarCards();
     _soltarSelecao();
     cards.forEach((card) => {
         if (card.persistente || _estaRodando(card)) return;
@@ -620,14 +621,8 @@ export function limparCards() {
 }
 
 export async function hidratarCards() {
-    let dados = null;
-    try {
-        const resp = await fetch(state.API + '/api/processos');
-        dados = await resp.json();
-    } catch (e) {
-        return;
-    }
-    (dados && dados.processos ? dados.processos : []).forEach((reg) => {
+    const processos = await _processosDoServidor();
+    (processos || []).forEach((reg) => {
         const card = cardIniciar({ pid: reg.id, comando: reg.comando, cwd: reg.cwd, rotulo: reg.rotulo,
                                    controles: reg.controles });
         if (!card) return;
@@ -640,6 +635,31 @@ export async function hidratarCards() {
         }
     });
     _atualizarVazio();
+}
+
+async function _processosDoServidor() {
+    try {
+        const resp = await fetch(state.API + '/api/processos');
+        const dados = await resp.json();
+        return dados && dados.processos ? dados.processos : [];
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function reconciliarCards() {
+    const vivos = await _processosDoServidor();
+    if (!vivos) return 0;
+    const ids = new Set(vivos.map((reg) => String(reg.id)));
+    let corrigidos = 0;
+    cards.forEach((card) => {
+        if (card.sugerido || !_estaRodando(card)) return;
+        if (ids.has(String(card.pid))) return;
+        card.exitCode = null;
+        _aplicarEstado(card, 'parado');
+        corrigidos++;
+    });
+    return corrigidos;
 }
 
 function _removerSugestoes() {
@@ -688,5 +708,17 @@ document.addEventListener('keydown', (e) => {
     _soltarSelecao();
 });
 
+function _vigiarAberturaDoTerminal() {
+    const alvo = document.getElementById('terminal-mode');
+    if (!alvo || typeof MutationObserver === 'undefined') return;
+    let visivel = !alvo.classList.contains('hidden');
+    new MutationObserver(() => {
+        const agora = !alvo.classList.contains('hidden');
+        if (agora && !visivel) reconciliarCards();
+        visivel = agora;
+    }).observe(alvo, { attributes: true, attributeFilter: ['class'] });
+}
+
 _sincronizarPlaceholder();
 hidratarCards();
+_vigiarAberturaDoTerminal();
