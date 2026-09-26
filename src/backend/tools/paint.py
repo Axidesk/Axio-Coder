@@ -130,6 +130,14 @@ def _pagina(html, estilo, ficheiros_css):
     return "".join(partes)
 
 
+def _lista_de_seletores(seletores):
+    """Varios seletores (um por linha ou por virgula) viram uma lista CSS."""
+    partes = []
+    for linha in (seletores or "").splitlines():
+        partes.extend(p.strip() for p in linha.split(","))
+    return ", ".join(p for p in partes if p) or "[class]"
+
+
 def _sonda_js(seletores):
     """JS que corre na pagina e devolve a geometria real dos elementos."""
     return """
@@ -168,7 +176,7 @@ def _sonda_js(seletores):
   return JSON.stringify({ pagina: [document.body.scrollWidth, document.body.scrollHeight],
                           raiz: getComputedStyle(document.documentElement).fontSize, rects: out });
 })()
-""" % (json.dumps(seletores or "[class]"), MAX_ELEMENTOS)
+""" % (json.dumps(_lista_de_seletores(seletores)), MAX_ELEMENTOS)
 
 
 def _main_js(sonda):
@@ -306,7 +314,7 @@ def _desenho(px, W, H, alvo):
         "css": {"tipo": "STRING", "desc": "CAMINHOS de ficheiros CSS do projeto, separados por virgula (ex: 'src/frontend/css/dock.css') e nao o texto das regras - o texto vai no 'estilo'; vazio = style.css + css/*.css do frontend.", "obrig": False, "padrao": ""},
         "cor": {"tipo": "STRING", "desc": "Cor alvo do mapa de desenho, em hex sem # (ex: 'ff0000'). Aceita VARIAS separadas por ';' (ex: 'ff0000;00ff00') - cada uma sai com o seu mapa e entra SEMPRE na paleta, mesmo com poucos pixels. Vazio = so paleta e geometria.", "obrig": False, "padrao": ""},
         "fundo": {"tipo": "STRING", "desc": "Cor de fundo a ignorar na paleta, hex sem # (padrao '1e1e1e').", "obrig": False, "padrao": "1e1e1e"},
-        "seletores": {"tipo": "STRING", "desc": "Seletor CSS dos elementos cuja geometria medir (padrao '[class]').", "obrig": False, "padrao": ""},
+        "seletores": {"tipo": "STRING", "desc": "Seletor CSS dos elementos cuja geometria medir (padrao '[class]'); aceita VARIOS, um por linha ou separados por virgula.", "obrig": False, "padrao": ""},
         "largura": {"tipo": "INTEGER", "desc": "Largura da janela em px (padrao 460).", "obrig": False, "padrao": 460},
         "altura": {"tipo": "INTEGER", "desc": "Altura da janela em px (padrao 900).", "obrig": False, "padrao": 900},
         "manter_png": {"tipo": "BOOLEAN", "desc": "Nao apagar o temporario (o caminho do PNG fica no resultado).", "obrig": False, "padrao": False},
@@ -382,7 +390,7 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
                               " (basta um 'font: 13px' num html). Medir cada pagina com o seu CSS.")
             linhas.append("")
             linhas.append("GEOMETRIA (pagina %dx%d, primeiros %d elementos de %s):"
-                          % (dados["pagina"][0], dados["pagina"][1], len(dados["rects"]), seletores or "[class]"))
+                          % (dados["pagina"][0], dados["pagina"][1], len(dados["rects"]), _lista_de_seletores(seletores)))
             for r in dados["rects"]:
                 linhas.append("  %-6s %-40s x=%7.1f y=%7.1f w=%7.1f h=%6.1f" %
                               (r["tag"], r["classe"], r["x"], r["y"], r["w"], r["h"]))
