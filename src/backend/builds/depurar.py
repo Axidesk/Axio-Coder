@@ -1,7 +1,11 @@
 import os
+import sys
 
 _PASTA_DEPURADORES = ("Windows Kits/10/Debuggers", "Windows Kits/11/Debuggers")
 _ARQUITETURAS = ("x64", "x86", "arm64", "arm")
+_VENVS = (".venv", "venv", "env")
+_EXTENSOES_CPP = (".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx")
+_EXTENSOES_PY = (".py", ".pyw")
 
 COMANDOS_UTEIS = (
     ("l+s", "a linha de origem onde a execucao parou"),
@@ -25,6 +29,23 @@ COMANDOS_UTEIS = (
 
 LINHA_DO_CARD = ("[axio] neste card: g continuar | p passo | t entrar | gu sair | "
                  "k pilha | dv /t /v variaveis | ?? expr | q sair")
+
+COMANDOS_UTEIS_PY = (
+    ("c", "continua ate ao proximo ponto de paragem"),
+    ("n", "executa a linha seguinte, sem entrar nas funcoes"),
+    ("s", "entra na funcao chamada e para na primeira linha dela"),
+    ("r", "corre ate ao fim da funcao atual"),
+    ("p expressao", "mostra o valor de uma variavel (ex: p total) - aqui o 'p' e IMPRIMIR"),
+    ("pp expressao", "mostra uma lista ou um dicionario formatado"),
+    ("w", "a pilha de chamadas, do sitio onde estas para tras"),
+    ("l", "o codigo a volta da linha atual"),
+    ("b ficheiro:linha", "marca um ponto de paragem novo, a quente"),
+    ("cl numero", "tira um ponto de paragem"),
+    ("q", "sai do depurador e fecha o programa"),
+)
+
+LINHA_DO_CARD_PY = ("[axio] neste card: c continuar | n proxima linha | s entrar na funcao | "
+                    "p expr ver valor | w pilha | l codigo | q sair")
 
 
 def cdb():
@@ -70,11 +91,17 @@ def preparacao(breakpoints):
     return linhas
 
 
+def _pedacos(texto):
+    """Parte a lista de pontos ou de comandos: por linha ou por ';'."""
+    return [p.strip() for p in (texto or "").replace("\r", "\n").replace(";", "\n").split("\n")
+            if p.strip()]
+
+
 def pontos(texto):
     """Le os pontos de paragem pedidos: 'ficheiro.cpp:12' por linha ou separados por ';'."""
     limpos = []
-    for pedaco in (texto or "").replace("\r", "\n").replace(";", "\n").split("\n"):
-        ponto = pedaco.strip().strip('"').strip("'")
+    for pedaco in _pedacos(texto):
+        ponto = pedaco.strip('"').strip("'")
         if not ponto:
             continue
         if "!" in ponto:
@@ -85,6 +112,106 @@ def pontos(texto):
             continue
         limpos.append(f"{os.path.basename(ficheiro.replace(chr(92), '/'))}:{linha.strip()}")
     return limpos
+
+
+def _extensao_do_ponto(pedaco):
+    """A extensao do ficheiro de um ponto, ja sem a linha e sem o 'modulo!' do cdb."""
+    nome = pedaco.split("!")[-1]
+    cabeca, _, cauda = nome.rpartition(":")
+    if cabeca and cauda.strip().isdigit():
+        nome = cabeca
+    return os.path.splitext(nome)[1].lower()
+
+
+def motor(breakpoints):
+    """O depurador que sabe ler estes pontos, decidido pela linguagem do primeiro deles."""
+    for pedaco in _pedacos(breakpoints):
+        extensao = _extensao_do_ponto(pedaco)
+        if extensao in _EXTENSOES_PY:
+            return "python"
+        if extensao in _EXTENSOES_CPP:
+            return "cpp"
+    return "cpp"
+
+
+def pontos_de_outra_linguagem(breakpoints, escolhido):
+    """Os pontos que o depurador escolhido nao sabe ler (ficaram de fora desta sessao)."""
+    estranhas = _EXTENSOES_CPP if escolhido == "python" else _EXTENSOES_PY
+    return [p for p in _pedacos(breakpoints) if _extensao_do_ponto(p) in estranhas]
+
+
+def python_do_projeto(raiz):
+    """O interpretador que corre o projeto: o venv dele, se tiver; senao o que corre o Axio."""
+    for nome in _VENVS:
+        for relativa in ("Scripts/python.exe", "bin/python"):
+            alvo = os.path.join(raiz, nome, relativa.replace("/", os.sep))
+            if os.path.isfile(alvo):
+                return os.path.realpath(alvo)
+    return sys.executable
+
+
+def comando_python(script, raiz):
+    """A linha que abre o pdb (o depurador que ja vem dentro do Python) sobre 'script'."""
+    if not script or not os.path.isfile(script):
+        return ""
+    return " ".join([f'"{python_do_projeto(raiz)}"', "-u", "-m", "pdb", f'"{script}"'])
+
+
+def _ficheiro_de(nome, raiz):
+    """O ficheiro de um ponto: o caminho dado, o mesmo dentro do projeto, ou pelo nome."""
+    if not nome:
+        return ""
+    dado = os.path.normpath(nome.replace("/", os.sep))
+    if os.path.isfile(dado):
+        return os.path.realpath(dado)
+    dentro = os.path.normpath(os.path.join(raiz, dado))
+    if os.path.isfile(dentro):
+        return os.path.realpath(dentro)
+    procurado = os.path.basename(dado).lower()
+    achados = []
+    for pasta, subpastas, ficheiros in os.walk(raiz):
+        subpastas[:] = [s for s in subpastas
+                        if not s.startswith(".") and s not in ("node_modules", "__pycache__")]
+        achados += [os.path.join(pasta, f) for f in ficheiros if f.lower() == procurado]
+        if len(achados) > 20:
+            break
+    if not achados:
+        return ""
+    achados.sort(key=lambda c: (c.count(os.sep), len(c)))
+    return os.path.realpath(achados[0])
+
+
+def pontos_python(texto, raiz):
+    """Le os pontos de paragem, resolvendo cada ficheiro dentro da pasta do projeto."""
+    limpos = []
+    for pedaco in _pedacos(texto):
+        ficheiro, separador, linha = pedaco.rpartition(":")
+        if not separador or not linha.strip().isdigit():
+            continue
+        caminho = _ficheiro_de(ficheiro.strip().strip('"').strip("'"), raiz)
+        if caminho:
+            limpos.append({"ficheiro": caminho, "linha": int(linha.strip())})
+    return limpos
+
+
+def preparacao_python(pontos, script):
+    """Os comandos que abrem a sessao: os pontos marcados e seguir.
+
+    No ficheiro que vai correr o ponto vai pelo NUMERO da linha - o pdb resolve-o contra o
+    ficheiro aberto, sem caminho nenhum. Nos outros o caminho tem de ser o REAL: o pdb
+    compara-o com o que a execucao reporta, e um nome curto do Windows (RODRIG~1) nunca
+    casa com o nome longo, o que deixaria o ponto a nunca disparar.
+    """
+    alvo = os.path.normcase(os.path.realpath(script))
+    linhas = []
+    for ponto in pontos:
+        caminho = os.path.realpath(ponto["ficheiro"])
+        if os.path.normcase(caminho) == alvo:
+            linhas.append(f"b {ponto['linha']}")
+        else:
+            linhas.append(f"b {caminho}:{ponto['linha']}")
+    linhas.append("c")
+    return linhas
 
 
 SESSAO = {"id": "", "executavel": ""}
@@ -113,6 +240,10 @@ def card_da_sessao():
 
 def texto_dos_comandos():
     return "\n".join(f"  {comando}  -  {para_que}" for comando, para_que in COMANDOS_UTEIS)
+
+
+def texto_dos_comandos_py():
+    return "\n".join(f"  {comando}  -  {para_que}" for comando, para_que in COMANDOS_UTEIS_PY)
 
 
 def comandos_do_pedido(texto):

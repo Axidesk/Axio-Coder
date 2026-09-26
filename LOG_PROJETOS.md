@@ -916,6 +916,57 @@ A lista sai por `pontosDeParagem()` (formato que o motor já lê: `nome:linha;no
 `window.__axioPontosDeParagem()` devolve-a ao vivo — é por aí que a sessão do `cdb` a recebe, sem
 endpoint novo.
 
+## O depurador em Python — o mesmo card, o motor que já vinha dentro do Python (2026-10-06)
+
+O `app.py:62` estava marcado na margem e não fazia nada: o que estava montado era o `cdb`, que sabe
+C++ e não sabe Python. Agora abrem-se os dois, e quem escolhe é **a linguagem do primeiro ponto
+marcado**: ficheiro `.py` corre sob o **pdb**, C/C++ sob o `cdb`.
+
+A decisão de não instalar nada foi medida, não suposta: o `pdb` vem dentro do Python, fala pelo mesmo
+stdin que o `cdb` já usava (`escrever_stdin_processo`), devolve o mesmo tipo de card e não exige
+adaptador nem protocolo nenhum. O `debugpy` faria o mesmo por um caminho muito mais caro (servidor
+DAP mais cliente DAP no frontend) — fica para quando o ecrã o justificar; hoje valia era ter o motor
+a funcionar no card que já existe.
+
+O que muda por dentro (`src/backend/builds/depurar.py`): `motor()` escolhe o depurador,
+`python_do_projeto()` pega o venv da pasta do projeto (`.venv`, `venv`, `env`) e só cai no do Axio
+quando ele não existe, `comando_python()` monta `python -u -m pdb "<script>"`, `pontos_python()`
+resolve cada ficheiro dentro da pasta do projeto e `preparacao_python()` escreve os pontos e o `c`
+inicial. Em `src/backend/tools/builds.py` o `_depurar` passou a despachar para `_depurar_python`, com
+texto de retorno próprio (`_texto_depuracao_py`).
+
+### Os comandos não são os mesmos — e é aí que se erra
+
+Em C++ o `p` **anda uma linha**; no pdb o `p` **imprime uma variável**, e andar uma linha é o `n`. A
+lista de comandos do card passou a ser por linguagem (`LINHA_DO_CARD` / `LINHA_DO_CARD_PY`), e a mesma
+correção foi feita na descrição do parâmetro `comandos` da ferramenta — era ela que me faria escrever
+`p` a pensar em passo dentro de um card de Python.
+
+### A armadilha que custou uma sessão inteira: nome curto contra nome longo
+
+O primeiro teste **parecia** funcionar: o `b <caminho>:7` era aceite e o `Breakpoint 1 at …` aparecia —
+e o `c` passava ao lado do ponto, direto ao erro. A causa está medida: o pdb guarda o ponto sob o
+caminho que lhe damos e compara-o com o que a execução reporta; no Windows o mesmo caminho existe em
+duas formas (a curta do 8.3, `C:\Users\RODRIG~1\…`, e a longa) e as duas **não casam como texto**. Um
+caminho vindo do `tempfile` sai em forma curta, o que a execução reporta é longo. `os.path.realpath()`
+normaliza as duas e o ponto dispara (provado: `abspath != realpath`; depois `Breakpoint 1 hit` na
+linha 7, `p total` → 0, `n` → linha 6).
+
+Pela mesma razão, **no ficheiro que vai correr o ponto vai pelo NÚMERO da linha** (`b 62`): o pdb
+resolve-o contra o ficheiro aberto e não há caminho nenhum que possa divergir. Só os pontos de outros
+ficheiros levam caminho — e aí real, completo.
+
+### O que isto ainda não é
+
+- Corre **o primeiro ponto**; uma lista com dois ficheiros abre uma sessão só. Os pontos da outra
+  linguagem são nomeados no retorno ("Ficaram de fora, nao sao Python") em vez de falharem em silêncio.
+- Não há barra de controlo: continuar/passo/entrar são escritos no card ou pedidos a mim, e os dois
+  caminhos passam pelo mesmo `_conduzir_depuracao`.
+- Depois de o programa morrer, o pdb **reinicia-o no `c`** ("Running 'cont' or 'step' will restart the
+  program"): a saída do ciclo é o `q`.
+- O `app.py` do próprio Axio é depurável, mas parar em `app.py:62` e seguir com `c` arranca uma
+  SEGUNDA instância, com o `iniciar_vigia_do_envio` a correr por cima. Ver com `p`/`n`/`q`, nunca com `c`.
+
 ## O que NÃO se faz
 
 - Não se reorganizam as pastas do projeto do utilizador (ver decisão 2).

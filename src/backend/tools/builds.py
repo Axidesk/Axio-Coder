@@ -17,8 +17,9 @@ from src.backend.tools.registry import register
     "ferramenta: nunca peca ao utilizador para decidir compilador, versao de Qt ou caminhos. "
     "Fluxo: acao='detetar' (o que e o projeto e o que exige), 'kits' (o que esta instalado e o que foi "
     "escolhido), 'preparar' (escolhe o kit, escreve o preset e configura), 'construir' (compila), "
-    "'correr' (abre o que ficou compilado), 'depurar' (abre o executavel sob o depurador de consola "
-    "do Windows SDK, num card, com os pontos de paragem ja marcados) e 'instalar' (traz do instalador "
+    "'correr' (abre o que ficou compilado), 'depurar' (abre o programa num card sob o depurador da "
+    "linguagem que os pontos marcados pedem - C++ pelo cdb do Windows SDK, Python pelo pdb, que ja "
+    "vem dentro do Python) e 'instalar' (traz do instalador "
     "da Qt os modulos que o projeto pede e o kit nao tem - sem uma unica janela). "
     "'construir' e 'correr' fazem o preparo sozinhos. "
     "build corre como card do terminal (saida a vivo, com botao de parar). "
@@ -50,14 +51,18 @@ from src.backend.tools.registry import register
         "breakpoints": {
             "tipo": "STRING",
             "desc": "Pontos de paragem para 'depurar', no formato ficheiro:linha (um por linha ou "
-                    "separados por ';'). Aceita modulo!ficheiro:linha quando o nome se repete.",
+                    "separados por ';'). Aceita modulo!ficheiro:linha quando o nome se repete. A "
+                    "linguagem do primeiro ponto escolhe o depurador: ficheiro .py corre sob o pdb, "
+                    "C/C++ sob o cdb.",
             "padrao": "",
         },
         "comandos": {
             "tipo": "STRING",
-            "desc": "Comandos para conduzir a sessao de 'depurar' (um por linha ou separados por ';'): "
-                    "k, dv /t /v, ?? variavel, l+s, p, t, g, bp ficheiro:linha, q. Comandos sem "
-                    "breakpoints vao para a sessao que ja esta aberta e a resposta volta aqui.",
+            "desc": "Comandos para conduzir a sessao de 'depurar' (um por linha ou separados por ';'). "
+                    "Em C++: k, dv /t /v, ?? variavel, l+s, p, t, g, bp ficheiro:linha, q. Em Python: "
+                    "c, n, s, p variavel, w, l, b ficheiro:linha, q - e aqui o 'p' IMPRIME uma "
+                    "variavel (quem anda uma linha e o 'n'). Comandos sem breakpoints vao para a "
+                    "sessao que ja esta aberta e a resposta volta aqui.",
             "padrao": "",
         },
     },
@@ -193,6 +198,8 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
     if comandos and not breakpoints:
         return ("NAO HA SESSAO DE DEPURACAO ABERTA: a ultima fechou (o programa terminou ou o card foi "
                 "parado). Abra outra com acao='depurar' e os 'breakpoints'.")
+    if depurar.motor(breakpoints) == "python":
+        return _depurar_python(pasta, breakpoints, comandos)
     if not depurar.cdb():
         return ("ERRO: nao encontrei o depurador de consola do Windows SDK (cdb.exe), que vem com os "
                 "\"Debugging Tools for Windows\". Sem ele nao ha como depurar C++ nesta maquina.")
@@ -221,6 +228,33 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
         escrever_stdin_processo(registo["id"], escrito)
     texto = _texto_depuracao(registo_id=registo["id"], executavel=executavel,
                              pontos=pontos_de_paragem, escritos=escritos)
+    if comandos:
+        return texto + "\n\n" + _conduzir_depuracao(comandos)
+    return texto
+
+def _depurar_python(pasta, breakpoints, comandos):
+    pontos = depurar.pontos_python(breakpoints, pasta)
+    if not pontos:
+        return (f"ERRO: nenhum destes pontos aponta para um ficheiro dentro de '{pasta}': "
+                f"{breakpoints}. Indique o ficheiro (ex: app.py:62).")
+    script = pontos[0]["ficheiro"]
+    linha = depurar.comando_python(script, pasta)
+    if not linha:
+        return f"ERRO: nao consegui montar o depurador para '{script}'."
+    emit_event("executing", function=f"Depurando {os.path.basename(script)}")
+    try:
+        registo = iniciar_processo(linha, cwd=pasta, modo="card", stdin_pipe=True, acompanhar=True,
+                                   rotulo=f"DEPURADOR: {os.path.basename(script)}")
+    except OSError as e:
+        return f"ERRO: nao consegui abrir o depurador ({e})."
+    depurar.guardar_sessao(registo["id"], script)
+    registrar_linha_processo(registo["id"], depurar.LINHA_DO_CARD_PY)
+    escritos = depurar.preparacao_python(pontos, script)
+    for escrito in escritos:
+        escrever_stdin_processo(registo["id"], escrito)
+    texto = _texto_depuracao_py(registo_id=registo["id"], script=script, pontos=pontos,
+                                escritos=escritos,
+                                fora=depurar.pontos_de_outra_linguagem(breakpoints, "python"))
     if comandos:
         return texto + "\n\n" + _conduzir_depuracao(comandos)
     return texto
@@ -427,6 +461,23 @@ def _texto_depuracao(registo_id, executavel, pontos, escritos):
                   "ultimas N linhas dela quando precisar de ler o que o depurador respondeu.")
     blocos.append("Para conduzir a sessao sem sair daqui, chame de novo acao='depurar' com 'comandos' "
                   "(ex: 'k;dv /t /v;?? argc'): os comandos vao para este card e a resposta volta aqui.")
+    return "\n\n".join(blocos)
+
+def _texto_depuracao_py(registo_id, script, pontos, escritos, fora):
+    marcados = ", ".join(f"{os.path.basename(p['ficheiro'])}:{p['linha']}" for p in pontos)
+    blocos = [f"DEPURADOR ABERTO (card {registo_id}): {script}",
+              f"Pontos de paragem: {marcados}",
+              "Comandos ja escritos: " + " | ".join(escritos)]
+    if fora:
+        blocos.append("Ficaram de fora, nao sao Python: " + ", ".join(fora))
+    blocos.append("Para conduzir a sessao, selecione o card e escreva no campo do terminal:\n"
+                  + depurar.texto_dos_comandos_py())
+    blocos.append("Atencao a uma diferenca do depurador de C++: aqui o 'p' IMPRIME uma variavel "
+                  "(ex: p total) e andar uma linha e o 'n'.")
+    blocos.append("A saida do depurador aparece no card. tool_listar_processos(saida=N) devolve as "
+                  "ultimas N linhas dela quando precisar de ler o que ele respondeu.")
+    blocos.append("Para conduzir a sessao sem sair daqui, chame de novo acao='depurar' com 'comandos' "
+                  "(ex: 'w;p total;n'): os comandos vao para este card e a resposta volta aqui.")
     return "\n\n".join(blocos)
 
 def _conduzir_depuracao(comandos):
