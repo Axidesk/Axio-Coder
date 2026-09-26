@@ -5482,6 +5482,21 @@
         "arquivo": "src/frontend/js/editor/pontos_paragem.js",
         "linha": 4
       }
+    },
+    {
+      "termo": "aviso de chamada errada",
+      "aliases": [
+        "chamada com parametro inexistente",
+        "aviso de chamada errada",
+        "parametro que a assinatura nao tem",
+        "kwarg errado"
+      ],
+      "identificador": "_aviso_chamada_sem_parametro",
+      "descricao": "Aviso que aparece no retorno de qualquer edicao de um .py (CHECKLIST ESTRUTURAL) quando uma chamada a funcao do proprio modulo usa uma palavra-chave que a assinatura dela nao tem. A sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta - foi o caso do _texto_depuracao(registo_id=) contra def _texto_depuracao(registro_id,...). Nao bloqueia a escrita; confirma no codigo real e acerta a chamada ou a assinatura.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/syntax.py",
+        "linha": 655
+      }
     }
   ]
 }

@@ -597,6 +597,9 @@ def aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, texto_novo):
     registo = _aviso_registo_em_funcao_errada(caminho_relativo, texto_novo)
     if registo:
         partes.append(registo)
+    chamada = _aviso_chamada_sem_parametro(caminho_relativo, texto_novo)
+    if chamada:
+        partes.append(chamada)
     if criadas:
         partes.append(
             "FUNCAO(OES) NOVA(S): " + ", ".join(criadas)
@@ -616,6 +619,55 @@ def aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, texto_novo):
     if not partes:
         return ""
     return " | CHECKLIST ESTRUTURAL: " + " | ".join(partes)
+
+def _assinaturas_do_topo(arvore):
+    assinaturas = {}
+    repetidos = set()
+    for no in arvore.body:
+        if not isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if no.name in assinaturas:
+            repetidos.add(no.name)
+            continue
+        argumentos = no.args
+        aceitos = [a.arg for a in (*argumentos.posonlyargs, *argumentos.args, *argumentos.kwonlyargs)]
+        assinaturas[no.name] = (aceitos, argumentos.kwarg is not None)
+    for nome in repetidos:
+        assinaturas.pop(nome, None)
+    return assinaturas
+
+def _chamadas_com_palavra_inexistente(arvore, assinaturas):
+    achados = set()
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Call) or not isinstance(no.func, ast.Name):
+            continue
+        alvo = assinaturas.get(no.func.id)
+        if alvo is None:
+            continue
+        aceitos, tem_kwargs = alvo
+        if tem_kwargs:
+            continue
+        for palavra in no.keywords:
+            if palavra.arg is not None and palavra.arg not in aceitos:
+                achados.add((no.lineno, no.func.id, palavra.arg, ", ".join(aceitos)))
+    return sorted(achados)
+
+def _aviso_chamada_sem_parametro(caminho_relativo, texto_novo):
+    """Chamada a uma funcao do proprio modulo com palavra-chave que a assinatura nao tem."""
+    if not str(caminho_relativo or "").endswith(".py") or not texto_novo:
+        return ""
+    try:
+        arvore = ast.parse(texto_novo)
+    except (SyntaxError, ValueError):
+        return ""
+    achados = _chamadas_com_palavra_inexistente(arvore, _assinaturas_do_topo(arvore))
+    if not achados:
+        return ""
+    detalhe = "; ".join(f"linha {linha}: {nome}({palavra}=...) mas a assinatura tem ({aceitos})"
+                        for linha, nome, palavra, aceitos in achados)
+    return ("CHAMADA COM PARAMETRO INEXISTENTE: " + detalhe
+            + " -> a sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta:"
+              " acerte a chamada ou a assinatura.")
 
 _MARCADOR_IMPORT_LOCAL = "# import-local"
 
