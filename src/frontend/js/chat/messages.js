@@ -2,6 +2,7 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { renderImagePreviews } from './attach.js';
 import { atualizarBotoesUndoRedo, createChildBalloon, gerarSnippetHtml, restaurarPastaSelecionada, sincronizarArquivosEmTempoReal } from './files.js';
+import { repintarCol3Aberta } from './historico/acoes.js';
 import { createLogGroupCard, roundMetaHtml } from './historico/cards.js';
 import { epochDeId } from './historico/checkpoint.js';
 import { fetchSessionHistoryData, saveCurrentTurnSession } from './historico/estado.js';
@@ -13,7 +14,7 @@ import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _for
 import { reavaliarBuscaChat } from './busca_chat.js';
 import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
 
-const { alertPopup, alertPopupContent, btnSend, btnShowThoughts, btnShowTools, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, contextAcumuladaFill, contextInfoLimite, contextSessaoFill, contextUsage, contextUsageAcumulada, contextUsageFill, contextUsageLabel, contextUsageSessao, currentLogsList, currentLogsWrapper, inputText, lblExecuting, lblFolder, lblMetrics, lblStatus, terminalMode } = dom;
+const { alertPopup, alertPopupContent, btnSend, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, contextAcumuladaFill, contextInfoLimite, contextSessaoFill, contextUsage, contextUsageAcumulada, contextUsageFill, contextUsageLabel, contextUsageSessao, currentLogsList, currentLogsWrapper, inputText, lblExecuting, lblFolder, lblMetrics, lblStatus, terminalMode } = dom;
 
 let currentPlanContainer = null;
 
@@ -345,13 +346,7 @@ async function tratar_tool_used_ai_thought(data) {
         _initCurrentGroupBalloon('Analisando...', true);
     }
     if (window.currentActiveLogGroup === currentGroupBalloon) {
-        if (state.isShowingTools) {
-            state.suppressCol3Anim = true;
-            try { state.isShowingTools = false; btnShowTools.click(); } finally { state.suppressCol3Anim = false; }
-        } else if (state.isShowingThoughts) {
-            state.suppressCol3Anim = true;
-            try { state.isShowingThoughts = false; btnShowThoughts.click(); } finally { state.suppressCol3Anim = false; }
-        }
+        if (state.isShowingTools || state.isShowingThoughts) repintarCol3Aberta(currentGroupBalloon);
     }
 }
 async function tratar_tool_sources(data) {
@@ -361,13 +356,7 @@ async function tratar_tool_sources(data) {
             break;
         }
     }
-    if (state.isShowingTools) {
-        state.suppressCol3Anim = true;
-        try {
-            state.isShowingTools = false;
-            btnShowTools.click();
-        } finally { state.suppressCol3Anim = false; }
-    }
+    if (state.isShowingTools) repintarCol3Aberta(currentGroupBalloon);
 }
 async function tratar_metrics(data) {
     lblMetrics.textContent = data.message;

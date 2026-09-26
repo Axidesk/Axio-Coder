@@ -7,6 +7,10 @@ import { isHistoryOpen } from '../layout.js';
 const { btnHistorySearch, btnShowQuestion, btnShowThoughts, btnShowTools } = dom;
 
 let repinturaCol3 = null;
+let repinturaPendente = null;
+let repinturaAgendada = 0;
+
+const ESPERA_DA_REPINTURA_MS = 250;
 
     function openFilesPanel(group, vista) {
         const alvo = vista || vistaDe('dock');
@@ -30,6 +34,22 @@ let repinturaCol3 = null;
     }
     function registrarRepinturaCol3(fn) {
         repinturaCol3 = fn;
+    }
+    function _repintarCol3Agora() {
+        repinturaAgendada = 0;
+        const grupo = repinturaPendente;
+        repinturaPendente = null;
+        if (!repinturaCol3) return;
+        const alvo = ['dock', 'historico'].map(id => vistaDe(id)).find(v => v && v.col3Aberta());
+        if (!alvo) return;
+        state.suppressCol3Anim = true;
+        try { repinturaCol3(alvo, grupo); } finally { state.suppressCol3Anim = false; }
+    }
+    function repintarCol3Aberta(grupo) {
+        if (!repinturaCol3) return false;
+        repinturaPendente = grupo;
+        if (!repinturaAgendada) repinturaAgendada = setTimeout(_repintarCol3Agora, ESPERA_DA_REPINTURA_MS);
+        return true;
     }
     function updateActionButtons() {
         const enabled = isHistoryOpen()
@@ -61,6 +81,7 @@ let repinturaCol3 = null;
 export {
     openFilesPanel,
     registrarRepinturaCol3,
+    repintarCol3Aberta,
     updateActionButtons,
     setHistoryActionButtonsVisible,
     selectHistoryTask
