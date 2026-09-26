@@ -4330,8 +4330,8 @@
         "arquivo": "src/backend/routes/git_panel.py",
         "linha": 88,
         "conferido": [
-          1790285969.813,
-          8717
+          1790392915.972,
+          8990
         ]
       }
     },
@@ -4370,8 +4370,8 @@
         "arquivo": "src/backend/routes/git_panel.py",
         "linha": 109,
         "conferido": [
-          1790285969.813,
-          8717
+          1790392915.972,
+          8990
         ]
       }
     },
@@ -5316,6 +5316,21 @@
           1790391752.154,
           35126
         ]
+      }
+    },
+    {
+      "termo": "prefixo da tarefa",
+      "aliases": [
+        "prefixo com o nome da tarefa",
+        "numero da tarefa no por subir",
+        "tarefa n antes da mensagem do commit",
+        "prefixo sumiu do commit"
+      ],
+      "identificador": "partesDoTituloDoCommit",
+      "descricao": "Calcula o \"Tarefa N - \" que aparece antes da mensagem no Por subir e no historico mais antigo: casa o hash com o log da sessao e le o numero do dia (nomeDoTurno), e corta o prefixo do resumo quando o commit ja o traz escrito a mao. Nada disto esta gravado no git - a mensagem do commit so tem o texto.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/chat/historico/cards.js",
+        "linha": 442
       }
     }
   ]

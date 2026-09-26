@@ -14,7 +14,6 @@ let sincronizacaoDoEnvio = null;
 let apiDeRestauro = null;
 let cacheDoUltimoEnviado = '';
 let cacheDoUltimoEnviadoValida = false;
-let nomesDeTarefaDe = -1;
 
     function rebuildGroupFromSaved(saved) {
         return {
@@ -419,8 +418,19 @@ let nomesDeTarefaDe = -1;
     }
     function nomeDoTurno(turno) {
         if (!turno) return '';
-        if (!turno.displayName && !turno.name) _nomearTurnos();
-        return turno.displayName || turno.name || '';
+        if (turno.displayName || turno.name) return turno.displayName || turno.name;
+        _nomearTurnos();
+        return turno.displayName || turno.name || _nomeDoMesmoTurnoNaCache(turno.id);
+    }
+    function _nomeDoMesmoTurnoNaCache(id) {
+        if (id === undefined || id === null) return '';
+        for (const sessao of state.sessionHistoryList) {
+            const logs = state.sessionDetailCache[sessao.filename];
+            if (!logs) continue;
+            const igual = logs.find(l => l && String(l.id) === String(id));
+            if (igual && (igual.displayName || igual.name)) return igual.displayName || igual.name;
+        }
+        return '';
     }
     function resumoDoCommit(texto) {
         return String(texto || '').trim().split(/\s+/).join(' ');
@@ -431,10 +441,9 @@ let nomesDeTarefaDe = -1;
     }
     function partesDoTituloDoCommit(hash, resumoDoPonto) {
         const turno = turnoDoCommit(hash);
-        return {
-            base: nomeDoTurno(turno),
-            resumo: resumoDoCommit(resumoDoPonto) || resumoDoCommit(resumoDoCommitDoLog(hash, turno))
-        };
+        const base = nomeDoTurno(turno);
+        const resumo = resumoDoCommit(resumoDoPonto) || resumoDoCommit(resumoDoCommitDoLog(hash, turno));
+        return { base: base, resumo: base ? _semPrefixoDeTarefa(resumo) : resumo };
     }
     function tituloDaTarefaDoCommit(hash, resumoDoPonto) {
         const partes = partesDoTituloDoCommit(hash, resumoDoPonto);
@@ -445,6 +454,9 @@ let nomesDeTarefaDe = -1;
         const daLista = (turno.commits || []).find(c => c && c.hash === hash);
         if (daLista) return daLista.nome || '';
         return turno.commit === hash ? (turno.commitNome || '') : '';
+    }
+    function _semPrefixoDeTarefa(texto) {
+        return String(texto || '').replace(/^Tarefa\s+\d+\b\s*[-:]?\s*/i, '').trim();
     }
     function comporTitulo(base, resumo) {
         return [base, resumo].filter(Boolean).join(' - ');
@@ -470,10 +482,16 @@ let nomesDeTarefaDe = -1;
         });
     }
     function _nomearTurnos() {
-        const carregadas = state.sessionHistoryList.filter(s => state.sessionDetailCache[s.filename]).length;
-        if (carregadas === nomesDeTarefaDe) return;
-        nomesDeTarefaDe = carregadas;
+        if (!_haTurnoSemNome()) return;
         assignDisplayNamesByDay();
+    }
+    function _haTurnoSemNome() {
+        for (const sessao of state.sessionHistoryList) {
+            const logs = state.sessionDetailCache[sessao.filename];
+            if (!logs) continue;
+            if (logs.some(l => l && !l.displayName && !l.name)) return true;
+        }
+        return false;
     }
     function marcarTagsNosCards() {
         document.querySelectorAll('.history-round-card').forEach(el => {
