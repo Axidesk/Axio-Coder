@@ -16,6 +16,7 @@ estado = {
     "file_history": {},
     "arquivos_tocados": set(),
     "edicoes_rodada": [],
+    "memorias_injetadas": {},
     "session_id_atual": "",
     "bloquear_edicao": False,
     "processos": {},

@@ -61,6 +61,7 @@ def set_folder():
         estado["file_history"] = {}
         estado["arquivos_tocados"] = set()
         estado["edicoes_rodada"] = []
+        estado["memorias_injetadas"] = {}
         estado["compactacoes_contexto"] = 0
         parados = 0
         arvore_morta = 0
@@ -161,6 +162,7 @@ def cancel():
 @chat_bp.route('/api/clear_context', methods=['POST'])
 def clear_context():
     estado["historico_chat"] = []
+    estado["memorias_injetadas"] = {}
     estado["compactacoes_contexto"] = 0
     medir_contexto()
     return jsonify({"status": "ok"})

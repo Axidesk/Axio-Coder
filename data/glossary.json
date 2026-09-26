@@ -701,10 +701,10 @@
       "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 839,
+        "linha": 842,
         "conferido": [
-          1790122597.228,
-          34257
+          1790444032.151,
+          34531
         ]
       }
     },
@@ -958,10 +958,10 @@
       "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
       "localizacao": {
         "arquivo": "src/backend/services/file_service.py",
-        "linha": 598,
+        "linha": 609,
         "conferido": [
-          1790394585.412,
-          32448
+          1790443733.499,
+          32832
         ]
       }
     },
@@ -1135,17 +1135,16 @@
         "bloco de memoria",
         "contexto de memorias",
         "memorias do palace",
-        "notas e conversas recuperadas"
+        "notas e conversas recuperadas",
+        "filtro de memorias",
+        "memoria que volta",
+        "memoria repetida"
       ],
-      "identificador": "_rotular_memorias",
-      "descricao": "Bloco de contexto injetado a cada rodada com as memorias recuperadas do palace. Cada entrada traz entre [ ]: a ORIGEM (nota curada = .axio/knowledge; conversa antiga (historico) = .axio/chats; memoria minerada), o PROJETO (wing do drawer, marcado '(OUTRO PROJETO)' quando difere do projeto aberto) e a IDADE do conteudo (data real + 'hoje'/'ha 3 dias'/'ha 2 meses'). A data vem de _instante_da_memoria, por ordem de confianca: epoch no nome do ficheiro (sessao_<unix>.txt) > mtime do source_path no disco > created_at do metadata. O epoch manda porque o created_at das transcricoes aponta a MINERACAO, nao o dia da conversa (medido: 29/08 aparecia como 12/09). idade_legivel/data_legivel em src/backend/memory/store.py sao a fonte unica dessa formatacao. As notas curadas vem primeiro e as conversas antigas limitadas a 3; _reforcar_notas_curadas faz uma segunda busca restrita ao room ai_memory quando nenhuma nota veio.",
+      "identificador": "_selecionar_memorias / _e_conversa_viva / _registrar_injecao",
+      "descricao": "Bloco injetado a cada rodada. Passa por tres cortes antes de entrar: relevancia (transcricao 0,60; nota curada 0,45 - uma pergunta sem relacao devolvia 8 hits entre 0,467 e 0,524, e o limiar antigo de 0,45 deixava passar tudo), conversa viva (transcricao gravada depois do inicio da sessao e eco da conversa de agora) e repeticao (texto ja injetado nesta sessao nao volta; o registo vive em estado['memorias_injetadas'] e morre ao abrir pasta ou limpar a conversa). Limite de 1 transcricao por rodada. A sobra sai declarada na linha '[filtro] fora: ...'.",
       "localizacao": {
         "arquivo": "src/backend/ai/coleta.py",
-        "linha": 115,
-        "conferido": [
-          1789244304.542,
-          9605
-        ]
+        "linha": 240
       }
     },
     {
@@ -3327,8 +3326,8 @@
         "arquivo": "src/frontend/js/editor/editor.js",
         "linha": 276,
         "conferido": [
-          1790122597.228,
-          34257
+          1790444032.151,
+          34531
         ]
       }
     },
@@ -5519,8 +5518,8 @@
         "arquivo": "src/frontend/js/editor/linha_depurador.js",
         "linha": 14,
         "conferido": [
-          1790442502.387,
-          1720
+          1790443820.9,
+          2155
         ]
       }
     }

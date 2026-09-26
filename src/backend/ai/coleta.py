@@ -9,12 +9,13 @@ Nao confundir com ai/context.py: aquele mede e compacta o contexto (tokens e
 historico); este vai BUSCAR o contexto antes do primeiro pedido ao modelo.
 """
 
+import hashlib
 import os
 import re
 import threading
 import time
 
-from src.backend.state import emit_event
+from src.backend.state import emit_event, estado
 from src.backend.memory.vector import buscar_memorias_com_timeout, ROOM_NOTAS
 from src.backend.memory.store import (
     carregar_indice_knowledge,
@@ -51,6 +52,44 @@ def _e_nota_curada(hit):
 
 def _e_historico(hit):
     return _origem_da_memoria(hit.get("source_path")) == "conversa antiga (historico)"
+
+
+SIMILARIDADE_MINIMA_TRANSCRICAO = 0.60
+SIMILARIDADE_MINIMA_NOTA = 0.45
+LIMITE_TRANSCRICOES = 1
+
+
+def _inicio_da_sessao():
+    """Epoch (segundos) do inicio da conversa atual, ou 0 quando nao ha.
+
+    `estado["session_id_atual"]` e escrito em milissegundos ao abrir a pasta e
+    ao limpar a conversa, e e a unica marca fiavel de onde esta conversa comeca.
+    """
+    marca = str(estado.get("session_id_atual") or "")
+    if not marca.isdigit():
+        return 0
+    return int(marca) // 1000 if len(marca) >= 13 else int(marca)
+
+
+def _e_conversa_viva(hit):
+    """Transcricao gravada DURANTE esta conversa: nao e memoria, e eco.
+
+    Medido a 2026-09-26 no palace real: cada rodada grava um
+    .axio/chats/sessao_<epoch>.txt e o minerador varre a pasta, logo a busca
+    seguinte devolvia as MINHAS PROPRAS frases de minutos antes, rotuladas como
+    "memoria recuperada". Era isso que me fazia voltar a um assunto ja
+    respondido: o texto nao era lembranca, era a conversa de agora a entrar por
+    outro caminho. Tudo o que foi gravado depois do inicio desta sessao ja esta
+    no historico dela.
+    """
+    instante = _instante_no_nome(hit.get("source_file"))
+    inicio = _inicio_da_sessao()
+    if not instante or not inicio:
+        return False
+    try:
+        return int(instante) >= inicio
+    except (TypeError, ValueError):
+        return False
 
 
 _EPOCH_NO_NOME = re.compile(r"_(\d{9,14})(?=\.[a-z0-9]+$)", re.IGNORECASE)
@@ -112,8 +151,11 @@ def _bloco_memoria(hit, projeto_atual=None):
     return f"{cabecalho}\n{hit.get('text', '')}"
 
 
-def _rotular_memorias(hits, max_historicos=3, projeto_atual=None):
+def _rotular_memorias(hits, max_historicos=LIMITE_TRANSCRICOES, projeto_atual=None):
     """Formata os hits da busca com a origem de cada um, sem repetir textos.
+
+    Devolve (texto, hits incluidos): so o que entrou conta como usado, e e essa
+    lista que _registrar_injecao marca para nao voltar nesta sessao.
 
     Reusa deduplicar_textos para a unicidade (comparacao normalizada) e mantem
     a associacao hit -> texto descartando os sobreviventes um a um.
@@ -125,10 +167,17 @@ def _rotular_memorias(hits, max_historicos=3, projeto_atual=None):
     rodadas passadas, que e o que me fazia repetir o que ja tinha sido dito. O
     limite nao esconde nenhuma nota curada - e _reforcar_notas_curadas garante
     que alguma chega para ser priorizada.
+
+    O limite das transcricoes e 1 (era 3) por uma medicao de 2026-09-26: com 3,
+    uma pergunta de outro assunto continuava a receber tres trechos de conversa
+    alheia, so que nunca os mesmos - o bloco saia igualmente cheio e o efeito de
+    colagem mantinha-se. Uma transcricao continua a bastar para o caso em que
+    ela serve mesmo: lembrar o que ja se fez sobre o assunto.
     """
     ordenados = sorted(hits, key=_e_historico)
     restantes = list(deduplicar_textos([hit.get("text", "") for hit in ordenados]))
     blocos = []
+    incluidos = []
     historicos = 0
     for hit in ordenados:
         texto = hit.get("text", "")
@@ -140,7 +189,8 @@ def _rotular_memorias(hits, max_historicos=3, projeto_atual=None):
             historicos += 1
         restantes.remove(texto)
         blocos.append(_bloco_memoria(hit, projeto_atual))
-    return "\n".join(blocos)
+        incluidos.append(hit)
+    return "\n".join(blocos), incluidos
 
 
 def _reforcar_notas_curadas(query, palace_path, wing, hits):
@@ -172,6 +222,86 @@ def _reforcar_notas_curadas(query, palace_path, wing, hits):
     return list(extra.get("results") or []) + list(hits)
 
 
+def _marca_do_texto(texto):
+    """Identidade estavel de uma memoria, para ela nao entrar duas vezes.
+
+    Normaliza os espacos antes de resumir: o mesmo trecho guardado em ficheiros
+    diferentes volta com quebras de linha distintas e casaria como novo.
+    """
+    normalizado = " ".join((texto or "").split())
+    return hashlib.sha1(normalizado.encode("utf-8")).hexdigest()[:16]
+
+
+def _registrar_injecao(hit):
+    """Marca o texto como usado nesta sessao; o registo morre com a conversa."""
+    estado.setdefault("memorias_injetadas", {})[_marca_do_texto(hit.get("text"))] = time.time()
+
+
+def _selecionar_memorias(hits):
+    """Separa o que pode entrar no contexto do que so ocuparia espaco.
+
+    Tres cortes, todos medidos no palace real a 2026-09-26:
+
+    1. RELEVANCIA - uma pergunta sem relacao nenhuma com o projeto devolvia 8
+       hits entre 0,467 e 0,524 (medido com "receita de bolo de cenoura"), logo
+       o limiar antigo de 0,45 deixava passar tudo. Para uma transcricao o corte
+       e 0,60: acima do chao de ruido medido e com folga sobre ele. Para uma
+       nota curada o piso e 0,45 - sao 111 contra 36.715 transcricoes e
+       descrevem o estado atual do projeto.
+    2. CONVERSA VIVA - transcricao gravada durante esta conversa ja esta no
+       historico dela.
+    3. REPETICAO - o mesmo texto ja injetado nesta sessao nao volta. E o que
+       impede uma memoria de me fazer repetir uma resposta ja dada.
+
+    Devolve (mantidos, omitidos) com a contagem por motivo.
+    """
+    mantidos = []
+    omitidos = {"irrelevante": 0, "conversa_atual": 0, "repetido": 0}
+    usadas = estado.setdefault("memorias_injetadas", {})
+    for hit in sorted(hits, key=_e_historico):
+        piso = SIMILARIDADE_MINIMA_NOTA if _e_nota_curada(hit) else SIMILARIDADE_MINIMA_TRANSCRICAO
+        try:
+            simil = float(hit.get("similarity") or 0.0)
+        except (TypeError, ValueError):
+            simil = 0.0
+        if simil < piso:
+            omitidos["irrelevante"] += 1
+            continue
+        if _e_conversa_viva(hit):
+            omitidos["conversa_atual"] += 1
+            continue
+        if _marca_do_texto(hit.get("text")) in usadas:
+            omitidos["repetido"] += 1
+            continue
+        mantidos.append(hit)
+    return mantidos, omitidos
+
+
+def _nota_de_omissao(omitidos):
+    """Diz o que ficou de fora e por que: filtro invisivel e filtro avariado."""
+    partes = []
+    if omitidos.get("conversa_atual"):
+        partes.append(f"{omitidos['conversa_atual']} da conversa de agora")
+    if omitidos.get("repetido"):
+        partes.append(f"{omitidos['repetido']} ja usadas nesta sessao")
+    if omitidos.get("irrelevante"):
+        partes.append(f"{omitidos['irrelevante']} abaixo da relevancia")
+    if not partes:
+        return ""
+    return "[filtro] fora: " + ", ".join(partes) + "."
+
+
+def _sem_memoria(omitidos):
+    base = "(nenhuma memoria relevante para esta consulta)"
+    nota = _nota_de_omissao(omitidos)
+    return f"{base} {nota}" if nota else base
+
+
+def _com_nota_de_omissao(texto, omitidos):
+    nota = _nota_de_omissao(omitidos)
+    return f"{texto}\n{nota}" if nota else texto
+
+
 def coletar_contexto(prompt_usuario, wing_atual, palace_path):
     """Busca em paralelo as 4 fontes de contexto e devolve {"nome": texto}.
 
@@ -197,7 +327,13 @@ def coletar_contexto(prompt_usuario, wing_atual, palace_path):
             return "(nenhuma memória relevante para esta consulta)"
         if not any(_e_nota_curada(h) for h in hits):
             hits = _reforcar_notas_curadas(prompt_usuario, palace_path, wing_atual, hits)
-        return _rotular_memorias(hits, projeto_atual=wing_atual)
+        mantidos, omitidos = _selecionar_memorias(hits)
+        if not mantidos:
+            return _sem_memoria(omitidos)
+        texto, incluidos = _rotular_memorias(mantidos, projeto_atual=wing_atual)
+        for hit in incluidos:
+            _registrar_injecao(hit)
+        return _com_nota_de_omissao(texto, omitidos)
 
     contexto = {}
 
