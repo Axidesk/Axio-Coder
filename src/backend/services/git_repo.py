@@ -596,6 +596,24 @@ def restaurar(pasta, revisao, caminhos):
     return {"status": "ok", "count": len(validos), "ficheiros": validos}
 
 
+def registrar_restauro(pasta, caminhos, titulo, detalhe=""):
+    """Grava um ponto com o estado que acabou de ser restaurado, por cima do ramo.
+
+    O restauro mexe so no disco: sem este ponto o ramo continua a apontar para o
+    codigo que foi desfeito e o envio para a nuvem levaria essa versao. O commit
+    entra no topo, com hash novo, sem reescrever nenhum commit anterior.
+    """
+    limpos = _validar_caminhos(caminhos)
+    if not limpos:
+        return {"status": "vazio", "message": "Nada para gravar neste restauro."}
+    if not pasta_do_repositorio(pasta)[0]:
+        return {"status": "sem_repo", "message": "A pasta do projeto nao e um repositorio git."}
+    mensagem = (titulo or "").strip() or "Volta ao ponto anterior"
+    if (detalhe or "").strip():
+        mensagem += "\n\n" + detalhe.strip()
+    return commitar(pasta, mensagem, limpos)
+
+
 def revisao_existe(pasta, revisao):
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:

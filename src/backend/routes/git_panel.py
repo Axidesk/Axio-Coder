@@ -221,7 +221,15 @@ def git_restauro():
         except OSError as e:
             return jsonify({"status": "error", "message": str(e)}), 500
         alterados.append({"nome": rel, "acao": "removido"})
-    return jsonify({"status": "ok", "altered": alterados, "count": len(alterados)})
+    ponto = {}
+    if alterados:
+        ponto = git_repo.registrar_restauro(
+            _pasta(),
+            list(caminhos) + remover,
+            f"Volta ao ponto {git_repo.curto(revisao)}",
+            str(dados.get("label") or ""),
+        )
+    return jsonify({"status": "ok", "altered": alterados, "count": len(alterados), "commit": ponto})
 
 
 @git_bp.route("/api/git/sugestao", methods=["POST"])

@@ -26,6 +26,7 @@ from src.backend.services.session import (
     varredura_dos_logs,
     caminho_checkpoint_state,
 )
+from src.backend.services import git_repo
 from src.backend.services.file_service import (
     capturar_snapshot,
     registrar_edicao,
@@ -676,4 +677,12 @@ def session_restore():
             return jsonify({"status": "error", "message": str(e)}), 500
         alterados.append({"nome": rel, "acao": "removido (criado após o ponto)"})
 
-    return jsonify({"status": "ok", "altered": alterados, "count": len(alterados)})
+    ponto = {}
+    if alterados:
+        ponto = git_repo.registrar_restauro(
+            pasta_raiz,
+            git_repo.caminhos_do_repo(pasta_raiz, [a["nome"] for a in alterados]),
+            "Volta ao ponto da sessao",
+            str(data.get("label") or ""),
+        )
+    return jsonify({"status": "ok", "altered": alterados, "count": len(alterados), "commit": ponto})

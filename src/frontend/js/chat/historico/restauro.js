@@ -92,6 +92,17 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
         if (restantes > 0) html += `<br>• e mais ${restantes}…`;
         return html;
     }
+    function _pontoGravadoHtml(commit) {
+        const info = commit || {};
+        if (info.status === 'ok') {
+            const plural = info.count === 1 ? 'arquivo' : 'arquivos';
+            return `<div style="height:10px;"></div><div style="text-align:center;font-size:0.78rem;color:var(--text-mutado);">Ponto gravado: <b style="color:var(--oliva);">${escapeHtml(info.curto || '')}</b> — ${info.count} ${plural}. O envio leva este codigo.</div>`;
+        }
+        if (info.status === 'error') {
+            return `<div style="height:10px;"></div><div style="text-align:center;font-size:0.78rem;color:var(--perigo);">Ponto nao gravado: ${escapeHtml(info.message || '')}</div>`;
+        }
+        return '';
+    }
     async function requestRestoreTask(group) {
         if (!group.__session) {
             showAlert('Não foi possível identificar a sessão desta tarefa para restaurar.');
@@ -178,13 +189,14 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
         if (state.pendingRestore.tipo === 'git') return performGitRestore();
         const filename = state.pendingRestore.filename;
         const roundId = state.pendingRestore.round_id || '';
+        const label = state.pendingRestore.label || '';
         state.pendingRestore = null;
         showRestoreLoading();
         try {
             const resp = await fetch('/api/session_restore', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename, round_id: roundId })
+                body: JSON.stringify({ filename, round_id: roundId, label })
             });
             const data = await resp.json();
             if (data.status === 'ok') {
@@ -209,6 +221,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
                 } else {
                     restMsgHtml += '<div style="color:var(--text-claro);">Nenhuma alteração necessária — o código já estava no estado da sessão.</div>';
                 }
+                restMsgHtml += _pontoGravadoHtml(data.commit);
                 showRestoreResult(restMsgHtml);
             } else if (data.status === 'empty') {
                 showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--text-inline);">' + (data.message || 'Esta sessão não possui checkpoint de código para restaurar.') + '</div>');
@@ -305,7 +318,8 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
                 body: JSON.stringify({
                     revisao: pendente.revisao,
                     restaurar: pendente.restaurar || [],
-                    remover: pendente.remover || []
+                    remover: pendente.remover || [],
+                    label: pendente.label || ''
                 })
             });
             const data = await resp.json();
@@ -328,6 +342,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
                 } else {
                     restMsgHtml += '<div style="color:var(--text-claro);">Nenhuma alteração necessária — o código já estava neste commit.</div>';
                 }
+                restMsgHtml += _pontoGravadoHtml(data.commit);
                 showRestoreResult(restMsgHtml);
             } else if (data.status === 'blocked') {
                 let bloqueadoHtml = '<div style="text-align:center;font-weight:700;font-size:1rem;color:var(--perigo);">Restauracao cancelada</div>';
