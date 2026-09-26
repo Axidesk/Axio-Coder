@@ -22,6 +22,7 @@ def preparar(pasta, configuracao="debug"):
     escolha = kits.escolher_kit(deteccao, kits.kits_instalados(deteccao.get("prefixos", ())))
     if escolha["faltam"]:
         return {"deteccao": deteccao, "escolha": escolha, "faltam": escolha["faltam"]}
+    _acrescentar_sanitizador(escolha, configuracao)
     escrita = presets.escrever(deteccao["pasta"], escolha, configuracao)
     if escrita.get("erro"):
         return {"deteccao": deteccao, "escolha": escolha, "faltam": [escrita["erro"]]}
@@ -37,6 +38,21 @@ def preparar(pasta, configuracao="debug"):
             os.path.join(escrita["pasta_build"], "CMakeCache.txt")
         ),
     }
+
+
+def _acrescentar_sanitizador(escolha, configuracao):
+    """Poe o runtime do AddressSanitizer no PATH dos cards quando a configuracao o pede."""
+    if not presets.e_sanitizador(configuracao):
+        return
+    runtime = kits.pasta_do_runtime_asan()
+    if not runtime:
+        escolha.setdefault("notas", []).append(
+            "Foi pedido o AddressSanitizer e o runtime dele nao esta nesta maquina (vem com o "
+            "compilador do Visual Studio 2019 16.9 ou mais recente): o programa compila, mas "
+            "morre no arranque sem dizer nada."
+        )
+        return
+    escolha["caminhos"] = list(escolha.get("caminhos") or []) + [runtime]
 
 
 def _sem_caminho(deteccao):

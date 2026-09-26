@@ -7,7 +7,11 @@ ARQUIVO = "CMakeUserPresets.json"
 # A versao mais baixa que cobre o que escrevemos: declarar acima disso so reduz compatibilidade.
 _VISAO = 3
 _GERADORES_MULTI_CONFIG = ("Visual Studio", "Xcode", "Multi-Config")
-_CONFIGURACOES = {"debug": "Debug", "release": "Release", "relwithdebinfo": "RelWithDebInfo", "minsizerel": "MinSizeRel"}
+# 'asan' e o build de Debug mais a flag que instrumenta os acessos a memoria.
+SANITIZADOR = "asan"
+_FLAG_ASAN = "/fsanitize=address"
+_CONFIGURACOES = {"debug": "Debug", "release": "Release", "relwithdebinfo": "RelWithDebInfo",
+                  "minsizerel": "MinSizeRel", SANITIZADOR: "Debug"}
 
 
 def _nome_do_preset(configuracao):
@@ -29,7 +33,7 @@ def escrever(pasta, escolha, configuracao="debug"):
         return {"erro": erro}
     configuracao_cmake = _CONFIGURACOES.get(configuracao.lower(), "Debug")
     multi_config = any(g in escolha["gerador"] for g in _GERADORES_MULTI_CONFIG)
-    configure = _configure(nome, escolha, configuracao_cmake, multi_config)
+    configure = _configure(nome, escolha, configuracao_cmake, multi_config, e_sanitizador(configuracao))
     build = _build(nome, configuracao_cmake, multi_config)
     dados["configurePresets"] = _sem_nome(dados.get("configurePresets"), nome) + [configure]
     dados["buildPresets"] = _sem_nome(dados.get("buildPresets"), nome) + [build]
@@ -52,10 +56,15 @@ def escrever(pasta, escolha, configuracao="debug"):
     }
 
 
-def _configure(nome, escolha, configuracao, multi_config):
+def e_sanitizador(configuracao):
+    """Diz se esta configuracao pede o AddressSanitizer."""
+    return (configuracao or "").lower() == SANITIZADOR
+
+
+def _configure(nome, escolha, configuracao, multi_config, sanitizador=False):
     preset = {
         "name": nome,
-        "displayName": f"Axio - {configuracao}",
+        "displayName": f"Axio - {configuracao}" + (" + AddressSanitizer" if sanitizador else ""),
         "description": _descricao(escolha),
         "generator": escolha["gerador"],
         "binaryDir": "${sourceDir}/build/" + nome,
@@ -63,6 +72,8 @@ def _configure(nome, escolha, configuracao, multi_config):
     if escolha.get("arquitetura"):
         preset["architecture"] = {"value": escolha["arquitetura"], "strategy": "set"}
     variaveis = dict(escolha.get("variaveis") or {})
+    if sanitizador:
+        variaveis["CMAKE_CXX_FLAGS"] = _FLAG_ASAN
     if not multi_config:
         variaveis["CMAKE_BUILD_TYPE"] = configuracao
     if variaveis:

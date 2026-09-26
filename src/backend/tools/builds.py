@@ -42,8 +42,11 @@ from src.backend.tools.registry import register
         },
         "configuracao": {
             "tipo": "STRING",
-            "desc": "debug (por omissao) ou release",
-            "enum": ["debug", "release"],
+            "desc": "debug (por omissao), release ou asan. O 'asan' e o build de Debug com o "
+                    "AddressSanitizer, que apanha erros de memoria que NAO rebentam (use-after-free, "
+                    "out-of-bounds, uso depois do fim do bloco) e escreve o relatorio com o ficheiro "
+                    "e a linha. Cada configuracao tem a sua pasta de build.",
+            "enum": ["debug", "release", "asan"],
             "padrao": "debug",
         },
         "alvo": {

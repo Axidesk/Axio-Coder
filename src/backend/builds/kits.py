@@ -368,6 +368,22 @@ def _caminhos_para_correr(qt, vulkan):
     return [os.path.normpath(c) for c in caminhos if os.path.isdir(c)]
 
 
+def pasta_do_runtime_asan():
+    """A pasta do compilador que traz o runtime do AddressSanitizer, para o PATH de quem corre o programa.
+
+    Sem esta pasta no PATH o programa instrumentado nao arranca e nao diz por que: o Windows
+    fecha-o com STATUS_DLL_NOT_FOUND e o card fica vazio.
+    """
+    for instalacao in _visual_studio():
+        for ferramenta in reversed(instalacao["ferramentas"]):
+            for arquitetura in ("x64", "x86", "arm64"):
+                pasta = os.path.join(instalacao["caminho"], "VC", "Tools", "MSVC", ferramenta,
+                                     "bin", "Host" + arquitetura, arquitetura)
+                if glob.glob(os.path.join(pasta, "clang_rt.asan_*dynamic-*.dll")):
+                    return os.path.normpath(pasta)
+    return ""
+
+
 def modulos_em_falta(kit, exigencia):
     """Modulos que o find_package pede e que o kit escolhido nao traz (a pasta do modulo e a prova)."""
     pedidos = exigencia.get("componentes") or []

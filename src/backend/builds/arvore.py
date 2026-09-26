@@ -49,17 +49,6 @@ def entradas_raiz(pasta):
     return [_entrada(no, [str(i)]) for i, no in enumerate(_nos(pasta))]
 
 
-def tem_projeto(pasta):
-    """Verdadeiro quando a arrumacao vem de um projeto: nesse caso a raiz mostra SO ele.
-
-    E o que o Qt Creator e o Solution Explorer fazem: a vista de projeto mostra o que o
-    projeto declara, e os ficheiros que vivem na pasta sem pertencer a nenhum alvo
-    (logs, .VC.db, ficheiros de build) ficam de fora. Sem projeto, a raiz continua a
-    mostrar as pastas e a lista solta.
-    """
-    return any(no.get("projeto") for no in _nos(pasta))
-
-
 def entradas(pasta, chave):
     """Filhos de um no virtual: os sub-nos e, nos grupos, os ficheiros que ele mostra."""
     partes = [p for p in (chave or "").split("/")[1:] if p]
