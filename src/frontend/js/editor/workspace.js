@@ -11,7 +11,6 @@ import { fadeEditorSwap, fadeGutterSwap, revelarLinhaComRolagem, scheduleExplore
 import { state } from './state.js';
 
 const DOCK_ANIM_MS = 450;
-const ANIMACAO_DO_DOCK_MS = 600;
 
 self.MonacoEnvironment = {
     getWorkerUrl: function (moduleId, label) {
@@ -214,16 +213,6 @@ export function applyExplorerSize(diferirLayout) {
     else layoutAllEditors();
 }
 
-export function applyLogAltura() {
-    const dock = state.logDock;
-    if (!dock) return;
-    if (state.dockSide === 'right' && state.logAltura > 0) {
-        dock.style.setProperty('--log-altura', (state.logAltura * 100).toFixed(2) + '%');
-    } else {
-        dock.style.removeProperty('--log-altura');
-    }
-}
-
 export function collapseDockForFocus() {
     if (state.dockCollapsedForFocus) return;
     const row = document.getElementById('dock-bottom-row');
@@ -263,7 +252,6 @@ export function applyDockLayout() {
     }
     applyFilesLayout();
     applyExplorerSize(true);
-    applyLogAltura();
     if (state.btnDockRight) {
         state.btnDockRight.classList.toggle('text-[var(--oliva)]', isRight);
         state.btnDockRight.classList.toggle('text-[var(--text-suave)]', !isRight);
@@ -289,23 +277,11 @@ export function applyFilesLayout() {
     window.dispatchEvent(new CustomEvent('axio-explorer-layout', { detail: { colunas } }));
 }
 
-let timerDaAnimacaoDoDock = null;
-
 export function animateDock(dir) {
-    const alvo = state.explorerView;
-    if (!alvo) return;
-    limparAnimacaoDoDock();
-    void alvo.offsetWidth;
-    alvo.classList.add(dir === 'right' ? 'dock-anim-right' : 'dock-anim-bottom');
-    timerDaAnimacaoDoDock = setTimeout(limparAnimacaoDoDock, ANIMACAO_DO_DOCK_MS);
-}
-
-function limparAnimacaoDoDock() {
-    if (timerDaAnimacaoDoDock) {
-        clearTimeout(timerDaAnimacaoDoDock);
-        timerDaAnimacaoDoDock = null;
-    }
-    if (state.explorerView) state.explorerView.classList.remove('dock-anim-right', 'dock-anim-bottom');
+    if (!state.explorerView) return;
+    state.explorerView.classList.remove('dock-anim-right', 'dock-anim-bottom');
+    void state.explorerView.offsetWidth;
+    state.explorerView.classList.add(dir === 'right' ? 'dock-anim-right' : 'dock-anim-bottom');
 }
 
 let raizDoDock = null;
@@ -327,78 +303,50 @@ export function aplicarDockDeProjeto(agrupada, raiz) {
 export function initExplorerResizer() {
     if (!state.explorerResizer) return;
     state.explorerResizer.addEventListener('mousedown', (e) => {
-        const right = state.dockSide === 'right';
-        const inicio = right ? e.clientX : e.clientY;
-        const tamanhoInicial = state.explorerSize;
-        arrastarResizer(e, (ev) => {
-            const delta = (right ? ev.clientX : ev.clientY) - inicio;
-            const novo = Math.max(80, Math.min(700, tamanhoInicial - delta));
-            return () => {
-                state.explorerSize = novo;
-                applyExplorerSize(true);
-            };
-        }, () => applyExplorerSize());
-    });
-}
-
-export function initLogResizer() {
-    if (!state.logResizer) return;
-    state.logResizer.addEventListener('mousedown', (e) => {
-        const dock = state.logDock;
+        e.preventDefault();
         const dockRow = document.getElementById('dock-bottom-row');
-        if (!dock || !dockRow || state.dockSide !== 'right') return;
-        const inicio = e.clientY;
-        const alturaInicial = dock.getBoundingClientRect().height;
-        arrastarResizer(e, (ev) => {
-            const coluna = dockRow.getBoundingClientRect().height;
-            if (!coluna) return null;
-            const nova = alturaInicial - (ev.clientY - inicio);
-            const fracao = Math.max(0.1, Math.min(0.9, nova / coluna));
-            return () => {
-                state.logAltura = fracao;
-                applyLogAltura();
-            };
-        }, () => applyLogAltura());
-    });
-}
+        const right = state.dockSide === 'right';
+        const startPos = right ? e.clientX : e.clientY;
+        const startSize = state.explorerSize;
+        let rafId = null;
+        let pendingSize = null;
+        if (dockRow) dockRow.classList.add('resizing');
 
-function arrastarResizer(e, calcular, concluir) {
-    e.preventDefault();
-    const dockRow = document.getElementById('dock-bottom-row');
-    let rafId = null;
-    let pendente = null;
-    if (dockRow) dockRow.classList.add('resizing');
-
-    function flush() {
-        rafId = null;
-        if (!pendente) return;
-        const aplicar = pendente;
-        pendente = null;
-        aplicar();
-    }
-
-    function onMove(ev) {
-        const aplicar = calcular(ev);
-        if (!aplicar) return;
-        pendente = aplicar;
-        if (rafId === null) rafId = requestAnimationFrame(flush);
-    }
-
-    function onUp() {
-        if (rafId !== null) {
-            cancelAnimationFrame(rafId);
+        function flush() {
             rafId = null;
+            if (pendingSize === null) return;
+            state.explorerSize = pendingSize;
+            pendingSize = null;
+            applyExplorerSize(true);
         }
-        flush();
-        concluir();
-        persistDockPrefs();
-        if (dockRow) dockRow.classList.remove('resizing');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-    }
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+        function onMove(ev) {
+            const delta = (right ? ev.clientX : ev.clientY) - startPos;
+            let newSize = startSize - delta;
+            newSize = Math.max(80, Math.min(700, newSize));
+            pendingSize = newSize;
+            if (rafId === null) rafId = requestAnimationFrame(flush);
+        }
+
+        function onUp() {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            if (pendingSize !== null) {
+                state.explorerSize = pendingSize;
+                pendingSize = null;
+            }
+            applyExplorerSize();
+            persistDockPrefs();
+            if (dockRow) dockRow.classList.remove('resizing');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
 }
 
 export function openFileFromLog(path, snippet, diffData, asReadonly) {
@@ -940,7 +888,7 @@ const DOCK_PREFS_KEY = 'axio-dock-prefs';
 
 export function persistDockPrefs() {
     try {
-        localStorage.setItem(DOCK_PREFS_KEY, JSON.stringify({ side: state.dockSide, size: state.explorerSize, altura: state.logAltura }));
+        localStorage.setItem(DOCK_PREFS_KEY, JSON.stringify({ side: state.dockSide, size: state.explorerSize }));
     } catch (e) {}
 }
 
@@ -951,8 +899,6 @@ export function initDockPrefs() {
     if (saved.side === 'right' || saved.side === 'bottom') state.dockSide = saved.side;
     const tamanho = parseInt(saved.size, 10);
     if (!isNaN(tamanho)) state.explorerSize = Math.max(80, Math.min(700, tamanho));
-    const altura = parseFloat(saved.altura);
-    if (!isNaN(altura)) state.logAltura = Math.max(0.1, Math.min(0.9, altura));
 }
 
 export function applyDockTheme(theme) {
@@ -978,7 +924,6 @@ initDockPrefs();
 
 applyDockLayout();
 initExplorerResizer();
-initLogResizer();
 
 
 export function scheduleEditorLayout() {

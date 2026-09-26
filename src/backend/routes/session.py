@@ -25,7 +25,6 @@ from src.backend.services.session import (
     rastreados_fora_do_snapshot,
     varredura_dos_logs,
     caminho_checkpoint_state,
-    registar_restauro_de_codigo,
 )
 from src.backend.services import git_repo
 from src.backend.services.file_service import (
@@ -680,7 +679,6 @@ def session_restore():
 
     ponto = {}
     if alterados:
-        registar_restauro_de_codigo([a["nome"] for a in alterados])
         ponto = git_repo.registrar_restauro(
             pasta_raiz,
             git_repo.caminhos_do_repo(pasta_raiz, [a["nome"] for a in alterados]),

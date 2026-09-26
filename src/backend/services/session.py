@@ -157,53 +157,6 @@ def caminho_checkpoint_state():
         return ""
     return os.path.join(pasta_logs, "checkpoint_state.json")
 
-MARCA_RESTAURO_MAX = 40
-
-def carregar_marcas_de_restauro():
-    """Restauros de codigo do projeto (ts + nomes dos ficheiros), do mais antigo ao mais recente."""
-    caminho = _caminho_marca_de_restauro()
-    if not caminho:
-        return []
-    try:
-        with open(caminho, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-    except (OSError, ValueError):
-        return []
-    if not isinstance(dados, list):
-        return []
-    return [m for m in dados if isinstance(m, dict) and m.get("ts") and isinstance(m.get("nomes"), list)]
-
-def registar_restauro_de_codigo(ficheiros):
-    """Grava quais ficheiros um restauro repôs, e quando.
-
-    Um restauro devolve o codigo a uma versao anterior sem tocar na memoria de
-    longo prazo: as notas ficam a descrever codigo que ja nao esta la e o agente
-    so da por isso quando vai mexer nesse ficheiro. Esta marca e a ponte -
-    a curadoria da memoria cruza-a com as notas escritas antes do restauro que
-    citam estes ficheiros.
-    """
-    caminho = _caminho_marca_de_restauro()
-    limpos = [str(f).replace("\\", "/").strip() for f in (ficheiros or [])]
-    nomes = sorted({os.path.basename(f) for f in limpos if f})
-    if not caminho or not nomes:
-        return []
-    marcas = carregar_marcas_de_restauro()
-    marcas.append({"ts": time.time(), "nomes": nomes})
-    marcas = marcas[-MARCA_RESTAURO_MAX:]
-    try:
-        os.makedirs(os.path.dirname(caminho), exist_ok=True)
-        gravar_json_atomico(caminho, marcas)
-    except OSError as e:
-        print(f"[memoria] falha ao gravar a marca de restauro: {e}")
-        return []
-    return nomes
-
-def _caminho_marca_de_restauro():
-    pasta_logs = pasta_session_logs()
-    if not pasta_logs:
-        return ""
-    return os.path.join(pasta_logs, "restauros_codigo.json")
-
 def ts_de_arquivo_log(nome):
     try:
         return int(nome.replace("sessionlog_", "").replace(".json", ""))

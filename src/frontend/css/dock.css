@@ -189,9 +189,6 @@
 #editor-panel.dock-right #dock-bottom-row.resizing {
     transition: none;
 }
-#editor-panel.dock-right #dock-bottom-row.resizing #log-dock {
-    transition: none;
-}
 #log-dock {
     display: flex;
     flex-direction: row;
