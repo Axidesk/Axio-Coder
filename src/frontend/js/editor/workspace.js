@@ -11,6 +11,7 @@ import { fadeEditorSwap, fadeGutterSwap, revelarLinhaComRolagem, scheduleExplore
 import { state } from './state.js';
 
 const DOCK_ANIM_MS = 450;
+const ANIMACAO_DO_DOCK_MS = 600;
 
 self.MonacoEnvironment = {
     getWorkerUrl: function (moduleId, label) {
@@ -288,11 +289,23 @@ export function applyFilesLayout() {
     window.dispatchEvent(new CustomEvent('axio-explorer-layout', { detail: { colunas } }));
 }
 
+let timerDaAnimacaoDoDock = null;
+
 export function animateDock(dir) {
-    if (!state.explorerView) return;
-    state.explorerView.classList.remove('dock-anim-right', 'dock-anim-bottom');
-    void state.explorerView.offsetWidth;
-    state.explorerView.classList.add(dir === 'right' ? 'dock-anim-right' : 'dock-anim-bottom');
+    const alvo = state.explorerView;
+    if (!alvo) return;
+    limparAnimacaoDoDock();
+    void alvo.offsetWidth;
+    alvo.classList.add(dir === 'right' ? 'dock-anim-right' : 'dock-anim-bottom');
+    timerDaAnimacaoDoDock = setTimeout(limparAnimacaoDoDock, ANIMACAO_DO_DOCK_MS);
+}
+
+function limparAnimacaoDoDock() {
+    if (timerDaAnimacaoDoDock) {
+        clearTimeout(timerDaAnimacaoDoDock);
+        timerDaAnimacaoDoDock = null;
+    }
+    if (state.explorerView) state.explorerView.classList.remove('dock-anim-right', 'dock-anim-bottom');
 }
 
 let raizDoDock = null;
