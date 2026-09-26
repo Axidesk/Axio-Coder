@@ -224,6 +224,9 @@ export function handleCrumbClick(seg, isLast, data) {
     }
     changeTerminalCwd(seg.abs);
 }
+const CLASSE_RETICENCIA = 'explorer-crumb-elipse';
+let observadorDoCaminho = null;
+
 export function pintarCaminho(itens) {
     if (!state.explorerPath) return;
     const lista = itens || [];
@@ -249,6 +252,49 @@ export function pintarCaminho(itens) {
         }
     });
     state.explorerPath.title = lista.map(item => item.titulo || item.texto).join('\\');
+    garantirObservadorDoCaminho();
+    ajustarRetcenciasDoCaminho();
+}
+function ocultarCrumb(crumb, oculto) {
+    crumb.style.display = oculto ? 'none' : '';
+    const vizinho = crumb.nextElementSibling;
+    if (vizinho && vizinho.classList && vizinho.classList.contains('explorer-crumb-sep')) {
+        vizinho.style.display = oculto ? 'none' : '';
+    }
+}
+function ajustarRetcenciasDoCaminho() {
+    const barra = state.explorerPath;
+    if (!barra || !barra.querySelectorAll) return;
+    const anterior = barra.querySelector('.' + CLASSE_RETICENCIA);
+    if (anterior) anterior.remove();
+    const crumbs = barra.querySelectorAll('.explorer-crumb');
+    for (let i = 0; i < crumbs.length; i++) ocultarCrumb(crumbs[i], false);
+    if (crumbs.length < 2 || !barra.clientWidth || barra.scrollWidth <= barra.clientWidth) return;
+    const elipse = document.createElement('span');
+    elipse.className = CLASSE_RETICENCIA;
+    elipse.textContent = '…';
+    barra.insertBefore(elipse, crumbs[0]);
+    const escondidas = [];
+    for (let i = 0; i < crumbs.length - 1 && barra.scrollWidth > barra.clientWidth; i++) {
+        ocultarCrumb(crumbs[i], true);
+        escondidas.push(crumbs[i].textContent);
+    }
+    if (!escondidas.length) {
+        elipse.remove();
+        return;
+    }
+    for (let i = 0; i < crumbs.length; i++) {
+        if (crumbs[i].style.display === 'none') continue;
+        const antes = crumbs[i].previousElementSibling;
+        if (antes && antes.classList && antes.classList.contains('explorer-crumb-sep')) antes.style.display = '';
+        break;
+    }
+    elipse.title = escondidas.join('\\');
+}
+function garantirObservadorDoCaminho() {
+    if (observadorDoCaminho || !state.explorerPath || typeof ResizeObserver === 'undefined') return;
+    observadorDoCaminho = new ResizeObserver(() => ajustarRetcenciasDoCaminho());
+    observadorDoCaminho.observe(state.explorerPath);
 }
 export function updateExplorerPath(data) {
     if (!state.explorerPath || !data) return;

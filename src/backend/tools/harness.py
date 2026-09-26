@@ -152,6 +152,27 @@ const funcaoDoDisco = (rel, nome) => {
 
 const funcoesDoDisco = (rel, ...nomes) => nomes.map((n) => funcaoDoDisco(rel, n)).join(String.fromCharCode(10));
 
+// As declaracoes de TOPO do modulo (module-locals) que uma funcao extraida fecha
+// por cima: funcoesDoDisco traz so a funcao, e escrever a mao `let x = false;` no
+// teste e o caminho para o teste provar uma regra que ja nao e a do disco. So
+// devolve o que cabe NUMA linha e termina em ';' - uma declaracao partida em
+// varias linhas e RECUSADA com o texto a vista, em vez de copiada as cegas.
+//   const preludio = declaracoesDoDisco("src/frontend/js/editor/workspace.js", "arvoreAgrupada", "raizDoDock");
+const declaracoesDoDisco = (rel, ...nomes) => {
+    const caminho = path.isAbsolute(rel) ? rel : path.join(process.cwd(), rel);
+    const linhas = fs.readFileSync(caminho, "utf8").split(String.fromCharCode(10));
+    return nomes.map((nome) => {
+        const inicio = new RegExp("^(?:let|const|var) " + nome + "[^A-Za-z0-9_$]");
+        const i = linhas.findIndex((l) => inicio.test(l));
+        if (i < 0) throw new Error("declaracao de topo nao encontrada: " + nome + " em " + rel);
+        const linha = linhas[i].trim();
+        if (!linha.endsWith(";")) {
+            throw new Error("a declaracao de " + nome + " em " + rel + " nao cabe numa linha (" + linha + "): copia-a a mao deste ficheiro");
+        }
+        return linha;
+    }).join(String.fromCharCode(10));
+};
+
 // O que a funcao extraida chama de FORA: os nomes que ela usa e nao declara
 // dentro. E a resposta a "o que tenho de injetar no new Function?", em vez de a
 // descobrir um ReferenceError de cada vez:
@@ -1610,7 +1631,9 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "mesmo balanceamento do funcaoDoDisco, e use funcaoMudou('HEAD~1', 'src/x.js', 'nomear') para saber "
     "se ela mudou (compara disco e revisao ja ignorando o CRLF do disco contra o LF do git, que num === "
     "cru acusa mudanca numa funcao identica). Assim o modelo testa a regra antiga lida do git em vez de "
-    "a reescrever de memoria. "
+    "a reescrever de memoria. Para uma funcao que fecha por cima de uma variavel de MODULO (module-local) "
+    "use declaracoesDoDisco('src/x.js', 'arvoreAgrupada', 'raizDoDock'): devolve essas linhas de topo "
+    "verbatim do disco - e recusa as que nao cabem numa linha - em vez de as reescrever a mao no teste. "
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
     "appendChild soltam o no do pai, className e classList sao a mesma fonte, toggle respeita a "

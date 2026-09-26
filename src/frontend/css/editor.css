@@ -496,6 +496,13 @@ body.theme-espacial .explorer-migalha {
     white-space: nowrap;
     user-select: none;
 }
+.explorer-path .explorer-crumb-elipse {
+    color: var(--text-mutado);
+    opacity: 0.55;
+    white-space: nowrap;
+    user-select: none;
+    flex-shrink: 0;
+}
 #ws-shell-arrow.ws-shell-arrow {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;

@@ -4,7 +4,7 @@ import { aplicarDockDeProjeto, applyTabsVisibility, layoutAllEditors } from './w
 import { atualizarSugestoes } from './terminal_cards.js';
 import { state } from './state.js';
 import { abreNoViewer } from './familia_ficheiro.js';
-import { alternarOcultos, aoMudarOcultos, mostrandoOcultos } from '../pastas_ocultas.js';
+import { alternarOcultos, aoMudarOcultos, mostrandoOcultos } from '/js/pastas_ocultas.js';
 
 const VALIDADE_DA_LISTA_MS = 6000;
 const MAX_PASTAS_LISTADAS = 24;

@@ -261,12 +261,18 @@ export function applyDockLayout() {
     }, DOCK_ANIM_MS);
 }
 
-export function applyFilesLayout() {
-    if (!state.explorerTree) return;
-    const colunas = state.dockSide !== 'right';
+function sincronizarColunas() {
+    if (!state.explorerTree) return null;
+    const colunas = arvoreAgrupada && state.dockSide !== 'right';
     const mudou = state.explorerTree.classList.contains('files-colunas') !== colunas;
     state.explorerTree.classList.toggle('files-colunas', colunas);
-    if (mudou) window.dispatchEvent(new CustomEvent('axio-explorer-layout', { detail: { colunas } }));
+    return mudou ? colunas : null;
+}
+
+export function applyFilesLayout() {
+    const colunas = sincronizarColunas();
+    if (colunas === null) return;
+    window.dispatchEvent(new CustomEvent('axio-explorer-layout', { detail: { colunas } }));
 }
 
 export function animateDock(dir) {
@@ -277,14 +283,19 @@ export function animateDock(dir) {
 }
 
 let raizDoDock = null;
+let arvoreAgrupada = false;
 
 export function aplicarDockDeProjeto(agrupada, raiz) {
-    if (agrupada === undefined || raiz === raizDoDock) return;
-    raizDoDock = raiz;
-    if (!agrupada || state.dockSide === 'right') return;
-    state.dockSide = 'right';
-    applyDockLayout();
-    persistDockPrefs();
+    if (agrupada !== undefined) arvoreAgrupada = agrupada;
+    if (agrupada !== undefined && raiz !== raizDoDock) {
+        raizDoDock = raiz;
+        if (agrupada && state.dockSide !== 'right') {
+            state.dockSide = 'right';
+            applyDockLayout();
+            persistDockPrefs();
+        }
+    }
+    sincronizarColunas();
 }
 
 export function initExplorerResizer() {
