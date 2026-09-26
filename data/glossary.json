@@ -466,8 +466,8 @@
         "arquivo": "src/backend/tools/syntax.py",
         "linha": 581,
         "conferido": [
-          1790370079.66,
-          29491
+          1790435995.695,
+          31696
         ]
       }
     },
@@ -823,10 +823,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 663,
+        "linha": 715,
         "conferido": [
-          1790370079.66,
-          29491
+          1790435995.695,
+          31696
         ]
       }
     },
@@ -5189,10 +5189,10 @@
       "descricao": "Modo da arvore na doc HORIZONTAL quando a lista tem grupos (CMake/sln): cada NIVEL da navegacao e uma COLUNA a direita, no desenho do Finder - a pasta clicada fica realcada e a coluna seguinte mostra os filhos dela; clicar outra vez na mesma pasta fecha as colunas a direita. Cada coluna rola sozinha (overflow-y auto) e a ULTIMA estica para nao deixar vazio; o painel NAO ganha barra vertical. Ligado por applyFilesLayout (src/frontend/js/editor/workspace.js:applyFilesLayout) e montado por renderColunasExplorer/abrirColunaDePasta (src/frontend/js/editor/explorer.js).",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 312,
+        "linha": 332,
         "conferido": [
-          1790428506.183,
-          28310
+          1790435815.064,
+          28856
         ]
       }
     },
@@ -5208,10 +5208,10 @@
       "descricao": "Cabecalho com o NOME da pasta no topo de cada coluna nascida de uma pasta no doc horizontal. O nome nao se repete como linha dentro da coluna.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 351,
+        "linha": 371,
         "conferido": [
-          1790428506.183,
-          28310
+          1790435815.064,
+          28856
         ]
       }
     },
@@ -5246,10 +5246,10 @@
       "descricao": "A pasta que abriu a coluna seguinte fica com o icone AZUL (o nome nao muda de cor). E o unico azul da arvore.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 369,
+        "linha": 389,
         "conferido": [
-          1790428506.183,
-          28310
+          1790435815.064,
+          28856
         ]
       }
     },
@@ -5371,10 +5371,10 @@
       "descricao": "Na doc horizontal (dock em baixo) e fora do modo colunas (projeto cmake), a lista do explorer vira flex column com flex-wrap: os ficheiros descem e, ao bater no limite inferior da janela, abrem uma coluna nova a direita (como o ambiente de trabalho do Windows). Quem poe a classe e sincronizarColunas em workspace.js; so o modo cmake (files-colunas) tem o scroll horizontal.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 295,
+        "linha": 315,
         "conferido": [
-          1790428506.183,
-          28310
+          1790435815.064,
+          28856
         ]
       }
     },
@@ -5428,17 +5428,15 @@
         "caminho do erro clicavel",
         "clicar no erro do compilador",
         "link do erro no card",
-        "erro que abre o ficheiro"
+        "erro que abre o ficheiro",
+        "erro que aponta a linha",
+        "erro clicavel no terminal"
       ],
       "identificador": "fragmentoDeSaida / .term-diag",
-      "descricao": "Linha da saida de um card de terminal que traz um ficheiro:linha (ficheiro.cpp(12), ficheiro.cpp:12:34, CMakeLists.txt:3, ou um traceback de Python). O clique abre o ficheiro naquela linha no Monaco. So fica clicavel o que EXISTE no disco (resolucao contra o cwd do card + fs.existsSync); o resto fica texto normal. A saida e pintada por linha COMPLETA: uma linha cortada a meio entre dois pedacos do processo nao acende metade.",
+      "descricao": "Marca ficheiro:linha na saida de qualquer processo do card; o clique abre o ficheiro naquela linha no Monaco (WorkspaceView.openFileAtLine). Reconhece caminho(L,C), caminho:L:C, [caminho @ L] da stack do cdb e File \"caminho\", line L do Python, e aceita ESPACOS no caminho. So o que existe no disco fica clicavel. ATENCAO: o card so pinta o conteudo quando esta ABERTO - fechado nao ha alvo nenhum para clicar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/diagnosticos.js",
-        "linha": 126,
-        "conferido": [
-          1790434486.481,
-          5344
-        ]
+        "linha": 163
       }
     },
     {
@@ -5459,10 +5457,10 @@
       "descricao": "Abre o executavel construido sob o cdb (depurador de consola do Windows SDK, em builds/depurar.py) num CARD do terminal, com os pontos de paragem ficheiro:linha ja marcados. A sessao e conduzida pelo parametro 'comandos' (k, dv /t /v, ?? variavel, l+s, p, t, g, q): sem 'breakpoints', os comandos vao para a sessao que ja esta aberta e a resposta volta no retorno da ferramenta. O cdb e lancado com -lines e a preparacao liga l+t/l+s, por isso cada paragem mostra a linha de origem.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 197,
+        "linha": 189,
         "conferido": [
-          1790435206.369,
-          22782
+          1790436203.712,
+          22808
         ]
       }
     },
@@ -5480,7 +5478,11 @@
       "descricao": "Clicar nos 16px da margem do editor marca/tira um ponto de paragem (bolinha vermelha). Vive na faixa do folding que ja existia - nada de glyph margin, logo o recuo do codigo nao muda. Por projeto (state.rootPath). A lista sai em pontosDeParagem() no formato nome:linha;nome:linha, lido por builds/depurar.py:pontos.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/pontos_paragem.js",
-        "linha": 4
+        "linha": 4,
+        "conferido": [
+          1790435866.482,
+          3944
+        ]
       }
     },
     {
@@ -5495,7 +5497,11 @@
       "descricao": "Aviso que aparece no retorno de qualquer edicao de um .py (CHECKLIST ESTRUTURAL) quando uma chamada a funcao do proprio modulo usa uma palavra-chave que a assinatura dela nao tem. A sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta - foi o caso do _texto_depuracao(registo_id=) contra def _texto_depuracao(registro_id,...). Nao bloqueia a escrita; confirma no codigo real e acerta a chamada ou a assinatura.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 655
+        "linha": 655,
+        "conferido": [
+          1790435995.695,
+          31696
+        ]
       }
     }
   ]

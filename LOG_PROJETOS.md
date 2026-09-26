@@ -701,6 +701,39 @@ motor de depuração.
 - Fora do plano, dito em voz alta: **profiler** (VTune/perf), **depuração remota** (`msvsmon` existe,
       mas é outro desenho) e time-travel. Não se constroem a reboque.
 
+## O clique no erro e a bolinha, provados na janela — e o defeito que isso revelou (2026-10-06, 2ª parte)
+
+Testado A CORRER na janela do Axio, não em laboratório. Criou-se `gerados/prova-erros/`
+(CMakeLists + `main.cpp` com um `;` em falta), construiu-se pela ferramenta, e o card do erro
+apareceu com o caminho a azul. Clicar nele abriu `main.cpp` na **linha 6, coluna 1** — exactamente
+onde o `cl` apontou. A bolinha foi provada no mesmo molde: clique real sobre a margem da linha 5
+do `PLANO.md` -> `cldr ponto-paragem` no DOM, 9x9px a `rgb(229,72,77)`, guardado como
+`PLANO.md:5`; o segundo clique tirou-o.
+
+**O defeito que isto revelou (grave, e atingia TODOS os projetos).** O `RE_ALVO` do
+`src/frontend/js/editor/diagnosticos.js` exigia segmentos de caminho sem espaços. A pasta base de
+todos os projetos deste utilizador é `D:\Dropbox\2 - Startup\CODER` — com espaços. Nenhum erro
+do compilador era clicável, em projeto nenhum, e não se notava porque o sintoma é o silêncio
+(nada fica azul). O `fs.existsSync` que devia validar nunca era consultado: o caminho nem era
+reconhecido como caminho.
+
+Substituiu-se o regex único por ANCORA + RECOLHA PARA TRÁS (`_recolherParaTras`): procura-se a
+posição (`(L,C)`, `:L:C`, `@ L`, `line L`) e recolhe-se o caminho caractere a caractere até um
+delimitador forte. O espaço passa a ser parte legítima do caminho; o `:` só é recuperado quando é
+a letra do drive. Ficou também reconhecido o **`[caminho @ L]` da stack do cdb** — clicar num
+quadro da pilha abre o ficheiro na linha, que é o que faltava dentro de um depurador.
+
+Medido depois: 2000 linhas de stack -> 2000 alvos em 6 ms; 2000 linhas de `ModLoad: ...dll` ->
+ZERO falsos positivos em 2 ms; linha de 400 000 caracteres -> 0 ms.
+
+**Armadilhas de teste que isto deixou** (custaram conclusões erradas a meio): (a) `_pintar(card)`
+sai cedo se o card NÃO estiver aberto, logo procurar `.term-diag` com o card fechado dá ZERO e
+isso não é avaria — é o desenho; (b) com o terminal escondido atrás do editor, a própria
+`#term-cards` mede 0x0 e um clique por seletor cai em (0,0) — medir a caixa antes de clicar.
+
+Limite aceite: `CMake Error at CMakeLists.txt:3 (project):` recolhe o prefixo e não resolve.
+Cortar prefixos por heurística traria falsos positivos piores que a oportunidade perdida.
+
 ## Erros do compilador clicáveis — o que o compilador escreve, medido (2026-10-06)
 
 Fecha a Fase 1. `builds/diagnosticos.py` lê a saída de um build e devolve cada erro com ficheiro,

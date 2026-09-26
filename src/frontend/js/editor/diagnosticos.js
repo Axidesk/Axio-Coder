@@ -9,8 +9,12 @@ const EXTENSOES = new Set([
     'bat', 'cmd', 'ps1', 'sh', 'sql', 'csv', 'ini', 'conf', 'env'
 ]);
 
-const RE_ALVO = /((?:[A-Za-z]:[\\/])?(?:[^\\/\s()<>"':]+[\\/])*[^\\/\s()<>"':]+\.([A-Za-z0-9]{1,10}))[\(\:](\d{1,6})(?:[,:](\d{1,6}))?[\)\:]?/g;
 const RE_TRACO = /File "([^"]+\.([A-Za-z0-9]{1,10}))", line (\d{1,6})/g;
+const RE_PARENTESES = /\((\d{1,6})(?:\s*,\s*(\d{1,6}))?\)/g;
+const RE_DOIS_PONTOS = /:(\d{1,6})(?::(\d{1,6}))?/g;
+const RE_ARROBA = /\[\s*(.+?)\s+@\s+(\d{1,6})\s*\]/g;
+const PARAGEM = new Set(['"', "'", '<', '>', '|', '*', '?', '(', ')', ';', ',', '=', '\n', '\r']);
+const LIMITE_CAMINHO = 400;
 
 const LIMITE_CACHE = 600;
 const LIMITE_LINHA = 1000;
@@ -30,19 +34,52 @@ function _varredura(linha, re) {
     return achados;
 }
 
+function _extensao(texto) {
+    const m = /\.([A-Za-z0-9]{1,10})$/.exec(texto);
+    return m ? m[1] : '';
+}
+
+function _recolherParaTras(linha, fim) {
+    let i = fim;
+    while (i > 0 && fim - i < LIMITE_CAMINHO) {
+        const c = linha[i - 1];
+        if (PARAGEM.has(c)) break;
+        if (c === ':') {
+            const letra = linha[i - 2] || '';
+            const antes = i >= 3 ? linha[i - 3] : '';
+            if (/[A-Za-z]/.test(letra) && (i === 2 || /[\s\[>"'=(\\/]/.test(antes))) i -= 2;
+            break;
+        }
+        i -= 1;
+    }
+    const bruto = linha.slice(i, fim);
+    return { inicio: i + (bruto.length - bruto.trimStart().length), texto: bruto.trim() };
+}
+
 function _candidatos(linha) {
     const achados = [];
-    _varredura(linha, RE_ALVO).forEach((a) => achados.push({
-        inicio: a.inicio, fim: a.fim, caminho: a.m[1], ext: a.m[2],
-        linha: parseInt(a.m[3], 10) || 0, coluna: parseInt(a.m[4], 10) || 0
-    }));
-    _varredura(linha, RE_TRACO).forEach((a) => achados.push({
-        inicio: a.inicio, fim: a.fim, caminho: a.m[1], ext: a.m[2],
-        linha: parseInt(a.m[3], 10) || 0, coluna: 0
-    }));
-    return achados
-        .filter((a) => EXTENSOES.has(String(a.ext).toLowerCase()))
-        .sort((a, b) => a.inicio - b.inicio);
+    const juntar = (inicio, fim, caminho, nLinha, nColuna) => {
+        const ext = _extensao(caminho);
+        if (!caminho || !ext || !EXTENSOES.has(ext.toLowerCase())) return;
+        achados.push({ inicio, fim, caminho, ext, linha: nLinha || 0, coluna: nColuna || 0 });
+    };
+    _varredura(linha, RE_PARENTESES).forEach((a) => {
+        const r = _recolherParaTras(linha, a.inicio);
+        juntar(r.inicio, a.fim, r.texto, parseInt(a.m[1], 10), parseInt(a.m[2], 10));
+    });
+    _varredura(linha, RE_DOIS_PONTOS).forEach((a) => {
+        const r = _recolherParaTras(linha, a.inicio);
+        juntar(r.inicio, a.fim, r.texto, parseInt(a.m[1], 10), parseInt(a.m[2], 10));
+    });
+    _varredura(linha, RE_ARROBA).forEach((a) => {
+        const bruto = a.m[1];
+        const inicio = a.m.index + 1 + (bruto.length - bruto.trimStart().length);
+        juntar(inicio, a.fim, bruto.trim(), parseInt(a.m[2], 10), 0);
+    });
+    _varredura(linha, RE_TRACO).forEach((a) => {
+        juntar(a.inicio, a.fim, a.m[1], parseInt(a.m[3], 10), 0);
+    });
+    return achados.sort((a, b) => a.inicio - b.inicio);
 }
 
 function _modulo(nome) {
