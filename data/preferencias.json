@@ -99,6 +99,16 @@
       "area": "janela",
       "texto": "A vista do doc NAO muda sozinha - nem para o editor nem para o preview. O que corre por SSE/timer atualiza o painel por dentro (repintarCol3Aberta) e nunca abre a camada; abrir a coluna 3 (abrirCol3/openCol3Panel) arrasta a vista para o editor, logo so pode partir de um clique do utilizador. O terminal continua a aparecer sozinho quando a IA usa processos (showWorkspaceView), mas nunca enquanto ele escreve no input do chat.",
       "atualizado": "2026-09-26 14:57:23"
+    },
+    {
+      "area": "recarga",
+      "texto": "NUNCA recarregar a janela do Axio no fim da rodada (nem por Ctrl+Shift+B nem por recarga direta) sem que a resposta em texto ja esteja entregue e visivel. A recarga apaga a mensagem do chat e o utilizador perde as consideracoes da rodada - ele nao as ve no chat nem as reencontra no historico. Se o codigo novo precisar mesmo de recarga para ser testado, AVISAR numa linha ANTES de a fazer e, se possivel, deixar o teste para o fim da resposta, depois do texto escrito. Preferencia dada em 2026-10-06.",
+      "atualizado": "2026-09-26 22:39:36"
+    },
+    {
+      "area": "provas",
+      "texto": "Antes de afirmar que algo funciona (ou que esta quebrado), MEDIR o caminho real de ponta a ponta - nunca deduzir do codigo lido nem de um exemplo parecido. Provar comportamento: tool_executar_python / tool_executar_js sobre a FUNCAO lida do disco; provar o depurador: pdb/processo a serio; provar a pagina: preview/janela reais (tool_observar_preview / tool_operar_preview). ANTES de acusar um defeito, provar que o defeito e do codigo e nao do teste: (a) usar a MESMA instancia que o codigo real usa (importar modulos do Axio pelo caminho errado carrega uma copia a parte e o teste mede um modulo vazio - ex: usar builds.depurar, nao um import novo); (b) limpar o estado global entre casos (o leitor do depurador acumula, e um caso contamina o seguinte); (c) estado que aparece vazio no fim do teste e suspeito - confirmar com um espiao (traceback de quem escreve) ANTES de reportar bug, porque pode ser efeito do proprio fluxo. Reportar 'falhou' sem reproducao do caminho real e pior do que nao testar: e um falso positivo, e queima a confianca do utilizador.",
+      "atualizado": "2026-09-26 23:18:06"
     }
   ]
 }
