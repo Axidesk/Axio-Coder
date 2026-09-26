@@ -234,6 +234,17 @@ const funcaoDoGit = (rev, rel, nome) => {
 };
 
 const funcoesDoGit = (rev, rel, ...nomes) => nomes.map((n) => funcaoDoGit(rev, rel, n)).join(String.fromCharCode(10));
+
+// A pergunta que se faz mesmo ("esta funcao mudou desde aquela revisao?"), com o
+// fim de linha neutralizado: o working tree do Windows tem CRLF e o blob do git
+// guarda LF, logo um === cru entre os dois textos acusa mudanca numa funcao
+// identica (medido: a diferenca comeca sempre no primeiro retorno de carro, que
+// cai no byte 36 do corpo de uma funcao curta).
+//   funcaoMudou("HEAD~1", "src/frontend/js/x.js", "nomear")   // -> true/false
+const funcaoMudou = (rev, rel, nome) => {
+    const limpar = (t) => t.split(String.fromCharCode(13) + String.fromCharCode(10)).join(String.fromCharCode(10));
+    return limpar(funcaoDoGit(rev, rel, nome)) !== limpar(funcaoDoDisco(rel, nome));
+};
 '''
 
 _DOM_FALSO_JS = r'''
@@ -1596,7 +1607,9 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "SEM shell, por isso o '%' de um --pretty=format:%cI chega intacto (num execSync do Windows o cmd.exe "
     "come-o e o erro nao aponta para o formato). Para comparar o MESMO codigo antes e depois de uma "
     "mudanca use funcoesDoGit('HEAD', 'src/x.js', 'nomear') - extrai a funcao da revisao do git com o "
-    "mesmo balanceamento do funcaoDoDisco, e assim o modelo testa a regra antiga lida do git em vez de "
+    "mesmo balanceamento do funcaoDoDisco, e use funcaoMudou('HEAD~1', 'src/x.js', 'nomear') para saber "
+    "se ela mudou (compara disco e revisao ja ignorando o CRLF do disco contra o LF do git, que num === "
+    "cru acusa mudanca numa funcao identica). Assim o modelo testa a regra antiga lida do git em vez de "
     "a reescrever de memoria. "
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
