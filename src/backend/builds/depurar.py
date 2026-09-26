@@ -244,15 +244,36 @@ def _importados_por(caminho):
     """Os nomes de modulo que um ficheiro importa, pelo primeiro pedaco de cada um."""
     try:
         with open(caminho, "r", encoding="utf-8", errors="replace") as ficheiro:
-            arvore = ast.parse(ficheiro.read())
-    except (OSError, SyntaxError, ValueError):
+            texto = ficheiro.read()
+    except OSError:
         return set()
+    try:
+        arvore = ast.parse(texto)
+    except (SyntaxError, ValueError):
+        return _importados_do_texto(texto)
     nomes = set()
     for no in ast.walk(arvore):
         if isinstance(no, ast.Import):
             nomes |= {apelido.name.split(".")[0].lower() for apelido in no.names}
         elif isinstance(no, ast.ImportFrom) and no.module and not no.level:
             nomes.add(no.module.split(".")[0].lower())
+    return nomes
+
+
+def _importados_do_texto(texto):
+    """Os imports de um ficheiro que nao compila, lidos das linhas."""
+    nomes = set()
+    for linha in texto.splitlines():
+        pedacos = linha.strip().split()
+        if len(pedacos) >= 2 and pedacos[0] == "import":
+            alvo = pedacos[1]
+        elif len(pedacos) >= 3 and pedacos[0] == "from" and pedacos[2].startswith("import"):
+            alvo = pedacos[1]
+        else:
+            continue
+        nome = alvo.rstrip(",").split(".")[0].lower()
+        if nome:
+            nomes.add(nome)
     return nomes
 
 
