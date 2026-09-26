@@ -23,6 +23,9 @@ COMANDOS_UTEIS = (
     ("q", "sai do depurador e fecha o programa"),
 )
 
+LINHA_DO_CARD = ("[axio] neste card: g continuar | p passo | t entrar | gu sair | "
+                 "k pilha | dv /t /v variaveis | ?? expr | q sair")
+
 
 def cdb():
     """O depurador de consola do Windows SDK (cdb.exe), preferindo o x64."""

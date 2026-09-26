@@ -624,19 +624,19 @@ def _anexar_log_processo(pid, linha):
     if len(reg["log"]) > 2000:
         reg["log"] = reg["log"][-2000:]
 
-def _registrar_linha_processo(pid, linha):
+def registrar_linha_processo(pid, linha):
     emit_event("process_output", pid=pid, line=linha)
     _anexar_log_processo(pid, linha)
 
 def _abrir_quando_pronto(pid, porta):
     url = f"http://127.0.0.1:{porta}"
     if not _porta_responde(porta, timeout=30):
-        _registrar_linha_processo(pid, f"[axio] servidor não respondeu em 30s; abra manualmente: {url}")
+        registrar_linha_processo(pid, f"[axio] servidor não respondeu em 30s; abra manualmente: {url}")
         return
     if _abrir_navegador(url):
-        _registrar_linha_processo(pid, f"[axio] navegador aberto em {url}")
+        registrar_linha_processo(pid, f"[axio] navegador aberto em {url}")
     else:
-        _registrar_linha_processo(pid, f"[axio] não consegui abrir o navegador; abra manualmente: {url}")
+        registrar_linha_processo(pid, f"[axio] não consegui abrir o navegador; abra manualmente: {url}")
 
 
 @register(

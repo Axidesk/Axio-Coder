@@ -4,7 +4,8 @@ import time
 from src.backend.builds import construir, depurar, detetar, diagnosticos, instalar, kits
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
-from src.backend.tools.process import correr_como_card, escrever_stdin_processo, iniciar_processo
+from src.backend.tools.process import (correr_como_card, escrever_stdin_processo, iniciar_processo,
+                                       registrar_linha_processo)
 from src.backend.tools.registry import register
 
 
@@ -213,6 +214,7 @@ def _depurar(pasta, configuracao, breakpoints, comandos=""):
     except OSError as e:
         return f"ERRO: nao consegui abrir o depurador ({e})."
     depurar.guardar_sessao(registo["id"], executavel)
+    registrar_linha_processo(registo["id"], depurar.LINHA_DO_CARD)
     escritos = depurar.preparacao(pontos_de_paragem)
     for escrito in escritos:
         escrever_stdin_processo(registo["id"], escrito)
