@@ -1,6 +1,8 @@
 import os
 import sys
 
+from src.backend.builds import leitura_depurador
+
 _PASTA_DEPURADORES = ("Windows Kits/10/Debuggers", "Windows Kits/11/Debuggers")
 _ARQUITETURAS = ("x64", "x86", "arm64", "arm")
 _VENVS = (".venv", "venv", "env")
@@ -215,17 +217,23 @@ def preparacao_python(pontos, script):
 
 
 SESSAO = {"id": "", "executavel": ""}
+JANELA_DA_LEITURA = 80
+_LEITURA = {"sobre": {}, "assinatura": ""}
 
 
 def guardar_sessao(registo_id, executavel):
     """Anota a sessao aberta, para os comandos seguintes irem para o mesmo card."""
     SESSAO["id"] = registo_id
     SESSAO["executavel"] = executavel
+    _LEITURA["sobre"] = {}
+    _LEITURA["assinatura"] = ""
 
 
 def esquecer_sessao():
     SESSAO["id"] = ""
     SESSAO["executavel"] = ""
+    _LEITURA["sobre"] = {}
+    _LEITURA["assinatura"] = ""
 
 
 def sessao_aberta():
@@ -236,6 +244,17 @@ def sessao_aberta():
 def card_da_sessao():
     """O card onde a sessao de depuracao esta aberta."""
     return SESSAO["id"]
+
+
+def leitura_nova(texto):
+    """Le a saida do depurador e devolve, em linguagem simples, o que ela diz - so quando muda."""
+    _LEITURA["sobre"] = leitura_depurador.leitura(texto, _LEITURA["sobre"])
+    novas = leitura_depurador.linhas(_LEITURA["sobre"])
+    assinatura = "\n".join(novas)
+    if not novas or assinatura == _LEITURA["assinatura"]:
+        return []
+    _LEITURA["assinatura"] = assinatura
+    return novas
 
 
 def texto_dos_comandos():

@@ -497,9 +497,21 @@ def _conduzir_depuracao(comandos):
         resposta = _esperar_resposta(registo_id, desde)
         blocos.append(f"  > {comando}")
         blocos += [f"    {linha}" for linha in resposta] or ["    (sem resposta)"]
+    lida = _mostrar_leitura(registo_id)
+    if lida:
+        blocos.append("Em linguagem simples:\n" + "\n".join(f"  {linha}" for linha in lida))
     blocos.append("Se um comando deixar o programa a correr, a resposta continua a chegar ao card: as "
                   "ultimas linhas dela saem com tool_listar_processos(saida=N).")
     return "\n".join(blocos)
+
+def _mostrar_leitura(registo_id):
+    """Poe no card, em linguagem simples, o que a saida recente do depurador diz."""
+    desde = _tamanho_da_saida(registo_id) - depurar.JANELA_DA_LEITURA
+    lida = depurar.leitura_nova("\n".join(_linhas_do_card(registo_id, desde)))
+    for linha in lida:
+        registrar_linha_processo(registo_id, linha)
+    return lida
+
 
 def _tamanho_da_saida(registo_id):
     return len((estado.get("processos", {}).get(registo_id) or {}).get("log") or [])

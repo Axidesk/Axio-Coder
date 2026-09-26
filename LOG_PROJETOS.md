@@ -967,6 +967,49 @@ ficheiros levam caminho — e aí real, completo.
 - O `app.py` do próprio Axio é depurável, mas parar em `app.py:62` e seguir com `c` arranca uma
   SEGUNDA instância, com o `iniciar_vigia_do_envio` a correr por cima. Ver com `p`/`n`/`q`, nunca com `c`.
 
+## O depurador a falar português — o texto cru fica, ao lado nasce a leitura (2026-10-06)
+
+O utilizador olhou para o card e disse-o sem rodeios: "aparece isso tudo mas eu n entendi um caralho".
+O dump do `cdb` tem cerca de trinta linhas e três interessam; o do `pdb` é igual. A resposta **não** é
+traduzir o dump nem escondê-lo atrás de uma janela: o texto cru fica, porque quem sabe ler precisa dele
+e escondê-lo camuflaria o problema. O que faltava era uma **leitura** ao lado do cru — e é isso que
+existe agora, escrita no próprio card:
+
+    [axio] parou em main.cpp:12  ->  total = somar(total, numeros[i]);
+    [axio] porque: ponto de paragem 0
+    [axio] valores: i = 0  ·  ponteiro = 0xcccccccccccccccc (padrao repetido - enchimento de memoria por usar)  ·  numeros = { size=3 }  ·  total = 0
+    [axio] quem chamou: main.cpp:12 <- exe_common.inl:79
+
+O leitor vive em `src/backend/builds/leitura_depurador.py` (só texto entra, só texto sai: não sabe o que
+é um processo, e é isso que o torna testável contra qualquer dump), o estado da sessão em
+`depurar.leitura_nova` e a escrita no card em `tools/builds.py:_mostrar_leitura`.
+
+### O que a prova apanhou (e que sem ela ficava lá)
+
+- **Cada prompt come a primeira linha da resposta.** O `cdb` escreve `0:000> ` antes da primeira linha e
+  o `pdb` escreve `(Pdb) `. Como o padrão de cada linha é ancorado no princípio, a linha que interessa —
+  a primeira — era a única que nunca casava: o `i = 0` desaparecia da lista e o `Breakpoint 0 hit` nunca
+  era lido (e a leitura dizia "arranque do programa"). Uma regex resolve os dois.
+- **A paragem de arranque do cdb não é avaria.** `Break instruction exception - code 80000003` é ele a
+  parar uma vez ao carregar; dizê-la como uma queda seria assustar sem razão. Só o `c0000005`
+  (Access violation) é levado a sério — e aí a leitura explica-o: "o programa mexeu numa memoria que não
+  era dele".
+- **O `0n0` do cdb é decimal.** O prefixo `0n` mostra-se como `0`, não como um número mágico.
+- **O cdb não diz o ficheiro na linha da paragem** (`>   12:` só tem o número): o nome sai do quadro da
+  pilha com a mesma linha. No pdb, quando não há um `w` na saída recente, a leitura diz "linha 62" sem
+  ficheiro — honesto em vez de inventado.
+- **O que se vê numa paragem não vale para a seguinte.** Uma paragem numa linha NOVA limpa as variáveis e
+  a pilha, senão a leitura mostrava valores de três passos antes como se fossem de agora.
+- **A leitura não repete nem se perde.** A mesma leitura não se escreve duas vezes (assinatura guardada) e
+  a janela são as últimas 80 linhas do card, não só a resposta do último comando: foi uma prova que
+  mostrou que um `w` que chega depois do tempo de espera se perdia por completo.
+
+### O que continua a faltar
+
+A leitura aparece quando **eu** conduzo a sessão. Se o utilizador escrever no campo do card com o card
+selecionado, só o depurador responde — falta o controlo à mão (continuar/passo/entrar/sair) que leia o
+card a toda a hora. É a peça seguinte, já pedida por ele.
+
 ## O que NÃO se faz
 
 - Não se reorganizam as pastas do projeto do utilizador (ver decisão 2).
