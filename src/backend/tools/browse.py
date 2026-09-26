@@ -11,6 +11,7 @@ from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, entradas_diretorio, resumo_entradas, normalizar_unicode, buscar_em_revisao, PASTAS_FORA_DA_BUSCA, EXT_FORA_DA_BUSCA
 
 LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
+LIMITE_EXCERTO = 200
 
 
 def _formato_tamanho(num):
@@ -171,7 +172,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
                 return f"ERRO: '{pasta}' tem mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB - nao vale a pena procura-lo como texto."
             with open(candidata, "r", encoding="utf-8", errors="ignore") as ficheiro:
                 linhas_do_ficheiro = ficheiro.readlines()
-            achados = [[f"{pasta.strip()} (Linha {i + 1}): {linha.strip()}"
+            achados = [[f"{pasta.strip()} (Linha {i + 1}): {_excerto(linha, p)}"
                         for i, linha in enumerate(linhas_do_ficheiro)
                         if p in normalizar_unicode(linha)][:100] for p in padroes]
             return _formatar_busca(termos, achados, f" em '{pasta.strip()}'")[:10000]
@@ -206,7 +207,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
                         alvo = normalizar_unicode(linha)
                         for indice, p in enumerate(padroes):
                             if p in alvo:
-                                resultados[indice].append(f"{caminho_relativo} (Linha {i+1}): {linha.strip()}")
+                                resultados[indice].append(f"{caminho_relativo} (Linha {i+1}): {_excerto(linha, p)}")
             except Exception: pass
             
     aviso = ""
@@ -230,3 +231,16 @@ def _formatar_busca(termos, achados, sufixo=""):
         linhas.extend(achadas or ["(nenhuma ocorrência)"])
         linhas.append("")
     return "\n".join(linhas).rstrip()
+
+
+def _excerto(linha, padrao):
+    texto = linha.strip()
+    if len(texto) <= LIMITE_EXCERTO:
+        return texto
+    texto = normalizar_unicode(texto)
+    posicao = texto.find(padrao)
+    if posicao < 0:
+        return texto[:LIMITE_EXCERTO] + " ..."
+    inicio = max(0, posicao - LIMITE_EXCERTO // 2)
+    fim = inicio + LIMITE_EXCERTO
+    return ("... " if inicio else "") + texto[inicio:fim] + (" ..." if fim < len(texto) else "")
