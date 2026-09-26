@@ -775,7 +775,7 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
     reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": cwd,
            "popen": None, "stdin": None, "modo": modo, "nascimento": time.time()}
     estado["processos"][pid] = reg
-    emit_event("process_started", pid=pid, comando=comando, modo=modo)
+    emit_event("process_started", pid=pid, comando=comando, modo=modo, cwd=cwd)
     kwargs = {
         "shell": True,
         "cwd": cwd,
@@ -883,16 +883,22 @@ def _texto_da_paragem(pid, relato):
 
 @register(
     "tool_listar_processos",
-    'Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado). Use para saber o que esta a correr antes de parar ou reiniciar algo.',
+    'Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado). Use para saber o que esta a correr antes de parar ou reiniciar algo. Com saida>0 mostra tambem as ultimas linhas que cada processo escreveu - o caminho para ler a resposta de um processo que continua a correr (um depurador, um servidor) sem o parar.',
     {
+        "saida": {
+            "tipo": "INTEGER",
+            "desc": "Quantas linhas do fim da saida de cada processo mostrar (0 = so o estado).",
+            "padrao": 0,
+        },
     },
     disponivel="edicao",
 )
-def tool_listar_processos():
+def tool_listar_processos(saida=0):
     """Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado).
 
     Permite saber o que esta a correr (servidores, watchers) sem ter de decorar
-    os pids nem consultar /api/processos manualmente.
+    os pids nem consultar /api/processos manualmente. Com 'saida' traz tambem o fim
+    do que cada um escreveu, que e a unica forma de ler um processo que nao terminou.
     """
     emit_event("executing", function="Listando processos em segundo plano")
     registros = estado.get("processos", {})
@@ -901,7 +907,12 @@ def tool_listar_processos():
     linhas = []
     for pid, reg in registros.items():
         estado_txt = "rodando" if _processo_vivo(reg) else reg.get("status", "parado")
-        linhas.append(f"{pid}: {reg.get('comando', '(desconhecido)')} [{estado_txt}]")
+        bloco = f"{pid}: {reg.get('comando', '(desconhecido)')} [{estado_txt}]"
+        if saida and saida > 0:
+            cauda = [str(linha) for linha in (reg.get("log") or [])[-int(saida):]]
+            if cauda:
+                bloco += "\n" + "\n".join("    " + linha for linha in cauda)
+        linhas.append(bloco)
     return "Processos em segundo plano:\n" + "\n".join(linhas)
 
 

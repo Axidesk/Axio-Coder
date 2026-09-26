@@ -1,10 +1,10 @@
 import os
 import time
 
-from src.backend.builds import construir, detetar, instalar, kits
+from src.backend.builds import construir, depurar, detetar, diagnosticos, instalar, kits
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
-from src.backend.tools.process import correr_como_card, iniciar_processo
+from src.backend.tools.process import correr_como_card, escrever_stdin_processo, iniciar_processo
 from src.backend.tools.registry import register
 
 
@@ -16,8 +16,9 @@ from src.backend.tools.registry import register
     "ferramenta: nunca peca ao utilizador para decidir compilador, versao de Qt ou caminhos. "
     "Fluxo: acao='detetar' (o que e o projeto e o que exige), 'kits' (o que esta instalado e o que foi "
     "escolhido), 'preparar' (escolhe o kit, escreve o preset e configura), 'construir' (compila), "
-    "'correr' (abre o que ficou compilado) e 'instalar' (traz do instalador da Qt os modulos que o "
-    "projeto pede e o kit nao tem - sem uma unica janela). "
+    "'correr' (abre o que ficou compilado), 'depurar' (abre o executavel sob o depurador de consola "
+    "do Windows SDK, num card, com os pontos de paragem ja marcados) e 'instalar' (traz do instalador "
+    "da Qt os modulos que o projeto pede e o kit nao tem - sem uma unica janela). "
     "'construir' e 'correr' fazem o preparo sozinhos. "
     "build corre como card do terminal (saida a vivo, com botao de parar). "
     "Nao serve para ler nem editar codigo (para isso ha as ferramentas de arquivo) nem para construir o "
@@ -25,8 +26,8 @@ from src.backend.tools.registry import register
     {
         "acao": {
             "tipo": "STRING",
-            "desc": "detetar | kits | preparar | construir | correr | instalar",
-            "enum": ["detetar", "kits", "preparar", "construir", "correr", "instalar"],
+            "desc": "detetar | kits | preparar | construir | correr | depurar | instalar",
+            "enum": ["detetar", "kits", "preparar", "construir", "correr", "depurar", "instalar"],
             "padrao": "detetar",
         },
         "pasta": {
@@ -45,9 +46,15 @@ from src.backend.tools.registry import register
             "desc": "Alvo (target) especifico a compilar. Vazio compila o projeto todo.",
             "padrao": "",
         },
+        "breakpoints": {
+            "tipo": "STRING",
+            "desc": "Pontos de paragem para 'depurar', no formato ficheiro:linha (um por linha ou "
+                    "separados por ';'). Aceita modulo!ficheiro:linha quando o nome se repete.",
+            "padrao": "",
+        },
     },
 )
-def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo=""):
+def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", breakpoints=""):
     caminho, erro = _pasta(pasta)
     if erro:
         return erro
@@ -61,6 +68,8 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo=""):
         return _construir(caminho, configuracao, alvo)
     if acao == "correr":
         return _correr(caminho, configuracao)
+    if acao == "depurar":
+        return _depurar(caminho, configuracao, breakpoints)
     if acao == "instalar":
         return _instalar(caminho, configuracao)
     return f"ERRO: acao desconhecida '{acao}'."
@@ -95,10 +104,12 @@ def _configurar(pasta, plano):
     saida = recortar_texto(_texto_do_processo(resultado))
     if _interrompido(resultado):
         return False, "CONFIGURACAO INTERROMPIDA: o card do terminal foi parado."
+    achados = diagnosticos.resumo(saida, raiz=pasta)
+    prefixo = f"{achados}\n\n" if achados else ""
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
-        return True, f"CONFIGURADO (exit 0).\n{saida}"
-    return False, f"ERRO AO CONFIGURAR (exit {resultado.returncode}):\n{saida}"
+        return True, f"{prefixo}CONFIGURADO (exit 0).\n{saida}"
+    return False, f"{prefixo}ERRO AO CONFIGURAR (exit {resultado.returncode}):\n{saida}"
 
 
 def _construir(pasta, configuracao, alvo):
@@ -124,6 +135,9 @@ def _construir(pasta, configuracao, alvo):
     if _interrompido(resultado):
         blocos.append("COMPILACAO INTERROMPIDA: o card do terminal foi parado.")
         return "\n\n".join(blocos)
+    achados = diagnosticos.resumo(saida, raiz=pasta)
+    if achados:
+        blocos.append(achados)
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
         blocos.append(f"COMPILADO (exit 0).\n{_texto_executaveis(produzidos)}\n{saida}")
@@ -169,6 +183,34 @@ def _correr(pasta, configuracao):
     return (f"ABERTO: {executavel} (pid={registo['id']}).\n"
             "A janela do programa aparece no ecra; o card do processo fica no terminal, onde a saida dele "
             "e o botao de parar estao.")
+
+
+def _depurar(pasta, configuracao, breakpoints):
+    if not depurar.cdb():
+        return ("ERRO: nao encontrei o depurador de consola do Windows SDK (cdb.exe), que vem com os "
+                "\"Debugging Tools for Windows\". Sem ele nao ha como depurar C++ nesta maquina.")
+    plano = construir.preparar(pasta, configuracao)
+    falha = _bloqueio(plano)
+    if falha:
+        return falha
+    produzidos = construir.exe_produzido(plano["pasta_build"], nome=plano["deteccao"].get("projeto", ""))
+    if not produzidos:
+        return (f"ERRO: nao ha nenhum executavel em '{plano['pasta_build']}' para depurar. "
+                "Corra primeiro acao='construir'.")
+    executavel = os.path.normpath(produzidos[0]["caminho"])
+    pontos_de_paragem = depurar.pontos(breakpoints)
+    linha = depurar.comando(executavel, [pasta, os.path.dirname(executavel)])
+    emit_event("executing", function=f"Depurando {os.path.basename(executavel)}")
+    try:
+        registo = iniciar_processo(linha, cwd=pasta, modo="card", stdin_pipe=True, acompanhar=True,
+                                   caminhos_extra=plano["escolha"].get("caminhos"))
+    except OSError as e:
+        return f"ERRO: nao consegui abrir o depurador ({e})."
+    escritos = depurar.preparacao(pontos_de_paragem)
+    for comando in escritos:
+        escrever_stdin_processo(registo["id"], comando)
+    return _texto_depuracao(registro_id=registo["id"], executavel=executavel,
+                            pontos=pontos_de_paragem, escritos=escritos)
 
 
 def _instalar(pasta, configuracao):
@@ -350,3 +392,19 @@ def _texto_executaveis(produzidos):
     linhas = ["EXECUTAVEIS:"]
     linhas += [f"  {p['caminho']} ({p['mb']} MB)" for p in produzidos[:5]]
     return "\n".join(linhas)
+
+
+def _texto_depuracao(registro_id, executavel, pontos, escritos):
+    blocos = [f"DEPURADOR ABERTO (card {registro_id}): {executavel}",
+              "Comandos ja escritos: " + " | ".join(escritos)]
+    if pontos:
+        blocos.append("Pontos de paragem: " + ", ".join(pontos))
+    else:
+        blocos.append("Sem pontos de paragem: o programa para na primeira instrucao. "
+                      "Marque um com bp `ficheiro.cpp:linha` escrito no campo do terminal com este card "
+                      "selecionado.")
+    blocos.append("Para conduzir a sessao, selecione o card e escreva no campo do terminal:\n"
+                  + depurar.texto_dos_comandos())
+    blocos.append("A saida do depurador aparece no card. tool_listar_processos(saida=N) devolve as "
+                  "ultimas N linhas dela quando precisar de ler o que o depurador respondeu.")
+    return "\n\n".join(blocos)

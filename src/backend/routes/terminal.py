@@ -39,6 +39,7 @@ def processos():
             "status": reg.get("status", "rodando"),
             "log": reg.get("log", [])[-200:],
             "rodando": rodando,
+            "cwd": reg.get("cwd", ""),
         })
     return jsonify({"processos": lista})
 

@@ -67,7 +67,7 @@ assuntos: um lê UM ficheiro, o outro julga o PROJETO inteiro. (Ver a secção s
       (`builds/arvore.py` + `routes/editor.py`), sem tocar no disco. Provado por HTTP: raiz do
       DRAFTCAD com 4 grupos (DraftCAD, dwg2dxf, doc, dxfrw), `@arvore/DraftCAD` com Fontes/
       Cabeçalhos/Outros, 40 cabeçalhos listados; a raiz do Axio (projeto Python) sai com 0 grupos.
-      **Falta:** erros do compilador clicáveis no Monaco.
+      **Feito (2026-10-06, depois):** erros do compilador clicáveis — ver a secção própria.
 - [x] **Fase 3** (2026-10-06) — `builds/instalar.py`: lê o catálogo do instalador da Qt (`list` e
       `search`, em XML) e resolve o componente que traz cada módulo em falta, com a allowlist
       aberta aos subcomandos de consulta e instalação. **Bloqueado pela própria Qt** nesta máquina
@@ -78,8 +78,11 @@ assuntos: um lê UM ficheiro, o outro julga o PROJETO inteiro. (Ver a secção s
 - [x] **Projeto do ZERO na árvore** (2026-10-06) — um projeto acabado de criar aparece arrumado
       sem nunca ter sido configurado: o `CMakeLists.txt` é lido como texto e o nó do projeto sai
       dali. Ver a secção própria.
-- [ ] **Fase 4** — o `.sln` do Tibia: leitura das **flags** por `msbuild -getItem` e o retarget
-      2015→2022 numa cópia, provado a compilar.
+- [ ] **Fase 4** — as **flags de qualquer `.sln`** por `msbuild -getItem`, e o retarget de um
+      projeto antigo numa cópia. O Tibia74 é só o caso que mostrou a falta; a peça é do leitor de
+      MSBuild (`builds/msbuild.py`), que já serve qualquer `.sln`. Nota de necessidade: num projeto
+      CMake isto **não falta** — as flags dele vivem no preset e no `compile_commands.json`; só um
+      projeto MSBuild nativo precisa do `-getItem` para saber o compilador e as definições.
 - [ ] **Fase 5** — clangd (opcional): ir à definição, erro enquanto se escreve.
 - [ ] **Fase 6** — depurador, com o mínimo de interface nova: C++ pelo `cdb` que JÁ está na máquina,
       depois o Monaco ligado ao motor, e Python/JS pelos adaptadores oficiais. Ver a secção própria
@@ -680,10 +683,12 @@ motor de depuração.
 
 **As fases** (a ordem não é arbitrária — cada uma prova o motor antes de lhe dar ecrã):
 
-- [ ] **Fase 6a — C++ por consola.** Correr o alvo sob `cdb` num **card do terminal** (o mecanismo do
+- [x] **Fase 6a — C++ por consola.** Correr o alvo sob `cdb` num **card do terminal** (o mecanismo do
       build), com os breakpoints por `ficheiro:linha` e uma lista de comandos. Não é gráfico: é
       depuração a sério, com zero janela nova, e serve primeiro para MIM, que sou quem procura o
       crash. Prova a exigir: parar no breakpoint, ler a stack, ler o valor de uma variável.
+      **Feito (2026-10-06)** — `builds/depurar.py` + ação `depurar` de `tool_gerir_projeto`; prova e
+      a armadilha do `-c` na secção "O depurador: o que ficou provado".
 - [ ] **Fase 6b — ligar o Monaco ao motor.** O clique na margem vira breakpoint, a barra de controlo
       entra, a linha actual acende e a stack/variáveis aparecem na coluna 3 — tudo por cima do motor
       que a 6a provou.
@@ -695,11 +700,118 @@ motor de depuração.
 - Fora do plano, dito em voz alta: **profiler** (VTune/perf), **depuração remota** (`msvsmon` existe,
       mas é outro desenho) e time-travel. Não se constroem a reboque.
 
+## Erros do compilador clicáveis — o que o compilador escreve, medido (2026-10-06)
+
+Fecha a Fase 1. `builds/diagnosticos.py` lê a saída de um build e devolve cada erro com ficheiro,
+linha, coluna, gravidade e código; `tools/builds.py` passa a pôr esse resumo À FRENTE da saída crua
+(em `_configurar` e `_construir`), para quem lê o card e para o agente.
+
+**Os formatos não foram adivinhados: compilou-se de propósito para os ver.** Amostras reais, do
+`cl.exe` desta máquina e do CMake 4 desta máquina:
+
+| o que se escreveu | forma real da linha |
+| --- | --- |
+| erro de identificador | `C:\...\erro.cpp(2): error C2065: 'nao_existe': identificador não declarado` |
+| o mesmo com `/diagnostics:column` | `C:\...\erro.cpp(2,5): error C2065: ...` |
+| include em falta | `C:\...\falta.cpp(1): fatal error C1083: Não é possível abrir arquivo incluir: 'nao_ha.h'` |
+| fonte inexistente | `c1xx: fatal error C1083: ...` — **sem localização nenhuma** |
+| erro do CMake | `CMake Error at CMakeLists.txt:3 (message):` e a mensagem na linha SEGUINTE, tudo isto em **stderr** |
+| GCC/Clang | `src/main.cpp:12:34: error: use of undeclared identifier 'x'` |
+| MSBuild | `C:\proj\app.vcxproj(15,7): error MSB1009: Arquivo de projeto não existe.` |
+
+Dois factos que decidem o parser:
+
+- **A coluna não existe por omissão.** O `cl` escreve `ficheiro(linha):`, só acrescenta `,coluna`
+  com `/diagnostics:column`. Um parser que exija a coluna perde TODOS os erros do MSVC normal.
+- **A palavra-chave fica em inglês mesmo com a mensagem traduzida** — medido: `error C2065:
+  'x': identificador não declarado`. A âncora é o **código** (`C2065`, `MSB1009`), nunca a palavra.
+
+Prova: 8 linhas reais reconhecidas (incluindo o `c1xx:` sem localização), 0 falsos positivos nas
+linhas de progresso (`[ 50%] Building CXX object ...`, `BUILD SUCCESSFUL in 1s`) e no `10.5.3:12`.
+Campainha que valeu: a mensagem do CMake **engolia a linha seguinte** (um erro do GCC logo a seguir
+entrava dentro da mensagem) — a lista de padrões de "linha filha" tinha de incluir o formato do GCC.
+
+### O clique no card (2026-10-06)
+
+`src/frontend/js/editor/diagnosticos.js` marca, na saída de QUALQUER processo, cada `ficheiro:linha`
+como um alvo clicável: o clique abre o ficheiro naquela linha no Monaco (`WorkspaceView.openFileAtLine`).
+Não é só para C++ — vale para um traceback de Python, para o erro de um linter, para o que vier.
+
+Três decisões que a medição impôs:
+
+- **Só o que EXISTE fica clicável.** Antes de pintar, o caminho é resolvido contra o `cwd` do card e
+  testado no disco (`fs.existsSync`). Um caminho partido pelo espaço de "Program Files" deixaria um
+  azul a prometer um clique que não faz nada; assim fica texto normal. Medido: 2 de 5 linhas de uma
+  cena viraram ligação (as que existiam) e o texto ficou byte a byte igual ao original.
+- **O `cwd` do card passou a viajar.** `process_started` e `/api/processos` levam agora `cwd`: sem ele
+  um caminho relativo (`src/main.cpp`) não tem contra o que ser resolvido. É informação que já
+  existia no registo do processo — só não saía.
+- **A saída é pintada por LINHA COMPLETA.** O que chega do processo chega em pedaços de 4096 bytes, e
+  uma linha pode ser cortada a meio. O card guarda a cauda incompleta e só a desenha quando a quebra
+  chega — senão metade de um `ficheiro:linha` ficava texto e a outra metade ligação. Provado com a
+  linha partida em dois: `src/...py(10` não acende nada, `...4): error ...` acende inteira.
+
+**Armadilha medida (custou um congelamento de 60 s a mim próprio).** A primeira versão da expressão
+que apanha `caminho(linha)` era um `(?:[^separadores]+[\\/])*` a seguir a `[^separadores]+\.` — com
+uma linha de 400 000 caracteres sem quebra (o caso de um `compile_commands.json` minificado, que é
+exactamente o que aparece num card) o motor de expressões regulares entra em retrocesso catastrófico
+e a interface **congela**. Não é hipótese: o meu primeiro teste de laboratório estourou os 60 s.
+Correcção: `LIMITE_LINHA = 1000` — uma linha maior que isso não é um erro (é um ficheiro gerado numa
+linha só) e sai como texto puro. Medido depois: a mesma linha de 400 000 caracteres custa **1 ms**.
+
+## O depurador: o que ficou provado, e a porta que não abre (2026-10-06)
+
+Fase 6a feita: `builds/depurar.py` (achar o `cdb`, formar a linha de comandos, ler os pontos de
+paragem) + a ação `depurar` de `tool_gerir_projeto`, que abre o executável sob o depurador **num card
+do terminal** — zero janelas novas, o mesmo mecanismo do build.
+
+**A armadilha, medida e não suposta: o `-c` não serve.** A primeira tentativa foi a que a
+documentação sugere — passar tudo na linha de comandos, com `-c` e a lista inteira de comandos
+(`.lines`, `bp`, `g`, `k`, `dv`, `q`) separada por pontos e vírgulas.
+Resultado, em VÁRIAS combinações (com e sem `-g`, com `-o`, e com `-logo` a gravar a sessão em
+ficheiro para não depender da captura do stdout): **os comandos do `-c` não produziram uma única
+linha de saída** e a sessão terminava logo (exit 42), sem parar em lado nenhum. O `ModLoad` do alvo
+aparecia; os comandos, não.
+
+**A porta que abre é o stdin.** Os MESMOS comandos, escritos no stdin do `cdb`, funcionaram à
+primeira:
+
+```
+Breakpoint 0 hit
+prova!main+0xc [C:\...\prova.cpp @ 8]
+0:000> k
+prova!main+0xc [C:\...\prova.cpp @ 8]
+prova!invoke_main+0x22 [exe_common.inl @ 78]
+...
+0:000> dv
+              x = 0n7
+              y = 0n0
+```
+
+Ou seja: parou no ponto de paragem, a stack saiu com ficheiro e linha, e o valor da variável saiu.
+E isto é a forma que o Axio já tem — o card escreve no stdin do processo. As três primeiras linhas
+(`.lines`, `bp ...`, `g`) são escritas por nós no arranque; a partir daí a sessão é conduzida com
+`k`, `dv`, `g`, `p` escritos no campo do terminal com o card selecionado.
+
+Três cuidados que a prova fixou:
+
+- **Nada de `-g`.** Ignorar o breakpoint inicial deixaria o programa a correr antes de os nossos
+  pontos estarem marcados — os `bp` chegariam tarde.
+- **`-y` e `-srcpath` apontam só a pastas locais** (a pasta do executável e a do projeto). Sem
+  servidor de símbolos: é offline, é rápido, e o que interessa depurar é o código do projeto.
+- **Pontos por `ficheiro:linha`**, com o nome reduzido ao basename (a forma provada); `modulo!ficheiro:linha`
+  passa intacto para o caso de o nome se repetir.
+
+**O que isto ainda NÃO prova:** a sessão a correr dentro do card do Axio, contra o DRAFTCAD, com a
+interface a mostrar a saída a vivo. Isso exige o backend reiniciado (a ação `depurar` nasce nesta
+rodada) e é o passo seguinte — a cobaia é o `DraftCAD.exe` que já está construído em
+`DRAFTCAD/build/axio-debug/`.
+
 ## O que falta (medido, não suposto)
 
-- **Depurador:** zero linhas no Axio. Na máquina há o `cdb` (Windows SDK) e o desenho das Fases 6a/6b/6c
-  está na secção anterior — escrito para ser executado, não para ficar bonito.
-- **Erros do compilador clicáveis** no Monaco: a outra metade da Fase 1.
+- **Depurador:** a Fase 6a está feita (C++ pelo `cdb`, num card). Falta a **6b** (o Monaco ligado ao
+  motor: clique na margem vira breakpoint, barra de controlo, linha acesa, stack na coluna 3) e a
+  **6c** (Python/JS pelos adaptadores DAP).
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /
@@ -710,9 +822,10 @@ motor de depuração.
   NuGet e Cargo ainda não têm verificação de "está atrás do registo" (o manifesto já é lido, a
   versão publicada ainda não é comparada).
 
-- **Erros do MSBuild/MSVC** chegam (ao card e a mim) mas ainda não são clicáveis no Monaco. A
-  saída do MSBuild é **localizada em português** ("Arquivo de projeto não existe"); só os
-  códigos ficam em inglês (`MSB1009`).
+- **Erros do MSBuild/MSVC** já são lidos e resumidos (`builds/diagnosticos.py`) e cada linha com
+  localização é clicável no card. A saída do MSBuild é **localizada em português** ("Arquivo de
+  projeto não existe"); só os códigos ficam em inglês (`MSB1009`) — por isso o parser se agarra
+  ao código, nunca à palavra.
 - **`.pro`** (qmake) não tem leitor: sem API oficial de fontes, a resposta da ferramenta di-lo em vez
   de falhar em silêncio. O `.sln` já é lido para a árvore; falta-o para as flags.
 

@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { fragmentoDeSaida } from './diagnosticos.js';
 
 const LIMITE_SAIDA = 300000;
 const VARREDURA_MS = 120;
@@ -121,9 +122,9 @@ function _reavaliarSeguir() {
 function _pintar(card, novo) {
     if (!card.el.classList.contains('term-card-aberto')) return;
     if (novo == null) {
-        card.saida.textContent = card.texto;
+        card.saida.replaceChildren(fragmentoDeSaida(card.texto, card.cwd));
     } else {
-        card.saida.appendChild(document.createTextNode(novo));
+        card.saida.appendChild(fragmentoDeSaida(novo, card.cwd));
     }
     if (card.seguirFim) _rolarAteAoFim(card);
 }
@@ -131,15 +132,17 @@ function _pintar(card, novo) {
 function _despejar(card) {
     card.agendado = false;
     if (!card.pendente) return;
-    const novo = card.pendente;
-    card.pendente = '';
-    card.texto += novo;
+    const corte = Math.max(card.pendente.lastIndexOf('\n'), card.pendente.lastIndexOf('\r'));
+    if (corte < 0) return;
+    const pronto = card.pendente.slice(0, corte + 1);
+    card.pendente = card.pendente.slice(corte + 1);
+    card.texto += pronto;
     if (card.texto.length > LIMITE_SAIDA) {
         card.texto = card.texto.slice(-LIMITE_SAIDA);
         _pintar(card, null);
         return;
     }
-    _pintar(card, novo);
+    _pintar(card, pronto);
 }
 
 function _agendar(card) {
@@ -157,7 +160,7 @@ function _alternar(card) {
     if (!card.texto) return;
     card.el.classList.add('term-card-aberto');
     card.seguirFim = true;
-    card.saida.textContent = card.texto;
+    card.saida.replaceChildren(fragmentoDeSaida(card.texto, card.cwd));
     _rolarAteAoFim(card);
 }
 
@@ -177,12 +180,14 @@ function _assumirIdentidade(card, comando) {
     card.nome.title = comando;
 }
 
-function _fundirCard(card, novoPid, comando) {
+function _fundirCard(card, novoPid, comando, cwd) {
     if (!novoPid) return;
     _deixarDeSugerir(card);
+    if (cwd) card.cwd = cwd;
     const recem = cards.get(novoPid);
     if (recem && recem !== card) {
-        card.texto += (recem.texto || '') + (recem.pendente || '');
+        card.texto += (card.pendente || '') + (recem.texto || '') + (recem.pendente || '');
+        card.pendente = '';
         recem.pendente = '';
         recem.el.remove();
         cards.delete(novoPid);
@@ -313,7 +318,7 @@ function _fecharCard(card) {
     if (rodando) _parar(pid);
 }
 
-function _criarCard(pid, comando, sugerido, dica) {
+function _criarCard(pid, comando, sugerido, dica, cwd) {
     const z = _zona();
     if (!z || !pid) return null;
     const el = document.createElement('div');
@@ -376,6 +381,7 @@ function _criarCard(pid, comando, sugerido, dica) {
         repetir: repetir,
         fim: fim,
         url: '',
+        cwd: cwd || '',
         texto: '',
         pendente: '',
         agendado: false,
@@ -432,16 +438,17 @@ export function cardIniciar(data) {
     const existente = cards.get(data.pid);
     if (existente) {
         existente.exitCode = null;
+        existente.cwd = data.cwd || existente.cwd;
         _aplicarEstado(existente, 'rodando');
         return existente;
     }
     const pendente = _cardEmLancamento(data.comando);
     if (pendente) {
-        _fundirCard(pendente, data.pid, data.comando);
+        _fundirCard(pendente, data.pid, data.comando, data.cwd);
         _aplicarEstado(pendente, 'rodando');
         return pendente;
     }
-    return _criarCard(data.pid, data.comando);
+    return _criarCard(data.pid, data.comando, false, '', data.cwd);
 }
 
 function _avisarPreview(url, automatico, alternar) {
@@ -561,7 +568,7 @@ export async function hidratarCards() {
         return;
     }
     (dados && dados.processos ? dados.processos : []).forEach((reg) => {
-        const card = cardIniciar({ pid: reg.id, comando: reg.comando });
+        const card = cardIniciar({ pid: reg.id, comando: reg.comando, cwd: reg.cwd });
         if (!card) return;
         (reg.log || []).forEach((linha) => {
             card.pendente += String(linha) + '\n';

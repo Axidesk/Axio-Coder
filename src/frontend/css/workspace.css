@@ -215,6 +215,15 @@
 .term-card-aberto .term-card-saida {
     display: block;
 }
+.term-diag {
+    color: var(--azul-acao);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background var(--dur-3) ease;
+}
+.term-diag:hover {
+    background: var(--bg-hover);
+}
 .term-aviso {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;
