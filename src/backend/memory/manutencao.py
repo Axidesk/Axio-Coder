@@ -13,6 +13,7 @@ from src.backend.memory.glossary import (
     localizar_alvos,
 )
 from src.backend.memory.store import coletar_notas_knowledge
+from src.backend.services.session import carregar_marcas_de_restauro
 from src.backend.state import estado, registar_aviso_de_mudanca
 
 INTERVALO_MANUTENCAO = 300.0
@@ -581,6 +582,45 @@ def _simbolos_ausentes(conteudo, orcamento):
     return sorted(set(ausentes))
 
 
+def _notas_anteriores_a_restauro(notas):
+    """Notas escritas ANTES de um restauro que tocou nos ficheiros que elas citam.
+
+    Depois de o projeto ser reposto para tras o ficheiro continua a existir e o
+    simbolo pode ate existir: a nota e que descreve uma versao que ja nao esta la
+    e nada no texto dela o denuncia. O criterio e temporal - conta so a nota
+    escrita antes do restauro, porque a reescrita depois ja descreve o codigo de
+    agora. A cura e reescrever a nota, e o aviso desaparece sozinho quando isso
+    acontece.
+    """
+    marcas = carregar_marcas_de_restauro()
+    if not marcas:
+        return []
+    afetadas_por_marca = []
+    for marca in marcas:
+        repostos = {str(n).lower() for n in marca.get("nomes", [])}
+        if not repostos:
+            continue
+        afetadas = []
+        for nota in notas:
+            if (nota.get("mtime") or 0) >= marca.get("ts", 0):
+                continue
+            corpo = nota.get("conteudo", "") or ""
+            citados = {os.path.basename(m.replace("\\", "/")).lower() for m in _RE_FICHEIRO.findall(corpo)}
+            if citados & repostos:
+                afetadas.append(nota.get("nome", ""))
+        if afetadas:
+            afetadas_por_marca.append((marca, afetadas))
+    avisos = []
+    for marca, afetadas in afetadas_por_marca[-2:]:
+        quando = time.strftime("%d/%m/%Y %H:%M", time.localtime(marca["ts"]))
+        amostra = ", ".join(f'"{a}"' for a in afetadas[:4])
+        resto = f" (+{len(afetadas) - 4})" if len(afetadas) > 4 else ""
+        avisos.append(f"{len(afetadas)} nota(s) anterior(es) ao restauro de {quando} citam ficheiro(s) repostos "
+                      f"por ele e podem descrever codigo que ja nao esta la: {amostra}{resto} - confirme no disco "
+                      f"e reescreva as que estiverem erradas")
+    return avisos
+
+
 def pendencias_de_memoria(intervalo=INTERVALO_PENDENCIAS):
     """O que exige JUIZO: o sistema AVISA, o agente cura (regra 24).
 
@@ -610,6 +650,7 @@ def pendencias_de_memoria(intervalo=INTERVALO_PENDENCIAS):
 
     try:
         notas = coletar_notas_knowledge()
+        linhas.extend(_notas_anteriores_a_restauro(notas))
         orcamento = [_LIMITE_VERIFICACOES_SIMBOLO]
         for nota in notas:
             corpo = nota.get("conteudo", "")

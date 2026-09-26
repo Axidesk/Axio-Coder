@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request
 from src.backend.services import git_repo
 from src.backend.services.git_sugestao import sugerir_mensagem
 from src.backend.services.file_service import mover_para_lixeira, registrar_edicao
-from src.backend.services.session import marcar_commit_no_log
+from src.backend.services.session import marcar_commit_no_log, registar_restauro_de_codigo
 from src.backend.services.settings import definir_git_automatico, git_automatico
 from src.backend.state import estado
 from src.backend.tools.js_contrato import quebras_introduzidas
@@ -223,6 +223,7 @@ def git_restauro():
         alterados.append({"nome": rel, "acao": "removido"})
     ponto = {}
     if alterados:
+        registar_restauro_de_codigo([a["nome"] for a in alterados])
         ponto = git_repo.registrar_restauro(
             _pasta(),
             list(caminhos) + remover,
