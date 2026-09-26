@@ -7,7 +7,7 @@ import { svgDoPonto, svgDoAviao } from './icones.js';
 import { showConfirm } from './ui.js';
 import { requestGitRestore, requestRestoreTask } from './historico/restauro.js';
 import { esquecerIntencaoManual, marcarProximoComoManual } from './historico/marcas_envio.js';
-import { nomeDaTarefaDoCommit, partesDoTituloDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, enviadaParaOServidor, reagruparPilhaDoDia } from './historico/cards.js';
+import { nomeDaTarefaDoCommit, partesDoTituloDoCommit, updateRoundCardCommitByTurnId, carregarPorSubir, enviadaParaOServidor, commitForaDoCheckpoint, reagruparPilhaDoDia } from './historico/cards.js';
 
 const CHAVE_RASCUNHOS = 'axio.git.rascunhos';
 
@@ -249,10 +249,16 @@ const SVG_ETIQUETA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
         if (!commits.length) {
             corpo = '<div class="git-nota">Tudo o que esta commitado ja subiu para o remoto.</div>';
         } else {
+            const fora = commits.filter(c => commitForaDoCheckpoint(c.hash)).length;
             corpo = '<div class="git-lista">' + commits.map(c => {
                 const partes = partesDoTituloDoCommit(c.hash, c.mensagem);
-                return `• <span class="git-hash">${escapeHtml(c.curto)}</span> ${linhaEmCamadas(partes.base, partes.resumo)}`;
-            }).join('<br>') + '</div>';
+                const riscado = commitForaDoCheckpoint(c.hash);
+                const titulo = riscado ? ' title="Estado posterior ao ponto restaurado (ja nao aplicado ao disco)"' : '';
+                return `<div class="git-subir-linha${riscado ? ' git-fora' : ''}"${titulo}>• <span class="git-hash">${escapeHtml(c.curto)}</span> ${linhaEmCamadas(partes.base, partes.resumo)}</div>`;
+            }).join('') + '</div>';
+            if (fora) {
+                corpo += `<div class="git-nota">${fora} destes ja nao corresponde${fora > 1 ? 'm' : ''} ao que esta no disco.</div>`;
+            }
         }
         return seccaoRecolhivel('Por subir', commits.length ? String(commits.length) : 'nada', corpo, '', commits.length > 0);
     }

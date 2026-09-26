@@ -4,7 +4,7 @@ import { createChildBalloon } from '../files.js';
 import { vistaDe } from '../colunas.js';
 import { escapeHtml, showQuestionPanel } from '../messages.js';
 import { openFilesPanel, selectHistoryTask, updateActionButtons } from './acoes.js';
-import { epochDeId, marcarCheckpoint } from './checkpoint.js';
+import { epochDeId, estadoAplicado, marcarCheckpoint } from './checkpoint.js';
 import { esquecerCache as esquecerMarcasDeEnvio, marcasDeEnvio, registarLeitura, semearSeVazio } from './marcas_envio.js';
 import { svgDoPonto, svgDoAviao, svgDoRestauro } from '../icones.js';
 
@@ -413,6 +413,10 @@ let nomesDeTarefaDe = -1;
     function nomeDaTarefaDoCommit(hash) {
         return nomeDoTurno(turnoDoCommit(hash));
     }
+    function commitForaDoCheckpoint(hash) {
+        const turno = turnoDoCommit(hash);
+        return !!turno && !estadoAplicado(turno.id);
+    }
     function nomeDoTurno(turno) {
         if (!turno) return '';
         if (!turno.displayName && !turno.name) _nomearTurnos();
@@ -686,6 +690,7 @@ export {
     registrarSincronizacaoDoEnvio,
     registrarRestauroDaTarefa,
     enviadaParaOServidor,
+    commitForaDoCheckpoint,
     turnosComCommit,
     talvezLembrarDeGuardar,
     reagruparPilhaDoDia

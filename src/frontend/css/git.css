@@ -290,6 +290,16 @@
     word-break: break-all;
 }
 
+.git-subir-linha.git-fora {
+    opacity: 0.45;
+}
+
+.git-subir-linha.git-fora .git-tarefa-nome,
+.git-subir-linha.git-fora .git-commit-nome {
+    color: var(--text-mutado-escuro);
+    text-decoration: line-through;
+}
+
 .git-hash {
     color: var(--git-cor-hash);
     font-size: 11.5px;

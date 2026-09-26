@@ -20,12 +20,15 @@ import { state } from '../state.js';
             ? base.concat([[state.checkpointRestoredAt, Number.MAX_SAFE_INTEGER]])
             : base;
     }
+    function estadoAplicado(id) {
+        const intervalos = _intervalosAplicadosHoje();
+        if (!intervalos) return true;
+        const e = epochDeId(id);
+        return intervalos.some(iv => e > iv[0] && e <= iv[1]);
+    }
     function marcarCheckpoint(el, id) {
         if (!id) return;
-        const intervalos = _intervalosAplicadosHoje();
-        const e = epochDeId(id);
-        const aplicado = !intervalos || intervalos.some(iv => e > iv[0] && e <= iv[1]);
-        if (aplicado) {
+        if (estadoAplicado(id)) {
             el.classList.remove('history-round-ahead');
             el.removeAttribute('title');
         } else {
@@ -37,5 +40,6 @@ import { state } from '../state.js';
 
 export {
     epochDeId,
+    estadoAplicado,
     marcarCheckpoint
 };
