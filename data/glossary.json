@@ -586,8 +586,8 @@
         "arquivo": "src/frontend/js/editor/terminal.js",
         "linha": 167,
         "conferido": [
-          1790391422.323,
-          15280
+          1790395878.415,
+          17310
         ]
       }
     },
@@ -1167,10 +1167,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1592,
+        "linha": 1613,
         "conferido": [
-          1790393883.843,
-          76902
+          1790396035.689,
+          78500
         ]
       }
     },
@@ -2133,10 +2133,10 @@
       "descricao": "Barra de cima do terminal (#ws-shell) que escolhe entre os DOIS modos: dois botoes irmaos, 'Cards' (#ws-mode-cards) e 'Shell' (#ws-shell-label), mais o '>' (#ws-shell-arrow) que expande o menu de shells. Clicar num botao ACENDE-o (--oliva) e apaga o outro; clicar no que ja esta aceso nao repete nada (ativarShell/desativarShell saem cedo se o modo for o mesmo). Cards = todo o comando do #term-input vira card gerido e o #term-log fica INVISIVEL ('#terminal-mode:not(.shell-ativo) #term-log { visibility: hidden }', ver 'janela do shell'). Shell = o mesmo campo manda tudo ao PTY e os cards escondem-se ('#terminal-mode.shell-ativo .term-card'), com a sessao JA carregada - o PTY nasce no arranque do backend, nao ao ligar o modo. O '>' abre o menu com cmd/powershell/pwsh; escolher um shell LIGA o modo com ele, e o item marcado (.ws-shell-item.active) segue state.shellAtual MESMO com o modo desligado - clicar no que ja esta marcado nao repete o POST nem desliga (a saida e o botao Cards). Estado em state.shellAtivo/state.shellAtual (terminal.js:setTerminalShell, ativarShell, desativarShell), NUNCA no texto do rotulo: cdCommandFor e comandoLimparTerminal leem o state para decidir 'cd /d' vs 'cd' e 'cls' vs 'clear'. TODA a fiacao dos botoes vive no FIM do terminal.js (nao em workspace.js, que so importa o que usa); o clique-fora que recolhe o menu (document, fora de #ws-shell) tambem vive la. Se o backend recusar o shell, o modo DESLIGA em vez de ficar aceso a mentir. Em modo shell os avisos .term-aviso CONTINUAM a aparecer, porque texto local nunca pode entrar no buffer do PTY. Ctrl+C sem nada selecionado manda \\x03 pelo socket (interromperShell). Trocar de shell reinicia o PTY e o frontend limpa o buffer da sessao antiga (ver 'banner do shell').",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal.js",
-        "linha": 317,
+        "linha": 363,
         "conferido": [
-          1790391422.323,
-          15280
+          1790395878.415,
+          17310
         ]
       }
     },
@@ -2240,10 +2240,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1172,
+        "linha": 1193,
         "conferido": [
-          1790393883.843,
-          76902
+          1790396035.689,
+          78500
         ]
       }
     },
@@ -5169,10 +5169,10 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 281,
+        "linha": 288,
         "conferido": [
-          1790391058.843,
-          36515
+          1790395908.095,
+          36832
         ]
       }
     },
@@ -5191,8 +5191,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 295,
         "conferido": [
-          1790394685.764,
-          27770
+          1790395863.815,
+          27937
         ]
       }
     },
@@ -5210,8 +5210,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 334,
         "conferido": [
-          1790394685.764,
-          27770
+          1790395863.815,
+          27937
         ]
       }
     },
@@ -5248,8 +5248,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 352,
         "conferido": [
-          1790394685.764,
-          27770
+          1790395863.815,
+          27937
         ]
       }
     },
@@ -5284,7 +5284,11 @@
       "descricao": "Barra #explorer-path. Quando o caminho nao cabe na largura (o cabecalho da arvore tem 9 icones a direita), terminal.js:pintarCaminho esconde os crumbs da ESQUERDA e poe um … antes do primeiro visivel, guardando sempre o ultimo nivel - o title do … diz o que ficou escondido.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/explorer.js",
-        "linha": 507
+        "linha": 507,
+        "conferido": [
+          1790395432.969,
+          34079
+        ]
       }
     },
     {
@@ -5336,17 +5340,31 @@
         "pastas ocultas",
         "olho das pastas ocultas",
         "ficheiros ocultos na arvore",
-        "mostrar o lixo"
+        "mostrar o lixo",
+        "olho que mostra os ficheiros escondidos"
       ],
-      "identificador": "#btn-explorer-ocultos (estado em src/frontend/js/pastas_ocultas.js)",
-      "descricao": "Botao com olho RISCADO (repouso) no cabecalho da arvore do doc, logo depois de #btn-git-doc (o de salvar). Comeca DESLIGADO e nao persiste entre sessoes. Aceso, revela na arvore o que a listagem esconde (pasta de build/cache, nome com ponto inicial, binario) pintado a 45% de opacidade (.explorer-oculto), e o painel de informacoes do projeto passa a mostrar o mesmo na arvore dele (.projeto-oculto) com os totais a contar isso. O estado e UM so, no modulo pastas_ocultas.js (mostrandoOcultos/alternarOcultos/aoMudarOcultos) e e o que mantem doc e painel sincronizados. Quem esconde e file_service.e_item_oculto; as rotas aceitam &ocultos=1 (/api/explorer) e ?ocultos=1 (/api/projeto/info).",
+      "identificador": "#btn-explorer-ocultos",
+      "descricao": "Botao com olho RISCADO (repouso) no cabecalho da arvore do doc, logo depois de #btn-git-doc (o de salvar). Comeca DESLIGADO e nao persiste. A rota /api/explorer devolve SEMPRE a pasta inteira, cada item escondido marcado oculto:true; o olho so poe/tira a classe 'mostra-ocultos' no #explorer-tree (explorer.js:aplicarOlhoNaArvore), onde #explorer-tree:not(.mostra-ocultos) .explorer-oculto fica display:none e, aceso, a linha aparece a 45% de opacidade (.explorer-oculto). A troca e instantanea: sem pedido ao servidor e sem redesenhar a arvore. O painel de informacoes do projeto ouve o mesmo estado (pastas_ocultas.js) e vai buscar o retrato com ocultos.",
       "localizacao": {
-        "arquivo": "src/frontend/index.html",
-        "linha": 484,
-        "conferido": [
-          1790394671.433,
-          81414
-        ]
+        "arquivo": "src/frontend/js/editor/explorer.js",
+        "linha": ""
+      }
+    },
+    {
+      "termo": "quebra de linha dos ficheiros",
+      "aliases": [
+        "quebra de linha",
+        "ficheiros que quebram",
+        "colunas de ficheiros no fundo da janela",
+        "ficheiros lado a lado como no windows",
+        "lista que desce e vira coluna",
+        "wrap dos ficheiros"
+      ],
+      "identificador": "#explorer-tree.files-vertical",
+      "descricao": "Na doc horizontal (dock em baixo) e fora do modo colunas (projeto cmake), a lista do explorer vira flex column com flex-wrap: os ficheiros descem e, ao bater no limite inferior da janela, abrem uma coluna nova a direita (como o ambiente de trabalho do Windows). Quem poe a classe e sincronizarColunas em workspace.js; so o modo cmake (files-colunas) tem o scroll horizontal.",
+      "localizacao": {
+        "arquivo": "src/frontend/css/editor.css",
+        "linha": 295
       }
     }
   ]

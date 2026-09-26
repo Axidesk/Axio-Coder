@@ -252,6 +252,9 @@
 .explorer-row.explorer-oculto:hover {
     opacity: 0.9;
 }
+#explorer-tree:not(.mostra-ocultos) .explorer-oculto {
+    display: none;
+}
 .explorer-row.explorer-error { color: var(--vermelho-vivo); }
 .explorer-row.explorer-error .explorer-file-icon,
 .explorer-row.explorer-error .explorer-folder-icon { color: var(--vermelho-vivo); }

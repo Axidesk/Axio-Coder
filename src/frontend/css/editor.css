@@ -292,6 +292,23 @@
     border-left: none;
     border-top: 1px solid var(--border);
 }
+#explorer-tree.files-vertical {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+#explorer-tree.files-vertical > ul {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    height: 100%;
+    gap: 2px 4px;
+}
+#explorer-tree.files-vertical .explorer-item {
+    width: 150px;
+    flex-shrink: 0;
+    margin: 0;
+}
 #explorer-tree.files-colunas {
     display: flex;
     min-width: 0;

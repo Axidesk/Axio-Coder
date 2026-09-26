@@ -263,9 +263,11 @@ export function applyDockLayout() {
 
 function sincronizarColunas() {
     if (!state.explorerTree) return null;
-    const colunas = arvoreAgrupada && state.dockSide !== 'right';
+    const horizontal = state.dockSide !== 'right';
+    const colunas = arvoreAgrupada && horizontal;
     const mudou = state.explorerTree.classList.contains('files-colunas') !== colunas;
     state.explorerTree.classList.toggle('files-colunas', colunas);
+    state.explorerTree.classList.toggle('files-vertical', horizontal && !colunas);
     return mudou ? colunas : null;
 }
 

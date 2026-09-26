@@ -40,13 +40,12 @@ function guardarLista(chave, dados) {
 }
 
 function chaveDaLista(caminho) {
-    return (mostrandoOcultos() ? 'ocultos:' : 'essencial:') + caminho;
+    return caminho;
 }
 
 function pedirLista(caminho) {
     const chave = chaveDaLista(caminho);
-    const sufixo = mostrandoOcultos() ? '&ocultos=1' : '';
-    const pedido = fetch(state.API + '/api/explorer?path=' + encodeURIComponent(caminho) + sufixo)
+    const pedido = fetch(state.API + '/api/explorer?path=' + encodeURIComponent(caminho))
         .then(r => r.json())
         .then(data => {
             if (!data.sem_raiz && !data.error) guardarLista(chave, data);
@@ -167,16 +166,17 @@ export function ligarBotaoDeOcultos() {
     });
     aoMudarOcultos(pintarBotaoDeOcultos);
     pintarBotaoDeOcultos();
+    aplicarOlhoNaArvore();
 }
 
-export async function alternarPastasOcultas() {
-    const caminho = caminhoDaArvore();
+export function alternarPastasOcultas() {
     alternarOcultos();
-    listasDePastas.clear();
-    dadosDaArvore = null;
-    state.explorerRenderPath = null;
-    state.explorerTree.innerHTML = '';
-    await loadExplorer(caminho);
+    aplicarOlhoNaArvore();
+}
+
+function aplicarOlhoNaArvore() {
+    if (!state.explorerTree) return;
+    state.explorerTree.classList.toggle('mostra-ocultos', mostrandoOcultos());
 }
 
 export function prefetchPasta(caminho) {
@@ -295,6 +295,7 @@ export function renderExplorer(data) {
     highlightSelection();
     applyErrorMarkers();
     atualizarSugestoes(caminho);
+    aplicarOlhoNaArvore();
 }
 export function renderEmptyExplorer() {
     state.explorerTree.innerHTML = '';
