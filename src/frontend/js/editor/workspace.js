@@ -1,5 +1,5 @@
 import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogTheme, enterLogMode, enterLogModeWithLines, enterReadonlyLogMode, exitLogMode, updateLineNumbersButton } from './themes.js';
-import { VISTAS_DE_TRABALHO, fecharPreview, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
+import { VISTAS_DE_TRABALHO, fecharPreview, garantirVistaVisivel, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
 import { agendarReconciliacaoDeAbas, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
 import { ALTURA_LINHA } from './metricas.js';
 import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
@@ -477,6 +477,9 @@ export function openFileAtLine(path, line) {
     if (!path) return;
     const targetLine = parseInt(line, 10) || 1;
     ensureWorkspaceReady();
+    setActive(true);
+    setTopBarHidden(false);
+    garantirVistaVisivel('editor');
     if (state.currentFile && mesmoFicheiro(state.currentFile, path) && state.editor) {
         setView('editor');
         exitLogMode();

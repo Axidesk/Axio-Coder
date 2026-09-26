@@ -135,6 +135,26 @@ function aplicarVista(name, previousView) {
     window.dispatchEvent(new CustomEvent('axio-view-change', { detail: { view: name, anterior: previousView } }));
 }
 
+export function garantirVistaVisivel(name) {
+    const vista = name || state.vistaDeTrabalho;
+    if (!VISTAS_DE_TRABALHO.includes(vista)) return;
+    if (state.currentView !== vista) {
+        setView(vista);
+        return;
+    }
+    const viewport = vista === 'preview' ? state.previewView : state.editorView;
+    if (!viewport) return;
+    if (state.viewTimers[vista]) {
+        clearTimeout(state.viewTimers[vista]);
+        state.viewTimers[vista] = null;
+    }
+    viewport.classList.remove('hidden');
+    viewport.classList.add('flex');
+    viewport.classList.remove('editor-slide-down', 'preview-fade-out');
+    applyTabsVisibility();
+    if (vista === 'editor') layoutAllEditors();
+}
+
 export function loadExplorerOnce() {
     if (!state.explorerLoaded) {
         state.explorerLoaded = true;
