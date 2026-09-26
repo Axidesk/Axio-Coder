@@ -542,10 +542,10 @@ def _vigia_do_depurador(registo_id):
             _avisar_sem_arranque(registo_id, janela, visto)
             return
         anterior = visto["paragem"]
-        if anterior and (anterior["arquivo"], anterior["linha"]) == (paragem["arquivo"],
-                                                                     paragem["linha"]):
+        agora = (paragem["arquivo"], paragem["linha"], paragem["queda"])
+        if anterior and anterior == agora:
             return
-        visto["paragem"] = paragem
+        visto["paragem"] = agora
         if not anterior and not paragem["acontecimento"]:
             return
         emit_event("debug_stop", pid=registo_id, arquivo=paragem["arquivo"], linha=paragem["linha"],

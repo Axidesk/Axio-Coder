@@ -384,7 +384,9 @@ def paragem_atual():
 
     'acontecimento' diz se houve algo que explique a paragem (um ponto de paragem apanhado ou
     uma queda). O sitio onde o depurador fica parado mal arranca nao conta como paragem: sem
-    esta separacao o editor saltava para a primeira linha do ficheiro em todas as sessoes."""
+    esta separacao o editor saltava para a primeira linha do ficheiro em todas as sessoes.
+    Numa queda o sitio do ERRO ganha ao sitio da paragem: o pdb fica no import que chamou o
+    modulo que nao compila, e editar esse import nao resolve nada."""
     with _LEITURA_TRANCA:
         sobre = dict(_LEITURA["sobre"] or {})
     parou = dict(sobre.get("parou") or {})
@@ -393,9 +395,15 @@ def paragem_atual():
     linha = int(parou.get("linha") or 0)
     if not caminho or not linha:
         return {}
+    queda = leitura_depurador.e_queda(motivo)
+    if queda:
+        erro = dict(sobre.get("erro") or {})
+        if erro.get("caminho") and erro.get("linha"):
+            caminho = erro["caminho"].strip()
+            linha = int(erro["linha"])
     return {"arquivo": os.path.realpath(caminho) if os.path.isfile(caminho) else caminho,
             "linha": linha,
-            "queda": leitura_depurador.e_queda(motivo),
+            "queda": queda,
             "acontecimento": bool(motivo) and not motivo.startswith("arranque do programa")}
 
 

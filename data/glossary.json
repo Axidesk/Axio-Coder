@@ -805,8 +805,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 200,
         "conferido": [
-          1790441072.808,
-          45731
+          1790459293.912,
+          46106
         ]
       }
     },
@@ -2029,8 +2029,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 308,
         "conferido": [
-          1790447385.779,
-          23445
+          1790457972.248,
+          24581
         ]
       }
     },
@@ -2070,8 +2070,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 60,
         "conferido": [
-          1790447385.779,
-          23445
+          1790457972.248,
+          24581
         ]
       }
     },
@@ -2090,10 +2090,10 @@
       "descricao": "Cards PAUSADOS que aparecem sozinhos no TOPO da zona dos cards com os comandos de arranque da pasta que o explorer mostra. Criados por atualizarSugestoes(pastaRel), chamada por explorer.js:renderExplorer a cada navegacao de pasta. Chave sintetica 'sug:<comando>' no Map interno (ainda nao tem pid). A bolinha diz 'Executar' e o rotulo do fim (.term-card-fim) mostra a ORIGEM ('scripts.start', 'ponto de entrada', 'Docker Compose'...). O CLIQUE NO CABECALHO de uma sugestao NAO faz nada - nem abre (nao tem corpo) nem seleciona (nao aceita resposta); so a bolinha (play) e o X respondem. PERSISTENTES: nascem com `card.persistente = true` e essa marca SOBREVIVE ao play, por isso limparCards (a borrachinha e o cls) salta-os - o card do modulo continua a vista mesmo depois de correr e terminar. Quem os leva e: o X do card, o Ctrl+R (nao vem do GET /api/processos) e o MUDAR DE PASTA, por _removerSugestoes (que filtra por `persistente` e nao por `sugerido`, e poupa os que ainda correm). NAO RECONSTROI O QUE NAO MUDOU: o fetch corre ANTES de tocar no DOM e _mesmasSugestoes compara com sugestoesAtuais, saindo cedo quando a lista e igual - sem isso a zona piscava a cada renderExplorer (que corre a cada files_changed).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
-        "linha": 660,
+        "linha": 680,
         "conferido": [
-          1790447385.779,
-          23445
+          1790457972.248,
+          24581
         ]
       }
     },
@@ -2265,8 +2265,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 238,
         "conferido": [
-          1790447385.779,
-          23445
+          1790457972.248,
+          24581
         ]
       }
     },
@@ -2286,8 +2286,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 484,
         "conferido": [
-          1790447385.779,
-          23445
+          1790457972.248,
+          24581
         ]
       }
     },
@@ -2328,8 +2328,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 347,
         "conferido": [
-          1790441072.808,
-          45731
+          1790459293.912,
+          46106
         ]
       }
     },
@@ -2540,8 +2540,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 551,
         "conferido": [
-          1790447385.779,
-          23445
+          1790457972.248,
+          24581
         ]
       }
     },
@@ -2760,8 +2760,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 97,
         "conferido": [
-          1790396477.219,
-          33986
+          1790449021.136,
+          34701
         ]
       }
     },
@@ -2780,8 +2780,8 @@
         "arquivo": "src/frontend/js/editor/explorer.js",
         "linha": 105,
         "conferido": [
-          1790396477.219,
-          33986
+          1790449021.136,
+          34701
         ]
       }
     },
@@ -3835,10 +3835,10 @@
       "descricao": "Cache de listagens de pasta (VALIDADE_DA_LISTA_MS=6000, MAX_PASTAS_LISTADAS=24) e prefetch no hover com intencao de 90ms; com a lista em cache o clique em loadExplorer desenha sem pedido de rede. Consumidores: loadExplorer, reloadExplorer, ligarPrefetchDePastas.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/explorer.js",
-        "linha": 182,
+        "linha": 202,
         "conferido": [
-          1790396477.219,
-          33986
+          1790449021.136,
+          34701
         ]
       }
     },
@@ -4672,8 +4672,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 375,
         "conferido": [
-          1790441072.808,
-          45731
+          1790459293.912,
+          46106
         ]
       }
     },
@@ -5172,10 +5172,10 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 295,
+        "linha": 302,
         "conferido": [
-          1790446303.611,
-          38139
+          1790458587.194,
+          38525
         ]
       }
     },
@@ -5192,10 +5192,10 @@
       "descricao": "Modo da arvore na doc HORIZONTAL quando a lista tem grupos (CMake/sln): cada NIVEL da navegacao e uma COLUNA a direita, no desenho do Finder - a pasta clicada fica realcada e a coluna seguinte mostra os filhos dela; clicar outra vez na mesma pasta fecha as colunas a direita. Cada coluna rola sozinha (overflow-y auto) e a ULTIMA estica para nao deixar vazio; o painel NAO ganha barra vertical. Ligado por applyFilesLayout (src/frontend/js/editor/workspace.js:applyFilesLayout) e montado por renderColunasExplorer/abrirColunaDePasta (src/frontend/js/editor/explorer.js).",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 332,
+        "linha": 334,
         "conferido": [
-          1790442513.979,
-          29104
+          1790458334.569,
+          29464
         ]
       }
     },
@@ -5211,10 +5211,10 @@
       "descricao": "Cabecalho com o NOME da pasta no topo de cada coluna nascida de uma pasta no doc horizontal. O nome nao se repete como linha dentro da coluna.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 371,
+        "linha": 373,
         "conferido": [
-          1790442513.979,
-          29104
+          1790458334.569,
+          29464
         ]
       }
     },
@@ -5249,10 +5249,10 @@
       "descricao": "A pasta que abriu a coluna seguinte fica com o icone AZUL (o nome nao muda de cor). E o unico azul da arvore.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 389,
+        "linha": 391,
         "conferido": [
-          1790442513.979,
-          29104
+          1790458334.569,
+          29464
         ]
       }
     },
@@ -5298,10 +5298,10 @@
       "descricao": "Barra #explorer-path. Quando o caminho nao cabe na largura (o cabecalho da arvore tem 9 icones a direita), terminal.js:pintarCaminho esconde os crumbs da ESQUERDA e poe um … antes do primeiro visivel, guardando sempre o ultimo nivel - o title do … diz o que ficou escondido.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/explorer.js",
-        "linha": 508,
+        "linha": 528,
         "conferido": [
-          1790396477.219,
-          33986
+          1790449021.136,
+          34701
         ]
       }
     },
@@ -5374,10 +5374,10 @@
       "descricao": "Na doc horizontal (dock em baixo) e fora do modo colunas (projeto cmake), a lista do explorer vira flex column com flex-wrap: os ficheiros descem e, ao bater no limite inferior da janela, abrem uma coluna nova a direita (como o ambiente de trabalho do Windows). Quem poe a classe e sincronizarColunas em workspace.js; so o modo cmake (files-colunas) tem o scroll horizontal.",
       "localizacao": {
         "arquivo": "src/frontend/css/editor.css",
-        "linha": 315,
+        "linha": 317,
         "conferido": [
-          1790442513.979,
-          29104
+          1790458334.569,
+          29464
         ]
       }
     },
@@ -5454,21 +5454,21 @@
         "pontos de paragem",
         "breakpoints",
         "cdb",
+        "pdb",
         "parar no codigo",
         "ler a pilha",
         "call stack",
         "ver as variaveis",
-        "conduzir a sessao de depuracao"
+        "conduzir a sessao de depuracao",
+        "o ficheiro do erro nao abre",
+        "abrir o ficheiro do erro automaticamente",
+        "linha vermelha do erro"
       ],
-      "identificador": "tool_gerir_projeto(acao='depurar') / _depurar / _conduzir_depuracao",
-      "descricao": "Abre o executavel construido sob o cdb (depurador de consola do Windows SDK, em builds/depurar.py) num CARD do terminal, com os pontos de paragem ficheiro:linha ja marcados. A sessao e conduzida pelo parametro 'comandos' (k, dv /t /v, ?? variavel, l+s, p, t, g, q): sem 'breakpoints', os comandos vao para a sessao que ja esta aberta e a resposta volta no retorno da ferramenta. O cdb e lancado com -lines e a preparacao liga l+t/l+s, por isso cada paragem mostra a linha de origem.",
+      "identificador": "tool_gerir_projeto(acao='depurar') / _vigia_do_depurador / paragem_atual / abrirParagemDoDepurador",
+      "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 198,
-        "conferido": [
-          1790447381.972,
-          32627
-        ]
+        "linha": 526
       }
     },
     {

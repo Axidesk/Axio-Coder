@@ -15,6 +15,7 @@ _FIM_DO_PROGRAMA = re.compile(r"^The program finished", re.IGNORECASE)
 _RECUSA = re.compile(r"^\*\*\*\s*(?P<nome>[A-Za-z_.]*[Ee]rror|[A-Za-z_.]+):\s*(?P<texto>.*)$")
 _TRACEBACK = re.compile(r"^Traceback \(most recent call last\):")
 _QUADRO_DO_TRACEBACK = re.compile(r'^\s*File "(?P<ficheiro>[^"]+)", line (?P<linha>\d+), in (?P<nome>.*)$')
+_QUADRO_SEM_FUNCAO = re.compile(r'^\s*File "(?P<ficheiro>[^"]+)", line (?P<linha>\d+)\s*$')
 _MOTIVO_DO_TRACEBACK = re.compile(r"^(?P<nome>[A-Za-z_][A-Za-z0-9_.]*): ?(?P<texto>.*)$")
 
 _FICHEIROS_DO_MOTOR = ("pdb.py", "bdb.py", "cmd.py", "code.py", "runpy.py", "<string>",
@@ -46,8 +47,10 @@ def _retrato(antes):
     """O retrato que ja se tinha, pronto a receber as linhas novas."""
     if not antes:
         return {"parou": None, "motivo": "", "recusa": "", "variaveis": [], "quadros": [],
-                "terminou": False, "pendente": False, "traceback": False, "motivo_novo": False}
+                "erro": None, "terminou": False, "pendente": False, "traceback": False,
+                "motivo_novo": False}
     return {"parou": dict(antes["parou"]) if antes.get("parou") else None,
+            "erro": dict(antes["erro"]) if antes.get("erro") else None,
             "motivo": antes.get("motivo", ""),
             "recusa": antes.get("recusa", ""),
             "variaveis": list(antes.get("variaveis") or []),
@@ -74,11 +77,17 @@ def _ler_linha(sobre, linha):
     achado = _TRACEBACK.match(limpa)
     if achado:
         sobre["traceback"] = True
+        sobre["erro"] = None
         return
     if sobre.get("traceback"):
         achado = _QUADRO_DO_TRACEBACK.match(limpa)
         if achado:
             _juntar_quadro(sobre, achado.group("ficheiro"), achado.group("linha"))
+            _marcar_local_do_erro(sobre, achado.group("ficheiro"), achado.group("linha"))
+            return
+        achado = _QUADRO_SEM_FUNCAO.match(limpa)
+        if achado:
+            _marcar_local_do_erro(sobre, achado.group("ficheiro"), achado.group("linha"))
             return
         achado = _MOTIVO_DO_TRACEBACK.match(limpa)
         if achado:
@@ -147,6 +156,9 @@ def linhas(sobre):
         saida.append(f"[axio] parou em {onde}" + (f"  ->  {codigo}" if codigo else ""))
     if sobre.get("motivo"):
         saida.append(f"[axio] porque: {sobre['motivo']}")
+        erro = sobre.get("erro") or {}
+        if erro.get("linha") and parou.get("linha") and _e_outro_sitio(erro, parou):
+            saida.append(f"[axio] o erro esta em {erro['ficheiro']}:{erro['linha']}")
     variaveis = sobre.get("variaveis") or []
     if variaveis:
         mostradas = "  ·  ".join(_texto_da_variavel(v) for v in variaveis[:_LIMITE_DE_VARIAVEIS])
@@ -211,6 +223,14 @@ def _juntar_quadro(sobre, ficheiro, linha):
         sobre["pendente"] = True
 
 
+def _marcar_local_do_erro(sobre, ficheiro, linha):
+    """Guarda o ULTIMO quadro do traceback - e ali que o erro esta."""
+    if not _do_programa(ficheiro):
+        return
+    sobre["erro"] = {"ficheiro": _nome_curto(ficheiro), "caminho": (ficheiro or "").strip(),
+                     "linha": int(linha)}
+
+
 def _do_programa(caminho):
     """Diz se o ficheiro e do programa que esta a ser depurado, e nao do motor do depurador nem
     da biblioteca do Python - a pilha do pdb, do bdb e do codecs nao e a pilha do utilizador."""
@@ -227,6 +247,13 @@ def _mesmo_sitio(antes, agora):
     if not antes or not agora:
         return True
     return _nome_curto(antes).lower() == _nome_curto(agora).lower()
+
+
+def _e_outro_sitio(erro, parou):
+    """Diz se o sitio do erro e diferente de onde o depurador ficou parado."""
+    if _nome_curto(erro.get("ficheiro")).lower() != _nome_curto(parou.get("ficheiro")).lower():
+        return True
+    return int(erro.get("linha") or 0) != int(parou.get("linha") or 0)
 
 
 def _nomear_pelo_quadro(sobre):
