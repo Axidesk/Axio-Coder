@@ -4,7 +4,7 @@ import { vistaDe } from './colunas.js';
 import { collapseHistorySearchInline } from './historico/busca.js';
 import { recolherContextPopup, syncMenuIcons, syncWorkspaceTopBar } from './ui.js';
 
-const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles, btnEyeDiff, btnGitAutoHistory, btnHistorySearch, btnLogToggle, btnRedo, btnShowQuestion, btnShowThoughts, btnShowTools, btnUndo, col3Header, col3Title, lblRedoCount, lblUndoCount, logDock, modeSubmenu, panelCol2, panelCol3, panelLogSession, plusMenu, slidingPanelContainer } = dom;
+const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles, btnDockLogSession, btnEyeDiff, btnGitAutoHistory, btnHistorySearch, btnRedo, btnShowQuestion, btnShowThoughts, btnShowTools, btnUndo, col3Header, col3Title, lblRedoCount, lblUndoCount, logDock, modeSubmenu, panelCol2, panelCol3, panelLogSession, plusMenu, slidingPanelContainer } = dom;
 
 
     function closePlusMenus() {
@@ -88,6 +88,12 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         syncDocTopBar();
     }
     function syncDockButtons() {
+        if (btnDockLogSession) {
+            const open = panelLogSession && !panelLogSession.classList.contains('panel-col-closed');
+            btnDockLogSession.classList.toggle('hidden', open);
+            btnDockLogSession.classList.toggle('text-[var(--oliva)]', open);
+            btnDockLogSession.classList.toggle('text-[var(--text-mutado)]', !open);
+        }
         if (btnDockFiles) btnDockFiles.classList.add('hidden');
         if (btnDockCode) btnDockCode.classList.add('hidden');
     }
@@ -133,7 +139,6 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
     function closePanelCol(panel) {
         if (!panel) return;
         panel.classList.add('panel-col-closed');
-        if (panel === panelCol2 && logDock) logDock.classList.remove('col2-foco');
         syncDockButtons();
         syncDocTopBar();
     }
@@ -160,57 +165,20 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         resetCol3State();
     }
     function isLogDockOpen() {
-        return !!panelLogSession && !panelLogSession.classList.contains('panel-col-closed') && !logSessionRecolhido();
-    }
-    function logSessionRecolhido() {
-        return !!panelLogSession && panelLogSession.classList.contains('log-recolhido');
-    }
-    function col2EmFoco() {
-        return !!logDock && logDock.classList.contains('col2-foco');
+        return panelLogSession && !panelLogSession.classList.contains('panel-col-closed');
     }
     function openLogDock() {
         if (!logDock) return;
-        logDock.classList.remove('dock-closed', 'col2-foco');
-        if (panelLogSession) panelLogSession.classList.remove('panel-col-closed', 'log-recolhido');
-        syncDockButtons();
-    }
-    function recolherLogSession() {
-        if (!panelLogSession) return;
-        if (logDock) logDock.classList.remove('col2-foco');
-        panelLogSession.classList.remove('panel-col-closed');
-        panelLogSession.classList.add('log-recolhido');
-        if (btnLogToggle) btnLogToggle.title = 'Expandir Log da Sessão';
-        syncDockButtons();
-    }
-    function expandirLogSession() {
-        if (!panelLogSession) return;
-        if (logDock) logDock.classList.remove('col2-foco');
-        panelLogSession.classList.remove('log-recolhido', 'panel-col-closed');
-        if (btnLogToggle) btnLogToggle.title = 'Recolher Log da Sessão';
+        logDock.classList.remove('dock-closed');
+        if (panelLogSession) panelLogSession.classList.remove('panel-col-closed');
         syncDockButtons();
     }
     function closeLogDock() {
-        if (logDock) logDock.classList.remove('col2-foco');
-        if (panelLogSession) {
-            panelLogSession.classList.remove('panel-col-closed');
-            panelLogSession.classList.add('log-recolhido');
-        }
+        if (panelLogSession) panelLogSession.classList.add('panel-col-closed');
         if (panelCol2) panelCol2.classList.add('panel-col-closed');
         if (panelCol3) panelCol3.classList.add('panel-col-closed');
         syncDockButtons();
     }
-    function alternarLogSession() {
-        if (logSessionRecolhido()) expandirLogSession();
-        else recolherLogSession();
-    }
-    function focarCol2DoDock() {
-        const editorPanel = document.getElementById('editor-panel');
-        if (!logDock || !panelCol2 || !editorPanel) return;
-        if (!editorPanel.classList.contains('dock-right')) return;
-        if (panelCol2.classList.contains('panel-col-closed')) return;
-        logDock.classList.add('col2-foco');
-    }
-
     function isHistoryOpen() {
         return !slidingPanelContainer.classList.contains('dock-closed');
     }
@@ -264,12 +232,6 @@ export {
     isLogDockOpen,
     openLogDock,
     closeLogDock,
-    logSessionRecolhido,
-    col2EmFoco,
-    alternarLogSession,
-    expandirLogSession,
-    recolherLogSession,
-    focarCol2DoDock,
     isHistoryOpen,
     openHistory,
     closeHistory,

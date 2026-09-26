@@ -1,7 +1,7 @@
 const { ipcRenderer } = window.require('electron');
 import { state } from './state.js';
 import * as dom from './dom.js';
-import { closeCol3, closePanelCol, closePlusMenus, focarCol2DoDock, openCol3Panel, openLogDockInWorkspace, openPanelCol, setupCol3ForFileView, syncCopyButtons, syncDocTopBar } from './layout.js';
+import { closeCol3, closePanelCol, closePlusMenus, openCol3Panel, openLogDockInWorkspace, openPanelCol, setupCol3ForFileView, syncCopyButtons, syncDocTopBar } from './layout.js';
 import { criarVista, vistaDoElemento } from './colunas.js';
 import { escapeHtml } from './messages.js';
 import { resetWorkspaceUI } from './ui.js';
@@ -530,7 +530,6 @@ const NL = String.fromCharCode(10);
             if (estavaFechado) {
                 expandir();
             }
-            if (vista.id === 'dock') focarCol2DoDock();
             marcarFileSelecionado(fileHeader);
             if (vista.aoSelecionarArquivo) vista.aoSelecionarArquivo();
             selecionarArquivo(fileData, vista);
