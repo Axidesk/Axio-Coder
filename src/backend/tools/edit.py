@@ -4,6 +4,7 @@ Verbatim de tools/filesystem.py; importa-lo e o que regista as suas 3 tools de
 gravacao, todas passando por `gravar_edicao_com_diff` - o unico ponto onde se
 escreve um ficheiro (a cadeia de avisos/gates de escrita esta em tools/syntax.py).
 """
+import difflib
 import os
 
 from src.backend.state import estado, emit_event, notificar_mudanca_arquivos
@@ -71,7 +72,32 @@ def _diagnostico_ancora(conteudo, texto_antigo):
         return (f" O trecho aparece inteiro a partir da linha {i + 1} - se a busca nao casou, "
                 "ha diferenca de caracteres invisivel (reporte isto).")
     return (f" Nenhuma linha do ficheiro e igual a primeira linha da ancora "
-            f"({primeira.strip()[:70]!r}).")
+            f"({primeira.strip()[:70]!r}).") + _linha_mais_parecida(linhas_arquivo, primeira)
+
+
+def _linha_mais_parecida(linhas, procurada):
+    """Aponta a linha mais parecida com a ancora, para o texto nao se procurar as cegas."""
+    alvo = procurada.strip()
+    for i, linha in enumerate(linhas):
+        if alvo and alvo in linha.strip():
+            inteira = linha.strip()
+            if len(inteira) <= 300:
+                return (f" Esse texto existe na linha {i + 1}, mas como PEDACO dela: a ancora tem de "
+                        f"ser a linha INTEIRA - use {inteira!r}.")
+            return (f" Esse texto existe na linha {i + 1}, mas como PEDACO dela: a ancora tem de ser "
+                    f"a linha INTEIRA, que tem {len(inteira)} caracteres - leia-a no ficheiro com "
+                    f"tool_ler_trecho_arquivo (linha {i + 1}) e use-a verbatim, sem cortar.")
+    melhor, indice = 0.0, -1
+    for i, linha in enumerate(linhas):
+        if not linha.strip():
+            continue
+        razao = difflib.SequenceMatcher(None, alvo, linha.strip()).ratio()
+        if razao > melhor:
+            melhor, indice = razao, i
+    if indice >= 0 and melhor >= 0.6:
+        return (f" A linha mais parecida e a {indice + 1} ({melhor:.0%} de semelhanca): "
+                f"{linhas[indice].strip()[:140]!r}.")
+    return " Nao ha nenhuma linha parecida com a ancora neste ficheiro - confirme o FICHEIRO."
 
 
 def gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, action_name):
