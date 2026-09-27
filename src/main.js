@@ -29,6 +29,7 @@ let temaAtual = 'dark';
 let inspectAtivo = false;
 let asanAtivo = false;
 let plataformaDoBuild = '';
+let plataformasDoBuild = [];
 let quitting = false;
 let flaskRestarts = 0;
 let reiniciandoBackend = false;
@@ -1207,14 +1208,7 @@ app.on('ready', () => {
           {
             label: 'C++',
             submenu: [
-              {
-                label: plataformaDoBuild ? 'Compilar (' + plataformaDoBuild + ')' : 'Compilar',
-                submenu: [
-                  { label: 'Debug', click: () => pedirCompilar('debug') },
-                  { label: 'Release', click: () => pedirCompilar('release') },
-                  { label: 'AddressSanitizer', click: () => pedirCompilar('asan') }
-                ]
-              },
+              grupoDeCompilacaoDoMenu(),
               { type: 'separator' },
               { label: asanAtivo ? 'Depurar com AddressSanitizer  ✓' : 'Depurar com AddressSanitizer', click: () => pedirAsan(!asanAtivo) }
             ]
@@ -1250,9 +1244,28 @@ app.on('ready', () => {
     }
   }
 
-  function pedirCompilar(configuracao) {
+  function grupoDeCompilacaoDoMenu() {
+    const configuracoes = (plataforma) => [
+      { label: 'Debug', click: () => pedirCompilar('debug', plataforma) },
+      { label: 'Release', click: () => pedirCompilar('release', plataforma) },
+      { label: 'AddressSanitizer', click: () => pedirCompilar('asan', plataforma) }
+    ];
+    if (plataformasDoBuild.length > 1) {
+      return {
+        label: 'Compilar',
+        submenu: plataformasDoBuild.map((p) => ({
+          label: p === plataformaDoBuild ? p + ' (do projeto)' : p,
+          submenu: configuracoes(p)
+        }))
+      };
+    }
+    const unica = plataformasDoBuild[0] || plataformaDoBuild;
+    return { label: unica ? 'Compilar (' + unica + ')' : 'Compilar', submenu: configuracoes(unica) };
+  }
+
+  function pedirCompilar(configuracao, plataforma) {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('menu:compilar', configuracao);
+      mainWindow.webContents.send('menu:compilar', configuracao, plataforma || '');
     }
   }
 
@@ -1289,11 +1302,13 @@ app.on('ready', () => {
     asanAtivo = !!ativo;
     montarMenu();
   });
-  ipcMain.on('build:plataforma', (e, valor) => {
+  ipcMain.on('build:plataforma', (e, dados) => {
     if (!veioDaJanelaPrincipal(e)) return;
-    const nova = String(valor || '');
-    if (nova === plataformaDoBuild) return;
+    const nova = String((dados || {}).plataforma || '');
+    const novas = ((dados || {}).plataformas || []).map(String);
+    if (nova === plataformaDoBuild && novas.join() === plataformasDoBuild.join()) return;
     plataformaDoBuild = nova;
+    plataformasDoBuild = novas;
     montarMenu();
   });
   setTema('dark', false);

@@ -8,17 +8,23 @@ TIMEOUT_CONSTRUIR = 3000
 _PASTAS_DE_SONDA = ("CMakeFiles", "CMakeScratch", "_deps", ".git")
 
 
-def preparar(pasta, configuracao="debug"):
+def preparar(pasta, configuracao="debug", plataforma=""):
     """Decide o que e preciso para construir: que projeto e, que kit o serve e que preset fica escrito.
 
     Nao executa nada - devolve os comandos ja formados. Quem os corre e quem tem o processo
     na mao, para o build ficar no painel do terminal e nao num canto invisivel.
+
+    `plataforma` e a escolha do utilizador no menu C++ (x86/x64). Vazia, o projeto decide sozinho;
+    preenchida e invalida para este projeto, o build recusa em vez de compilar outra coisa.
     """
     deteccao = detetar.detetar(pasta)
     if deteccao.get("erro"):
         return {"erro": deteccao["erro"]}
+    recusa = _plataforma_recusada(deteccao, plataforma)
+    if recusa:
+        return {"deteccao": deteccao, "faltam": [recusa]}
     if deteccao["tipo"] == "msbuild":
-        return _preparar_msbuild(deteccao, configuracao)
+        return _preparar_msbuild(deteccao, configuracao, plataforma)
     if deteccao["tipo"] != "cmake":
         return {"deteccao": deteccao, "faltam": [_sem_caminho(deteccao)]}
     escolha = kits.escolher_kit(deteccao, kits.kits_instalados(deteccao.get("prefixos", ())))
@@ -59,7 +65,59 @@ def plataforma_do_build(pasta):
     return ""
 
 
-def _preparar_msbuild(deteccao, configuracao):
+def plataformas_do_build(pasta):
+    """Entre que plataformas se pode escolher ao compilar este projeto - o que o menu C++ oferece.
+
+    Um projeto do Visual Studio traz normalmente as duas (Win32 e x64) e a escolha e do utilizador;
+    um CMake do Axio e sempre x64, porque a plataforma sai do preset - oferecer x86 seria prometer o
+    que ele nao faz. Sem projeto conhecido nao ha escolha nenhuma.
+    """
+    deteccao = detetar.detetar(pasta or "")
+    if deteccao.get("erro"):
+        return []
+    return _plataformas_suportadas(deteccao)
+
+
+def _plataformas_suportadas(deteccao):
+    if deteccao["tipo"] == "msbuild":
+        return ["x86", "x64"]
+    if deteccao["tipo"] == "cmake":
+        return ["x64"]
+    return []
+
+
+def _normalizar_plataforma(valor):
+    texto = str(valor or "").strip().lower()
+    if texto in ("x86", "win32", "32"):
+        return "x86"
+    if texto in ("x64", "amd64", "64"):
+        return "x64"
+    return ""
+
+
+def _plataforma_recusada(deteccao, plataforma):
+    """A razao pela qual a plataforma pedida nao serve para este projeto - vazio quando serve.
+
+    Uma plataforma pedida que nao se reconhece e RECUSADA, e nunca ignorada: cair em silencio na
+    plataforma do projeto compilaria outra coisa que nao a pedida, sem ninguem dar por isso.
+    """
+    pedido = str(plataforma or "").strip()
+    if not pedido:
+        return ""
+    pedida = _normalizar_plataforma(pedido)
+    if not pedida:
+        return f"Plataforma '{pedido}' desconhecida: use x86 ou x64."
+    suportadas = _plataformas_suportadas(deteccao)
+    if pedida in suportadas:
+        return ""
+    if not suportadas:
+        return (f"Este projeto ({deteccao['rotulo']}) nao declara plataforma nenhuma: nao ha como "
+                f"compilar para {pedida}.")
+    return (f"Este projeto compila em {' e '.join(suportadas)}; foi pedido {pedida}. Escolha uma "
+            f"plataforma do projeto.")
+
+
+def _preparar_msbuild(deteccao, configuracao, plataforma=""):
     """O plano de um projeto do Visual Studio: que MSBuild, que plataforma e que configuracao."""
     escolha = kits.escolher_kit(deteccao, kits.kits_instalados(deteccao.get("prefixos", ())))
     if escolha["faltam"]:
@@ -71,7 +129,7 @@ def _preparar_msbuild(deteccao, configuracao):
         return {"deteccao": deteccao, "escolha": escolha,
                 "faltam": ["A pasta tem um projeto do Visual Studio e nao encontrei nem o .sln nem o "
                            ".vcxproj com as fontes declaradas."]}
-    plataforma = _plataforma_do_msbuild(deteccao, alvo)
+    plataforma = _normalizar_plataforma(plataforma) or _plataforma_do_msbuild(deteccao, alvo)
     nome = "Release" if configuracao == "release" else "Debug"
     escolha["gerador"] = ""
     escolha["arquitetura"] = plataforma

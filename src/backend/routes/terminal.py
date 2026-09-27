@@ -196,10 +196,12 @@ def terminal_depurar():
 @terminal_bp.route('/api/terminal/compilar', methods=['POST'])
 def terminal_compilar():
     """Compila o projeto aberto na configuracao pedida (debug/release/asan) como card do terminal,
-    sem abrir sessao de depuracao. E o que o menu Ferramentas -> C++ aciona."""
+    sem abrir sessao de depuracao. E o que o menu Ferramentas -> C++ aciona, com a plataforma
+    (x86/x64) escolhida a mao quando ela vem no pedido."""
     dados = request.json or {}
     resultado = compilar_projeto((dados.get("pasta") or "").strip(),
-                                 (dados.get("configuracao") or "debug").strip())
+                                 (dados.get("configuracao") or "debug").strip(),
+                                 (dados.get("plataforma") or "").strip())
     if not resultado.get("ok"):
         return jsonify({"error": resultado.get("texto", "")}), 409
     return jsonify({"ok": True, "texto": resultado.get("texto", "")})

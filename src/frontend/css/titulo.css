@@ -143,6 +143,12 @@
     color: var(--text-mutado);
 }
 
+.titulo-nota {
+    margin-left: 8px;
+    color: var(--text-mutado);
+    font-size: 11px;
+}
+
 .titulo-separador {
     height: 1px;
     margin: 4px 8px;

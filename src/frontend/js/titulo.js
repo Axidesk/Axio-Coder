@@ -7,6 +7,7 @@ const botoes = [
 let inspecionar = false;
 let asan = false;
 let plataforma = '';
+let plataformas = [];
 let aberto = null;
 let zoom = 1;
 let zoomMinimo = 0.5;
@@ -49,14 +50,30 @@ function itensFerramentas() {
         { separador: true },
         { rotulo: 'Modo Inspecionar', marca: inspecionar, acao: 'inspect' },
         { grupo: 'C++', itens: [
-            { grupo: plataforma ? 'Compilar (' + plataforma + ')' : 'Compilar', itens: [
-                { rotulo: 'Debug', acao: 'compilar', valor: 'debug' },
-                { rotulo: 'Release', acao: 'compilar', valor: 'release' },
-                { rotulo: 'AddressSanitizer', acao: 'compilar', valor: 'asan' }
-            ] },
+            grupoDeCompilacao(),
             { separador: true },
             { rotulo: 'Depurar com AddressSanitizer', marca: asan, acao: 'asan' }
         ] }
+    ];
+}
+
+function grupoDeCompilacao() {
+    if (plataformas.length > 1) {
+        return { grupo: 'Compilar', itens: plataformas.map((p) => ({
+            grupo: p,
+            nota: p === plataforma ? 'do projeto' : '',
+            itens: configuracoesDeBuild(p)
+        })) };
+    }
+    const unica = plataformas[0] || plataforma;
+    return { grupo: unica ? 'Compilar (' + unica + ')' : 'Compilar', itens: configuracoesDeBuild(unica) };
+}
+
+function configuracoesDeBuild(plataformaEscolhida) {
+    return [
+        { rotulo: 'Debug', acao: 'compilar', valor: 'debug', plataforma: plataformaEscolhida },
+        { rotulo: 'Release', acao: 'compilar', valor: 'release', plataforma: plataformaEscolhida },
+        { rotulo: 'AddressSanitizer', acao: 'compilar', valor: 'asan', plataforma: plataformaEscolhida }
     ];
 }
 
@@ -90,7 +107,7 @@ function construirItem(item) {
     }
     botao.addEventListener('click', () => {
         if (item.acao === 'compilar') {
-            pedirCompilacao(item.valor);
+            pedirCompilacao(item.valor, item.plataforma);
             fechar();
             return;
         }
@@ -126,6 +143,13 @@ function cabecaDeItem(rotulo, antes) {
     if (antes) cabeca.appendChild(antes);
     cabeca.appendChild(seta);
     return cabeca;
+}
+
+function notaDeGrupo(texto) {
+    const nota = document.createElement('span');
+    nota.className = 'titulo-nota';
+    nota.textContent = texto;
+    return nota;
 }
 
 function construirZoom() {
@@ -185,7 +209,7 @@ function construirGrupo(item) {
     const bloco = document.createElement('div');
     bloco.className = 'titulo-grupo';
 
-    const cabeca = cabecaDeItem(item.grupo);
+    const cabeca = cabecaDeItem(item.grupo, item.nota ? notaDeGrupo(item.nota) : null);
 
     const corpo = document.createElement('div');
     corpo.className = 'titulo-grupo-corpo';
@@ -223,10 +247,12 @@ function sincronizarAsan() {
 function atualizarPlataforma() {
     return fetch('/api/projeto/plataforma').then((resposta) => resposta.json()).then((dados) => {
         const nova = String((dados || {}).plataforma || '');
-        if (nova === plataforma) return;
+        const novas = ((dados || {}).plataformas || []).map(String);
+        if (nova === plataforma && novas.join() === plataformas.join()) return;
         plataforma = nova;
+        plataformas = novas;
         const ipc = ponte();
-        if (ipc) ipc.send('build:plataforma', plataforma);
+        if (ipc) ipc.send('build:plataforma', { plataforma: plataforma, plataformas: plataformas });
         repintarMenuAberto();
     }).catch(() => {});
 }
@@ -240,12 +266,16 @@ function primeiraLinha(texto) {
     return String(texto || '').split('\n').find((linha) => linha.trim()) || '';
 }
 
-function pedirCompilacao(configuracao) {
-    avisarStatus('Compilando (' + configuracao + ')...');
+function pedirCompilacao(configuracao, plataformaEscolhida) {
+    const alvo = plataformaEscolhida || plataforma;
+    avisarStatus(alvo ? 'Compilando (' + configuracao + ', ' + alvo + ')...'
+                      : 'Compilando (' + configuracao + ')...');
+    const pedido = { configuracao: configuracao };
+    if (alvo) pedido.plataforma = alvo;
     return fetch('/api/terminal/compilar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ configuracao: configuracao })
+        body: JSON.stringify(pedido)
     }).then((resposta) => resposta.json().then((dados) => ({ ok: resposta.ok, dados: dados }))
     ).then(({ ok, dados }) => {
         if (ok) return;
@@ -304,8 +334,8 @@ if (ipc) {
         gravarAsan(asan);
         repintarMenuAberto();
     });
-    ipc.on('menu:compilar', (evento, configuracao) => {
-        pedirCompilacao(configuracao);
+    ipc.on('menu:compilar', (evento, configuracao, plataformaEscolhida) => {
+        pedirCompilacao(configuracao, plataformaEscolhida);
     });
     ipc.on('menu:set-zoom', (evento, valor) => {
         zoom = Number(valor) || 1;

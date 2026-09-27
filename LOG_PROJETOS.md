@@ -992,20 +992,55 @@ executavel corre). 89 rotas, 0 avarias.
 Uma correcao de brinde: o plano dizia "shaders: glslc encontrado" em qualquer projeto, so porque o
 glslc esta instalado na maquina - passou a dize-lo so quando e o projeto que compila shaders.
 
-### A plataforma no menu, em vez do "(x64)" fixo (2026-10-07)
+### A plataforma no menu: escolha manual, com a do projeto marcada (2026-10-07)
 
 O item dizia `Compilar (x64)` a todos os projetos - e passou a ser FALSO no dia em que o motor comecou
-a compilar `.sln`, porque o Tibia e x86. O rotulo passa a ser lido do PROPRIO projeto: `x86`, `x64`, ou
-nada (sem projeto conhecido escreve so `Compilar`, em vez de prometer uma plataforma que nao sabe).
-`construir.plataforma_do_build` e a unica fonte disso e o `_preparar_msbuild` passou a usar o mesmo
-`_plataforma_do_msbuild`, para o rotulo e o build nao poderem divergir. Vem pela rota nova
-`GET /api/projeto/plataforma`, lida ao abrir o menu (e sem custo quando nao mudou), e chega tambem ao
-menu nativo por IPC. Medido: Tibia -> `Compilar (x86)`, DRAFTCAD -> `Compilar (x64)`, pasta sem projeto
--> `Compilar`.
+a compilar `.sln`, porque o Tibia e x86. Primeiro ficou lido do PROPRIO projeto
+(`construir.plataforma_do_build`, pela rota `GET /api/projeto/plataforma`, que agora devolve tambem as
+`plataformas` que ele aceita); a pedido do utilizador passou a ser ESCOLHA, com um terceiro nivel:
 
-NAO se parte isto em dois menus (x86 / x64): a plataforma e propriedade do PROJETO, nao uma escolha do
-menu. Com seis itens, cinco falhavam conforme o projeto aberto, e num projeto novo nao ha nada em que
-basear a escolha - seria recriar exactamente a armadilha que a deteccao automatica veio evitar.
+    Ferramentas > C++ > Compilar > x86 [do projeto] > Debug | Release | AddressSanitizer
+                                > x64              > Debug | Release | AddressSanitizer
+
+- Um projeto do Visual Studio abre as DUAS plataformas, com a nota `do projeto` na que traz as
+  dependencias ligadas (`msbuild.plataforma_do_projeto`): ele escolhe a mao e ve qual e a dele.
+- Um projeto CMake fica `Compilar (x64)` direto nas configuracoes - o preset escreve x64 e oferecer x86
+  seria prometer o que ele nao faz. Sem projeto conhecido, `Compilar` sem plataforma nenhuma.
+- `construir.plataformas_do_build` decide se ha escolha a oferecer; `_plataformas_suportadas` e a mesma
+  fonte para o menu e para a recusa, logo nao podem divergir.
+- **A plataforma pedida e VALIDADA, nunca ignorada**: `preparar(pasta, configuracao, plataforma)` recusa
+  com o motivo uma plataforma que o projeto nao suporta (`x86` num CMake -> "Este projeto compila em x64;
+  foi pedido x86") e uma que nao se reconhece (`arm64` -> "Plataforma 'arm64' desconhecida: use x86 ou
+  x64"). MOTIVO MEDIDO: sem isto o `arm64` caia em silencio e compilava a plataforma do projeto - o pior
+  genero de defeito, porque o menu dizia uma coisa e o build fazia outra sem avisar.
+- A escolha viaja no corpo do POST (`plataforma`) ate `compilar_projeto(pasta, configuracao, plataforma)`
+  -> `_construir` -> `construir.preparar`.
+- A decisao anterior (nao partir em dois menus) foi REVISTA a pedido do utilizador, e ele tinha razao: a
+  plataforma continua a ser propriedade do projeto, mas quem decide e ele. O que faltava nao era esconder
+  a opcao - era marcar a do projeto e recusar a errada em voz alta.
+
+### As propriedades do Visual Studio vivem TODAS no `.vcxproj` (2026-10-07, medido no Tibia74)
+
+Lido linha a linha em `Projects/Tibia74/Tibia74.vcxproj` - e por isso que o Axio nao precisa de janela
+nenhuma de propriedades: o MSBuild le o ficheiro e herda tudo o que o VS faria.
+
+| O que aparece na janela do VS | Onde esta no `.vcxproj` | Linha |
+|---|---|---|
+| C/C++ > Pre-processador > Definicoes | `<ClCompile><PreprocessorDefinitions>` | 84 (Debug) / 107 (Release) |
+| Vinculador > Entrada > Dependencias Adicionais | `<Link><AdditionalDependencies>` | 88 / 112 |
+| VC++ Directories > Include Directories | `<PropertyGroup><IncludePath>` | 66 / 71 |
+| VC++ Directories > Library Directories | `<PropertyGroup><LibraryPath>` | 67 / 72 |
+
+- ARMADILHA: este projeto NAO usa `<AdditionalIncludeDirectories>` (o campo "Additional Include
+  Directories" em C/C++ > Geral) - usa as macros `IncludePath`/`LibraryPath`, que sao as de "VC++
+  Directories". Sao dois campos diferentes do VS a fazer quase o mesmo: procurar so o primeiro faz
+  dizer que o projeto nao tem includes declarados.
+- A checkbox "Inherit from parent or project defaults" NAO e um atributo: e o `%(AdditionalDependencies)`
+  ou o `$(IncludePath)` escrito no FIM do valor. Sem ele, o VS so tinha os valores proprios.
+- Os "inherited values" (`kernel32.lib user32.lib gdi32.lib...`) NAO estao no `.vcxproj` - medido, zero
+  ocorrencias. Vem dos targets do MSBuild, importados pelo `Microsoft.Cpp.props` (linha 53).
+- O que NAO esta no `.vcxproj` e continua a faltar: o toolset `v140` (VS2015) nas PropertyGroups das
+  linhas 30/36/43/49 nao existe nesta maquina. E esse o passo do retarget para 2022.
 
 ## O que falta (medido, não suposto)
 

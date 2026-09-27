@@ -23,13 +23,15 @@ def projeto_info():
 def projeto_plataforma():
     """A plataforma com que o menu C++ vai compilar este projeto - lida do proprio projeto.
 
-    Existe para o menu poder escrever 'Compilar (x86)' ou 'Compilar (x64)' em vez de prometer x64 a
-    um projeto que traz as dependencias ligadas so em Win32.
+    Devolve a do projeto ('plataforma': x86/x64) e as que ele aceita ('plataformas'): com mais de uma,
+    o menu abre a escolha entre elas marcando a do projeto; com uma so, escreve-a no rotulo; com
+    nenhuma, nao promete escolha nenhuma.
     """
     raiz = estado.get("pasta_raiz", "")
     if not raiz or not os.path.isdir(raiz):
-        return jsonify({"plataforma": ""})
-    return jsonify({"plataforma": construir.plataforma_do_build(raiz)})
+        return jsonify({"plataforma": "", "plataformas": []})
+    return jsonify({"plataforma": construir.plataforma_do_build(raiz),
+                    "plataformas": construir.plataformas_do_build(raiz)})
 
 
 @projeto_bp.route('/api/projeto/outdated')

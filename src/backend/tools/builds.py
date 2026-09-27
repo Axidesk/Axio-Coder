@@ -131,8 +131,8 @@ def _configurar(pasta, plano):
         return True, f"{prefixo}CONFIGURADO (exit 0).\n{saida}"
     return False, f"{prefixo}ERRO AO CONFIGURAR (exit {resultado.returncode}):\n{saida}"
 
-def _construir(pasta, configuracao, alvo):
-    plano = construir.preparar(pasta, configuracao)
+def _construir(pasta, configuracao, alvo, plataforma=""):
+    plano = construir.preparar(pasta, configuracao, plataforma)
     falha = _bloqueio(plano)
     if falha:
         return False, falha
@@ -331,8 +331,12 @@ def abrir_depuracao(pasta, pontos="", arquivo=""):
         return {"ok": False, "texto": texto}
     return {"ok": True, "id": card, "texto": texto}
 
-def compilar_projeto(pasta, configuracao="debug"):
-    """Compila o projeto na configuracao pedida como card do terminal (sem abrir sessao)."""
+def compilar_projeto(pasta, configuracao="debug", plataforma=""):
+    """Compila o projeto na configuracao pedida como card do terminal (sem abrir sessao).
+
+    `plataforma` (x86/x64) e a escolha manual do menu C++: vazia, o projeto decide; preenchida e
+    invalida para ele, o build recusa com o motivo em vez de compilar noutra arquitectura.
+    """
     escolhida = (configuracao or "debug").strip().lower()
     if escolhida not in CONFIGURACOES:
         return {"ok": False, "texto": (f"ERRO: configuracao '{configuracao}' desconhecida (use "
@@ -340,7 +344,7 @@ def compilar_projeto(pasta, configuracao="debug"):
     caminho, erro = _pasta(pasta)
     if erro:
         return {"ok": False, "texto": erro}
-    ok, texto = _construir(caminho, escolhida, "")
+    ok, texto = _construir(caminho, escolhida, "", plataforma)
     return {"ok": ok, "texto": texto}
 
 def _sobe_o_axio(pasta, arquivo):
