@@ -142,7 +142,7 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
         blocos.append(texto)
         if not ok:
             return False, "\n\n".join(blocos)
-    comando = plano["construir"] + (f" --target {alvo}" if alvo else "")
+    comando = _comando_com_alvo(plano, alvo)
     inicio = time.time()
     emit_event("executing", function=f"Compilando {plano['deteccao'].get('projeto') or os.path.basename(pasta)}")
     resultado = correr_como_card(comando, cwd=pasta, timeout=construir.TIMEOUT_CONSTRUIR,
@@ -163,6 +163,14 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
         return True, "\n\n".join(blocos)
     blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
     return False, "\n\n".join(blocos)
+
+def _comando_com_alvo(plano, alvo):
+    """O alvo no dialeto de cada motor: alvo do MSBuild ou alvo do CMake."""
+    if not alvo or not all(c.isalnum() or c in "_.-" for c in alvo):
+        return plano["construir"]
+    if plano["escolha"].get("msbuild"):
+        return plano["construir"].replace("/t:Build", f"/t:{alvo}")
+    return f"{plano['construir']} --target {alvo}"
 
 def _bloqueio(plano):
     if plano.get("erro"):
