@@ -481,6 +481,37 @@ def summary_de_logs(logs):
     resumo = ", ".join(nomes[:3])
     return resumo[:160]
 
+def fundir_grupos_de_log(existentes, novos):
+    """Junta grupos de turno por id: o mesmo id e SUBSTITUIDO, nunca repetido.
+
+    O log deixou de ser escrito num unico ato no fim da rodada - o autosave
+    grava o turno enquanto ele corre -, logo a mesma lista chega mais de uma
+    vez. Um extend cego punha o mesmo card no historico duas vezes; aqui o grupo
+    novo toma o lugar do antigo e um id ja repetido no ficheiro e colapsado na
+    primeira posicao.
+    """
+    fusao = []
+    posicao = {}
+    for grupo in existentes or []:
+        chave = str((grupo or {}).get("id") or "")
+        if not chave:
+            fusao.append(grupo)
+            continue
+        if chave in posicao:
+            fusao[posicao[chave]] = grupo
+            continue
+        posicao[chave] = len(fusao)
+        fusao.append(grupo)
+    for grupo in novos or []:
+        chave = str((grupo or {}).get("id") or "")
+        if chave and chave in posicao:
+            fusao[posicao[chave]] = grupo
+            continue
+        if chave:
+            posicao[chave] = len(fusao)
+        fusao.append(grupo)
+    return fusao
+
 def _iter_snapshot_caminhos(pasta_raiz, snapshot):
     """Itera (rel, meta, caminho) de um snapshot, ignorando metas nao-dict."""
     for rel, meta in (snapshot or {}).items():

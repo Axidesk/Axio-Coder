@@ -5,7 +5,7 @@ import { atualizarBotoesUndoRedo, createChildBalloon, gerarSnippetHtml, restaura
 import { repintarCol3Aberta } from './historico/acoes.js';
 import { createLogGroupCard, roundMetaHtml } from './historico/cards.js';
 import { epochDeId } from './historico/checkpoint.js';
-import { fetchSessionHistoryData, saveCurrentTurnSession } from './historico/estado.js';
+import { fetchSessionHistoryData, saveCurrentTurnSession, agendarAutosaveDoTurno, pararAutosaveDoTurno } from './historico/estado.js';
 import { prefetchSessionDetails, preloadSessionHistory } from './historico/painel.js';
 import { activateWorkspaceIcon, escrevendoNoChat, esconderChip, renderCurrentSessionLogs, resetSendButton, resetTurnUI, setLogsLoading, showAlert, showWorkspaceView } from './ui.js';
 import { escapeHtml } from './escape.js';
@@ -189,6 +189,7 @@ function startSSE() {
         }
         const tratar = HANDLERS[data.type];
         if (tratar) await tratar(data);
+        agendarAutosaveDoTurno();
     };
     state.eventSource.onopen = function() {
         restaurarPastaSelecionada();
@@ -692,6 +693,7 @@ async function tratar_cancel() {
     currentSessionPlanoTotal = 0;
 }
 async function tratar_done() {
+    pararAutosaveDoTurno();
     if (!window.lastStatusError) {
         lblStatus.textContent = 'Aguardando instrução';
     }

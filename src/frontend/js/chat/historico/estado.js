@@ -66,7 +66,8 @@ import { state } from '../state.js';
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            await resp.json();
+            const dados = await resp.json();
+            _autosaveIntervalo = _intervaloDoAutosave(dados && dados.bytes);
         } catch (e) {
             console.error('Erro ao salvar log da sessão:', e);
             return {};
@@ -74,8 +75,55 @@ import { state } from '../state.js';
     }
 
 
+const AUTOSAVE_MS = 8000;
+let _autosaveTimer = null;
+let _autosaveUltimo = 0;
+let _autosaveArmado = false;
+let _autosaveIntervalo = AUTOSAVE_MS;
+
+function agendarAutosaveDoTurno() {
+    if (!state.isGenerating) return;
+    const agora = Date.now();
+    if (!_autosaveArmado) {
+        _autosaveArmado = true;
+        _autosaveUltimo = agora;
+        saveCurrentTurnSession();
+        return;
+    }
+    const faltam = _autosaveUltimo + _autosaveIntervalo - agora;
+    if (faltam <= 0) {
+        _autosaveUltimo = agora;
+        saveCurrentTurnSession();
+        return;
+    }
+    if (_autosaveTimer) return;
+    _autosaveTimer = setTimeout(() => {
+        _autosaveTimer = null;
+        _autosaveUltimo = Date.now();
+        if (state.isGenerating) saveCurrentTurnSession();
+    }, faltam);
+}
+
+function _intervaloDoAutosave(bytes) {
+    if (!bytes) return _autosaveIntervalo;
+    if (bytes > 10000000) return 180000;
+    if (bytes > 2000000) return 45000;
+    return AUTOSAVE_MS;
+}
+
+function pararAutosaveDoTurno() {
+    if (_autosaveTimer) {
+        clearTimeout(_autosaveTimer);
+        _autosaveTimer = null;
+    }
+    _autosaveArmado = false;
+    _autosaveUltimo = 0;
+}
+
 export {
     fetchSessionHistoryData,
     saveCheckpointState,
-    saveCurrentTurnSession
+    saveCurrentTurnSession,
+    agendarAutosaveDoTurno,
+    pararAutosaveDoTurno
 };

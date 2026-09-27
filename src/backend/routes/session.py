@@ -15,6 +15,7 @@ from src.backend.services.session import (
     gravar_log_sessao,
     prune_session_logs,
     summary_de_logs,
+    fundir_grupos_de_log,
     snapshot_sessao_anterior,
     snapshot_recomposto,
     reconciliar_snapshot_com_disco,
@@ -227,7 +228,7 @@ def session_log_save():
                 if anterior:
                     grupo["commit"] = anterior
             grupo["snapshot"] = snapshot_cumulativo
-        pay_dia["logs"].extend(grupos_dia)
+        pay_dia["logs"] = fundir_grupos_de_log(pay_dia["logs"], grupos_dia)
         pay_dia["summary"] = summary_de_logs(pay_dia["logs"]) or (data.get("summary") or "").strip()[:160]
         pay_dia["snapshot"] = snapshot_cumulativo
 
@@ -240,9 +241,14 @@ def session_log_save():
     descartados = prune_session_logs(pasta_logs, manter_dias=3)
     if descartados:
         threading.Thread(target=limpar_drawers_de_sources, args=(descartados,), daemon=True).start()
+    try:
+        bytes_gravados = os.path.getsize(os.path.join(pasta_logs, filenames[-1])) if filenames else 0
+    except OSError:
+        bytes_gravados = 0
     return jsonify({
         "status": "ok",
         "filename": filenames[-1] if filenames else "",
+        "bytes": bytes_gravados,
     })
 
 @session_bp.route('/api/session_history', methods=['GET'])
