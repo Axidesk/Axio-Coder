@@ -15,6 +15,7 @@ import time
 
 from src.backend.memory.mempalace_patch import abrir_client
 from src.backend.memory.vector import garantir_patch_mempalace, wing_da_pasta
+from src.backend.services.persistencia import gravar_json_atomico
 from src.backend.state import caminho_estado_projeto, emit_event, estado, memoria_lock
 from src.backend.tools.projeto_comum import arquivos_de_codigo, caminho_relativo
 from src.backend.tools.registry import register
@@ -22,6 +23,7 @@ from src.backend.tools.registry import register
 TAMANHO_CHUNK = 1600
 CHUNKER_VERSION = 2
 _COLLECTION_CODIGO = "axio_code"
+CHECKPOINT_MANIFESTO = 40
 
 _lock_index = threading.Lock()
 TIMEOUT_INDEXACAO = 12.0
@@ -122,10 +124,29 @@ def _ler_indice_bruto():
         return {}
     try:
         with open(caminho, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-        return dados if isinstance(dados, dict) else {}
+            texto = f.read()
     except Exception:
         return {}
+    try:
+        dados = json.loads(texto)
+    except Exception:
+        dados = _recuperar_indice_cortado(texto)
+    return dados if isinstance(dados, dict) else {}
+
+def _recuperar_indice_cortado(texto):
+    """Aproveita as entradas inteiras de um manifesto gravado so pela metade."""
+    marca = '"chunker_version": ' + str(CHUNKER_VERSION)
+    fim = texto.rfind(marca)
+    if fim < 0:
+        return {}
+    fim = texto.find("}", fim)
+    if fim < 0:
+        return {}
+    try:
+        dados = json.loads(texto[:fim + 1] + "}}")
+    except Exception:
+        return {}
+    return dados if isinstance(dados, dict) else {}
 
 def _carregar_indice():
     arquivos = _ler_indice_bruto().get("arquivos")
@@ -135,15 +156,13 @@ def _salvar_indice(indice, auditoria=None, colecao_id=""):
     caminho = _caminho_indice()
     if not caminho:
         return
+    payload = {"arquivos": indice, "atualizado_em": time.time()}
+    if colecao_id:
+        payload["colecao_id"] = str(colecao_id)
+    if auditoria:
+        payload["ultima_indexacao"] = auditoria
     try:
-        os.makedirs(os.path.dirname(caminho), exist_ok=True)
-        payload = {"arquivos": indice, "atualizado_em": time.time()}
-        if colecao_id:
-            payload["colecao_id"] = colecao_id
-        if auditoria:
-            payload["ultima_indexacao"] = auditoria
-        with open(caminho, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+        gravar_json_atomico(caminho, payload, fsync=True)
     except Exception:
         pass
 
@@ -160,7 +179,7 @@ def _colecao_foi_recriada(col, indice):
     proprio cache promete.
     """
     guardado = _ler_indice_bruto().get("colecao_id")
-    atual = getattr(col, "id", None) or getattr(col, "name", None)
+    atual = _id_da_colecao(col)
     if guardado and atual and guardado != atual:
         return True
     prometidos = sum(int(info.get("chunks", 0) or 0) for info in indice.values())
@@ -170,6 +189,10 @@ def _colecao_foi_recriada(col, indice):
         return col.count() < prometidos
     except Exception:
         return False
+
+def _id_da_colecao(col):
+    """Id da colecao em texto: o chromadb entrega um uuid.UUID e o json nao o grava."""
+    return str(getattr(col, "id", None) or getattr(col, "name", "") or "")
 
 def _chunkar_por_tamanho(conteudo):
     linhas = conteudo.splitlines()
@@ -436,6 +459,8 @@ def indexar_codigo_incremental(force=False):
         else:
             novos += 1
         total_chunks += len(chunks)
+        if (novos + alterados) % CHECKPOINT_MANIFESTO == 0:
+            _salvar_indice(indice, _ler_indice_bruto().get("ultima_indexacao"), _id_da_colecao(col))
         if (novos + alterados) % 5 == 0:
             emit_event("executing", function=f"Indexando código ({pos}/{total_arquivos})")
     for rel in list(indice.keys()):
@@ -453,7 +478,7 @@ def indexar_codigo_incremental(force=False):
         "identidade_embedder": _identidade_embedder["status"],
         "timestamp": time.time(),
     }
-    _salvar_indice(indice, auditoria, getattr(col, "id", ""))
+    _salvar_indice(indice, auditoria, _id_da_colecao(col))
     return {"novos": novos, "alterados": alterados, "removidos": removidos, "total_chunks": total_chunks}
 
 def buscar_codigo_semantico(query, n_results=5):
