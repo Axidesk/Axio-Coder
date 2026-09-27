@@ -152,8 +152,9 @@ function _pintarBarra() {
     const preenchimento = document.getElementById('term-progresso-fill');
     if (!preenchimento) return;
     const valor = rodando ? progressoDaBarra.valor : null;
-    preenchimento.classList.toggle('term-progresso-indeterminado', valor == null);
-    preenchimento.style.width = valor == null ? '' : (valor * 100).toFixed(1) + '%';
+    const aCorrer = rodando && valor == null;
+    preenchimento.classList.toggle('term-progresso-indeterminado', aCorrer);
+    preenchimento.style.width = aCorrer ? '' : ((valor || 0) * 100).toFixed(1) + '%';
 }
 
 function _despejar(card) {

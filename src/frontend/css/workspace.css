@@ -147,19 +147,18 @@
 }
 .term-progresso {
     display: grid;
-    grid-template-rows: 0fr;
-    margin: 0 2px;
+    grid-template-rows: 0px;
+    margin: 0;
     transition: grid-template-rows var(--dur-5) var(--ease-fluid),
                 margin-bottom var(--dur-5) var(--ease-fluid);
     pointer-events: none;
 }
 .term-progresso-visivel {
-    grid-template-rows: 1fr;
-    margin-bottom: 10px;
+    grid-template-rows: 6px;
+    margin-bottom: 12px;
 }
 .term-progresso-trilho {
     overflow: hidden;
-    height: 3px;
     border-radius: 9999px;
     background: var(--cinza-escuro);
 }
