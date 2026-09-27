@@ -70,6 +70,48 @@ def grupos_soltos(pasta):
     return agrupar_por_tipo(ficheiros, {}, {})
 
 
+_COM_CAMINHOS = {
+    "IncludePath": "include",
+    "AdditionalIncludeDirectories": "include",
+    "LibraryPath": "lib",
+    "AdditionalLibraryDirectories": "lib",
+}
+
+def plataforma_do_projeto(pasta):
+    """A plataforma que este projeto tem LIGADA: a que traz caminhos de include e de lib declarados.
+
+    Um projeto vindo de outro computador costuma ter as dependencias ligadas so numa plataforma; compilar
+    na outra da erros de include que nao tem nada a ver com o codigo.
+    """
+    contagem = {}
+    for caminho in _vcxprojs(pasta):
+        for plataforma, dados in _caminhos_por_plataforma(caminho).items():
+            if plataforma:
+                contagem[plataforma] = contagem.get(plataforma, 0) + len(dados["include"]) + len(dados["lib"])
+    if not contagem:
+        return ""
+    return max(contagem, key=lambda p: (contagem[p], p.lower() == "x64"))
+
+def caminhos_de_dependencia(pasta):
+    """Os caminhos de include e de lib que o projeto declara, e quais JA NAO EXISTEM nesta maquina.
+
+    E a leitura que troca setenta erros 'C1083: cannot open include file' por uma linha: o projeto aponta
+    para uma pasta que ficou no computador onde foi criado.
+    """
+    includes = []
+    libs = []
+    for caminho in _vcxprojs(pasta):
+        for dados in _caminhos_por_plataforma(caminho).values():
+            includes += dados["include"]
+            libs += dados["lib"]
+    includes = _unicos(includes)
+    libs = _unicos(libs)
+    return {
+        "include": includes,
+        "lib": libs,
+        "em_falta": [c for c in includes + libs if not os.path.isdir(c)],
+    }
+
 def _vcxprojs(pasta):
     """Os .vcxproj que compoem a solucao; sem solucao, o .vcxproj solto da propria pasta."""
     try:
@@ -204,6 +246,49 @@ def _local(tag):
 def _normalizar(caminho):
     trocado = (caminho or "").replace("\\", "/")
     return os.path.normpath(trocado).replace("\\", "/") if trocado else ""
+
+
+def _caminhos_por_plataforma(caminho_vcxproj):
+    """Le os caminhos de include e de lib do .vcxproj, agrupados pela plataforma da condicao."""
+    arvore = _ler(caminho_vcxproj)
+    if arvore is None:
+        return {}
+    saida = {}
+    for grupo in arvore.iter():
+        if _local(grupo.tag) not in ("PropertyGroup", "ItemDefinitionGroup"):
+            continue
+        plataforma_do_grupo = _plataforma_da_condicao(grupo.get("Condition", ""))
+        for elemento in grupo.iter():
+            nome = _local(elemento.tag)
+            if nome not in _COM_CAMINHOS:
+                continue
+            texto = (elemento.text or "").strip()
+            if not texto:
+                continue
+            plataforma = _plataforma_da_condicao(elemento.get("Condition", "")) or plataforma_do_grupo
+            dados = saida.setdefault(plataforma, {"include": [], "lib": []})
+            dados[_COM_CAMINHOS[nome]] += [
+                c for c in _separar_caminhos(texto) if _e_caminho_local(c)
+            ]
+    return saida
+
+
+def _plataforma_da_condicao(condicao):
+    """Tira a plataforma de uma condicao do tipo '$(Configuration)|$(Platform)'=='Release|Win32'."""
+    if not condicao or "Platform" not in condicao or "==" not in condicao:
+        return ""
+    valor = condicao.split("==")[-1].strip().strip("'\"")
+    if "|" not in valor:
+        return ""
+    return valor.split("|")[1].strip()
+
+
+def _separar_caminhos(texto):
+    return [_normalizar(parte.strip()) for parte in texto.split(";") if parte.strip()]
+
+
+def _e_caminho_local(texto):
+    return len(texto) > 2 and texto[1] == ":" and texto[2] in "/\\"
 
 
 def _extensao(nome):

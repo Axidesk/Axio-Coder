@@ -434,7 +434,7 @@ def _texto_faltam(plano):
 def _texto_plano(plano):
     deteccao = plano["deteccao"]
     escolha = plano["escolha"]
-    escrita = plano["escrita"]
+    escrita = plano.get("escrita") or {}
     qt = escolha.get("qt") or {}
     linhas = [
         "PLANO ESCOLHIDO PELO AXIO:",
@@ -450,7 +450,7 @@ def _texto_plano(plano):
         linhas.append(f"  Qt: {qt['versao']} {qt['kit']}")
     if escolha.get("cmake"):
         linhas.append(f"  CMake: {escolha['cmake'].get('versao') or escolha['cmake']['caminho']}")
-    if escolha.get("glslc"):
+    if escolha.get("glslc") and _compila_shaders(deteccao):
         linhas.append("  shaders: glslc encontrado")
     if escrita.get("preset"):
         linhas.append(f"  preset: {escrita['preset']} -> {escrita['arquivo']}")
@@ -486,6 +486,13 @@ def _texto_deteccao(dados):
     if dados["pastas_de_build"]:
         linhas.append("PASTAS DE BUILD QUE JA EXISTEM: " + ", ".join(dados["pastas_de_build"]))
     return "\n".join(linhas)
+
+def _compila_shaders(deteccao):
+    """Diz se e o projeto que compila shaders: o glslc pode estar instalado e isto nao lhe dizer respeito."""
+    for programa in deteccao.get("programas", []):
+        if any("glslc" in nome for nome in programa["nomes"]):
+            return True
+    return False
 
 def _pacote_texto(pacote):
     modulos = f" ({', '.join(pacote['componentes'])})" if pacote["componentes"] else ""

@@ -21,6 +21,13 @@ _CAMINHOS_PLAUSIVEIS = (
 _VSWHERE = "Microsoft Visual Studio/Installer/vswhere.exe"
 _PREFERENCIA_COMPILADOR = {"msvc": 3, "clang": 2, "mingw": 1}
 
+_MSBUILD_DA_INSTALACAO = (
+    "MSBuild/Current/Bin/amd64/MSBuild.exe",
+    "MSBuild/Current/Bin/MSBuild.exe",
+    "MSBuild/15.0/Bin/MSBuild.exe",
+    "MSBuild/14.0/Bin/MSBuild.exe",
+)
+
 _TIPOS_COMPILADOS = ("cmake", "msbuild", "qmake", "make")
 
 _LINGUAGENS_SEM_KIT = {
@@ -57,12 +64,19 @@ def escolher_kit(deteccao, instalado):
     faltam = []
     notas = []
     msvc = instalado["msvc"][0] if instalado["msvc"] else None
+    msbuild = _msbuild_do_visual_studio(instalado["msvc"])
     cmake = _mais_recente(instalado["cmake"])
     ninja = _mais_recente(instalado["ninja"])
     glslc = instalado["glslc"][0] if instalado["glslc"] else None
     vulkan = instalado["vulkan"]
-    if not cmake:
+    if deteccao.get("tipo") == "cmake" and not cmake:
         faltam.append("CMake nao esta instalado - sem ele nao ha projeto para configurar.")
+    if deteccao.get("tipo") == "msbuild" and not msbuild:
+        faltam.append(
+            "O projeto e do Visual Studio e nao encontrei o MSBuild nesta maquina - e ele que compila "
+            "um .sln/.vcxproj. Ele vem com o Visual Studio (workload 'Desktop development with C++') "
+            "ou com as Build Tools: 'winget install -e --id Microsoft.VisualStudio.BuildTools'."
+        )
     exigencia_qt = exigencia_de(deteccao.get("pacotes", []), "qt")
     qt = None
     modulos_ausentes = []
@@ -100,6 +114,7 @@ def escolher_kit(deteccao, instalado):
         "arquitetura": arquitetura,
         "qt": qt,
         "cmake": cmake,
+        "msbuild": msbuild,
         "ninja": ninja,
         "glslc": glslc,
         "vulkan": vulkan,
@@ -137,6 +152,7 @@ def _kit_sem_compilador(deteccao):
         "arquitetura": "",
         "qt": None,
         "cmake": None,
+        "msbuild": None,
         "ninja": None,
         "glslc": None,
         "vulkan": {"raiz": "", "lib": "", "glslc": ""},
@@ -283,6 +299,18 @@ def _visual_studio():
             "ferramentas": ferramentas,
         })
     return sorted(resultado, key=lambda v: _versao_tupla(v["versao"]), reverse=True)
+
+
+def _msbuild_do_visual_studio(instalacoes):
+    """O MSBuild da instalacao mais recente do Visual Studio - e ele que compila um .sln/.vcxproj."""
+    for instalacao in instalacoes:
+        raiz = instalacao["caminho"].replace("/", os.sep)
+        for relativo in _MSBUILD_DA_INSTALACAO:
+            caminho = os.path.join(raiz, relativo.replace("/", os.sep))
+            if os.path.isfile(caminho):
+                return {"caminho": os.path.abspath(caminho), "produto": instalacao["produto"],
+                        "versao": instalacao["versao"]}
+    return None
 
 
 def _ferramentas_em_disco(nome):

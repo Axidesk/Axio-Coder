@@ -930,6 +930,61 @@ so depois a sessao do cdb; e o binario que ELE compilou reporta `heap-use-after-
 Fonte:
 https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
 
+## Compilar projeto do Visual Studio (2026-10-07) - e o que trava o Tibia
+
+O motor tratava so CMake: um `.sln`/`.vcxproj` respondia "nesta primeira versao o Axio configura e
+compila projetos CMake". Agora compila os dois. Quem decide continua a ser o projeto
+(`detetar.detetar` -> tipo `msbuild`) e o plano vive em `construir._preparar_msbuild`.
+
+Tres decisoes que valem:
+
+- **quem compila e o MSBuild do Visual Studio**: `kits._msbuild_do_visual_studio` procura o
+  `MSBuild.exe` dentro do que `kits_instalados` ja descobria (instalacao mais recente primeiro,
+  `Current/Bin/amd64` antes do `Bin`). Medido: Community 2022, 17.14.37216.2;
+- **a PLATAFORMA sai do proprio projeto, nunca de um default**: `msbuild.plataforma_do_projeto` conta
+  os caminhos de include/lib declarados POR plataforma e escolhe a que os tem (empate -> x64). Num
+  `.sln` o nome da solucao e `x86`, e nao `Win32` - a traducao e feita. Motivo medido: o Tibia74 tem
+  as dependencias ligadas SO nas configuracoes Win32, logo compilar em x64 era um muro de `C1083` a
+  fingir de erro de codigo;
+- **diz-se ANTES que os caminhos declarados ja nao existem**: `msbuild.caminhos_de_dependencia` le
+  `IncludePath`/`LibraryPath`/`Additional*Directories` do `.vcxproj` (por plataforma, pela condicao) e
+  `preparar` poem uma nota no plano. E o que troca setenta erros iguais por uma linha.
+
+**A peca que falta deste caminho:** o AddressSanitizer num projeto do VS. No CMake e uma opcao do
+preset; num `.sln` a flag `/fsanitize=address` teria de ser escrita no proprio projeto (ou injetada
+por um `.props` com `ForceImportBeforeCppTargets`, o mecanismo que a Microsoft da para nao mexer no
+ficheiro). O `preparar` RECUSA o `asan` num `.sln` com esse motivo, em vez de compilar sem o
+sanitizador e dizer que o ligou.
+
+### O Tibia74: quatro factos medidos
+
+1. `.sln` de VS2015 (`PlatformToolset v140`, `WindowsTargetPlatformVersion 8.1`), aplicacao,
+   `CharacterSet MultiByte`, 72 fontes e 81 cabecalhos, com `Debug\` e `Release\` ja cheios de
+   binarios de 2026-09-25;
+2. **o MSBuild de 2022 compila-o**: correu 37 s e chegou a invocar o `cl.exe` ficheiro a ficheiro (o
+   v140 tambem e aceite, sem override nenhum);
+3. **o que o trava nao e o compilador: sao as dependencias.** O `.vcxproj` aponta para
+   `D:\OTSERV\REBUILD\libs\...` (lua-5.1.5, libxml2_2-9-1-2, zlib-1.2.3.4, sqlite-autoconf-3071700,
+   boost_1_86_0, iconv_1.16, mysql-connector-c-6.1.6-win32) - **essa pasta ja nao existe aqui**. Os
+   `C1083: cannot open include file 'libxml/xmlmemory.h'` sao so isso;
+4. **as mesmas sete bibliotecas ESTAO no disco**, com os mesmos nomes, em
+   `D:\Dropbox\2 - Startup\TIBIA OT\REBUILD\libs`, com os `.h` e os `.lib` (`lua51.lib`, `libxml2.lib`,
+   `zlib.lib`, `iconv.lib`, `sqlite3.lib`, `libmysql.lib`). O projeto mudou de casa com o antigo
+   `D:\OTSERV` e os caminhos ficaram no sitio velho.
+
+Consequencia: ao abrir a migracao 2015->2022 (Fase 4), o primeiro passo nao e o compilador - e
+reapontar as dependencias. E o **x86 continua a ser o alvo certo deste projeto**: as libs do mysql sao
+`win32` e as configuracoes x64 nao tem caminho nenhum declarado.
+
+PROVA: `construir.preparar` no Tibia devolve
+`"...\MSBuild.exe" "...\Tibia74.sln" /t:Build /m /nologo /p:Configuration=Release /p:Platform=x86` e a
+nota das 14 pastas em falta; o `asan` recusa com o motivo. Sem regressao: DRAFTCAD (cmake) continua
+`cmake --build --preset axio-release` e o Axio (python) e o `docs` (desconhecido) dizem o mesmo de
+antes. Uma sonda `.vcxproj` minima compila de ponta a ponta com o MSBuild do 2022 (exit 0, o
+executavel corre). 89 rotas, 0 avarias.
+Uma correcao de brinde: o plano dizia "shaders: glslc encontrado" em qualquer projeto, so porque o
+glslc esta instalado na maquina - passou a dize-lo so quando e o projeto que compila shaders.
+
 ## O que falta (medido, não suposto)
 
 - **Depurador:** a Fase 6a está feita e **provada no DRAFTCAD** (C++ pelo `cdb`, num card: pontos por
