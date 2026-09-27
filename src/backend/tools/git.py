@@ -281,7 +281,7 @@ def _recusa_de_publicacao(nomes, motivo="segredo"):
         return ("RECUSADO: entre o que iria para o commit aparece material de OUTRO projeto (" +
                 ", ".join(nomes) + "). Este repositorio nao tem ficheiro nenhum de projeto nativo, logo "
                 "isto pertence a um projeto que vive dentro desta pasta. Nada foi commitado - poe esses "
-                "caminhos no .gitignore (o repositorio do Axio ja ignora 'Projects/' e 'DRAFTCAD/') ou "
+                "caminhos no .gitignore (o repositorio do Axio ja ignora 'docs/projetos/') ou "
                 "publica so os ficheiros deste projeto.")
     return ("RECUSADO: entre o que iria para o commit aparece " + ", ".join(nomes) +
             ". Nada foi commitado - tira esses caminhos do pedido ou poe-os no .gitignore.")

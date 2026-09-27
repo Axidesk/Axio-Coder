@@ -1098,6 +1098,21 @@ MEDIDO, e a resposta e que nao havia nada a reverter: `Projects/` esta no `.giti
 Tibia entrou em commit nenhum, e o commit daquela rodada levou 4 ficheiros, todos do Axio. A garantia
 nao e uma promessa da rodada: e regra do proprio git, logo sobrevive a qualquer esquecimento meu.
 
+**ATUALIZADO a 2026-10-07 (a arrumacao):** os dois projetos de exemplo sairam da raiz para
+`docs/projetos/` (o DRAFTCAD e o servidor Tibia74), e a regra do `.gitignore` passou a ser uma so -
+`docs/projetos/` -, substituindo as antigas `DRAFTCAD/` e `Projects/` que apontavam para sitios que
+ja nao existem. O `docs/` fica FORA da regra de proposito: a documentacao do Axio continua versionada.
+MEDIDO: `git check-ignore` confirma os dois projetos inteiros ignorados (o codigo, o `build` de 928 MB
+do DRAFTCAD, o servidor, o `xampp` e o `nova.sql`) e `git status -uall docs/projetos` devolveu 0 linhas
+- sem a correcao eram 2055 ficheiros que iam para o commit.
+
+O guarda foi PROVADO em vez de suposto: uma sonda com um `.sln` e um `.vcxproj` numa pasta nova da raiz
+mostrou que o `git status --short` COLAPSA a pasta num so nome (`?? _sonda_projeto_alheio/`), logo a
+verificacao que corre ANTES do `add` nao a veria - mas a que corre DEPOIS do `add`, sobre
+`git diff --cached --name-only`, lista os ficheiros um a um e apanhou os dois, com motivo `alheio` e o
+commit recusado. As duas defesas ficam de pe, por esta ordem: o `.gitignore` nao deixa entrar, o guarda
+nao deixa commitar.
+
 O que FALTAVA era o caso geral, e esse ficou fechado em `tools/git.py`: `_e_de_outro_projeto` reconhece
 material de projeto nativo (`.sln`, `.vcxproj` e os sufixos, `.pro`, `.props`, `.targets`,
 `CMakeLists.txt`) e `_proibidos_na_publicacao` recusa publicar quando um `add -A` CEGO o apanharia -

@@ -65,6 +65,6 @@ gerados/
 # Documentos internos de planeamento (arquivados em docs/planos/)
 docs/planos/
 
-# Projetos de exemplo, so para exercitar as ferramentas (DRAFTCAD e Tibia74)
-DRAFTCAD/
-Projects/
+# Projetos externos guardados como referencia em docs/projetos/ (o DRAFTCAD e o
+# servidor Tibia74): o codigo deles vive no repositorio de cada um, nunca neste
+docs/projetos/
