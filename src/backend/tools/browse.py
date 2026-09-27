@@ -190,7 +190,12 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         
         for name in files:
             if time.time() - tempo_inicio > 10:
-                saida = _formatar_busca(termos, resultados) + f"\n[AVISO] Timeout de 10s atingido em '{root}'. Resultados parciais - restrinja com 'pasta' para varrer uma subpasta de cada vez."
+                onde = os.path.relpath(root, estado["pasta_raiz"])
+                aviso = (f"[AVISO] VARREDURA INCOMPLETA: os 10s esgotaram em '{onde}' e o resto da arvore "
+                         "nao chegou a ser varrido. Um termo sem resultados ABAIXO nao e prova de que nao "
+                         "existe - so diz que nao esta na parte varrida. Repita com 'pasta' apontado a "
+                         "subpasta certa antes de concluir que algo nao existe.")
+                saida = aviso + "\n" + _formatar_busca(termos, resultados)
                 return saida[:10000] + "\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
 
             if name.endswith(extensoes_ignoradas): continue

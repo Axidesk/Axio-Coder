@@ -1070,6 +1070,45 @@ nenhuma de propriedades: o MSBuild le o ficheiro e herda tudo o que o VS faria.
 - O que NAO esta no `.vcxproj` e continua a faltar: o toolset `v140` (VS2015) nas PropertyGroups das
   linhas 30/36/43/49 nao existe nesta maquina. E esse o passo do retarget para 2022.
 
+### O repositorio do Axio nao mistura projetos (2026-10-07, a pedido do utilizador)
+
+O utilizador apanhou o risco antes de ele acontecer: ao reapontar as dependencias do Tibia eu editei
+`Projects/Tibia74/Tibia74.vcxproj`, que vive DENTRO da pasta do Axio, e perguntou como reverter e como
+impedir que aquilo subisse para o repositorio do Axio.
+
+MEDIDO, e a resposta e que nao havia nada a reverter: `Projects/` esta no `.gitignore` (linha 70), o
+`git ls-files Projects` e VAZIO, e `git log --all -- Projects/Tibia74/` tambem - nenhum ficheiro do
+Tibia entrou em commit nenhum, e o commit daquela rodada levou 4 ficheiros, todos do Axio. A garantia
+nao e uma promessa da rodada: e regra do proprio git, logo sobrevive a qualquer esquecimento meu.
+
+O que FALTAVA era o caso geral, e esse ficou fechado em `tools/git.py`: `_e_de_outro_projeto` reconhece
+material de projeto nativo (`.sln`, `.vcxproj` e os sufixos, `.pro`, `.props`, `.targets`,
+`CMakeLists.txt`) e `_proibidos_na_publicacao` recusa publicar quando um `add -A` CEGO o apanharia -
+o repositorio do Axio tem 276 ficheiros versionados e ZERO destes, medido, logo qualquer um deles
+pertence a um projeto que vive ali dentro. Com `ficheiros` indicado a mao a escolha e do utilizador e
+so os segredos continuam a bloquear: o perigo e o `add -A` cego, nao a decisao explicita.
+PROVA: 7 cenarios com repositorio git real em pasta temporaria - 8 nomes reconhecidos e 8 ficheiros do
+Axio nao (sem falso positivo), o `.sln` recusado num `add -A` (commit count intacto e stage limpo), a
+mesma cena com `ficheiros=app.py` a publicar so o app.py e a deixar o `.sln` fora, o `.env` bloqueado
+mesmo com lista explicita, `CMakeLists.txt` recusado, e um commit legitimo a passar.
+
+CURADORIA (regra 24): a pendencia "cita ficheiro inexistente: prog.py" era um FALSO POSITIVO do
+detetor - a nota ja dizia, em texto, que `prog.py` e uma sonda que o teste cria e apaga. `_NEGACOES_A_FRENTE`
+ganhou `temporari`/`descartavel`/`apagad` e o paragrafo da PROVA passou a dizer explicitamente, na
+mesma linha, que todas as mencoes sao da sonda: `_referencias_mortas` devolve `[]` e o controlo
+(uma referencia morta a serio) continua a ser apanhado.
+
+### A varredura que estoura o tempo passa a dizer que nao chegou ao fim (2026-10-07)
+
+Apanhado a medir o proprio trabalho: uma busca sem `pasta` na raiz do Axio gastou os 10s em
+`Projects/Tibia74/src` e devolveu "nenhuma ocorrencia" para dois simbolos que ESTAO em
+`src/backend/tools/git.py`. O aviso existia, mas vinha DEPOIS dos termos e lia-se como nota de rodape -
+um falso "nao existe" e do pior que pode acontecer a quem decide por ele.
+Agora o aviso vai na PRIMEIRA linha, diz em que pasta parou, e diz a frase que faltava: um termo sem
+resultados abaixo NAO e prova de ausencia, so diz que nao esta na parte varrida. Medido com o relogio
+forcado: aviso na primeira linha, achados reais logo abaixo, e o controlo (`algo_que_nao_existe_xyz`)
+continua sem resultados.
+
 ## O que falta (medido, não suposto)
 
 - **Depurador:** a Fase 6a está feita e **provada no DRAFTCAD** (C++ pelo `cdb`, num card: pontos por

@@ -29,6 +29,7 @@ _SEGREDOS = (
     "mempalace.yaml",
 )
 _TEMPLATES_DE_SEGREDO = (".env.example", ".env.sample", ".env.template", ".env.dist", ".env.defaults")
+_EXTENSOES_DE_PROJETO_ALHEIO = (".sln", ".vcxproj", ".pro", ".props", ".targets")
 
 
 def _curto(pasta, revisao):
@@ -201,6 +202,19 @@ def _e_segredo(nome):
     return False
 
 
+def _e_de_outro_projeto(nome):
+    """Ficheiro de projeto nativo (.sln/.vcxproj/.pro/CMakeLists): o Axio e Python+JS e nao tem nenhum,
+    logo isto pertence a um projeto que vive dentro desta pasta - uma copia do Visual Studio, um projeto
+    de exemplo. Entrar num commit do Axio seria misturar dois projetos no mesmo repositorio."""
+    limpo = nome.replace("\\", "/").rstrip("/")
+    if limpo.startswith("./"):
+        limpo = limpo[2:]
+    base = limpo.rsplit("/", 1)[-1].lower()
+    if base == "cmakelists.txt":
+        return True
+    return any(base.endswith(ext) or (ext + ".") in base for ext in _EXTENSOES_DE_PROJETO_ALHEIO)
+
+
 def _escopo_relativo(raiz, escopo):
     """A pasta do projeto dentro do repositorio. "" quando ela E a raiz do repositorio (ou esta fora dele)."""
     if not escopo:
@@ -262,9 +276,28 @@ def _ficheiros_em_stage(raiz, escopo=""):
     return [n for n in nomes if _no_escopo(n, prefixo)]
 
 
-def _recusa_de_publicacao(segredos):
-    return ("RECUSADO: entre o que iria para o commit aparece " + ", ".join(segredos) +
+def _recusa_de_publicacao(nomes, motivo="segredo"):
+    if motivo == "alheio":
+        return ("RECUSADO: entre o que iria para o commit aparece material de OUTRO projeto (" +
+                ", ".join(nomes) + "). Este repositorio nao tem ficheiro nenhum de projeto nativo, logo "
+                "isto pertence a um projeto que vive dentro desta pasta. Nada foi commitado - poe esses "
+                "caminhos no .gitignore (o repositorio do Axio ja ignora 'Projects/' e 'DRAFTCAD/') ou "
+                "publica so os ficheiros deste projeto.")
+    return ("RECUSADO: entre o que iria para o commit aparece " + ", ".join(nomes) +
             ". Nada foi commitado - tira esses caminhos do pedido ou poe-os no .gitignore.")
+
+
+def _proibidos_na_publicacao(nomes, com_lista_explicita=False):
+    """O que nao entra num commit: segredo sempre; material de outro projeto so quando o stage foi um
+    'add -A' cego - com a lista de ficheiros dada a mao, quem escolhe o que entra e o utilizador."""
+    segredos = [n for n in nomes if _e_segredo(n)]
+    if segredos:
+        return "segredo", segredos
+    if not com_lista_explicita:
+        alheios = [n for n in nomes if _e_de_outro_projeto(n)]
+        if alheios:
+            return "alheio", alheios
+    return "", []
 
 
 def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
@@ -279,14 +312,14 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
             return [f"NADA A PUBLICAR: nao ha alteracoes dentro de '{prefixo}/' - o que estiver alterado fora "
                     "da pasta do projeto nao entra neste commit."]
         return ["NADA A PUBLICAR: o repositorio esta limpo."]
-    segredos = [n for n in nomes if _e_segredo(n)]
-    if segredos:
-        return [_recusa_de_publicacao(segredos) + " Nada foi posto em stage."]
+    lista = _lista_de_ficheiros(raiz, ficheiros)
+    motivo, proibidos = _proibidos_na_publicacao(nomes, bool(lista))
+    if proibidos:
+        return [_recusa_de_publicacao(proibidos, motivo) + " Nada foi posto em stage."]
 
     antes = _ficheiros_em_stage(raiz, escopo)
     todas_antes = _ficheiros_em_stage(raiz)
     linhas = []
-    lista = _lista_de_ficheiros(raiz, ficheiros)
     if lista:
         _, erro = git_saida(raiz, "add", "--", *lista)
         linhas.append("git add " + " ".join(lista) + ": " + (f"ERRO: {erro}" if erro else "ok"))
@@ -305,15 +338,15 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
     itens = [l for l in (entrada or "").splitlines() if l.strip()]
     if not itens:
         return linhas + ["NADA EM STAGE depois do add: nao ha o que commitar."]
-    segredos = [n for n in _ficheiros_em_stage(raiz, escopo) if _e_segredo(n)]
-    if segredos:
+    motivo, proibidos = _proibidos_na_publicacao(_ficheiros_em_stage(raiz, escopo), bool(lista))
+    if proibidos:
         nota = " O stage ficou como estava antes."
         if git_saida(raiz, "reset")[1]:
-            git_saida(raiz, "rm", "--cached", "--quiet", "--", *segredos)
+            git_saida(raiz, "rm", "--cached", "--quiet", "--", *proibidos)
             nota = " Tirei esses caminhos do stage; o resto ficou la."
         elif todas_antes:
             git_saida(raiz, "add", "--", *todas_antes)
-        return linhas + [_recusa_de_publicacao(segredos) + nota]
+        return linhas + [_recusa_de_publicacao(proibidos, motivo) + nota]
     linhas += _linhas_do_estado("ENTRA NO COMMIT", itens)
 
     caminho_msg = _ficheiro_da_mensagem(mensagem)
@@ -441,7 +474,11 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True)
     "acentos e varias linhas passam intactos. RECUSA-SE a publicar quando entre os ficheiros aparece "
     "algum de credencial ou de estado local (.env, data/settings.json, data/cofre.json, "
     "data/vertex_credentials.json, entities.json, mempalace.yaml, .axio/) - e nesse caso nao toca em "
-    "nada, nem no stage. Quando a pasta do projeto ainda nao tem repositorio, RECUSA - a nao ser que "
+    "nada, nem no stage. RECUSA tambem quando um 'add -A' cego apanharia material de OUTRO projeto "
+    "(um .sln/.vcxproj/.pro/.props/CMakeLists.txt dentro da pasta): este repositorio nao tem nenhum, "
+    "logo pertence a um projeto que vive ali dentro (um projeto de exemplo, uma copia do Visual "
+    "Studio) e entrava misturado no commit. Com 'ficheiros' indicado a mao, a escolha e do utilizador "
+    "e so os segredos continuam a bloquear. Quando a pasta do projeto ainda nao tem repositorio, RECUSA - a nao ser que "
 "criar=True, e entao cria um repositorio git ALI, na pasta do projeto (nunca no repositorio de outro "
 "projeto), com um .gitignore de partida; sem remoto o commit fica so no disco, e a resposta di-lo. "
 "ESCREVE no repositorio: ve o que vai entrar com 'tool_estado_git' antes.",

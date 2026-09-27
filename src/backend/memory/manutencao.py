@@ -42,6 +42,9 @@ _NEGACOES_A_FRENTE = (
     "a criar",
     "falta criar",
     "a construir",
+    "temporari",
+    "descartavel",
+    "apagad",
 )
 _COMANDOS = ("node ", "python ", "py ", "npm ", "npx ", "deno ", "bun ")
 
