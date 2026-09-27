@@ -48,6 +48,7 @@ def git_estado():
         return jsonify({"status": "sem_repo", "message": info.get("motivo", ""), "estado": info})
     arvore = git_repo.historico(pasta)
     info["commits"] = arvore.get("commits", [])
+    info["total_commits"] = arvore.get("total", 0)
     info["tags"] = git_repo.tags_com_ponto(pasta)
     info["erro_historico"] = arvore.get("erro", "")
     info["por_subir"] = git_repo.por_subir(pasta, remoto=info.get("remoto")).get("commits", [])
@@ -71,6 +72,19 @@ def git_versoes():
         "ramos": info.get("ramos", []),
         "erro": info.get("erro", ""),
     })
+
+
+@git_bp.route("/api/git/commits", methods=["GET"])
+def git_commits():
+    """Pagina do historico: e o que deixa o bloco 'Mais antigo' ir alem dos commits do estado."""
+    try:
+        skip = max(0, int(request.args.get("skip", 0)))
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "skip tem de ser um numero"}), 400
+    info = git_repo.historico(_pasta(), skip=skip)
+    if not info.get("repo"):
+        return jsonify({"status": "sem_repo", "message": info.get("motivo", ""), "commits": [], "total": 0})
+    return jsonify({"status": "ok", "commits": info.get("commits", []), "total": info.get("total", 0)})
 
 
 @git_bp.route("/api/git/automatico", methods=["POST"])

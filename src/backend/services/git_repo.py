@@ -162,12 +162,28 @@ def estado(pasta):
     }
 
 
-def historico(pasta, limite=_LIMITE_HISTORICO):
+def _total_de_commits(raiz):
+    """Quantos commits o ramo tem: e o que diz ao historico se ainda ha paginas por ler."""
+    saida, erro = git_saida(raiz, "rev-list", "--count", "HEAD")
+    if erro:
+        return 0
+    try:
+        return int((saida or "0").strip())
+    except ValueError:
+        return 0
+
+
+def historico(pasta, limite=_LIMITE_HISTORICO, skip=0):
+    """Commits do ramo do mais recente para o mais antigo; 'skip' avanca as paginas."""
     raiz, erro = pasta_do_repositorio(pasta)
     if erro:
-        return {"repo": False, "motivo": erro, "commits": [], "tags": []}
+        return {"repo": False, "motivo": erro, "commits": [], "tags": [], "total": 0}
     formato = _SEPARADOR.join(["%H", "%h", "%s", "%cI", "%an", "%D"])
-    saida, erro_log = git_saida(raiz, "log", f"--max-count={int(limite)}", "--decorate=short", f"--pretty=format:{formato}")
+    pular = max(0, int(skip))
+    saida, erro_log = git_saida(
+        raiz, "log", f"--max-count={int(limite)}", f"--skip={pular}",
+        "--decorate=short", f"--pretty=format:{formato}",
+    )
     commits = []
     for linha in (saida or "").splitlines():
         partes = linha.split(_SEPARADOR)
@@ -183,7 +199,10 @@ def historico(pasta, limite=_LIMITE_HISTORICO):
             "tags": [m[5:] for m in marcas if m.startswith("tag: ")],
             "head": "HEAD" in marcas,
         })
-    return {"repo": True, "raiz": raiz, "commits": commits, "erro": erro_log}
+    total = pular + len(commits)
+    if len(commits) >= int(limite):
+        total = _total_de_commits(raiz)
+    return {"repo": True, "raiz": raiz, "commits": commits, "total": total, "erro": erro_log}
 
 
 def _tags_com_ponto(raiz):

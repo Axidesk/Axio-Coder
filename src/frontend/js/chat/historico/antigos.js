@@ -6,6 +6,7 @@ import { diaDoCommit } from './marcas_envio.js';
 import { tituloDaTarefaDoCommit, partesDoTituloDoCommit, turnosComCommit } from './cards.js';
 
 const LIMITE = 20;
+const TETO_PAGINAS = 6;
 const TITULO = 'Mais antigo';
 
 let commitsAMostrar = LIMITE;
@@ -14,6 +15,10 @@ let repositorio = null;
 let leituraValida = false;
 let pedidoEmCurso = null;
 let alvoComBalao = null;
+let commitsCarregados = [];
+let totalNoRepo = 0;
+let paginaEmCurso = null;
+let paginasPedidas = 0;
 
     async function carregarRepositorio(forcar) {
         if (!forcar && leituraValida) return repositorio;
@@ -26,15 +31,49 @@ let alvoComBalao = null;
                     ? { commits: estado.commits || [], tags: estado.tags || [] }
                     : { commits: [], tags: [] };
                 leituraValida = !!estado.repo;
+                commitsCarregados = repositorio.commits.slice();
+                totalNoRepo = Number(estado.total_commits) > 0 ? Number(estado.total_commits) : commitsCarregados.length;
                 return repositorio;
             })
             .catch(() => {
                 repositorio = { commits: [], tags: [] };
                 leituraValida = false;
+                commitsCarregados = [];
+                totalNoRepo = 0;
                 return repositorio;
             })
             .finally(() => { pedidoEmCurso = null; });
         return pedidoEmCurso;
+    }
+    async function carregarMais() {
+        if (paginaEmCurso) return paginaEmCurso;
+        if (commitsCarregados.length >= totalNoRepo) return false;
+        const vistos = new Set(commitsCarregados.map(c => c.hash));
+        paginaEmCurso = fetch('/api/git/commits?skip=' + commitsCarregados.length)
+            .then(r => r.json())
+            .then(d => {
+                const novos = (d && d.commits) || [];
+                novos.forEach(c => {
+                    if (c && c.hash && !vistos.has(c.hash)) {
+                        vistos.add(c.hash);
+                        commitsCarregados.push(c);
+                    }
+                });
+                if (d && Number(d.total) > 0) totalNoRepo = Number(d.total);
+                return novos.length > 0;
+            })
+            .catch(() => false)
+            .finally(() => { paginaEmCurso = null; });
+        return paginaEmCurso;
+    }
+    function _completarEmFundo() {
+        if (paginasPedidas >= TETO_PAGINAS || commitsCarregados.length >= totalNoRepo) return;
+        carregarMais().then(cresceu => {
+            if (!cresceu) return;
+            paginasPedidas += 1;
+            const atual = document.querySelector('.history-antigos');
+            if (atual) _preencher(atual);
+        });
     }
     function _hashesComCard() {
         const comCard = new Set();
@@ -49,7 +88,7 @@ let alvoComBalao = null;
     }
     function commitsAntigos() {
         const comCard = _hashesComCard();
-        return (repositorio ? repositorio.commits : []).filter(c => {
+        return commitsCarregados.filter(c => {
             const dia = diaDoCommit(c.data);
             const diaNosCards = !!dia && diasVisiveis.indexOf(dia) !== -1;
             return !comCard.has(c.hash) && !diaNosCards;
@@ -143,15 +182,23 @@ let alvoComBalao = null;
             clip.appendChild(_linha(commit));
         });
         const restantes = lista.length - visiveis.length;
-        if (restantes > 0) {
+        const porLer = commitsCarregados.length < totalNoRepo;
+        if (restantes > 0 || porLer) {
             const acoes = document.createElement('div');
             acoes.className = 'git-acoes';
             const botao = document.createElement('button');
             botao.type = 'button';
             botao.className = 'git-pill';
-            botao.textContent = 'Ver mais ' + Math.min(restantes, LIMITE) + ' de ' + restantes;
-            botao.addEventListener('click', () => {
+            botao.textContent = restantes > 0
+                ? 'Ver mais ' + Math.min(restantes, LIMITE) + ' de ' + restantes + (porLer ? '+' : '')
+                : 'Ver mais';
+            botao.addEventListener('click', async () => {
                 commitsAMostrar += LIMITE;
+                if (commitsAMostrar > lista.length && commitsCarregados.length < totalNoRepo) {
+                    botao.disabled = true;
+                    botao.textContent = 'A carregar…';
+                    await carregarMais();
+                }
                 _pintar(clip);
             });
             acoes.appendChild(botao);
@@ -194,6 +241,7 @@ let alvoComBalao = null;
         if (!container) return;
         diasVisiveis = dias || [];
         commitsAMostrar = LIMITE;
+        paginasPedidas = 0;
         const anterior = container.querySelector('.history-antigos');
         if (anterior) anterior.remove();
         const bloco = _bloco();
@@ -216,14 +264,16 @@ let alvoComBalao = null;
     function _preencher(bloco) {
         if (!bloco.isConnected) return;
         const total = commitsAntigos().length;
-        if (leituraValida && !total) {
+        const porLer = commitsCarregados.length < totalNoRepo;
+        if (leituraValida && !total && !porLer) {
             bloco.remove();
             return;
         }
         bloco.style.display = leituraValida ? '' : 'none';
-        bloco._resumo.textContent = String(total);
+        bloco._resumo.textContent = porLer ? total + '+' : String(total);
         bloco.dataset.resumo = leituraValida ? 'pronto' : 'pendente';
         if (leituraValida && bloco.classList.contains('projeto-aberto')) _pintar(bloco._clip);
+        if (leituraValida && porLer) _completarEmFundo();
     }
 
 export {
