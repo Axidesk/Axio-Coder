@@ -11,6 +11,7 @@ import urllib.request
 
 from PIL import Image
 
+from src.backend.config import APP_ROOT
 from src.backend.services import cofre, github
 from src.backend.services.file_service import git_saida, raiz_repositorio
 from src.backend.services.git_projeto import criar_repositorio
@@ -215,6 +216,24 @@ def _e_de_outro_projeto(nome):
     return any(base.endswith(ext) or (ext + ".") in base for ext in _EXTENSOES_DE_PROJETO_ALHEIO)
 
 
+def _mesma_pasta(a, b):
+    """Dois caminhos que sao a MESMA pasta (no Windows a caixa das letras nao conta)."""
+    if not a or not b:
+        return False
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+def _e_o_repositorio_do_axio(raiz):
+    """O repositorio do PROPRIO Axio - o unico onde um ficheiro de projeto nativo e material alheio.
+
+    Num repositorio que E a pasta de outro projeto (o Tibia74, um projeto de exemplo), o .sln que
+    vive la dentro e o ficheiro DELE: recusa-lo impede-lo-ia de ter o proprio historico, que e
+    exactamente a razao de criar o repositorio ali. Sem esta distincao o guarda que protege o
+    repositorio do Axio fechava a porta a qualquer projeto nativo.
+    """
+    return _mesma_pasta(raiz, APP_ROOT)
+
+
 def _escopo_relativo(raiz, escopo):
     """A pasta do projeto dentro do repositorio. "" quando ela E a raiz do repositorio (ou esta fora dele)."""
     if not escopo:
@@ -287,13 +306,13 @@ def _recusa_de_publicacao(nomes, motivo="segredo"):
             ". Nada foi commitado - tira esses caminhos do pedido ou poe-os no .gitignore.")
 
 
-def _proibidos_na_publicacao(nomes, com_lista_explicita=False):
+def _proibidos_na_publicacao(nomes, com_lista_explicita=False, raiz=""):
     """O que nao entra num commit: segredo sempre; material de outro projeto so quando o stage foi um
     'add -A' cego - com a lista de ficheiros dada a mao, quem escolhe o que entra e o utilizador."""
     segredos = [n for n in nomes if _e_segredo(n)]
     if segredos:
         return "segredo", segredos
-    if not com_lista_explicita:
+    if not com_lista_explicita and _e_o_repositorio_do_axio(raiz):
         alheios = [n for n in nomes if _e_de_outro_projeto(n)]
         if alheios:
             return "alheio", alheios
@@ -313,7 +332,7 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
                     "da pasta do projeto nao entra neste commit."]
         return ["NADA A PUBLICAR: o repositorio esta limpo."]
     lista = _lista_de_ficheiros(raiz, ficheiros)
-    motivo, proibidos = _proibidos_na_publicacao(nomes, bool(lista))
+    motivo, proibidos = _proibidos_na_publicacao(nomes, bool(lista), raiz)
     if proibidos:
         return [_recusa_de_publicacao(proibidos, motivo) + " Nada foi posto em stage."]
 
@@ -338,7 +357,7 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
     itens = [l for l in (entrada or "").splitlines() if l.strip()]
     if not itens:
         return linhas + ["NADA EM STAGE depois do add: nao ha o que commitar."]
-    motivo, proibidos = _proibidos_na_publicacao(_ficheiros_em_stage(raiz, escopo), bool(lista))
+    motivo, proibidos = _proibidos_na_publicacao(_ficheiros_em_stage(raiz, escopo), bool(lista), raiz)
     if proibidos:
         nota = " O stage ficou como estava antes."
         if git_saida(raiz, "reset")[1]:
@@ -436,7 +455,29 @@ def _e_o_repositorio_do_projeto(raiz):
     pasta = estado.get("pasta_raiz") or ""
     if not pasta:
         return False
-    return os.path.normcase(os.path.abspath(raiz)) == os.path.normcase(os.path.abspath(raiz_repositorio(pasta) or ""))
+    return _mesma_pasta(raiz, raiz_repositorio(pasta) or "")
+
+
+def _repositorio_ignora(raiz, pasta):
+    """O repositorio de fora IGNORA esta pasta (esta no .gitignore dele)? """
+    relativo = os.path.relpath(os.path.abspath(pasta), os.path.abspath(raiz)).replace(os.sep, "/")
+    saida, _ = git_saida(raiz, "check-ignore", "--", relativo)
+    return bool((saida or "").strip())
+
+
+def _precisa_de_repositorio_proprio(base, raiz):
+    """A pasta esta sem repositorio proprio: nao ha nenhum, ou o que ha e de FORA e ignora-a.
+
+    Uma pasta que vive dentro do repositorio de outra coisa mas esta no .gitignore dele e HOSPEDE, nao
+    parte dele - 'docs/projetos/' do Axio existe exactamente para isso. Negar-lhe um repositorio proprio
+    obrigava a tirar o projeto de la so para lhe dar historico. O contrario tambem e recusado: dentro de
+    um repositorio que RASTREIA a pasta, criar outro seria dois historicos a disputar os mesmos ficheiros.
+    """
+    if not raiz:
+        return True
+    if _mesma_pasta(raiz, base):
+        return False
+    return _repositorio_ignora(raiz, base)
 
 
 @register(
@@ -488,7 +529,9 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True)
     "Studio) e entrava misturado no commit. Com 'ficheiros' indicado a mao, a escolha e do utilizador "
     "e so os segredos continuam a bloquear. Quando a pasta do projeto ainda nao tem repositorio, RECUSA - a nao ser que "
 "criar=True, e entao cria um repositorio git ALI, na pasta do projeto (nunca no repositorio de outro "
-"projeto), com um .gitignore de partida; sem remoto o commit fica so no disco, e a resposta di-lo. "
+"projeto); vale o mesmo para uma pasta HOSPEDE, que vive dentro do repositorio de outra coisa mas esta "
+"no gitignore dele (o 'docs/projetos/' do Axio existe para isso) - essa ganha o seu proprio. "
+"Sai com um .gitignore de partida; sem remoto o commit fica so no disco, e a resposta di-lo. "
 "ESCREVE no repositorio: ve o que vai entrar com 'tool_estado_git' antes.",
     {
         'mensagem': {"tipo": "STRING", "desc": "Mensagem do commit (a mesma serve de mensagem a etiqueta)"},
@@ -505,14 +548,14 @@ def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="",
         return falta
     raiz = raiz_repositorio(base)
     abertura = []
-    if not raiz:
-        if not criar:
-            return (f"ERRO: '{base}' nao esta dentro de um repositorio git (nenhuma pasta .git a subir a partir "
-                    "dai). Esta pasta ainda nao tem repositorio: repita com criar=True e o repositorio nasce "
-                    "AQUI dentro, na pasta do projeto - o commit nunca cai no repositorio de outro projeto.")
+    if criar and _precisa_de_repositorio_proprio(base, raiz):
         raiz, abertura = _criar_repositorio(base)
         if not raiz:
             return "\n".join(abertura)
+    if not raiz:
+        return (f"ERRO: '{base}' nao esta dentro de um repositorio git (nenhuma pasta .git a subir a partir "
+                "dai). Esta pasta ainda nao tem repositorio: repita com criar=True e o repositorio nasce "
+                "AQUI dentro, na pasta do projeto - o commit nunca cai no repositorio de outro projeto.")
     return "\n".join(abertura + _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, base))
 
 
