@@ -1206,9 +1206,14 @@ app.on('ready', () => {
           {
             label: 'C++',
             submenu: [
-              { label: 'Compilar (Debug)', click: () => pedirCompilar('debug') },
-              { label: 'Compilar (Release)', click: () => pedirCompilar('release') },
-              { label: 'Compilar (AddressSanitizer)', click: () => pedirCompilar('asan') },
+              {
+                label: 'Compilar (x64)',
+                submenu: [
+                  { label: 'Debug', click: () => pedirCompilar('debug') },
+                  { label: 'Release', click: () => pedirCompilar('release') },
+                  { label: 'AddressSanitizer', click: () => pedirCompilar('asan') }
+                ]
+              },
               { type: 'separator' },
               { label: asanAtivo ? 'Depurar com AddressSanitizer  ✓' : 'Depurar com AddressSanitizer', click: () => pedirAsan(!asanAtivo) }
             ]

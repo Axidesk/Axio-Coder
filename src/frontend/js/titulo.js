@@ -48,9 +48,11 @@ function itensFerramentas() {
         { separador: true },
         { rotulo: 'Modo Inspecionar', marca: inspecionar, acao: 'inspect' },
         { grupo: 'C++', itens: [
-            { rotulo: 'Compilar (Debug)', acao: 'compilar', valor: 'debug' },
-            { rotulo: 'Compilar (Release)', acao: 'compilar', valor: 'release' },
-            { rotulo: 'Compilar (AddressSanitizer)', acao: 'compilar', valor: 'asan' },
+            { grupo: 'Compilar (x64)', itens: [
+                { rotulo: 'Debug', acao: 'compilar', valor: 'debug' },
+                { rotulo: 'Release', acao: 'compilar', valor: 'release' },
+                { rotulo: 'AddressSanitizer', acao: 'compilar', valor: 'asan' }
+            ] },
             { separador: true },
             { rotulo: 'Depurar com AddressSanitizer', marca: asan, acao: 'asan' }
         ] }

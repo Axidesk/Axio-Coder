@@ -171,7 +171,7 @@
     margin-left: auto;
 }
 
-.titulo-grupo.aberto .titulo-seta {
+.titulo-grupo.aberto > .titulo-item .titulo-seta {
     transform: rotate(90deg);
 }
 
@@ -180,7 +180,7 @@
     padding-left: 10px;
 }
 
-.titulo-grupo.aberto .titulo-grupo-corpo {
+.titulo-grupo.aberto > .titulo-grupo-corpo {
     display: block;
 }
 

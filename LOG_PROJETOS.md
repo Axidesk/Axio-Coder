@@ -907,9 +907,16 @@ projetos (`configuracao='asan'` no `tool_gerir_projeto`), com prova e armadilhas
 
 **No menu, a pedido do utilizador (2026-10-07).** O ASan e as configuracoes de build vivem no submenu
 **Ferramentas → C++**, nos DOIS menus (o do topo e o nativo do Electron) — "feature especial para
-usuarios experientes", fora do caminho de quem nao compila. O submenu traz tres ACOES — `Compilar (Debug)`,
-`Compilar (Release)`, `Compilar (AddressSanitizer)` — mais o toggle `Depurar com AddressSanitizer` com `✓`
-quando ligado. Compilar pelo menu e um POST a `/api/terminal/compilar`
+usuarios experientes", fora do caminho de quem nao compila. Dentro dele ha um SEGUNDO nivel —
+**`Compilar (x64)`** — que abre as tres configuracoes (`Debug`, `Release`, `AddressSanitizer`); por baixo
+fica o toggle `Depurar com AddressSanitizer` com `✓` quando ligado. O `x64` do rotulo nao e decoracao: e a
+arquitectura que o motor escolhe sempre (preset `architecture: x64` e `CMAKE_GENERATOR_PLATFORM=x64` lidos
+da cache real do DRAFTCAD), e todos os kits Windows de Qt 6 do catalogo do instalador sao `win64_*` — os
+unicos de 32 bits que la existem sao de Qt 5.
+O grupo aceita ANINHAMENTO (um `{grupo, itens}` dentro de `itens`) e isso expos uma armadilha de CSS: as
+regras do `.titulo-grupo` eram DESCENDENTES, e com um grupo dentro de outro a seta do subgrupo fechado
+rodava so porque o pai estava aberto, e o corpo do neto aparecia sem o subgrupo aberto. As duas passaram a
+filho direto (`>`). Compilar pelo menu e um POST a `/api/terminal/compilar`
 (`builds.compilar_projeto` → `_construir`), que corre como card do terminal na pasta aberta: a MESMA
 porta do `tool_gerir_projeto(acao='construir')`, sem abrir sessao; a barra de estado (`#lbl-status`)
 mostra a primeira linha da recusa quando o build nao pode arrancar. O compilador e UM (o MSVC) e
