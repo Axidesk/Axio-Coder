@@ -1065,6 +1065,21 @@ _RE_PERCENTO = re.compile(r"(\d{1,3}(?:[.,]\d+)?)\s*%")
 _RE_FONTE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:c|cc|cpp|cxx)\b", re.IGNORECASE)
 _RE_LINHA_FONTE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:c|cc|cpp|cxx)\Z", re.IGNORECASE)
 
+_RE_GERACAO_FIM = re.compile(r"finished\s+generating\s+code", re.IGNORECASE)
+_RE_GERACAO = re.compile(r"\bgenerating\s+code\b", re.IGNORECASE)
+_RE_ALVO_DO_BUILD = re.compile(r"\s*(?:\d+>\s*)?(clcompile|link)\s*:", re.IGNORECASE)
+
+_ALVO_PARA_FASE = {"clcompile": 0.05, "link": 0.60}
+_FIM_DA_GERACAO = 0.90
+_TOPO_DA_GERACAO = 0.98
+
+_FASES_DA_INSTALACAO = (
+    ("successfully installed", 1.0),
+    ("installing collected packages", 0.80),
+    ("downloading", 0.35),
+    ("collecting", 0.15),
+)
+
 
 def _rotulo_do_comando(comando):
     """O programa por tras do comando, sem caminho nem argumentos - 'MSBuild.exe', nao o caminho todo."""
@@ -1116,6 +1131,37 @@ def _texto_de_progresso(reg, decorrido):
     return " ".join(partes)
 
 
+def _fase_da_instalacao(texto):
+    """A fase de uma instalacao, pelo que o pip escreve: recolher, descarregar, instalar."""
+    baixo = texto.lower()
+    for marca, valor in _FASES_DA_INSTALACAO:
+        if marca in baixo:
+            return valor
+    return None
+
+
+def _fase_anunciada(texto, fase, geracao):
+    """A fase que a linha anuncia, quando nao ha numero nenhum para contar. (fase, geracao).
+
+    Um build do MSVC diz onde esta pelos proprios alvos: 'ClCompile:' (a compilar), 'Link:'
+    (a ligar) e 'Generating code'/'Finished generating code' (o LTCG). Uma instalacao diz-se
+    pelo pip. E o degrau que resta quando o programa nao da percentagem - um build com tudo
+    ja compilado nao tem ficheiro nenhum para contar e ficava sem barra nenhuma.
+    """
+    if _RE_GERACAO_FIM.search(texto):
+        return (max(fase, _TOPO_DA_GERACAO) if fase is not None else _TOPO_DA_GERACAO), True
+    if geracao or _RE_GERACAO.search(texto):
+        return (max(fase, _FIM_DA_GERACAO) if fase is not None else _FIM_DA_GERACAO), True
+    achado = _RE_ALVO_DO_BUILD.match(texto)
+    if achado:
+        alvo = _ALVO_PARA_FASE[achado.group(1).lower()]
+        return (max(fase, alvo) if fase is not None else alvo), geracao
+    marcado = _fase_da_instalacao(texto)
+    if marcado is not None and (fase is None or marcado > fase):
+        return marcado, geracao
+    return fase, geracao
+
+
 def _progresso_do_log(log):
     """Quanto o proprio programa ja disse que fez, de 0 a 1 - None quando nao disse nada.
 
@@ -1124,10 +1170,14 @@ def _progresso_do_log(log):
     CL.exe mandou compilar. Cada invocacao do CL.exe e um lote e os lotes somam-se - o lote
     novo so aparece depois de o anterior ter acabado, logo um segundo projeto do mesmo .sln
     continua a contagem em vez de a reiniciar. A compilacao enche ate _FIM_DA_COMPILACAO; o
-    resto e o linker, que fecha com a percentagem do LTCG quando a imprime.
+    resto e o linker, que fecha com a percentagem do LTCG quando a imprime. Sem numero nenhum
+    para contar - um build com tudo ja compilado - resta a fase: _fase_anunciada diz onde o
+    build esta, em degraus, sem inventar percentagem nenhuma.
     """
     etapas = None
     percento = None
+    fase = None
+    geracao = False
     lotes = []
     nomes = set()
     feitos = set()
@@ -1143,6 +1193,7 @@ def _progresso_do_log(log):
             valor = float(achado.group(1).replace(",", "."))
             if 0 <= valor <= 100:
                 percento = min(1.0, valor / 100.0)
+        fase, geracao = _fase_anunciada(texto, fase, geracao)
         fontes = _RE_FONTE.findall(texto)
         if len(fontes) >= 3 and ".exe" in texto.lower():
             if nomes:
@@ -1162,12 +1213,18 @@ def _progresso_do_log(log):
         if total:
             compilado = prontos / total
             if compilado < 1.0:
-                return _FIM_DA_COMPILACAO * compilado
-            if percento is not None:
-                return _FIM_DA_COMPILACAO + (1.0 - _FIM_DA_COMPILACAO) * percento
-            return _FIM_DA_COMPILACAO
+                medido = _FIM_DA_COMPILACAO * compilado
+            elif percento is not None:
+                medido = _FIM_DA_COMPILACAO + (1.0 - _FIM_DA_COMPILACAO) * percento
+            else:
+                medido = _FIM_DA_COMPILACAO
+            return max(medido, fase) if fase is not None else medido
     if etapas is not None:
         return etapas
+    if fase is not None:
+        if geracao and percento is not None:
+            return max(fase, _FIM_DA_GERACAO + (_TOPO_DA_GERACAO - _FIM_DA_GERACAO) * percento)
+        return fase
     if percento is not None:
         return percento
     return None

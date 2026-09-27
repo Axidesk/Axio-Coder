@@ -169,14 +169,6 @@
     background: var(--azul-acao);
     transition: width var(--dur-9) var(--ease-fluid);
 }
-.term-progresso-indeterminado {
-    width: 30%;
-    animation: term-progresso-correr var(--dur-11) var(--ease-fluid) infinite;
-}
-@keyframes term-progresso-correr {
-    from { transform: translateX(-110%); }
-    to { transform: translateX(440%); }
-}
 .term-controle {
     padding: 3px 10px;
     border: none;

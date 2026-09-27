@@ -144,17 +144,15 @@ function _pintarBarra() {
     const barra = document.getElementById('term-progresso');
     if (!barra) return;
     const rodando = _barraRodando();
-    barra.classList.toggle('term-progresso-visivel', rodando);
     if (!rodando) {
         progressoDaBarra.pid = null;
         progressoDaBarra.valor = null;
     }
+    const valor = rodando ? progressoDaBarra.valor : null;
+    barra.classList.toggle('term-progresso-visivel', valor != null);
     const preenchimento = document.getElementById('term-progresso-fill');
     if (!preenchimento) return;
-    const valor = rodando ? progressoDaBarra.valor : null;
-    const aCorrer = rodando && valor == null;
-    preenchimento.classList.toggle('term-progresso-indeterminado', aCorrer);
-    preenchimento.style.width = aCorrer ? '' : ((valor || 0) * 100).toFixed(1) + '%';
+    preenchimento.style.width = ((valor || 0) * 100).toFixed(1) + '%';
 }
 
 function _despejar(card) {

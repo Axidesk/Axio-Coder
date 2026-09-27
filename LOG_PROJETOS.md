@@ -1442,3 +1442,44 @@ igual, fica como ALERTA (regra 18), nao como edicao a escondida.
 - Ficheiros de filtros do Visual C++ (`.vcxproj.filters`) — https://learn.microsoft.com/en-us/cpp/build/reference/vcxproj-filters-files
 - Esquema dos ficheiros de projeto do MSBuild — https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference
 - Portar/retarget de projetos Visual C++ — https://learn.microsoft.com/en-us/cpp/porting/overview-of-potential-upgrade-issues-visual-cpp
+
+---
+
+## A barra de progresso deixou de varrer o ecra (2026-10-07)
+
+O build que o utilizador correu depois tinha uma coisa nova no log: `ClCompile: Todas as saidas estao
+atualizadas.` - um build INCREMENTAL, zero ficheiros para compilar. O `_progresso_do_log` nao encontrava
+numero nenhum durante quase todo o minuto (a unica percentagem, `0 of 23913 functions ( 0.0%)`, so
+aparece no fim) e o frontend, sem valor, punha a barra em `term-progresso-indeterminado`: uma barra azul
+a passar de um lado para o outro. A queixa foi direta - "eu quero barra de progresso real q vai se
+preenchendo de acordo com o avanco", "n q fique passando uma barra azul de um lado para o outro".
+
+O que a fonte primaria diz (a barra so pode mostrar o que o programa diz):
+- o MSBuild NAO tem progresso numerico. O `-bl` (binlog) serve para ler DEPOIS, o `-tl` reescreve linhas
+  com ANSI, e o proprio anuncio do TerminalLogger fala em "progress reporting" como trabalho FUTURO;
+- com `/m` - o que este build usa - os eventos chegam fora de ordem e a recomendacao oficial e o binlog;
+- logo a fonte real e contar as unidades de trabalho do proprio log (ja se fazia) e, sem nenhuma, a FASE.
+
+O que mudou:
+1. `process._fase_anunciada` (novo): um degrau por fase quando nao ha numero - num build `ClCompile:`
+   0.05, `Link:` 0.60, `Generating code` 0.90, `Finished generating code` 0.98; numa instalacao
+   `Collecting` 0.15, `Downloading` 0.35, `Installing collected packages` 0.80, `Successfully installed`
+   1.0 - as cinco linhas do pip foram MEDIDAS com um `pip install --target`, nao lembradas.
+2. `_progresso_do_log` passou a devolver `max(medido, fase)` no caminho numerico: o `0.98` do "Finished
+   generating code" ganha ao `0.90` que a percentagem do LTCG a 0.0% daria.
+3. O `term-progresso-indeterminado` e o `@keyframes term-progresso-correr` foram APAGADOS. A barra
+   aparece so quando ha valor (`valor != null`); sem valor medido ela recolhe.
+
+Provas: o log incremental real da 0.05 -> 0.60 -> 0.90 -> 0.98; o build completo da 0.475 a meio dos 72
+ficheiros, 0.95 no fim da compilacao e 0.99965 com o LTCG a 99.3%; o pip da 0.15/0.35/0.80/1.0; prosa
+sem nada continua a dar `None`. Na interface, com o codigo do disco num DOM falso: sem valor escondida,
+0.375 -> 37.5%, 0.95 -> 95%, um valor menor a seguir e recusado - e a palavra "indeterminado" ja nao
+existe no CSS nem no JS.
+
+O limite, dito sem rodeios: a granularidade e a da unidade de trabalho (72 ficheiros em ~3m30 dao ~1.3%
+a cada ~3s) e durante o LTCG o linker fica calado ~55s - nesse trecho a barra fica nos 90%, que e o
+estado verdadeiro, com o rotulo do card a dizer "Generating code".
+
+Fontes: [MSBuild command-line reference](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-command-line-reference),
+[TerminalLogger](https://learn.microsoft.com/en-us/dotnet/api/microsoft.build.logging.terminallogger),
+[Write multi-processor-aware loggers](https://learn.microsoft.com/en-us/visualstudio/msbuild/writing-multi-processor-aware-loggers).
