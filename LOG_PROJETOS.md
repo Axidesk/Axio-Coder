@@ -983,6 +983,13 @@ Consequencia: ao abrir a migracao 2015->2022 (Fase 4), o primeiro passo nao e o 
 reapontar as dependencias. E o **x86 continua a ser o alvo certo deste projeto**: as libs do mysql sao
 `win32` e as configuracoes x64 nao tem caminho nenhum declarado.
 
+**REAPONTADO a 2026-10-07, a pedido do utilizador**: o prefixo `D:\OTSERV\REBUILD\libs` foi trocado por
+`D:\Dropbox\2 - Startup\TIBIA OT\REBUILD\libs` no `Tibia74.vcxproj` - 28 ocorrencias, as 14 pastas das
+quatro linhas de caminhos (`IncludePath`/`LibraryPath` em Debug|Win32 e Release|Win32). O projeto
+APONTA para onde as libs ja estavam; nao se copiou nada. Medido depois da troca:
+`msbuild.caminhos_de_dependencia` -> 7 includes + 7 libs e `em_falta: []`. Nem o `.sln` nem o
+`.vcxproj.user` tinham caminho para o sitio velho (varridos). O retarget para 2022 continua por fazer.
+
 PROVA: `construir.preparar` no Tibia devolve
 `"...\MSBuild.exe" "...\Tibia74.sln" /t:Build /m /nologo /p:Configuration=Release /p:Platform=x86` e a
 nota das 14 pastas em falta; o `asan` recusa com o motivo. Sem regressao: DRAFTCAD (cmake) continua
@@ -992,22 +999,35 @@ executavel corre). 89 rotas, 0 avarias.
 Uma correcao de brinde: o plano dizia "shaders: glslc encontrado" em qualquer projeto, so porque o
 glslc esta instalado na maquina - passou a dize-lo so quando e o projeto que compila shaders.
 
-### A plataforma no menu: escolha manual, com a do projeto marcada (2026-10-07)
+### A plataforma no menu: o que o PROJETO liga manda, e so ha escolha quando ele nao diz nada (2026-10-07)
 
 O item dizia `Compilar (x64)` a todos os projetos - e passou a ser FALSO no dia em que o motor comecou
-a compilar `.sln`, porque o Tibia e x86. Primeiro ficou lido do PROPRIO projeto
-(`construir.plataforma_do_build`, pela rota `GET /api/projeto/plataforma`, que agora devolve tambem as
-`plataformas` que ele aceita); a pedido do utilizador passou a ser ESCOLHA, com um terceiro nivel:
+a compilar `.sln`, porque o Tibia e x86. A regra passou por tres versoes no mesmo dia, todas a pedido do
+utilizador: (1) lida do projeto e escrita no rotulo; (2) ESCOLHA, com um terceiro nivel a abrir sempre as
+duas plataformas (`Compilar > x86 [do projeto] | x64 > Debug|Release|ASan`); (3) a FINAL, que e a que
+esta no codigo - **o menu oferece as plataformas que o projeto tem LIGADAS**, e so oferece as duas
+quando o projeto nao liga nenhuma:
 
-    Ferramentas > C++ > Compilar > x86 [do projeto] > Debug | Release | AddressSanitizer
-                                > x64              > Debug | Release | AddressSanitizer
+    Tibia74   -> Compilar (x86) > Debug | Release | AddressSanitizer
+    DRAFTCAD  -> Compilar (x64) > Debug | Release | AddressSanitizer
+    novo, ainda sem caminhos -> Compilar > x86 | x64 > Debug | Release | AddressSanitizer
+    pasta sem projeto        -> Compilar > Debug | Release | AddressSanitizer
 
-- Um projeto do Visual Studio abre as DUAS plataformas, com a nota `do projeto` na que traz as
-  dependencias ligadas (`msbuild.plataforma_do_projeto`): ele escolhe a mao e ve qual e a dele.
+- `msbuild.plataformas_do_projeto(pasta)` le as plataformas que trazem caminhos no `.vcxproj` (a mesma
+  contagem de `plataforma_do_projeto`, partilhada em `_dependencias_por_plataforma`). Oferecer a
+  plataforma SEM dependencias era oferecer setenta erros `C1083` que nao sao do codigo - foi o defeito
+  que esta versao fecha.
+- `construir._plataformas_do_msbuild` normaliza essa leitura para `x86`/`x64`; sem nada declarado cai no
+  par do Visual Studio e `plataforma_do_build` devolve VAZIO, para o menu nao marcar como `do projeto`
+  o que e apenas um valor de recurso.
+- Um projeto com duas plataformas mesmo ligadas continua a abrir as duas, com a nota `do projeto` na
+  que traz as dependencias: ele escolhe a mao e ve qual e a dele.
 - Um projeto CMake fica `Compilar (x64)` direto nas configuracoes - o preset escreve x64 e oferecer x86
   seria prometer o que ele nao faz. Sem projeto conhecido, `Compilar` sem plataforma nenhuma.
 - `construir.plataformas_do_build` decide se ha escolha a oferecer; `_plataformas_suportadas` e a mesma
-  fonte para o menu e para a recusa, logo nao podem divergir.
+  fonte para o menu e para a recusa, logo nao podem divergir - e a recusa compara o NOME NORMALIZADO
+  (`Win32` e `x86` sao a mesma coisa), porque comparar o texto cru recusava a propria plataforma do
+  projeto.
 - **A plataforma pedida e VALIDADA, nunca ignorada**: `preparar(pasta, configuracao, plataforma)` recusa
   com o motivo uma plataforma que o projeto nao suporta (`x86` num CMake -> "Este projeto compila em x64;
   foi pedido x86") e uma que nao se reconhece (`arm64` -> "Plataforma 'arm64' desconhecida: use x86 ou
@@ -1015,9 +1035,17 @@ a compilar `.sln`, porque o Tibia e x86. Primeiro ficou lido do PROPRIO projeto
   genero de defeito, porque o menu dizia uma coisa e o build fazia outra sem avisar.
 - A escolha viaja no corpo do POST (`plataforma`) ate `compilar_projeto(pasta, configuracao, plataforma)`
   -> `_construir` -> `construir.preparar`.
-- A decisao anterior (nao partir em dois menus) foi REVISTA a pedido do utilizador, e ele tinha razao: a
-  plataforma continua a ser propriedade do projeto, mas quem decide e ele. O que faltava nao era esconder
-  a opcao - era marcar a do projeto e recusar a errada em voz alta.
+- A 1a decisao (nao partir em dois menus) e a 2a (abrir sempre as duas) foram ambas revistas a pedido do
+  utilizador, que nos dois casos tinha razao: a plataforma e propriedade do projeto, mas quem decide o
+  que o menu mostra e ele. A resposta que ficou junta as duas: mostrar o que o projeto liga, dar a
+  escolha quando ele nada liga, e recusar em voz alta o que nao serve.
+- PROVA desta versao: 18 casos em processo novo (`plataformas_do_build` -> Tibia `['x86']`, DRAFTCAD
+  `['x64']`, projeto novo `['x86','x64']` com `plataforma` vazio, pasta vazia e Axio `[]`; recusa do
+  `x64` no Tibia, do `arm64`, e aceitacao do `x86`; o comando do build com `/p:Platform=x86` mesmo
+  quando a plataforma nao vem do menu). No JS, a funcao real do disco montada num DOM falso: o Tibia da
+  UM cabecalho `Compilar (x86)` com as tres configuracoes e nenhuma escolha de plataforma; o projeto
+  novo da tres cabecalhos (raiz + x86 + x64), sem nota quando nada esta decidido e com a nota `do
+  projeto` quando ha uma. 90 rotas, 0 avarias; imports limpos; 0 clones.
 
 ### As propriedades do Visual Studio vivem TODAS no `.vcxproj` (2026-10-07, medido no Tibia74)
 

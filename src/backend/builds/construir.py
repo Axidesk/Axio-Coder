@@ -59,7 +59,7 @@ def plataforma_do_build(pasta):
     if deteccao.get("erro"):
         return ""
     if deteccao["tipo"] == "msbuild":
-        return _plataforma_do_msbuild(deteccao, _alvo_do_visual_studio(deteccao))
+        return _plataforma_do_msbuild(deteccao)
     if deteccao["tipo"] == "cmake":
         return "x64"
     return ""
@@ -68,9 +68,11 @@ def plataforma_do_build(pasta):
 def plataformas_do_build(pasta):
     """Entre que plataformas se pode escolher ao compilar este projeto - o que o menu C++ oferece.
 
-    Um projeto do Visual Studio traz normalmente as duas (Win32 e x64) e a escolha e do utilizador;
-    um CMake do Axio e sempre x64, porque a plataforma sai do preset - oferecer x86 seria prometer o
-    que ele nao faz. Sem projeto conhecido nao ha escolha nenhuma.
+    Manda o projeto: um do Visual Studio oferece as plataformas que ele tem LIGADAS, porque as
+    dependencias costumam estar numa so, e so oferece as duas quando nao liga nenhuma (projeto
+    recem-criado), onde a escolha e mesmo do utilizador. Um CMake do Axio e sempre x64, porque a
+    plataforma sai do preset - oferecer x86 seria prometer o que ele nao faz. Sem projeto conhecido
+    nao ha escolha nenhuma.
     """
     deteccao = detetar.detetar(pasta or "")
     if deteccao.get("erro"):
@@ -80,10 +82,25 @@ def plataformas_do_build(pasta):
 
 def _plataformas_suportadas(deteccao):
     if deteccao["tipo"] == "msbuild":
-        return ["x86", "x64"]
+        return _plataformas_do_msbuild(deteccao)
     if deteccao["tipo"] == "cmake":
         return ["x64"]
     return []
+
+
+def _plataformas_do_msbuild(deteccao):
+    """As plataformas que o menu oferece num projeto do Visual Studio.
+
+    As que o projeto tem LIGADAS: oferecer a plataforma sem dependencias e oferecer setenta erros de
+    include que nao sao do codigo. Um projeto sem nenhuma ligada nao diz nada sobre plataformas - ai
+    a escolha e do utilizador e oferecem-se as duas do Visual Studio.
+    """
+    ligadas = []
+    for bruta in msbuild.plataformas_do_projeto(deteccao["pasta"]):
+        normalizada = _normalizar_plataforma(bruta)
+        if normalizada and normalizada not in ligadas:
+            ligadas.append(normalizada)
+    return ligadas or ["x86", "x64"]
 
 
 def _normalizar_plataforma(valor):
@@ -107,7 +124,7 @@ def _plataforma_recusada(deteccao, plataforma):
     pedida = _normalizar_plataforma(pedido)
     if not pedida:
         return f"Plataforma '{pedido}' desconhecida: use x86 ou x64."
-    suportadas = _plataformas_suportadas(deteccao)
+    suportadas = [n for n in (_normalizar_plataforma(p) for p in _plataformas_suportadas(deteccao)) if n]
     if pedida in suportadas:
         return ""
     if not suportadas:
@@ -129,7 +146,7 @@ def _preparar_msbuild(deteccao, configuracao, plataforma=""):
         return {"deteccao": deteccao, "escolha": escolha,
                 "faltam": ["A pasta tem um projeto do Visual Studio e nao encontrei nem o .sln nem o "
                            ".vcxproj com as fontes declaradas."]}
-    plataforma = _normalizar_plataforma(plataforma) or _plataforma_do_msbuild(deteccao, alvo)
+    plataforma = _normalizar_plataforma(plataforma) or _plataforma_do_msbuild(deteccao) or "x64"
     nome = "Release" if configuracao == "release" else "Debug"
     escolha["gerador"] = ""
     escolha["arquitetura"] = plataforma
@@ -149,11 +166,12 @@ def _preparar_msbuild(deteccao, configuracao, plataforma=""):
     }
 
 
-def _plataforma_do_msbuild(deteccao, alvo):
-    plataforma = msbuild.plataforma_do_projeto(deteccao["pasta"]) or "x64"
-    if alvo and alvo.lower().endswith(".sln") and plataforma.lower() == "win32":
-        return "x86"
-    return plataforma
+def _plataforma_do_msbuild(deteccao):
+    """A plataforma do projeto no nome que o utilizador reconhece: 'Win32' e 'x86' sao a mesma coisa.
+
+    Vazio quando o projeto nao declara nenhuma: o menu nao promete uma plataforma que o projeto nao diz.
+    """
+    return _normalizar_plataforma(msbuild.plataforma_do_projeto(deteccao["pasta"]))
 
 
 def _acrescentar_sanitizador(escolha, configuracao):

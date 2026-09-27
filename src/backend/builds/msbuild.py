@@ -83,14 +83,29 @@ def plataforma_do_projeto(pasta):
     Um projeto vindo de outro computador costuma ter as dependencias ligadas so numa plataforma; compilar
     na outra da erros de include que nao tem nada a ver com o codigo.
     """
+    contagem = _dependencias_por_plataforma(pasta)
+    if not contagem:
+        return ""
+    return max(contagem, key=lambda p: (contagem[p], p.lower() == "x64"))
+
+
+def plataformas_do_projeto(pasta):
+    """As plataformas deste projeto que tem dependencias ligadas - e o que o menu C++ tem para oferecer.
+
+    Uma so quando as dependencias estao numa plataforma (o caso comum), as duas quando estao em ambas.
+    Vazia quando o projeto nao declara caminho nenhum: ai ele nao diz nada sobre plataformas.
+    """
+    contagem = _dependencias_por_plataforma(pasta)
+    return sorted(p for p, n in contagem.items() if n)
+
+
+def _dependencias_por_plataforma(pasta):
     contagem = {}
     for caminho in _vcxprojs(pasta):
         for plataforma, dados in _caminhos_por_plataforma(caminho).items():
             if plataforma:
                 contagem[plataforma] = contagem.get(plataforma, 0) + len(dados["include"]) + len(dados["lib"])
-    if not contagem:
-        return ""
-    return max(contagem, key=lambda p: (contagem[p], p.lower() == "x64"))
+    return contagem
 
 def caminhos_de_dependencia(pasta):
     """Os caminhos de include e de lib que o projeto declara, e quais JA NAO EXISTEM nesta maquina.
