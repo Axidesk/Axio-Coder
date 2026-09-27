@@ -362,7 +362,7 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
             linhas.append(f"ETIQUETA {etiqueta}: " + (f"ERRO: {erro}" if erro else "criada"))
 
         hash_novo, _ = git_saida(raiz, "rev-parse", "HEAD")
-        if hash_novo:
+        if hash_novo and _e_o_repositorio_do_projeto(raiz):
             estado["commit_do_agente"] = {
                 "hash": hash_novo.strip(),
                 "quando": int(time.time() * 1000),
@@ -429,6 +429,14 @@ def _criar_repositorio(base):
     if resultado["gitignore"]:
         linhas.append("GITIGNORE: criei um .gitignore de partida (.env, .venv, node_modules, build, dist).")
     return caminho, linhas
+
+
+def _e_o_repositorio_do_projeto(raiz):
+    """So o commit do repositorio do PROPRIO projeto aberto marca o turno do historico."""
+    pasta = estado.get("pasta_raiz") or ""
+    if not pasta:
+        return False
+    return os.path.normcase(os.path.abspath(raiz)) == os.path.normcase(os.path.abspath(raiz_repositorio(pasta) or ""))
 
 
 @register(
