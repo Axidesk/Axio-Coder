@@ -51,7 +51,10 @@ def resumo(texto, raiz="", maximo=25):
         f"{len(itens) - erros - avisos} nota(s)" if len(itens) - erros - avisos else "",
     ) if parte)
     linhas = [f"DIAGNOSTICOS ({contagem}):"]
-    for item in itens[:maximo]:
+    por_codigo = _contagem_por_codigo(itens)
+    if len(por_codigo) > 1:
+        linhas.append("  por codigo: " + "; ".join(f"{n}x {codigo}" for codigo, n in por_codigo))
+    for item in _amostras(itens, maximo):
         linhas.append("  " + item["bruto"])
     if len(itens) > maximo:
         linhas.append(f"  ... e mais {len(itens) - maximo}")
@@ -60,6 +63,33 @@ def resumo(texto, raiz="", maximo=25):
 
 def _linhas(texto):
     return (texto or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
+
+def _contagem_por_codigo(itens):
+    contagem = {}
+    for item in itens:
+        chave = item["codigo"] or item["gravidade"]
+        contagem[chave] = contagem.get(chave, 0) + 1
+    return sorted(contagem.items(), key=lambda par: (-par[1], par[0]))
+
+
+def _amostras(itens, maximo):
+    escolhidos, vistos = [], set()
+    for indice, item in enumerate(itens):
+        chave = (item["gravidade"], item["codigo"])
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        escolhidos.append(indice)
+        if len(escolhidos) >= maximo:
+            return [itens[i] for i in escolhidos]
+    for indice in range(len(itens)):
+        if indice in escolhidos:
+            continue
+        escolhidos.append(indice)
+        if len(escolhidos) >= maximo:
+            break
+    return [itens[i] for i in escolhidos]
 
 
 def _da_linha(linha, linhas, indice, raiz):
