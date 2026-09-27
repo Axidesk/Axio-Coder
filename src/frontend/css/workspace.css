@@ -146,6 +146,7 @@
     opacity: 1;
 }
 .term-progresso {
+    position: relative;
     display: grid;
     grid-template-rows: 0px;
     margin: 0;
@@ -156,6 +157,20 @@
 .term-progresso-visivel {
     grid-template-rows: 6px;
     margin-bottom: 12px;
+    pointer-events: auto;
+    cursor: help;
+}
+.term-progresso::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -6px;
+    bottom: -6px;
+    pointer-events: none;
+}
+.term-progresso-visivel::after {
+    pointer-events: auto;
 }
 .term-progresso-trilho {
     overflow: hidden;
@@ -167,7 +182,36 @@
     width: 0;
     border-radius: 9999px;
     background: var(--azul-acao);
-    transition: width var(--dur-9) var(--ease-fluid);
+    transition: width var(--dur-9) var(--ease-fluid), opacity var(--dur-3) ease;
+}
+.term-progresso-lento .term-progresso-fill {
+    animation: term-progresso-pulso 1.6s var(--ease-fluid) infinite;
+}
+@keyframes term-progresso-pulso {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .term-progresso-lento .term-progresso-fill { animation: none; }
+}
+.term-progresso-dica {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    z-index: 20;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, 2px);
+    pointer-events: none;
+    transition: opacity var(--dur-3) ease, transform var(--dur-3) ease, visibility var(--dur-3) ease;
+}
+.term-progresso-visivel:hover .term-progresso-dica {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -8px);
 }
 .term-controle {
     padding: 3px 10px;

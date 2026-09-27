@@ -5,6 +5,7 @@ import { abrirPainelDoDepurador } from './painel_depurador.js';
 
 const LIMITE_SAIDA = 300000;
 const VARREDURA_MS = 120;
+const PULSO_MS = 4000;
 
 const SVG_SETA = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 const SVG_REPETIR = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
@@ -20,6 +21,8 @@ const lancamentos = new Map();
 const progressoDaBarra = { pid: null, valor: null };
 let sugestoesAtuais = [];
 let zona = null;
+let barraEl = null;
+let pulsoTimer = null;
 let selecionado = null;
 
 function _zona() {
@@ -28,6 +31,11 @@ function _zona() {
         if (zona) zona.addEventListener('scroll', _reavaliarSeguir, { passive: true });
     }
     return zona;
+}
+
+function _barra() {
+    if (!barraEl) barraEl = document.getElementById('term-progresso');
+    return barraEl;
 }
 
 function _estaRodando(card) {
@@ -141,7 +149,7 @@ function _barraRodando() {
 }
 
 function _pintarBarra() {
-    const barra = document.getElementById('term-progresso');
+    const barra = _barra();
     if (!barra) return;
     const rodando = _barraRodando();
     if (!rodando) {
@@ -150,9 +158,27 @@ function _pintarBarra() {
     }
     const valor = rodando ? progressoDaBarra.valor : null;
     barra.classList.toggle('term-progresso-visivel', valor != null);
+    if (valor == null) _pararPulso(barra);
     const preenchimento = document.getElementById('term-progresso-fill');
-    if (!preenchimento) return;
-    preenchimento.style.width = ((valor || 0) * 100).toFixed(1) + '%';
+    if (preenchimento) preenchimento.style.width = ((valor || 0) * 100).toFixed(1) + '%';
+    const dica = document.getElementById('term-progresso-dica');
+    if (dica) dica.textContent = valor == null ? '' : Math.round(valor * 100) + '%';
+}
+
+function _pararPulso(barra) {
+    if (pulsoTimer) {
+        clearTimeout(pulsoTimer);
+        pulsoTimer = null;
+    }
+    barra.classList.remove('term-progresso-lento');
+}
+
+function _reiniciarPulso(barra) {
+    _pararPulso(barra);
+    pulsoTimer = setTimeout(() => {
+        pulsoTimer = null;
+        if (_barraRodando()) barra.classList.add('term-progresso-lento');
+    }, PULSO_MS);
 }
 
 function _despejar(card) {
@@ -636,6 +662,8 @@ export function progressoDoProcesso(data) {
     if (progressoDaBarra.valor != null && valor <= progressoDaBarra.valor) return;
     progressoDaBarra.valor = valor;
     _pintarBarra();
+    const barra = _barra();
+    if (barra) _reiniciarPulso(barra);
 }
 
 export function aviso(texto, cls) {
