@@ -28,6 +28,7 @@ from src.backend.tools.process import id_processo, run_com_timeout
 from src.backend.tools.registry import register
 
 _TIMEOUT_TRECHO_MAX = 300
+_LIMITE_SAIDA_PARCIAL = 4000
 _ARRANQUE = time.time()
 _PREFIXO_TEMP_PYTHON = "axio_python_"
 _PREFIXO_TEMP_JS = "axio_js_"
@@ -1551,6 +1552,7 @@ _TRECHOS = {
         "sufixo": ".py",
         "snippet": _snippet_python,
         "interpretador": _interpretador_python,
+        "argumentos": ["-u"],
     },
     "javascript": {
         "rotulo": "trecho JavaScript",
@@ -1585,11 +1587,13 @@ def _correr_trecho(chave, trecho, timeout, rotulo=""):
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(cfg["snippet"](trecho, raiz_projeto))
-        proc = run_com_timeout([interpretador, caminho], timeout=limite)
-    except subprocess.TimeoutExpired:
+        proc = run_com_timeout([interpretador, *cfg.get("argumentos", []), caminho], timeout=limite)
+    except subprocess.TimeoutExpired as e:
         emit_event("process_finished", pid=pid, exit_code=None, status="timeout")
-        return (f"ERRO: o trecho passou de {limite}s e a arvore de processos foi encerrada. Se o codigo "
-                "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
+        aviso = (f"ERRO: o trecho passou de {limite}s e a arvore de processos foi encerrada. Se o codigo "
+                 "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
+        parcial = _saida_ate_ao_timeout(e)
+        return f"{aviso}\n{parcial}" if parcial else aviso
     except OSError as e:
         emit_event("process_finished", pid=pid, exit_code=None, status="erro")
         return f"ERRO: nao consegui executar o trecho ({e})."
@@ -1600,6 +1604,25 @@ def _correr_trecho(chave, trecho, timeout, rotulo=""):
             pass
     _espelhar_teste_no_terminal(pid, proc)
     return _relatorio_execucao(proc, limite, cfg["linguagem"])
+
+def _saida_ate_ao_timeout(erro):
+    """O que o processo ja tinha impresso quando o limite estourou, para a medicao nao se perder."""
+    partes = []
+    for rotulo, atributo in (("stdout", "output"), ("stderr", "stderr")):
+        texto = getattr(erro, atributo, None)
+        if not texto:
+            continue
+        if not isinstance(texto, str):
+            texto = texto.decode("utf-8", "replace")
+        if not texto.strip():
+            continue
+        if len(texto) > _LIMITE_SAIDA_PARCIAL:
+            texto = texto[:_LIMITE_SAIDA_PARCIAL] + "\n[... cortado no limite de tempo]"
+        partes.append(f"--- {rotulo} (ate ao limite) ---\n{texto}")
+    if not partes:
+        return ""
+    return ("O processo ja tinha impresso isto antes de ser encerrado - aproveita-o em vez de "
+            "repetir a medicao:\n" + "\n".join(partes))
 
 @register(
     "tool_executar_python",

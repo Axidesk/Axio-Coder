@@ -1042,11 +1042,14 @@ def run_com_timeout(cmd, timeout=60, cwd=None):
         out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         matar_arvore(proc)
+        parcial = parcial_err = b""
         try:
-            proc.communicate(timeout=5)
+            parcial, parcial_err = proc.communicate(timeout=5)
         except Exception:
             pass
-        raise
+        raise subprocess.TimeoutExpired(cmd, timeout,
+                                        output=_texto_de_saida(parcial),
+                                        stderr=_texto_de_saida(parcial_err)) from None
     return subprocess.CompletedProcess(proc.args, proc.returncode,
                                        _texto_de_saida(out), _texto_de_saida(err))
 
