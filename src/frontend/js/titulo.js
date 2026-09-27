@@ -47,7 +47,13 @@ function itensFerramentas() {
         { rotulo: 'Dev Tools', atalho: 'Ctrl+Shift+I', acao: 'devtools' },
         { separador: true },
         { rotulo: 'Modo Inspecionar', marca: inspecionar, acao: 'inspect' },
-        { rotulo: 'AddressSanitizer (C++)', marca: asan, acao: 'asan' }
+        { grupo: 'C++', itens: [
+            { rotulo: 'Compilar (Debug)', acao: 'compilar', valor: 'debug' },
+            { rotulo: 'Compilar (Release)', acao: 'compilar', valor: 'release' },
+            { rotulo: 'Compilar (AddressSanitizer)', acao: 'compilar', valor: 'asan' },
+            { separador: true },
+            { rotulo: 'Depurar com AddressSanitizer', marca: asan, acao: 'asan' }
+        ] }
     ];
 }
 
@@ -62,6 +68,7 @@ function construirItem(item) {
         traco.className = 'titulo-separador';
         return traco;
     }
+    if (item.grupo) return construirGrupo(item);
     if (item.zoom) return construirZoom();
     const botao = document.createElement('button');
     botao.type = 'button';
@@ -79,6 +86,11 @@ function construirItem(item) {
         botao.appendChild(atalho);
     }
     botao.addEventListener('click', () => {
+        if (item.acao === 'compilar') {
+            pedirCompilacao(item.valor);
+            fechar();
+            return;
+        }
         if (item.acao === 'inspect') inspecionar = !inspecionar;
         if (item.acao === 'asan') {
             asan = !asan;
@@ -96,23 +108,30 @@ function aplicarZoom(valor) {
     if (ipc) ipc.send('menu:acao', 'zoom', valor);
 }
 
-function construirZoom() {
-    const bloco = document.createElement('div');
-    bloco.className = 'titulo-zoom';
-
+function cabecaDeItem(rotulo, antes) {
     const cabeca = document.createElement('button');
     cabeca.type = 'button';
     cabeca.className = 'titulo-item';
     const marca = document.createElement('span');
     marca.className = 'titulo-marca';
-    const rotulo = document.createElement('span');
-    rotulo.textContent = 'Zoom';
-    const atual = document.createElement('span');
-    atual.className = 'titulo-atalho';
+    const texto = document.createElement('span');
+    texto.textContent = rotulo;
     const seta = document.createElement('span');
     seta.className = 'titulo-seta';
     seta.textContent = '›';
-    cabeca.append(marca, rotulo, atual, seta);
+    cabeca.append(marca, texto);
+    if (antes) cabeca.appendChild(antes);
+    cabeca.appendChild(seta);
+    return cabeca;
+}
+
+function construirZoom() {
+    const bloco = document.createElement('div');
+    bloco.className = 'titulo-zoom';
+
+    const atual = document.createElement('span');
+    atual.className = 'titulo-atalho';
+    const cabeca = cabecaDeItem('Zoom', atual);
 
     const corpo = document.createElement('div');
     corpo.className = 'titulo-zoom-corpo';
@@ -159,6 +178,24 @@ function construirZoom() {
     return bloco;
 }
 
+function construirGrupo(item) {
+    const bloco = document.createElement('div');
+    bloco.className = 'titulo-grupo';
+
+    const cabeca = cabecaDeItem(item.grupo);
+
+    const corpo = document.createElement('div');
+    corpo.className = 'titulo-grupo-corpo';
+    for (const filho of item.itens) corpo.appendChild(construirItem(filho));
+
+    cabeca.addEventListener('click', (evento) => {
+        evento.stopPropagation();
+        bloco.classList.toggle('aberto');
+    });
+    bloco.append(cabeca, corpo);
+    return bloco;
+}
+
 function repintarMenuAberto() {
     const ferramentas = botoes.find((b) => b.lista === itensFerramentas);
     if (aberto && ferramentas && aberto === ferramentas.el) abrir(aberto, itensFerramentas);
@@ -178,6 +215,28 @@ function sincronizarAsan() {
         const ipc = ponte();
         if (ipc) ipc.send('asan:set', asan);
     }).catch(() => {});
+}
+
+function avisarStatus(texto) {
+    const status = document.getElementById('lbl-status');
+    if (status) status.textContent = texto;
+}
+
+function primeiraLinha(texto) {
+    return String(texto || '').split('\n').find((linha) => linha.trim()) || '';
+}
+
+function pedirCompilacao(configuracao) {
+    avisarStatus('Compilando (' + configuracao + ')...');
+    return fetch('/api/terminal/compilar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configuracao: configuracao })
+    }).then((resposta) => resposta.json().then((dados) => ({ ok: resposta.ok, dados: dados }))
+    ).then(({ ok, dados }) => {
+        if (ok) return;
+        avisarStatus(primeiraLinha((dados || {}).error) || 'Nao consegui compilar este projeto.');
+    }).catch(() => avisarStatus('Nao consegui falar com o servidor para compilar.'));
 }
 
 function abrir(botao, lista) {
@@ -229,6 +288,9 @@ if (ipc) {
         asan = !!ativo;
         gravarAsan(asan);
         repintarMenuAberto();
+    });
+    ipc.on('menu:compilar', (evento, configuracao) => {
+        pedirCompilacao(configuracao);
     });
     ipc.on('menu:set-zoom', (evento, valor) => {
         zoom = Number(valor) || 1;

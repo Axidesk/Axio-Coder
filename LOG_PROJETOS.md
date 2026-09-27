@@ -905,9 +905,15 @@ out-of-bounds, use-after-free e use-after-scope — erros que não rebentam e n�
 de COMPILAÇÃO, não um botão — e **JA esta feito (2026-10-07)**: e a configuracao `asan` do motor de
 projetos (`configuracao='asan'` no `tool_gerir_projeto`), com prova e armadilhas na nota propria.
 
-**No menu, a pedido do utilizador (2026-10-07).** O ASan nao ficou na interface: virou um TOGGLE
-`AddressSanitizer (C++)` no menu Ferramentas, abaixo do Modo Inspecionar, nos DOIS menus (o do topo e o
-nativo do Electron), com `✓` quando ligado — "feature especial para usuarios experientes". O estado vive
+**No menu, a pedido do utilizador (2026-10-07).** O ASan e as configuracoes de build vivem no submenu
+**Ferramentas → C++**, nos DOIS menus (o do topo e o nativo do Electron) — "feature especial para
+usuarios experientes", fora do caminho de quem nao compila. O submenu traz tres ACOES — `Compilar (Debug)`,
+`Compilar (Release)`, `Compilar (AddressSanitizer)` — mais o toggle `Depurar com AddressSanitizer` com `✓`
+quando ligado. Compilar pelo menu e um POST a `/api/terminal/compilar`
+(`builds.compilar_projeto` → `_construir`), que corre como card do terminal na pasta aberta: a MESMA
+porta do `tool_gerir_projeto(acao='construir')`, sem abrir sessao; a barra de estado (`#lbl-status`)
+mostra a primeira linha da recusa quando o build nao pode arrancar. O compilador e UM (o MSVC) e
+Debug/Release/ASan sao configuracoes dele — o Release ja existia no motor, faltava so o atalho. O estado do toggle vive
 em `settings.json` -> `depurador.asan` e, com ele ligado, o `depurar` em C++ **compila instrumentado
 antes de abrir a sessao**. Custo assumido: um build na arvore `axio-asan` antes de cada sessao (o
 primeiro completo, os seguintes incrementais). Prova: o item aparece e marca por avaliacao na pagina

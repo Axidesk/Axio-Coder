@@ -255,6 +255,8 @@ def _depurar(pasta, configuracao, breakpoints, comandos="", alvo=""):
 _AVISO_AXIO_NO_DEPURADOR = ("[axio] e o arranque do proprio Axio: nao escreva 'c' aqui - uma segunda "
                             "instancia dele abriria por cima desta. olhe com p/n/w e saia com q")
 
+CONFIGURACOES = ("debug", "release", "asan")
+
 AVISO_ASAN_LIGADO = ("AddressSanitizer LIGADO pelo menu Ferramentas: o programa foi compilado instrumentado "
               "antes de a sessao abrir, para os erros de memoria que NAO rebentam (memoria ja "
               "libertada a ser usada, escrita fora dos limites) aparecerem no relatorio com o "
@@ -328,6 +330,18 @@ def abrir_depuracao(pasta, pontos="", arquivo=""):
     if not card:
         return {"ok": False, "texto": texto}
     return {"ok": True, "id": card, "texto": texto}
+
+def compilar_projeto(pasta, configuracao="debug"):
+    """Compila o projeto na configuracao pedida como card do terminal (sem abrir sessao)."""
+    escolhida = (configuracao or "debug").strip().lower()
+    if escolhida not in CONFIGURACOES:
+        return {"ok": False, "texto": (f"ERRO: configuracao '{configuracao}' desconhecida (use "
+                                       f"{', '.join(CONFIGURACOES)}).")}
+    caminho, erro = _pasta(pasta)
+    if erro:
+        return {"ok": False, "texto": erro}
+    ok, texto = _construir(caminho, escolhida, "")
+    return {"ok": ok, "texto": texto}
 
 def _sobe_o_axio(pasta, arquivo):
     """Diz se este alvo arrancaria o proprio Axio - a mesma trava que a rota do terminal usa."""

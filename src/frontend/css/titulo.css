@@ -167,6 +167,23 @@
     display: block;
 }
 
+.titulo-grupo .titulo-seta {
+    margin-left: auto;
+}
+
+.titulo-grupo.aberto .titulo-seta {
+    transform: rotate(90deg);
+}
+
+.titulo-grupo-corpo {
+    display: none;
+    padding-left: 10px;
+}
+
+.titulo-grupo.aberto .titulo-grupo-corpo {
+    display: block;
+}
+
 .titulo-zoom-barra {
     width: 100%;
     accent-color: var(--oliva);

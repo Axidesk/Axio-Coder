@@ -15,7 +15,7 @@ from src.backend.services.process_manager import (
     shell_caminho,
     comando_inicia_axio,
 )
-from src.backend.tools.builds import abrir_depuracao
+from src.backend.tools.builds import abrir_depuracao, compilar_projeto
 from src.backend.tools.process import (
     escrever_stdin_processo,
     iniciar_processo,
@@ -192,3 +192,14 @@ def terminal_depurar():
     if not resultado.get("ok"):
         return jsonify({"error": resultado.get("texto", "")}), 409
     return jsonify(resultado)
+
+@terminal_bp.route('/api/terminal/compilar', methods=['POST'])
+def terminal_compilar():
+    """Compila o projeto aberto na configuracao pedida (debug/release/asan) como card do terminal,
+    sem abrir sessao de depuracao. E o que o menu Ferramentas -> C++ aciona."""
+    dados = request.json or {}
+    resultado = compilar_projeto((dados.get("pasta") or "").strip(),
+                                 (dados.get("configuracao") or "debug").strip())
+    if not resultado.get("ok"):
+        return jsonify({"error": resultado.get("texto", "")}), 409
+    return jsonify({"ok": True, "texto": resultado.get("texto", "")})

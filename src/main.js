@@ -1203,7 +1203,16 @@ app.on('ready', () => {
           { role: 'toggleDevTools', label: 'Dev Tools' },
           { type: 'separator' },
           { label: inspectAtivo ? 'Modo Inspecionar  ✓' : 'Modo Inspecionar', click: () => pedirInspect(!inspectAtivo) },
-          { label: asanAtivo ? 'AddressSanitizer (C++)  ✓' : 'AddressSanitizer (C++)', click: () => pedirAsan(!asanAtivo) }
+          {
+            label: 'C++',
+            submenu: [
+              { label: 'Compilar (Debug)', click: () => pedirCompilar('debug') },
+              { label: 'Compilar (Release)', click: () => pedirCompilar('release') },
+              { label: 'Compilar (AddressSanitizer)', click: () => pedirCompilar('asan') },
+              { type: 'separator' },
+              { label: asanAtivo ? 'Depurar com AddressSanitizer  ✓' : 'Depurar com AddressSanitizer', click: () => pedirAsan(!asanAtivo) }
+            ]
+          }
         ]
       }
     ]);
@@ -1232,6 +1241,12 @@ app.on('ready', () => {
     montarMenu();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('menu:set-asan', asanAtivo);
+    }
+  }
+
+  function pedirCompilar(configuracao) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('menu:compilar', configuracao);
     }
   }
 
