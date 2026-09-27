@@ -1051,15 +1051,117 @@ def run_com_timeout(cmd, timeout=60, cwd=None):
                                        _texto_de_saida(out), _texto_de_saida(err))
 
 
-FATIA_PROGRESSO_PROCESSO = 10.0
+FATIA_PROGRESSO_PROCESSO = 2.0
+
+_ROTULO_CURTO = 32
+_CAUDA_CURTA = 68
+_CAUDA_LONGA = 160
+
+_RE_ETAPAS = re.compile(r"\[\s*(\d+)\s*/\s*(\d+)\s*\]")
+_RE_PERCENTO = re.compile(r"(\d{1,3}(?:[.,]\d+)?)\s*%")
+_RE_FONTE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:c|cc|cpp|cxx)\b", re.IGNORECASE)
+_RE_LINHA_FONTE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:c|cc|cpp|cxx)\Z", re.IGNORECASE)
 
 
-def _texto_de_progresso(pid, decorrido, timeout):
+def _rotulo_do_comando(comando):
+    """O programa por tras do comando, sem caminho nem argumentos - 'MSBuild.exe', nao o caminho todo."""
+    texto = str(comando or "").strip()
+    if not texto:
+        return "processo"
+    corte = texto.lower().find(".exe")
+    if corte >= 0:
+        primeiro = texto[:corte + 4]
+    elif texto[0] in "\"'":
+        fim = texto.find(texto[0], 1)
+        primeiro = texto[1:fim] if fim > 0 else texto[1:]
+    else:
+        primeiro = texto.split()[0]
+    nome = os.path.basename(primeiro.replace("\\", "/").replace('"', "").rstrip("/")) or primeiro
+    return nome[:_ROTULO_CURTO]
+
+
+def _duracao(decorrido):
+    total = int(decorrido)
+    if total < 60:
+        return f"{total}s"
+    minutos, segundos = divmod(total, 60)
+    if minutos < 60:
+        return f"{minutos}m{segundos:02d}s"
+    horas, minutos = divmod(minutos, 60)
+    return f"{horas}h{minutos:02d}m"
+
+
+def _ultima_linha_legivel(log):
+    """A ultima linha que se le. As linhas monstruosas (o comando do CL.exe com 72 ficheiros) nao contam."""
+    for linha in reversed(log):
+        texto = " ".join(str(linha).split())
+        if not texto or len(texto) > _CAUDA_LONGA:
+            continue
+        if len(texto) <= _CAUDA_CURTA:
+            return texto
+        corte = texto[:_CAUDA_CURTA]
+        espaco = corte.rfind(" ")
+        return (corte[:espaco] if espaco > 20 else corte) + "..."
+    return ""
+
+
+def _texto_de_progresso(reg, decorrido):
+    partes = [_rotulo_do_comando(reg.get("comando")), "-", _duracao(decorrido)]
+    cauda = _ultima_linha_legivel(reg.get("log") or [])
+    if cauda:
+        partes.append("| " + cauda)
+    return " ".join(partes)
+
+
+def _progresso_do_log(log):
+    """Quanto o proprio programa ja disse que fez, de 0 a 1 - None quando nao disse nada.
+
+    Le o que as ferramentas de build escrevem: '[45/120]' (ninja, make), uma percentagem
+    qualquer, ou, no MSVC, os ficheiros ja compilados contra os que a linha de comando do
+    CL.exe mandou compilar.
+    """
+    etapas = None
+    percento = None
+    total = 0
+    nomes = set()
+    feitos = set()
+    for bruto in log:
+        texto = str(bruto)
+        achado = _RE_ETAPAS.search(texto)
+        if achado:
+            denominador = int(achado.group(2))
+            if denominador > 0:
+                etapas = min(1.0, int(achado.group(1)) / denominador)
+        achado = _RE_PERCENTO.search(texto)
+        if achado:
+            valor = float(achado.group(1).replace(",", "."))
+            if 0 <= valor <= 100:
+                percento = min(1.0, valor / 100.0)
+        fontes = _RE_FONTE.findall(texto)
+        if len(fontes) >= 3 and ".exe" in texto.lower():
+            total = len(fontes)
+            nomes = {os.path.basename(f.replace("\\", "/")) for f in fontes}
+        elif total:
+            limpa = texto.strip().strip('"')
+            nome = os.path.basename(limpa.replace("\\", "/"))
+            if _RE_LINHA_FONTE.search(limpa) and nome in nomes:
+                feitos.add(nome)
+    if total and feitos:
+        return min(0.99, len(feitos) / total)
+    if etapas is not None:
+        return etapas
+    if percento is not None:
+        return percento
+    return None
+
+
+def _avisar_progresso(pid, decorrido):
     reg = estado.get("processos", {}).get(pid) or {}
-    comando = str(reg.get("comando") or "processo")[:60]
-    log = reg.get("log") or []
-    cauda = f" | ultima linha: {log[-1][:100]}" if log else ""
-    return f"{comando} - {int(decorrido)}s de {int(timeout)}s{cauda}"
+    emit_event("executing",
+               function=_texto_de_progresso(reg, decorrido),
+               pid=pid,
+               decorrido=int(decorrido),
+               progresso=_progresso_do_log(reg.get("log") or []))
 
 
 def _esperar_com_progresso(popen, pid, timeout, fatia=FATIA_PROGRESSO_PROCESSO):
@@ -1080,7 +1182,7 @@ def _esperar_com_progresso(popen, pid, timeout, fatia=FATIA_PROGRESSO_PROCESSO):
             restante -= passo
             if restante <= 0:
                 return False
-            emit_event("executing", function=_texto_de_progresso(pid, decorrido, timeout))
+            _avisar_progresso(pid, decorrido)
     return False
 
 
@@ -1105,7 +1207,7 @@ def _esperar_card(reg, timeout):
         decorrido += passo
         restante -= passo
         if restante > 0:
-            emit_event("executing", function=_texto_de_progresso(pid, decorrido, timeout))
+            _avisar_progresso(pid, decorrido)
     popen = reg.get("popen")
     if popen is not None:
         matar_arvore(popen)

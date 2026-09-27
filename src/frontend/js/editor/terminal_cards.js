@@ -17,6 +17,7 @@ const PREFIXO_ECO = '> ';
 
 const cards = new Map();
 const lancamentos = new Map();
+const progressoDaBarra = { pid: null, valor: null };
 let sugestoesAtuais = [];
 let zona = null;
 let selecionado = null;
@@ -78,6 +79,7 @@ export function descartarSelecao() {
 function _atualizarVazio() {
     const z = _zona();
     if (z) z.classList.toggle('term-cards-vazio', z.childElementCount === 0);
+    _pintarBarra();
 }
 
 function _rotuloFim(status, exitCode) {
@@ -99,6 +101,7 @@ function _aplicarEstado(card, status) {
         card.ponto.title = efetivo === 'rodando' ? 'A correr: clica para parar' : 'Parado';
         card.fim.textContent = _rotuloFim(efetivo, card.exitCode);
     }
+    _pintarBarra();
 }
 
 function _fimDoCardVisivel(card) {
@@ -129,6 +132,28 @@ function _pintar(card, novo) {
         card.saida.appendChild(fragmentoDeSaida(novo, card.cwd));
     }
     if (card.seguirFim) _rolarAteAoFim(card);
+}
+
+function _barraRodando() {
+    let rodando = false;
+    cards.forEach((c) => { if (_estaRodando(c)) rodando = true; });
+    return rodando;
+}
+
+function _pintarBarra() {
+    const barra = document.getElementById('term-progresso');
+    if (!barra) return;
+    const rodando = _barraRodando();
+    barra.classList.toggle('term-progresso-visivel', rodando);
+    if (!rodando) {
+        progressoDaBarra.pid = null;
+        progressoDaBarra.valor = null;
+    }
+    const preenchimento = document.getElementById('term-progresso-fill');
+    if (!preenchimento) return;
+    const valor = rodando ? progressoDaBarra.valor : null;
+    preenchimento.classList.toggle('term-progresso-indeterminado', valor == null);
+    preenchimento.style.width = valor == null ? '' : (valor * 100).toFixed(1) + '%';
 }
 
 function _despejar(card) {
@@ -598,6 +623,20 @@ export function cardFinalizar(data) {
     card.exitCode = data.exit_code;
     _aplicarEstado(card, data.status);
     _soltarControles(card);
+}
+
+export function progressoDoProcesso(data) {
+    if (!data || data.progresso == null) return;
+    const card = data.pid != null ? cards.get(data.pid) : null;
+    if (!card || !_estaRodando(card)) return;
+    if (progressoDaBarra.pid !== data.pid) {
+        progressoDaBarra.pid = data.pid;
+        progressoDaBarra.valor = null;
+    }
+    const valor = Math.max(0, Math.min(1, Number(data.progresso) || 0));
+    if (progressoDaBarra.valor != null && valor <= progressoDaBarra.valor) return;
+    progressoDaBarra.valor = valor;
+    _pintarBarra();
 }
 
 export function aviso(texto, cls) {

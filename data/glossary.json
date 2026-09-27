@@ -5626,6 +5626,24 @@
           11789
         ]
       }
+    },
+    {
+      "termo": "barra de progresso do terminal",
+      "aliases": [
+        "barra de progresso",
+        "loading bar",
+        "barra que enche",
+        "barra de compilacao",
+        "barra do build",
+        "barra em cima do input do terminal",
+        "barra de carregamento do terminal"
+      ],
+      "identificador": "#term-progresso",
+      "descricao": "Barra fininha (3px, azul --azul-acao sobre trilho --cinza-escuro) que aparece por cima do input do terminal enquanto um card de processo corre. Enche com o progresso REAL lido do log do processo (ficheiros ja compilados contra os da linha de comando do CL.exe, ou [N/M] do ninja/make, ou a ultima percentagem da saida) e fica a animar quando o log nao diz nada - nunca inventa uma percentagem. O valor e monotonico e so anda para a frente. Quem a pinta e terminal_cards._pintarBarra; o valor chega pelo evento executing (progressoDoProcesso).",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 397
+      }
     }
   ]
 }

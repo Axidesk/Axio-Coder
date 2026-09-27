@@ -1126,6 +1126,55 @@ resultados abaixo NAO e prova de ausencia, so diz que nao esta na parte varrida.
 forcado: aviso na primeira linha, achados reais logo abaixo, e o controlo (`algo_que_nao_existe_xyz`)
 continua sem resultados.
 
+### O TIBIA COMPILOU - e o build passou a contar o que faz (2026-10-07)
+
+O utilizador compilou o Tibia pelo menu e colou o log: `Release|x86`, 72 ficheiros, 23.913 funcoes
+ligadas, **0 avisos e 0 erros, 5m11s**, e o `Release\Tibia74.exe` saiu novo. Quem compilou foi o CL.exe
+de 2015 (`D:\Jogos e programas\VS2015\VC\bin\CL.exe`) com o SDK 8.1 - o toolset que o `.vcxproj`
+declara, nao o do 2022. Fecha-se aqui o caminho aberto desde que as dependencias foram reapontadas:
+`Projects/Tibia74` compila de ponta a ponta pelo Axio. O retarget para o VS2022 passa a ser o passo
+SEGUINTE, e e um passo a parte (como combinado com ele).
+
+Confirmei antes de compilar que nada do servidor que ja funciona era tocado: o `.vcxproj` nao declara
+`OutDir`/`IntDir`/`OutputFile` nem `PostBuildEvent` (varrido), logo o MSBuild escreve em `Release\` e
+`Debug\`, como sempre; `Release\TESTE\` (com o `data\`, o `config.lua` e o `Start Serv.bat`) e uma
+pasta dele que a compilacao nao toca, e o executavel novo tem de ser copiado para la para ser testado.
+
+Duas queixas dele no mesmo recado, com a mesma raiz - o build nao contava nada:
+
+1. **"a mensagem final" era feia**: `C:\...\MSB - 310s de 3000s | ultima linha: Finished generatin...`
+   - um caminho cortado a meio, um teto de 3000s que nao informa nada, e uma linha truncada a meio de
+   uma palavra. Passou a `MSBuild.exe - 5m11s | Generating code`: `_rotulo_do_comando` corta no
+   primeiro `.exe` (MEDIDO: cortar por espacos dava "Jogos", porque o caminho do CL.exe tem espacos e
+   nao vem entre aspas), `_duracao` escreve `45s`/`5m11s`/`1h02m`, e `_ultima_linha_legivel` escolhe a
+   ultima linha que se le, saltando as monstruosas (a do CL.exe com 72 ficheiros). O teto do timeout
+   saiu do texto: nao e informacao e assustava.
+2. **Uma barra a encher, como no Visual Studio**: nasceu em `#term-progresso` (rodape do terminal, por
+   cima do input do card), cheia a partir do PROPRIO log - nunca a fingir. `_progresso_do_log` le, por
+   ordem: os ficheiros ja compilados contra os que a linha de comando do `CL.exe` mandou compilar (a
+   linha do CL e a unica com >=3 ficheiros de codigo e `.exe`), senao `[N/M]` do ninja/make, senao a
+   ultima percentagem da saida. Sem sinal nenhum devolve `None` e a barra ANIMA em vez de mentir. O
+   valor e monotonico (nunca recua) e o teto e 0.99 enquanto o processo corre. O evento `executing`
+   passou a levar `pid`, `decorrido` e `progresso`, e a fatia de aviso desceu de 10s para 2s.
+
+PROVA (backend, modulo real do disco): texto -> `MSBuild.exe - 5m11s | Finished generating code`,
+`npm - 12s`, `processo - 5s | ola mundo`; duracoes `45s`/`5m11s`/`1h02m`/`0s`; progresso -> log vazio
+`None`, ninja `[45/120]` `0.375` e `[120/120]` `1.0`, percentagem `(99.3%)` `0.993`, MSVC 3 de 8
+`0.375`, log do Tibia a meio (7 de 12) `0.583` e no fim `0.99`, prosa qualquer `None`; e o evento sai
+com o payload todo (`function`, `pid`, `decorrido`, `progresso`). Rotulos medidos: `MSBuild.exe`,
+`CL.exe`, `npm`, `cmake`, `npm.cmd`, `python`, `where.exe`, vazio -> `processo`.
+PROVA (frontend, funcoes lidas do disco + DOM falso): sem card -> escondida; card a correr sem valor ->
+visivel e indeterminada; 0.375 -> `37.5%`; 0.10 a seguir -> NAO recua; 0.993 -> `99.3%`; evento sem
+`progresso` ignorado; pid que nao e de card ignorado; card parou -> escondida e valor limpo.
+PROVA (pintura, CSS real + tokens): 588px de largura, 3px de altura, preenchimento azul de x=26 a
+x=246 (220.5px = 37.5% de 588), trilho cinza de 247 a 613, cantos arredondados (as duas cores de
+mistura nos extremos), e o input 10px abaixo.
+90 rotas, 0 avarias; imports limpos (py e js); sintaxe OK.
+
+Fica UMA redundancia antiga que a analise de similaridade voltou a apanhar (nao e desta rodada, e nao
+lhe toquei por nao ser trabalho pedido): `terminal_cards._mesmoEndereco` e `preview.mesmaPaginaWeb` sao
+o mesmo ajudante de comparar URL, copiado nos dois ficheiros (11 linhas, 55 tokens).
+
 ## O que falta (medido, não suposto)
 
 - **Depurador:** a Fase 6a está feita e **provada no DRAFTCAD** (C++ pelo `cdb`, num card: pontos por

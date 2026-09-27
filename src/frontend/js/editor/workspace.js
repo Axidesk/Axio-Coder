@@ -7,7 +7,7 @@ import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './lin
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
 import { mostrarEstadoDoDepurador } from './painel_depurador.js';
 import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
-import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, marcarDepuracaoTerminada, temCardSelecionado } from './terminal_cards.js';
+import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, marcarDepuracaoTerminada, progressoDoProcesso, temCardSelecionado } from './terminal_cards.js';
 import { ensureTerminal, termFit } from './xterm.js';
 import { captureDiffExitScroll, computeLineDiff, enterDiffMode, exitDiffMode, revealDiffExitScroll } from './diff.js';
 import { fadeEditorSwap, fadeGutterSwap, revelarLinhaComRolagem, scheduleExplorerReload, smoothRevealLine } from './scroll.js';
@@ -32,6 +32,8 @@ export function handleSSE(data) {
         cardSaida(data);
     } else if (data.type === 'process_finished') {
         cardFinalizar(data);
+    } else if (data.type === 'executing') {
+        progressoDoProcesso(data);
     } else if (data.type === 'workspace_activate') {
         state.wsStatus.textContent = 'bootstrap ativo';
     } else if (data.type === 'debug_stop') {

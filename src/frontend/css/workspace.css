@@ -145,6 +145,39 @@
     padding: 5px 10px;
     opacity: 1;
 }
+.term-progresso {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin: 0 2px;
+    transition: grid-template-rows var(--dur-5) var(--ease-fluid),
+                margin-bottom var(--dur-5) var(--ease-fluid);
+    pointer-events: none;
+}
+.term-progresso-visivel {
+    grid-template-rows: 1fr;
+    margin-bottom: 10px;
+}
+.term-progresso-trilho {
+    overflow: hidden;
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--cinza-escuro);
+}
+.term-progresso-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 9999px;
+    background: var(--azul-acao);
+    transition: width var(--dur-7) var(--ease-fluid);
+}
+.term-progresso-indeterminado {
+    width: 30%;
+    animation: term-progresso-correr var(--dur-11) var(--ease-fluid) infinite;
+}
+@keyframes term-progresso-correr {
+    from { transform: translateX(-110%); }
+    to { transform: translateX(440%); }
+}
 .term-controle {
     padding: 3px 10px;
     border: none;
