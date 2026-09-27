@@ -692,10 +692,14 @@ motor de depuração.
       que ficou provado". A sessão é conduzida pela própria ferramenta, com o parâmetro `comandos`.
 - [ ] **Fase 6b — ligar o Monaco ao motor.** O clique na margem vira breakpoint, a barra de controlo
       entra, a linha actual acende e a stack/variáveis aparecem na coluna 3 — tudo por cima do motor
-      que a 6a provou.
+      que a 6a provou. **Falta só a parte da stack/variaveis na coluna 3 (medido 2026-10-07)**: o
+      clique na margem, os botoes de controlo, o botao de depurar na barra, o ficheiro (com a linha) a
+      abrir sozinho e a linha acesa no editor ja estao feitos e provados.
 - [ ] **Fase 6c — Python e JS pelos adaptadores.** `debugpy` para Python e o inspector do Node
       (CDP); aqui o adaptador faz o trabalho todo e o frontend é o MESMO da 6b. É esta fase que prova
-      que o ecrã não se repete por linguagem — e é a razão de o desenho ser este.
+      que o ecrã não se repete por linguagem — e é a razão de o desenho ser este. **Python resolvido
+      por outra via (2026-10-06/07)**: corre pelo `pdb`, no mesmo card e com os mesmos botoes, e o
+      adaptador nao foi preciso. **Falta o JS** (inspector do Node).
 - [ ] **Fase 5 (clangd)** é o par natural disto: sem índice não há "ir à definição" nem erro
       enquanto se escreve.
 - Fora do plano, dito em voz alta: **profiler** (VTune/perf), **depuração remota** (`msvsmon` existe,
@@ -898,7 +902,9 @@ deu 404, o que provou a fiação toda; falta o reinício).
 possíveis não têm fim e muitos não se decidem por cálculo. O degrau seguinte é documentado e tem
 outro nome: **AddressSanitizer** do MSVC (`/fsanitize=address`, VS 2019 16.9+), que apanha
 out-of-bounds, use-after-free e use-after-scope — erros que não rebentam e não dão erro. É uma opção
-de COMPILAÇÃO, não um botão, e não está feito. Fonte:
+de COMPILAÇÃO, não um botão — e **JA esta feito (2026-10-07)**: e a configuracao `asan` do motor de
+projetos (`configuracao='asan'` no `tool_gerir_projeto`), com prova e armadilhas na nota propria.
+Fonte:
 https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
 
 ## O que falta (medido, não suposto)
@@ -908,8 +914,13 @@ https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
   A **6b** já tem o clique na margem a marcar o ponto, os botões de controlo dentro do card
   (Continuar/Passo/Entrar/Sair/Pilha/Variáveis/Terminar), o botão de depurar na barra do terminal e
   o salto do editor para a linha onde parou (tudo feito e provado a 2026-10-06, ver as secções
-  próprias). A linha ACESA no código entrou a seguir (ver "A linha do erro acesa no editor"); falta a
-  stack na coluna 3; a **6c** (Python) já corre pelo `pdb`, no mesmo card e com os mesmos botões.
+  próprias). A linha ACESA no código entrou a seguir (ver "A linha do erro acesa no editor") e o
+  AddressSanitizer ja vive como configuracao `asan` (ver a secção própria). **O que falta mesmo:** a
+  camada de stack/variaveis na coluna 3 - e os DADOS ja existem no motor (`leitura_depurador` guarda
+  `quadros` e `variaveis`), o que falta e expo-los: `depurar.paragem_atual` so devolve
+  arquivo/linha/queda e o evento `debug_stop` nao os leva; os pontos de paragem CONDICIONAIS, que so
+  existem por comando (`bp`); e o **JS** do 6c (inspector do Node). A **6c** (Python) ja corre pelo
+  `pdb`, no mesmo card e com os mesmos botoes.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /
@@ -1100,8 +1111,12 @@ se queixa) e a única que continua a exigir um ponto de paragem marcado à mão.
 
 ### Duplicação que já cá estava (alertada, não mexida)
 
-`editor.js` tem dois blocos de 9 linhas iguais (`applyContent` contra `aplicar`) e `terminal_cards.js`
-repete 11 linhas de `preview.js`. São de antes desta rodada; ficam como candidatos a mesclar.
+MEDIDO A 2026-10-07 (jscpd, `min_linhas=9`): a duplicacao do `editor.js` JA NAO EXISTE - zero clones
+no ficheiro, e so ha um `applyContent` (nao ha `aplicar` nenhum). A nota antiga estava desatualizada.
+O que continua de pe e UM clone: `terminal_cards.js:_mesmoEndereco` [520-530] repete
+`preview.js:mesmaPaginaWeb` [72-82] - 11 linhas, 55 tokens, e a MESMA funcao com dois nomes (compara
+origin+pathname de dois URLs). Candidata a mesclar; como e funcao com dois nomes e responsabilidade
+igual, fica como ALERTA (regra 18), nao como edicao a escondida.
 
 ## O que NÃO se faz
 
