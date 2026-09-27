@@ -1,7 +1,7 @@
 import os
 import time
 
-from src.backend.builds import construir, depurar, detetar, diagnosticos, instalar, kits
+from src.backend.builds import avisos, construir, depurar, detetar, diagnosticos, instalar, kits
 from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
 from src.backend.services.settings import asan_ligado
@@ -25,6 +25,9 @@ from src.backend.tools.registry import register
     "vem dentro do Python; sem nenhum ponto marcado corre o programa em modo de depuracao, para "
     "onde ele rebentar) e 'instalar' (traz do instalador "
     "da Qt os modulos que o projeto pede e o kit nao tem - sem uma unica janela). "
+    "'avisos' compila os ficheiros do projeto com os avisos LIGADOS e conta-os por codigo e por "
+    "sitio, dizendo o que os '#pragma warning(disable)' e o '/wd' estao a esconder - sem tocar no "
+    "projeto e sem depender de ele compilar ate ao fim. "
     "'construir' e 'correr' fazem o preparo sozinhos. "
     "build corre como card do terminal (saida a vivo, com botao de parar). "
     "Nao serve para ler nem editar codigo (para isso ha as ferramentas de arquivo) nem para construir o "
@@ -32,8 +35,8 @@ from src.backend.tools.registry import register
     {
         "acao": {
             "tipo": "STRING",
-            "desc": "detetar | kits | preparar | construir | correr | depurar | instalar",
-            "enum": ["detetar", "kits", "preparar", "construir", "correr", "depurar", "instalar"],
+            "desc": "detetar | kits | preparar | construir | avisos | correr | depurar | instalar",
+            "enum": ["detetar", "kits", "preparar", "construir", "avisos", "correr", "depurar", "instalar"],
             "padrao": "detetar",
         },
         "pasta": {
@@ -89,6 +92,8 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", 
     if acao == "construir":
         _, texto = _construir(caminho, configuracao, alvo)
         return texto
+    if acao == "avisos":
+        return _texto_avisos(caminho)
     if acao == "correr":
         return _correr(caminho, configuracao)
     if acao == "depurar":
@@ -122,9 +127,15 @@ def _configurar(pasta, plano):
     resultado = correr_como_card(comando, cwd=pasta, timeout=construir.TIMEOUT_CONFIGURAR,
                                  caminhos_extra=plano["escolha"].get("caminhos"))
     saida = recortar_texto(_texto_do_processo(resultado))
-    if _interrompido(resultado):
-        return False, "CONFIGURACAO INTERROMPIDA: o card do terminal foi parado."
     achados = diagnosticos.resumo(saida, raiz=pasta)
+    if _interrompido(resultado):
+        blocos = ["CONFIGURACAO INTERROMPIDA: o card do terminal foi parado. O que sai abaixo e o que "
+                  "ja tinha sido apurado antes da paragem."]
+        if achados:
+            blocos.append(achados)
+        if saida:
+            blocos.append(saida)
+        return False, "\n\n".join(blocos)
     prefixo = f"{achados}\n\n" if achados else ""
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
@@ -151,10 +162,15 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
     produzidos = construir.exe_produzido(
         plano["pasta_build"], desde=inicio, nome=plano["deteccao"].get("projeto", "")
     )
-    if _interrompido(resultado):
-        blocos.append("COMPILACAO INTERROMPIDA: o card do terminal foi parado.")
-        return False, "\n\n".join(blocos)
     achados = diagnosticos.resumo(saida, raiz=pasta)
+    if _interrompido(resultado):
+        blocos.append("COMPILACAO INTERROMPIDA: o card do terminal foi parado. O que sai abaixo e o que "
+                      "ja tinha sido apurado antes da paragem - nao e o resultado final do build.")
+        if achados:
+            blocos.append(achados)
+        if saida:
+            blocos.append(saida)
+        return False, "\n\n".join(blocos)
     if achados:
         blocos.append(achados)
     if resultado.returncode == 0:
@@ -405,6 +421,10 @@ def _instalar(pasta, configuracao):
 
 def _texto_do_processo(resultado):
     return ((resultado.stdout or "") + (resultado.stderr or "")).strip()
+
+def _texto_avisos(pasta):
+    emit_event("executing", function=f"Medindo os avisos de {os.path.basename(pasta)}")
+    return avisos.texto(avisos.censo(pasta))
 
 def _texto_instalado(pasta, plano, saida):
     deteccao = detetar.detetar(pasta)

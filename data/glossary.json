@@ -5651,6 +5651,26 @@
           83381
         ]
       }
+    },
+    {
+      "termo": "censo de avisos",
+      "aliases": [
+        "quantos avisos tem o projeto",
+        "avisos escondidos",
+        "o que os pragmas escondem",
+        "medir os avisos do c++",
+        "limpar os avisos",
+        "warnings do projeto",
+        "contar avisos",
+        "censo de warnings",
+        "pragmas de aviso"
+      ],
+      "identificador": "tool_gerir_projeto(acao='avisos')",
+      "descricao": "Compila os ficheiros de um projeto do Visual Studio com os avisos ligados e conta-os por codigo e por sitio, a partir de uma copia da pasta src com os #pragma warning(disable:...) neutralizados (o projeto no disco nao e tocado). So le .vcxproj.",
+      "localizacao": {
+        "arquivo": "src/backend/builds/avisos.py:25",
+        "linha": ""
+      }
     }
   ]
 }
