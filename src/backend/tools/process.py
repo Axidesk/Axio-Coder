@@ -1052,6 +1052,9 @@ def run_com_timeout(cmd, timeout=60, cwd=None):
 
 
 FATIA_PROGRESSO_PROCESSO = 2.0
+PASSO_VIGIA_PROGRESSO = 0.25
+
+_FIM_DA_COMPILACAO = 0.95
 
 _ROTULO_CURTO = 32
 _CAUDA_CURTA = 68
@@ -1118,11 +1121,14 @@ def _progresso_do_log(log):
 
     Le o que as ferramentas de build escrevem: '[45/120]' (ninja, make), uma percentagem
     qualquer, ou, no MSVC, os ficheiros ja compilados contra os que a linha de comando do
-    CL.exe mandou compilar.
+    CL.exe mandou compilar. Cada invocacao do CL.exe e um lote e os lotes somam-se - o lote
+    novo so aparece depois de o anterior ter acabado, logo um segundo projeto do mesmo .sln
+    continua a contagem em vez de a reiniciar. A compilacao enche ate _FIM_DA_COMPILACAO; o
+    resto e o linker, que fecha com a percentagem do LTCG quando a imprime.
     """
     etapas = None
     percento = None
-    total = 0
+    lotes = []
     nomes = set()
     feitos = set()
     for bruto in log:
@@ -1139,15 +1145,27 @@ def _progresso_do_log(log):
                 percento = min(1.0, valor / 100.0)
         fontes = _RE_FONTE.findall(texto)
         if len(fontes) >= 3 and ".exe" in texto.lower():
-            total = len(fontes)
+            if nomes:
+                lotes.append((len(nomes), len(feitos)))
             nomes = {os.path.basename(f.replace("\\", "/")) for f in fontes}
-        elif total:
+            feitos = set()
+        elif nomes:
             limpa = texto.strip().strip('"')
             nome = os.path.basename(limpa.replace("\\", "/"))
             if _RE_LINHA_FONTE.search(limpa) and nome in nomes:
                 feitos.add(nome)
-    if total and feitos:
-        return min(0.99, len(feitos) / total)
+    if nomes:
+        lotes.append((len(nomes), len(feitos)))
+    if lotes:
+        total = sum(t for t, _ in lotes)
+        prontos = sum(f for _, f in lotes)
+        if total:
+            compilado = prontos / total
+            if compilado < 1.0:
+                return _FIM_DA_COMPILACAO * compilado
+            if percento is not None:
+                return _FIM_DA_COMPILACAO + (1.0 - _FIM_DA_COMPILACAO) * percento
+            return _FIM_DA_COMPILACAO
     if etapas is not None:
         return etapas
     if percento is not None:
@@ -1164,25 +1182,45 @@ def _avisar_progresso(pid, decorrido):
                progresso=_progresso_do_log(reg.get("log") or []))
 
 
-def _esperar_com_progresso(popen, pid, timeout, fatia=FATIA_PROGRESSO_PROCESSO):
-    """Espera pelo fim em fatias, avisando o ecra do que ja corre.
+def _visto_vazio():
+    return {"linhas": 0, "valor": None, "avisado_em": time.time()}
+
+
+def _avisar_progresso_se_mudou(pid, decorrido, visto):
+    """Avisa o ecra assim que o progresso muda - e, sem mudanca, de FATIA em FATIA.
+
+    O valor so e recalculado quando o log cresce: varrer o log inteiro a cada
+    PASSO_VIGIA_PROGRESSO sobre um log que nao mudou era trabalho de graca.
+    """
+    log = (estado.get("processos", {}).get(pid) or {}).get("log") or []
+    agora = time.time()
+    if len(log) != visto["linhas"]:
+        visto["linhas"] = len(log)
+        valor = _progresso_do_log(log)
+        if valor is not None and valor != visto["valor"]:
+            visto["valor"] = valor
+            visto["avisado_em"] = agora
+            _avisar_progresso(pid, decorrido)
+            return
+    if agora - visto["avisado_em"] >= FATIA_PROGRESSO_PROCESSO:
+        visto["avisado_em"] = agora
+        _avisar_progresso(pid, decorrido)
+
+
+def _esperar_com_progresso(popen, pid, timeout):
+    """Espera pelo fim em passos curtos, avisando o ecra do que ja corre.
 
     Sem isto um passo longo (um pip install de gigabytes, um build) fica minutos calado e
     nao se sabe se anda ou morreu. Devolve False quando o tempo acaba.
     """
-    restante = float(timeout)
-    decorrido = 0.0
-    while restante > 0:
-        passo = min(fatia, restante)
+    inicio = time.time()
+    visto = _visto_vazio()
+    while time.time() - inicio < timeout:
         try:
-            popen.wait(timeout=passo)
+            popen.wait(timeout=PASSO_VIGIA_PROGRESSO)
             return True
         except subprocess.TimeoutExpired:
-            decorrido += passo
-            restante -= passo
-            if restante <= 0:
-                return False
-            _avisar_progresso(pid, decorrido)
+            _avisar_progresso_se_mudou(pid, time.time() - inicio, visto)
     return False
 
 
@@ -1195,19 +1233,13 @@ def correr_como_card(comando, cwd=None, timeout=300, caminhos_extra=None):
 
 def _esperar_card(reg, timeout):
     pid = reg["id"]
-    restante = float(timeout)
-    decorrido = 0.0
-    while restante > 0:
-        passo = min(FATIA_PROGRESSO_PROCESSO, restante)
-        fim = time.time() + passo
-        while time.time() < fim:
-            if reg.get("status") != "rodando":
-                return _resultado_do_card(reg)
-            time.sleep(0.2)
-        decorrido += passo
-        restante -= passo
-        if restante > 0:
-            _avisar_progresso(pid, decorrido)
+    inicio = float(reg.get("nascimento") or time.time())
+    visto = _visto_vazio()
+    while time.time() - inicio < timeout:
+        if reg.get("status") != "rodando":
+            return _resultado_do_card(reg)
+        time.sleep(PASSO_VIGIA_PROGRESSO)
+        _avisar_progresso_se_mudou(pid, time.time() - inicio, visto)
     popen = reg.get("popen")
     if popen is not None:
         matar_arvore(popen)

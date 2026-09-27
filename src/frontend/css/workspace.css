@@ -167,7 +167,7 @@
     width: 0;
     border-radius: 9999px;
     background: var(--azul-acao);
-    transition: width var(--dur-7) var(--ease-fluid);
+    transition: width var(--dur-9) var(--ease-fluid);
 }
 .term-progresso-indeterminado {
     width: 30%;

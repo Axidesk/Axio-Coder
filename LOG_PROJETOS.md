@@ -1154,8 +1154,8 @@ Duas queixas dele no mesmo recado, com a mesma raiz - o build nao contava nada:
    ordem: os ficheiros ja compilados contra os que a linha de comando do `CL.exe` mandou compilar (a
    linha do CL e a unica com >=3 ficheiros de codigo e `.exe`), senao `[N/M]` do ninja/make, senao a
    ultima percentagem da saida. Sem sinal nenhum devolve `None` e a barra ANIMA em vez de mentir. O
-   valor e monotonico (nunca recua) e o teto e 0.99 enquanto o processo corre. O evento `executing`
-   passou a levar `pid`, `decorrido` e `progresso`, e a fatia de aviso desceu de 10s para 2s.
+   valor e monotonico (nunca recua). O evento `executing` passou a levar `pid`, `decorrido` e
+   `progresso`, e a fatia de aviso desceu de 10s para 2s.
 
 PROVA (backend, modulo real do disco): texto -> `MSBuild.exe - 5m11s | Finished generating code`,
 `npm - 12s`, `processo - 5s | ola mundo`; duracoes `45s`/`5m11s`/`1h02m`/`0s`; progresso -> log vazio
@@ -1170,6 +1170,45 @@ PROVA (pintura, CSS real + tokens): 588px de largura, 3px de altura, preenchimen
 x=246 (220.5px = 37.5% de 588), trilho cinza de 247 a 613, cantos arredondados (as duas cores de
 mistura nos extremos), e o input 10px abaixo.
 90 rotas, 0 avarias; imports limpos (py e js); sintaxe OK.
+
+### "Nao tem como ser real?" - a barra sempre foi real; faltava chegar depressa (2026-10-07)
+
+Pesquisado na documentacao OFICIAL da Microsoft antes de mexer, e a resposta e clara: **nao existe
+percentagem no MSBuild**. O `TerminalLogger` (o `-tl`, MSBuild 17.8+) e descrito como "a logger which
+updates the console output 'live' during the build" e trabalha a reescrever linhas com codigos
+ANSI, projeto a projeto - nao da um numero. A pagina dos loggers multi-processador diz o mesmo por
+outra via: com `/m` os eventos chegam fora de ordem e a solucao recomendada e o binlog (para ler
+DEPOIS) ou o `-tl`. Logo a percentagem so pode sair da contagem das unidades de trabalho do proprio
+stream - que e o que ja faziamos. O que faltava nao era "ser real": era (a) chegar depressa, (b) nao
+mentir na conta.
+
+- **A fidelidade do valor nao tem como melhorar.** Continua a contar trabalho real do log, e a doc
+  confirma que nao ha fonte melhor. A granularidade e a da unidade de trabalho: no Tibia, 72 traducoes
+  em ~3m30 dao ~1,3% a cada ~3s. Sem um logger proprio em C# nao ha mais fino que isto.
+- **A LATENCIA era o defeito verdadeiro.** O valor so era calculado e emitido de
+  `FATIA_PROGRESSO_PROCESSO` (2s) em 2s: uma unidade acabada 0,1s depois do aviso anterior so aparecia
+  no ecra 2s mais tarde. Agora ha um passo de `PASSO_VIGIA_PROGRESSO` (0,25s) que avisa assim que o
+  valor MUDA, e a fatia de 2s fica so como batimento do relogio para os passos calados.
+- **A CONTA mentia em dois sitios.** (a) O `total` era substituido a cada linha do `CL.exe`, logo num
+  `.sln` com dois projetos o valor caia para o principio do segundo - e como o frontend ignora
+  descidas, a barra CONGELAVA. Os lotes passaram a somar-se (o lote novo so aparece depois de o
+  anterior acabar, logo o anterior esta feito). (b) O linker nao existia na conta: a compilacao enchia
+  ate 0.99 e ficava parada ali enquanto o LTCG corria. Agora a compilacao enche ate
+  `_FIM_DA_COMPILACAO` (0,95) e o linker fecha o resto com a percentagem que ele proprio imprime
+  ("23745 of 23913 functions (99.3%)").
+- `_visto_vazio`/`_avisar_progresso_se_mudou` e nao "vigia": `seguir_saida_processo` ja usa "vigia"
+  para o observador de linhas do depurador, e dois sentidos no mesmo modulo confundem.
+- No frontend mudou so a transicao do preenchimento (`--dur-7` -> `--dur-9`, 0,4s): um passo real de
+  1,3% a cada ~3s le-se como movimento em vez de salto.
+
+PROVA (backend, modulo real do disco, com os 72 ficheiros verdadeiros do log do Tibia): 0 de 72 ->
+`0.0`; 36 de 72 -> `0.475`; 72 de 72 -> `0.95`; 72/72 + a linha do LTCG -> `0.9997`; ninja `[45/120]` ->
+`0.375`; percentagem solta -> `0.5`; prosa -> `None`. Dois projetos: 1o a meio `0.475`, 1o completo
+`0.95`, 2o a arrancar (0 de 3) `0.912` - continua de onde ia em vez de recomecar.
+PROVA (aviso): emite na 1a mudanca (1), CALA-SE com o log parado (ainda 1), emite no ficheiro seguinte
+(2) e no outro (3), e o batimento sai quando nada muda (4); a varredura so corre quando o log cresce.
+PROVA (espera, com um processo a serio): termina dentro do tempo e os avisos saem a 0,26/0,52/0,53s -
+antes eram sempre ~2,0s; num passo sem sinal nenhum os avisos continuam de 2,06s em 2,06s.
 
 Fica UMA redundancia antiga que a analise de similaridade voltou a apanhar (nao e desta rodada, e nao
 lhe toquei por nao ser trabalho pedido): `terminal_cards._mesmoEndereco` e `preview.mesmaPaginaWeb` sao
