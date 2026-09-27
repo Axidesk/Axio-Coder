@@ -154,6 +154,10 @@ def _preparar_msbuild(deteccao, configuracao, plataforma=""):
     escolha.setdefault("notas", []).append(
         f"MSBuild: {escolha['msbuild']['caminho']} ({escolha['msbuild']['produto']})"
     )
+    for toolset in msbuild.toolsets_do_projeto(deteccao["pasta"]):
+        nota = _nota_do_toolset(toolset)
+        if nota:
+            escolha["notas"].append(nota)
     em_falta = msbuild.caminhos_de_dependencia(deteccao["pasta"])["em_falta"]
     if em_falta:
         escolha["notas"].append(_texto_caminhos_em_falta(em_falta))
@@ -219,6 +223,23 @@ def _texto_caminhos_em_falta(em_falta):
     return (f"ATENCAO: {len(em_falta)} pasta(s) de dependencias que este projeto declara nao existem "
             f"nesta maquina - a compilacao para com 'cannot open include file'."
             f"{onde} Sao caminhos que ficaram no computador onde o projeto foi criado.")
+
+
+def _nota_do_toolset(pedido):
+    """O que dizer sobre o toolset que o projeto pede: com que compilador sai, ou que ele nao esta aqui.
+
+    Cala-se quando o nome nao e de uma familia conhecida - melhor nao dizer nada do que afirmar que falta.
+    """
+    achado = kits.toolset_instalado(pedido)
+    if not achado:
+        return ""
+    if achado["pasta"]:
+        return (f"Toolset {pedido}: compila com o compilador de {achado['produto']} "
+                f"({achado['versao']}) em {achado['pasta']}.")
+    return (f"ATENCAO: o projeto pede o toolset {pedido} e nao encontrei esse conjunto de ferramentas "
+            f"nesta maquina - o MSBuild para antes de compilar, a dizer que nao o encontra. Resolve-se "
+            f"instalando-o pelo Visual Studio Installer (separador 'Componentes individuais') ou mudando "
+            f"o toolset do projeto.")
 
 
 def _raiz_comum(caminhos):

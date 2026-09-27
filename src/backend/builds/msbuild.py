@@ -99,6 +99,27 @@ def plataformas_do_projeto(pasta):
     return sorted(p for p, n in contagem.items() if n)
 
 
+def toolsets_do_projeto(pasta):
+    """Os toolsets que o projeto pede ao compilador ('v140', 'v143'...) - vazio quando nao declara nenhum.
+
+    Um projeto antigo pede o toolset com que nasceu, e um que nao esteja nesta maquina para a compilacao
+    ANTES de ela comecar; por isso isto se le antes de mandar compilar. Um .vcxproj que mude de toolset
+    por configuracao devolve mais do que um.
+    """
+    pedidos = []
+    for caminho in _vcxprojs(pasta):
+        arvore = _ler(caminho)
+        if arvore is None:
+            continue
+        for elemento in arvore.iter():
+            if _local(elemento.tag) != "PlatformToolset":
+                continue
+            pedido = (elemento.text or "").strip()
+            if pedido and pedido not in pedidos:
+                pedidos.append(pedido)
+    return pedidos
+
+
 def _dependencias_por_plataforma(pasta):
     contagem = {}
     for caminho in _vcxprojs(pasta):

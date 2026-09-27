@@ -878,10 +878,10 @@
       "descricao": "Revisor automatico de saude da memoria: detecta glossario com alvo desaparecido e notas de knowledge que citam ficheiros inexistentes; o bloco de aviso so aparece na injecao quando ha algo a curar",
       "localizacao": {
         "arquivo": "src/backend/memory/manutencao.py",
-        "linha": 737,
+        "linha": 740,
         "conferido": [
-          1790444986.025,
-          41254
+          1790476466.274,
+          41307
         ]
       }
     },
@@ -897,10 +897,10 @@
       "descricao": "Mede TUDO o que entra no contexto do agente (glossario, notas de knowledge, vetor, busca semantica) e devolve veredito LIMPA ou N pontos a curar; exposto como tool_gerenciar_memoria(acao='diagnostico')",
       "localizacao": {
         "arquivo": "src/backend/memory/manutencao.py",
-        "linha": 842,
+        "linha": 845,
         "conferido": [
-          1790444986.025,
-          41254
+          1790476466.274,
+          41307
         ]
       }
     },
@@ -3857,10 +3857,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 457,
+        "linha": 494,
         "conferido": [
-          1790284025.436,
-          32536
+          1790476420.734,
+          34828
         ]
       }
     },
@@ -3877,10 +3877,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 421,
+        "linha": 454,
         "conferido": [
-          1790284025.436,
-          32536
+          1790476420.734,
+          34828
         ]
       }
     },
@@ -3957,10 +3957,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 726,
+        "linha": 763,
         "conferido": [
-          1790284025.436,
-          32536
+          1790476420.734,
+          34828
         ]
       }
     },
@@ -3977,10 +3977,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 577,
+        "linha": 614,
         "conferido": [
-          1790284025.436,
-          32536
+          1790476420.734,
+          34828
         ]
       }
     },
@@ -3997,10 +3997,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 490,
+        "linha": 527,
         "conferido": [
-          1790284025.436,
-          32536
+          1790476420.734,
+          34828
         ]
       }
     },

@@ -956,6 +956,19 @@ por um `.props` com `ForceImportBeforeCppTargets`, o mecanismo que a Microsoft d
 ficheiro). O `preparar` RECUSA o `asan` num `.sln` com esse motivo, em vez de compilar sem o
 sanitizador e dizer que o ligou.
 
+### O toolset do projeto e lido antes de compilar (2026-10-07)
+
+`msbuild.toolsets_do_projeto(pasta)` le os `<PlatformToolset>` do `.vcxproj` e
+`kits.toolset_instalado(nome)` diz onde esta o compilador dele: o `v140` pelo registo do VS2015 (o mesmo
+caminho que o `Microsoft.Cpp.Common.props` le), o `v141`+ pelas ferramentas MSVC das instalacoes que o
+vswhere devolve (`_TOOLSET_POR_FAMILIA`: v140->14.0, v141->14.1, v142->14.2, v143->14.3/14.4). O plano
+passa a dizer com que compilador a coisa sai ("Toolset v140: compila com o compilador de Visual Studio
+2015 (14.0) em D:/Jogos e programas/VS2015/VC") ou avisa que ele nao esta nesta maquina - o MSBuild para
+ANTES de compilar quando o toolset falta. Um nome de familia desconhecida (`v999`) fica em silencio:
+melhor nao dizer nada do que afirmar que falta. Pelo mesmo motivo, `kits.escolher_kit` deixou de anunciar
+"Compilador MSVC 14.44..." num projeto do Visual Studio - nesses quem manda e o toolset, e a nota
+contradizia-a. MOTIVO: eu tinha dito ao utilizador que o `v140` nao existia sem o medir.
+
 ### O Tibia74: quatro factos medidos
 
 1. `.sln` de VS2015 (`PlatformToolset v140`, `WindowsTargetPlatformVersion 8.1`), aplicacao,
@@ -964,8 +977,8 @@ sanitizador e dizer que o ligou.
 2. **o MSBuild de 2022 invoca o compilador**: o build nao para na plataforma nem no toolset e chega a
    chamar o `cl.exe`. Reedicao medicao a 2026-10-07 (a nota dizia "correu 37 s"; o que se mede agora e
    isto): 72 linhas de erro, TODAS a mesma - `otpch.h(21): fatal error C1083: Cannot open include file:
-   'libxml/xmlmemory.h'`. O `v140` NAO esta instalado nesta maquina (so o 14.44.35207 do 2022 e o
-   14.29.30133 do 2019) e o build nao se queixou dele - o que trava e mesmo so o cabecalho;
+   'libxml/xmlmemory.h'`. O build nao para no toolset: o `v140` **esta instalado** (correcao de
+   2026-10-07 - o que aqui estava escrito era falso) e o que trava e mesmo so o cabecalho;
 3. **o que o trava nao e o compilador: sao as dependencias.** O `.vcxproj` aponta para
    `D:\OTSERV\REBUILD\libs\...` (lua-5.1.5, libxml2_2-9-1-2, zlib-1.2.3.4, sqlite-autoconf-3071700,
    boost_1_86_0, iconv_1.16, mysql-connector-c-6.1.6-win32) - **essa pasta ja nao existe aqui**. Os
@@ -1067,8 +1080,12 @@ nenhuma de propriedades: o MSBuild le o ficheiro e herda tudo o que o VS faria.
   ou o `$(IncludePath)` escrito no FIM do valor. Sem ele, o VS so tinha os valores proprios.
 - Os "inherited values" (`kernel32.lib user32.lib gdi32.lib...`) NAO estao no `.vcxproj` - medido, zero
   ocorrencias. Vem dos targets do MSBuild, importados pelo `Microsoft.Cpp.props` (linha 53).
-- O que NAO esta no `.vcxproj` e continua a faltar: o toolset `v140` (VS2015) nas PropertyGroups das
-  linhas 30/36/43/49 nao existe nesta maquina. E esse o passo do retarget para 2022.
+- O toolset `v140` das PropertyGroups das linhas 30/36/43/49 **esta instalado**: o Visual Studio 2015
+  vive em `D:\Jogos e programas\VS2015\VC`, e o registo
+  (`HKLM\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\14.0\Setup\VC @ProductDir`) e o caminho que o
+  proprio `Microsoft.Cpp.Common.props` (linhas 54-57) le para o resolver. O SDK 8.1 que o projeto pede
+  tambem esta (`C:\Program Files (x86)\Windows Kits\8.1\`). Um build como esta tem tudo o que precisa;
+  o retarget para 2022 e um passo a parte.
 
 ### O repositorio do Axio nao mistura projetos (2026-10-07, a pedido do utilizador)
 

@@ -5,6 +5,7 @@ import re
 import shutil
 import string
 import subprocess
+import winreg
 
 from src.backend.builds.detetar import exigencia_de, versao_pedida
 
@@ -99,7 +100,7 @@ def escolher_kit(deteccao, instalado):
     variaveis = {}
     if qt:
         variaveis["CMAKE_PREFIX_PATH"] = qt["caminho"]
-    if msvc and not qt:
+    if msvc and not qt and deteccao.get("tipo") != "msbuild":
         notas.append(f"Compilador MSVC {msvc['ferramentas'][-1] if msvc['ferramentas'] else ''} de {msvc['produto']}.")
     if not msvc and not qt:
         faltam.append(
@@ -299,6 +300,58 @@ def _visual_studio():
             "ferramentas": ferramentas,
         })
     return sorted(resultado, key=lambda v: _versao_tupla(v["versao"]), reverse=True)
+
+
+_TOOLSET_POR_FAMILIA = {
+    "v140": ("14.0",),
+    "v141": ("14.1",),
+    "v142": ("14.2",),
+    "v143": ("14.3", "14.4"),
+}
+
+_V140_NO_REGISTO = (
+    r"SOFTWARE\Microsoft\VisualStudio\14.0\Setup\VC",
+    r"SOFTWARE\Wow6432Node\Microsoft\VisualStudio\14.0\Setup\VC",
+)
+
+_TOOLSET_AUSENTE = {"produto": "", "versao": "", "pasta": ""}
+
+
+def toolset_instalado(nome, instalacoes=()):
+    """Onde esta o compilador do toolset que o projeto pede.
+
+    Vazio quando o nome nao e de uma familia que se saiba procurar: nesse caso nao se afirma nada.
+    Com 'pasta' vazia, a familia e conhecida e NAO esta nesta maquina - e o caso que para a compilacao
+    antes de ela comecar, e por isso que isto se le antes de mandar compilar.
+
+    O v140 (Visual Studio 2015) vive fora das instalacoes recentes: quem o encontra e o proprio MSBuild,
+    pelo registo do VS2015, e e o mesmo caminho que aqui se le. Do v141 para cima sao as ferramentas MSVC
+    de cada instalacao do Visual Studio (ou das Build Tools), que a lista de instalacoes ja traz.
+    """
+    familia = _TOOLSET_POR_FAMILIA.get(str(nome or "").strip().lower())
+    if not familia:
+        return {}
+    if familia == ("14.0",):
+        return _v140_do_registo()
+    for instalacao in (instalacoes or _visual_studio()):
+        for ferramenta in sorted(instalacao.get("ferramentas") or [], reverse=True):
+            if ferramenta.startswith(familia):
+                return {"produto": instalacao.get("produto", ""), "versao": ferramenta,
+                        "pasta": f"{instalacao.get('caminho', '').rstrip('/')}/VC/Tools/MSVC/{ferramenta}"}
+    return dict(_TOOLSET_AUSENTE)
+
+
+def _v140_do_registo():
+    for chave in _V140_NO_REGISTO:
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, chave) as registo:
+                pasta = str(winreg.QueryValueEx(registo, "ProductDir")[0] or "")
+        except OSError:
+            continue
+        if os.path.isdir(pasta):
+            return {"produto": "Visual Studio 2015", "versao": "14.0",
+                    "pasta": pasta.replace("\\", "/").rstrip("/")}
+    return dict(_TOOLSET_AUSENTE)
 
 
 def _msbuild_do_visual_studio(instalacoes):
