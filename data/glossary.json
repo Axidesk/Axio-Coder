@@ -262,8 +262,8 @@
         "arquivo": "src/main.js",
         "linha": 1205,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -446,8 +446,8 @@
         "arquivo": "src/main.js",
         "linha": 274,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -1539,7 +1539,11 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js - reconstruido sempre que o tema, o modo inspecionar ou o ASan mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar e o submenu \"C++\" com Compilar Debug/Release/ASan). A barra visual foi escondida - o menu nativo existe pelos aceleradores; o que se VE e o dropdown HTML #titulo-menu, montado por titulo.js:itensExibir/itensFerramentas.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1173
+        "linha": 1173,
+        "conferido": [
+          1790473108.882,
+          48935
+        ]
       }
     },
     {
@@ -2456,8 +2460,8 @@
         "arquivo": "src/main.js",
         "linha": 395,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -2497,8 +2501,8 @@
         "arquivo": "src/main.js",
         "linha": 395,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -3305,8 +3309,8 @@
         "arquivo": "src/main.js",
         "linha": 42,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -3344,10 +3348,10 @@
       "descricao": "Item 'Zoom' do dropdown Exibir da barra de titulo (construirZoom em titulo.js). Expande um painel inline com um slider de 50 a 200 em passos de 10, a percentagem no rotulo e um botao 'Repor 100%'. O zoom e GLOBAL e unico: o setZoomLevel do Chromium e same-origin, logo a janela principal e a vista nativa do preview (ambas em 127.0.0.1:5000) partilham o mesmo nivel - e por isso que o zoom do menu e o antigo +/- do preview mexiam na interface toda. O `input` do slider so pinta o rotulo e agenda a aplicacao a 400ms (ESPERA_DO_ZOOM_MS); o `change` (o valor commitado, ao largar o handle) aplica e cancela o temporizador. Aplicar no `input` fazia uma mudanca de zoom por pixel arrastado - setZoomFactor + redimensionar a vista do preview + gravar data/settings.json a cada passo - e era isso que fazia a janela piscar. O valor persiste em data/settings.json (interface.zoom) e o main le-o no arranque.",
       "localizacao": {
         "arquivo": "src/frontend/js/titulo.js",
-        "linha": 99,
+        "linha": 130,
         "conferido": [
-          1790472085.238,
-          7685
+          1790473108.805,
+          9980
         ]
       }
     },
@@ -3386,8 +3390,8 @@
         "arquivo": "src/main.js",
         "linha": 949,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -3546,8 +3550,8 @@
         "arquivo": "src/main.js",
         "linha": 905,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -3586,8 +3590,8 @@
         "arquivo": "src/frontend/css/titulo.css",
         "linha": 17,
         "conferido": [
-          1789930778.084,
-          4145
+          1790473108.877,
+          4437
         ]
       }
     },
@@ -4134,8 +4138,8 @@
         "arquivo": "src/main.js",
         "linha": 673,
         "conferido": [
-          1790472128.524,
-          48249
+          1790473108.882,
+          48935
         ]
       }
     },
@@ -5464,10 +5468,10 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 546,
+        "linha": 567,
         "conferido": [
-          1790471958.765,
-          34803
+          1790474097.57,
+          35801
         ]
       }
     },
@@ -5579,7 +5583,11 @@
       "descricao": "Interruptor 'Depurar com AddressSanitizer' dentro do submenu Ferramentas -> C++. Ligado, o depurar em C++ compila com /fsanitize=address antes de abrir a sessao (configuracao 'asan' do motor, arvore build/axio-asan). O estado vive em settings.json -> depurador.asan e e lido por asan_ligado().",
       "localizacao": {
         "arquivo": "src/backend/services/settings.py",
-        "linha": 77
+        "linha": 77,
+        "conferido": [
+          1790472179.667,
+          3438
+        ]
       }
     },
     {
@@ -5591,14 +5599,16 @@
         "compilar release pelo menu",
         "compilar debug pelo menu",
         "compilar asan pelo menu",
+        "compilar x64",
+        "compilar x86",
         "atalho de compilar",
         "build pelo menu"
       ],
-      "identificador": "itensFerramentas (grupo 'C++') / pedirCompilacao",
-      "descricao": "Item 'C++' do menu Ferramentas, nos dois menus (o do topo, por itensFerramentas/construirGrupo, e o nativo do Electron em main.js:montarMenu). Traz as tres configuracoes de build do MSVC como acoes - Compilar (Debug), Compilar (Release), Compilar (AddressSanitizer) - e o toggle 'Depurar com AddressSanitizer'. Compilar manda POST a /api/terminal/compilar (routes/terminal.py:terminal_compilar -> builds.compilar_projeto:334), que corre como card do terminal na pasta aberta, sem abrir sessao de depuracao.",
+      "identificador": "itensFerramentas (grupo 'C++' > grupo 'Compilar (<plataforma do projeto>)') / pedirCompilacao / construir.plataforma_do_build",
+      "descricao": "Submenu do menu Ferramentas, nos DOIS menus (o do topo, por itensFerramentas/construirGrupo, e o nativo do Electron em main.js:montarMenu). Dentro dele, 'Compilar (<plataforma>)' e um SEGUNDO nivel que abre as configuracoes do MSVC (Debug/Release/AddressSanitizer). O rotulo NAO e fixo: a plataforma e lida do proprio projeto por construir.plataforma_do_build (rota GET /api/projeto/plataforma) e o menu escreve x86, x64, ou so 'Compilar' quando nao ha projeto conhecido - o x64 fixo mentia ao Tibia74, que e Win32. Clicar manda POST /api/terminal/compilar e o build corre como card do terminal.",
       "localizacao": {
         "arquivo": "src/frontend/js/titulo.js",
-        "linha": 45
+        "linha": 46
       }
     }
   ]

@@ -961,8 +961,11 @@ sanitizador e dizer que o ligou.
 1. `.sln` de VS2015 (`PlatformToolset v140`, `WindowsTargetPlatformVersion 8.1`), aplicacao,
    `CharacterSet MultiByte`, 72 fontes e 81 cabecalhos, com `Debug\` e `Release\` ja cheios de
    binarios de 2026-09-25;
-2. **o MSBuild de 2022 compila-o**: correu 37 s e chegou a invocar o `cl.exe` ficheiro a ficheiro (o
-   v140 tambem e aceite, sem override nenhum);
+2. **o MSBuild de 2022 invoca o compilador**: o build nao para na plataforma nem no toolset e chega a
+   chamar o `cl.exe`. Reedicao medicao a 2026-10-07 (a nota dizia "correu 37 s"; o que se mede agora e
+   isto): 72 linhas de erro, TODAS a mesma - `otpch.h(21): fatal error C1083: Cannot open include file:
+   'libxml/xmlmemory.h'`. O `v140` NAO esta instalado nesta maquina (so o 14.44.35207 do 2022 e o
+   14.29.30133 do 2019) e o build nao se queixou dele - o que trava e mesmo so o cabecalho;
 3. **o que o trava nao e o compilador: sao as dependencias.** O `.vcxproj` aponta para
    `D:\OTSERV\REBUILD\libs\...` (lua-5.1.5, libxml2_2-9-1-2, zlib-1.2.3.4, sqlite-autoconf-3071700,
    boost_1_86_0, iconv_1.16, mysql-connector-c-6.1.6-win32) - **essa pasta ja nao existe aqui**. Os
@@ -970,7 +973,11 @@ sanitizador e dizer que o ligou.
 4. **as mesmas sete bibliotecas ESTAO no disco**, com os mesmos nomes, em
    `D:\Dropbox\2 - Startup\TIBIA OT\REBUILD\libs`, com os `.h` e os `.lib` (`lua51.lib`, `libxml2.lib`,
    `zlib.lib`, `iconv.lib`, `sqlite3.lib`, `libmysql.lib`). O projeto mudou de casa com o antigo
-   `D:\OTSERV` e os caminhos ficaram no sitio velho.
+   `D:\OTSERV` e os caminhos ficaram no sitio velho. **A substituicao e 1:1 (medida)**: as sete pastas
+   tem os mesmos nomes e a mesma arrumacao relativa que os 14 caminhos declaram - os `.lib` do lua,
+   libxml2, zlib e sqlite estao na RAIZ da pasta (que e exactamente onde o projeto aponta) e os do
+   iconv e do mysql estao em `lib\`, como ele espera. Trocar o prefixo `D:\OTSERV\REBUILD\libs` por
+   `D:\Dropbox\2 - Startup\TIBIA OT\REBUILD\libs` basta para os 14 caminhos passarem a resolver.
 
 Consequencia: ao abrir a migracao 2015->2022 (Fase 4), o primeiro passo nao e o compilador - e
 reapontar as dependencias. E o **x86 continua a ser o alvo certo deste projeto**: as libs do mysql sao
@@ -984,6 +991,21 @@ antes. Uma sonda `.vcxproj` minima compila de ponta a ponta com o MSBuild do 202
 executavel corre). 89 rotas, 0 avarias.
 Uma correcao de brinde: o plano dizia "shaders: glslc encontrado" em qualquer projeto, so porque o
 glslc esta instalado na maquina - passou a dize-lo so quando e o projeto que compila shaders.
+
+### A plataforma no menu, em vez do "(x64)" fixo (2026-10-07)
+
+O item dizia `Compilar (x64)` a todos os projetos - e passou a ser FALSO no dia em que o motor comecou
+a compilar `.sln`, porque o Tibia e x86. O rotulo passa a ser lido do PROPRIO projeto: `x86`, `x64`, ou
+nada (sem projeto conhecido escreve so `Compilar`, em vez de prometer uma plataforma que nao sabe).
+`construir.plataforma_do_build` e a unica fonte disso e o `_preparar_msbuild` passou a usar o mesmo
+`_plataforma_do_msbuild`, para o rotulo e o build nao poderem divergir. Vem pela rota nova
+`GET /api/projeto/plataforma`, lida ao abrir o menu (e sem custo quando nao mudou), e chega tambem ao
+menu nativo por IPC. Medido: Tibia -> `Compilar (x86)`, DRAFTCAD -> `Compilar (x64)`, pasta sem projeto
+-> `Compilar`.
+
+NAO se parte isto em dois menus (x86 / x64): a plataforma e propriedade do PROJETO, nao uma escolha do
+menu. Com seis itens, cinco falhavam conforme o projeto aberto, e num projeto novo nao ha nada em que
+basear a escolha - seria recriar exactamente a armadilha que a deteccao automatica veio evitar.
 
 ## O que falta (medido, não suposto)
 

@@ -1,7 +1,9 @@
+import os
 import threading
 
 from flask import Blueprint, jsonify, request
 
+from src.backend.builds import construir
 from src.backend.services.etiquetas import estado_etiquetagem, etiquetar_projeto
 from src.backend.services.notas import gravar_notas, ler_notas
 from src.backend.services.traducao import MAX_CHARS_TEXTO, estado_traducao, traduzir_texto
@@ -15,6 +17,19 @@ projeto_bp = Blueprint("projeto", __name__)
 @projeto_bp.route('/api/projeto/info')
 def projeto_info():
     return jsonify(dados_projeto(com_ocultos=request.args.get("ocultos") == "1"))
+
+
+@projeto_bp.route('/api/projeto/plataforma')
+def projeto_plataforma():
+    """A plataforma com que o menu C++ vai compilar este projeto - lida do proprio projeto.
+
+    Existe para o menu poder escrever 'Compilar (x86)' ou 'Compilar (x64)' em vez de prometer x64 a
+    um projeto que traz as dependencias ligadas so em Win32.
+    """
+    raiz = estado.get("pasta_raiz", "")
+    if not raiz or not os.path.isdir(raiz):
+        return jsonify({"plataforma": ""})
+    return jsonify({"plataforma": construir.plataforma_do_build(raiz)})
 
 
 @projeto_bp.route('/api/projeto/outdated')

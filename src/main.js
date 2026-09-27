@@ -28,6 +28,7 @@ let flaskProcess;
 let temaAtual = 'dark';
 let inspectAtivo = false;
 let asanAtivo = false;
+let plataformaDoBuild = '';
 let quitting = false;
 let flaskRestarts = 0;
 let reiniciandoBackend = false;
@@ -1207,7 +1208,7 @@ app.on('ready', () => {
             label: 'C++',
             submenu: [
               {
-                label: 'Compilar (x64)',
+                label: plataformaDoBuild ? 'Compilar (' + plataformaDoBuild + ')' : 'Compilar',
                 submenu: [
                   { label: 'Debug', click: () => pedirCompilar('debug') },
                   { label: 'Release', click: () => pedirCompilar('release') },
@@ -1286,6 +1287,13 @@ app.on('ready', () => {
   });
   ipcMain.on('asan:set', (e, ativo) => {
     asanAtivo = !!ativo;
+    montarMenu();
+  });
+  ipcMain.on('build:plataforma', (e, valor) => {
+    if (!veioDaJanelaPrincipal(e)) return;
+    const nova = String(valor || '');
+    if (nova === plataformaDoBuild) return;
+    plataformaDoBuild = nova;
     montarMenu();
   });
   setTema('dark', false);

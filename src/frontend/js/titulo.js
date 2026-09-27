@@ -6,6 +6,7 @@ const botoes = [
 ];
 let inspecionar = false;
 let asan = false;
+let plataforma = '';
 let aberto = null;
 let zoom = 1;
 let zoomMinimo = 0.5;
@@ -48,7 +49,7 @@ function itensFerramentas() {
         { separador: true },
         { rotulo: 'Modo Inspecionar', marca: inspecionar, acao: 'inspect' },
         { grupo: 'C++', itens: [
-            { grupo: 'Compilar (x64)', itens: [
+            { grupo: plataforma ? 'Compilar (' + plataforma + ')' : 'Compilar', itens: [
                 { rotulo: 'Debug', acao: 'compilar', valor: 'debug' },
                 { rotulo: 'Release', acao: 'compilar', valor: 'release' },
                 { rotulo: 'AddressSanitizer', acao: 'compilar', valor: 'asan' }
@@ -219,6 +220,17 @@ function sincronizarAsan() {
     }).catch(() => {});
 }
 
+function atualizarPlataforma() {
+    return fetch('/api/projeto/plataforma').then((resposta) => resposta.json()).then((dados) => {
+        const nova = String((dados || {}).plataforma || '');
+        if (nova === plataforma) return;
+        plataforma = nova;
+        const ipc = ponte();
+        if (ipc) ipc.send('build:plataforma', plataforma);
+        repintarMenuAberto();
+    }).catch(() => {});
+}
+
 function avisarStatus(texto) {
     const status = document.getElementById('lbl-status');
     if (status) status.textContent = texto;
@@ -267,6 +279,7 @@ for (const botao of botoes) {
             return;
         }
         abrir(botao.el, botao.lista);
+        if (botao.lista === itensFerramentas) atualizarPlataforma();
     });
 }
 
@@ -305,3 +318,5 @@ if (ipc) {
     }).catch(() => {});
     sincronizarAsan();
 }
+
+atualizarPlataforma();

@@ -42,6 +42,23 @@ def preparar(pasta, configuracao="debug"):
     }
 
 
+def plataforma_do_build(pasta):
+    """A plataforma com que este projeto vai ser compilado - o que o menu C++ mostra ANTES de carregar.
+
+    Um projeto do Visual Studio traz a sua (a que tem as dependencias ligadas); um CMake e sempre x64,
+    porque e o que o preset do Axio escreve. Sem projeto conhecido devolve vazio, para o menu nao
+    escrever uma plataforma que nao sabe.
+    """
+    deteccao = detetar.detetar(pasta or "")
+    if deteccao.get("erro"):
+        return ""
+    if deteccao["tipo"] == "msbuild":
+        return _plataforma_do_msbuild(deteccao, _alvo_do_visual_studio(deteccao))
+    if deteccao["tipo"] == "cmake":
+        return "x64"
+    return ""
+
+
 def _preparar_msbuild(deteccao, configuracao):
     """O plano de um projeto do Visual Studio: que MSBuild, que plataforma e que configuracao."""
     escolha = kits.escolher_kit(deteccao, kits.kits_instalados(deteccao.get("prefixos", ())))
@@ -54,9 +71,7 @@ def _preparar_msbuild(deteccao, configuracao):
         return {"deteccao": deteccao, "escolha": escolha,
                 "faltam": ["A pasta tem um projeto do Visual Studio e nao encontrei nem o .sln nem o "
                            ".vcxproj com as fontes declaradas."]}
-    plataforma = msbuild.plataforma_do_projeto(deteccao["pasta"]) or "x64"
-    if alvo.lower().endswith(".sln") and plataforma.lower() == "win32":
-        plataforma = "x86"
+    plataforma = _plataforma_do_msbuild(deteccao, alvo)
     nome = "Release" if configuracao == "release" else "Debug"
     escolha["gerador"] = ""
     escolha["arquitetura"] = plataforma
@@ -74,6 +89,13 @@ def _preparar_msbuild(deteccao, configuracao):
         "construir": (f'"{escolha["msbuild"]["caminho"]}" "{alvo}" /t:Build /m /nologo '
                       f"/p:Configuration={nome} /p:Platform={plataforma}"),
     }
+
+
+def _plataforma_do_msbuild(deteccao, alvo):
+    plataforma = msbuild.plataforma_do_projeto(deteccao["pasta"]) or "x64"
+    if alvo and alvo.lower().endswith(".sln") and plataforma.lower() == "win32":
+        return "x86"
+    return plataforma
 
 
 def _acrescentar_sanitizador(escolha, configuracao):
@@ -116,9 +138,28 @@ def _sem_sanitizador_msbuild():
 
 
 def _texto_caminhos_em_falta(em_falta):
+    raiz = _raiz_comum(em_falta)
+    onde = f" Todas debaixo de '{raiz}'." if raiz else f" A primeira e '{em_falta[0]}'."
     return (f"ATENCAO: {len(em_falta)} pasta(s) de dependencias que este projeto declara nao existem "
-            f"nesta maquina - a compilacao para com 'cannot open include file'. A primeira e "
-            f"'{em_falta[0]}'. Sao caminhos que ficaram no computador onde o projeto foi criado.")
+            f"nesta maquina - a compilacao para com 'cannot open include file'."
+            f"{onde} Sao caminhos que ficaram no computador onde o projeto foi criado.")
+
+
+def _raiz_comum(caminhos):
+    """A pasta mais funda por onde TODOS os caminhos em falta passam - o que ficou para tras.
+
+    Um projeto copiado de outro computador costuma ter as dependencias todas debaixo de uma so pasta
+    que nao veio; dize-la numa linha poupa a leitura das N.
+    """
+    partes = [os.path.normpath(c).split(os.sep) for c in (caminhos or [])]
+    if not partes:
+        return ""
+    comum = []
+    for i in range(min(len(p) for p in partes)):
+        if len({p[i].lower() for p in partes}) != 1:
+            break
+        comum.append(partes[0][i])
+    return os.sep.join(comum) if len(comum) > 1 else ""
 
 
 def exe_produzido(pasta_build, desde=None, nome=""):
