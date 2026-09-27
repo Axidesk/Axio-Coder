@@ -25,13 +25,7 @@ export function loadFileIntoEditor(path, opts) {
             if (!opts.manterVista) setView('editor');
             ensureEditor();
             const applyContent = function () {
-                state.suppressAutoSave = true;
-                clearHoverLine();
-                if (state.currentFile && state.editor && !state.currentFileIsImage && !state.logMode && !state.diffMode) {
-                    state.editorViewStates[state.currentFile] = state.editor.saveViewState();
-                }
-                state.currentFile = path;
-                state.abaAtiva = path;
+                _prepararTrocaDeFicheiro(path);
                 if (data.tipo === 'imagem') {
                     showEditorImage(data);
                 } else if (data.tipo === 'binario') {
@@ -94,17 +88,21 @@ export function loadFileIntoEditor(path, opts) {
             return false;
         });
 }
+function _prepararTrocaDeFicheiro(path) {
+    state.suppressAutoSave = true;
+    clearHoverLine();
+    if (state.currentFile && state.editor && !state.currentFileIsImage && !state.logMode && !state.diffMode) {
+        state.editorViewStates[state.currentFile] = state.editor.saveViewState();
+    }
+    state.currentFile = path;
+    state.abaAtiva = path;
+}
+
 function _abrirAbaApagada(path, conteudo, opts) {
     if (!opts.manterVista) setView('editor');
     ensureEditor();
     const aplicar = function () {
-        state.suppressAutoSave = true;
-        clearHoverLine();
-        if (state.currentFile && state.editor && !state.currentFileIsImage && !state.logMode && !state.diffMode) {
-            state.editorViewStates[state.currentFile] = state.editor.saveViewState();
-        }
-        state.currentFile = path;
-        state.abaAtiva = path;
+        _prepararTrocaDeFicheiro(path);
         hideEditorImage();
         let model = state.editorModels[path];
         if (!model) {

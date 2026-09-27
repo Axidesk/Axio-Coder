@@ -1,3 +1,4 @@
+import ast
 import os
 import re
 
@@ -10,6 +11,8 @@ _EXCECAO = re.compile(r"^\([0-9a-f.]+\):\s+(?P<nome>.+?)\s+-\s+code (?P<codigo>[
 _NAO_TRATADA = re.compile(r"^Uncaught exception", re.IGNORECASE)
 _PONTO = re.compile(r"^Breakpoint (?P<numero>\d+) hit")
 _VARIAVEL = re.compile(r"^[0-9a-f`]{16,}\s+(?P<resto>.+)$")
+_VARIAVEIS_PY = re.compile(r"^\('__axio__',\s*(?P<dados>\{.*\})\)\s*$")
+_VARIAVEL_DE_SISTEMA = re.compile(r"^__.*__$")
 _QUADRO_CDB = re.compile(r"\[(?P<ficheiro>[A-Za-z]:[^\]]*?)\s+@\s+(?P<linha>\d+)\]")
 _FIM_DO_PROGRAMA = re.compile(r"^The program finished", re.IGNORECASE)
 _RECUSA = re.compile(r"^\*\*\*\s*(?P<nome>[A-Za-z_.]*[Ee]rror|[A-Za-z_.]+):\s*(?P<texto>.*)$")
@@ -29,6 +32,9 @@ _TRADUCOES = {
     "access violation": "o programa mexeu numa memoria que nao era dele",
 }
 _LIMITE_DE_VARIAVEIS = 8
+_MAX_VARIAVEIS = 40
+_LIMITE_DO_VALOR = 200
+_NOTA_DE_CORTE = "cortado - o valor e maior do que isto"
 _LIMITE_DE_QUADROS = 4
 
 
@@ -135,6 +141,10 @@ def _ler_linha(sobre, linha):
     achado = _QUADRO_CDB.search(limpa)
     if achado:
         _juntar_quadro(sobre, achado.group("ficheiro"), achado.group("linha"))
+        return
+    achado = _VARIAVEIS_PY.match(limpa)
+    if achado:
+        _juntar_variaveis_python(sobre, achado.group("dados"))
         return
     achado = _VARIAVEL.match(limpa)
     if achado:
@@ -291,6 +301,35 @@ def _da_variavel(resto):
         return None
     valor, nota = _nota_do_valor(valor)
     return {"nome": pedacos[-1], "tipo": " ".join(pedacos[:-1]), "valor": valor, "nota": nota}
+
+
+def _juntar_variaveis_python(sobre, dados):
+    """Le o dicionario marcado que o 'p' do pdb devolveu: uma variavel local por nome.
+
+    O marcador __axio__ e escrito pelo proprio comando, por isso uma linha igual vinda do
+    programa que esta a ser depurado nunca entra aqui por engano. Cada nome substitui o que ja
+    estava: pedir as variaveis duas vezes na mesma paragem atualiza, nao acumula. Os nomes de
+    sistema ficam de fora e um valor gigante entra cortado - este retrato vai inteiro para a
+    janela do depurador."""
+    try:
+        valores = ast.literal_eval(dados)
+    except (ValueError, SyntaxError, TypeError):
+        return
+    if not isinstance(valores, dict):
+        return
+    proprias = {v["nome"]: v for v in sobre["variaveis"] if v.get("tipo") not in ("", None)}
+    for nome, texto in list(valores.items()):
+        if _VARIAVEL_DE_SISTEMA.match(str(nome)):
+            continue
+        proprias[str(nome)] = _da_variavel_python(str(nome), str(texto))
+    sobre["variaveis"] = list(proprias.values())[-_MAX_VARIAVEIS:]
+
+
+def _da_variavel_python(nome, texto):
+    """Uma variavel local do Python, pronta a mostrar - com o valor cortado quando for gigante."""
+    cortado = len(texto) > _LIMITE_DO_VALOR
+    return {"nome": nome, "tipo": "", "valor": texto[:_LIMITE_DO_VALOR] if cortado else texto,
+            "nota": _NOTA_DE_CORTE if cortado else ""}
 
 
 def _nota_do_valor(valor):

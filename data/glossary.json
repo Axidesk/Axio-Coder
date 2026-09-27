@@ -4331,10 +4331,10 @@
       "descricao": "Grava um commit LOCAL (sem push) com os ficheiros daquela tarefa e devolve o hash; com filename+round_id grava o hash no turno do log (services/session.py:marcar_commit_no_log), o que faz o card ganhar o pino com o hash no tooltip. Lista de ficheiros VAZIA e recusada - um commit do painel nunca leva tudo o que estiver sujo.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 88,
+        "linha": 77,
         "conferido": [
-          1790428692.22,
-          9088
+          1790471137.515,
+          9806
         ]
       }
     },
@@ -4371,10 +4371,10 @@
       "descricao": "Estado do que falta commitar numa tarefa. A rota POST /api/git/pendentes recebe os ficheiros da tarefa e devolve o subconjunto com alteracoes no disco (git status --porcelain -- <paths>); o painel cruza-o com group.files e, com count==0, TIRA o botao Commit desta tarefa e explica \"Nada por commitar\". Leitura falhada (null) mantem o botao: a falta de dado nunca tira a capacidade.",
       "localizacao": {
         "arquivo": "src/backend/routes/git_panel.py",
-        "linha": 109,
+        "linha": 123,
         "conferido": [
-          1790428692.22,
-          9088
+          1790471137.515,
+          9806
         ]
       }
     },
@@ -4996,10 +4996,10 @@
       "descricao": "Bloco \"Mais antigo\" da coluna 1, montado por historico/antigos.js:_pintar dentro de .history-antigos. Mostra os commits do repositorio que NAO estao nos cards, em paginas de 20 (LIMITE) com o botao de continuar.\n\nO FILTRO E POR DIA (2026-10-06): commitsAntigos cruza _hashesComCard() com os dias que tem cards (diasVisiveis) e descarta TAMBEM todo o commit cujo DIA ja tem card - nao so o commit que casa por hash. Motivo medido: cada rodada publica DUAS vezes (tarefa + auto-melhoria) e so uma da nome ao card, logo a outra ficava orfa aqui a repetir um dia que ja estava em cima. SAO 143 commits a comecar em 22/09 (antes eram 151, com 25/09, 24/09 e 23/09 repetidos). LIMITE assumido: um dia com cards leva consigo um commit que nao seja de rodada nenhuma (feito fora do painel) - foi o preco escolhido para o bloco ser continuacao limpa.\n\nA LINHA tem DUAS ALTURAS desde 2026-10-06 (antes era uma linha so, com o nome a 2 linhas clamped): _linha monta .history-antigo-topo (hash, tarefa, chips de etiqueta e o restaurar, todos na mesma linha, e o restaurar com margin-left:auto na ponta direita) e, IRMA do topo e NAO dentro dele, a .history-antigo-msg com a mensagem do commit, uma linha so com reticencias (white-space:nowrap + text-overflow:ellipsis, no lugar do -webkit-line-clamp:2). A mensagem comeca na MESMA indentacao da hash (x=6 - os 6px de padding da linha), que e o pedido: o commit por baixo, justificado a esquerda como a hash. MEDIDO a 320px: hash x=6, msg x=6, restaurar x=304,4, topo y=34,5 e msg y=60,5.\n\nO BALAO DA MENSAGEM mudou com ela: _ligarBaloes so mostrava o popup quando o texto estava cortado na VERTICAL (scrollHeight contra clientHeight); com a linha agora horizontal, o teste passou a ser scrollWidth contra clientWidth - sem esta troca o balao deixava de aparecer justamente quando o texto ja nao cabe.\n\nAs ETIQUETAS (chips verdes) cruzam repositorio.tags com o ponto do commit (_tagsDoCommit, casa pelo hash COMPLETO) e vivem do cache de /api/git/estado - uma versao criada depois desta leitura so aparece depois de Ctrl+R.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/antigos.js",
-        "linha": 74,
+        "linha": 113,
         "conferido": [
-          1790301836.517,
-          9869
+          1790471137.545,
+          12155
         ]
       }
     },
@@ -5123,8 +5123,8 @@
         "arquivo": "src/backend/builds/arvore.py",
         "linha": 47,
         "conferido": [
-          1790379025.023,
-          16080
+          1790462069.553,
+          15594
         ]
       }
     },
@@ -5151,10 +5151,10 @@
       "descricao": "Quem manda na arvore do explorer e o PROPRIO projeto, e a escolha do leitor e por FAMILIA: CMakeLists.txt ja configurado -> cmake_api (File API do CMake); CMakeLists.txt sem build nenhum -> detetar.py:_alvos_do_texto (lido como texto); .sln/.vcxproj -> msbuild.py:projetos (le o .vcxproj para saber os ficheiros e o .vcxproj.filters para saber as pastas virtuais); nenhum ficheiro de projeto -> msbuild.py:agrupar_por_tipo (rede por extensao: Fontes/Cabecalhos/Recursos/Outros). Ainda NAO ha leitor de qmake (.pro) nem de Meson: caem na rede por extensao. Nenhuma destas familias e intrinseca do C++ - CMake (Kitware) e MSBuild (Microsoft) sao formatos de FERRAMENTAS, e o Qt Creator suporta 7 build systems (CMake, qmake, Qbs, Autotools, Nimble, Meson, IncrediBuild); Ninja nao e build system, e o executor que o CMake usa por baixo.",
       "localizacao": {
         "arquivo": "src/backend/builds/arvore.py",
-        "linha": 85,
+        "linha": 74,
         "conferido": [
-          1790379025.023,
-          16080
+          1790462069.553,
+          15594
         ]
       }
     },
@@ -5468,10 +5468,10 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 526,
+        "linha": 529,
         "conferido": [
-          1790460161.649,
-          32539
+          1790461997.804,
+          32875
         ]
       }
     },
@@ -5540,7 +5540,29 @@
       "descricao": "Corre o pdb real em pastas temporarias com erros conhecidos e compara o que cada corrida aponta (ficheiro e linha) com o esperado.",
       "localizacao": {
         "arquivo": "src/backend/tools/depurador_auditoria.py",
-        "linha": 167
+        "linha": 167,
+        "conferido": [
+          1790461688.789,
+          7532
+        ]
+      }
+    },
+    {
+      "termo": "janela do depurador",
+      "aliases": [
+        "painel do depurador",
+        "janela de debug",
+        "painel de pilha e variaveis",
+        "ver a pilha",
+        "ver as variaveis",
+        "janela dos valores",
+        "pilha de chamadas"
+      ],
+      "identificador": "#panel-col-3-debug (vistaDe('depurador') em colunas.js)",
+      "descricao": "Camada da coluna 3 (abre por cima da area do Monaco, irma de #panel-col-3-notes) que mostra a PILHA DE CHAMADAS e as VARIAVEIS da paragem atual: cada quadro e clicavel e abre o ficheiro naquela linha. NAO abre sozinha - quem a abre sao os botoes Pilha/Variaveis do card de depuracao (terminal_cards.js). Os dados chegam pelo evento SSE debug_estado (builds.py:_avisar_do_estado, com depurar.estado_do_depurador), separado do debug_stop (que abre o ficheiro do erro). O cabecalho mostra o ficheiro e a linha da paragem.",
+      "localizacao": {
+        "arquivo": "src/frontend/js/editor/painel_depurador.js",
+        "linha": ""
       }
     }
   ]

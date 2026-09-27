@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { fragmentoDeSaida } from './diagnosticos.js';
 import { limparLinhaDoDepurador } from './linha_depurador.js';
+import { abrirPainelDoDepurador } from './painel_depurador.js';
 
 const LIMITE_SAIDA = 300000;
 const VARREDURA_MS = 120;
@@ -452,12 +453,15 @@ function _pintarControles() {
         const botao = document.createElement('button');
         botao.type = 'button';
         botao.className = 'term-controle';
+        const abreJanela = c.id === 'pilha' || c.id === 'variaveis';
         botao.textContent = c.rotulo || c.comando;
-        botao.title = (c.dica ? c.dica + ' ' : '') + '(comando: ' + c.comando + ')';
+        botao.title = (c.dica ? c.dica + ' ' : '')
+            + (abreJanela ? '- abre a janela do depurador' : '(comando: ' + c.comando + ')');
         botao.disabled = !!c.passivo;
         if (c.passivo) botao.title = 'O programa terminou - escreva no campo do terminal para conduzir a sessao';
         botao.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (abreJanela) abrirPainelDoDepurador();
             if (cardComControles) _responderStdin(cardComControles, c.comando);
         });
         linha.appendChild(botao);

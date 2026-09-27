@@ -56,13 +56,16 @@ COMANDOS_UTEIS_PY = (
 LINHA_DO_CARD_PY = ("[axio] neste card: c continuar | n proxima linha | s entrar na funcao | "
                     "p expr ver valor | w pilha | l codigo | q sair")
 
+_COMANDO_DAS_VARIAVEIS_PY = ("p ('__axio__', {k: repr(v) for k, v in locals().items()})")
+
 CONTROLES = (
     ("continuar", "Continuar", "g", "c", "segue ate ao proximo ponto de paragem"),
     ("passo", "Passo", "p", "n", "executa a linha seguinte, sem entrar nas funcoes"),
     ("entrar", "Entrar", "t", "s", "entra na funcao chamada e para na primeira linha dela"),
     ("sair", "Sair", "gu", "r", "sai da funcao onde estas e volta a quem a chamou"),
     ("pilha", "Pilha", "k", "w", "o caminho das chamadas ate aqui"),
-    ("variaveis", "Variaveis", "dv /t /v", "p locals()", "os valores das variaveis deste momento"),
+    ("variaveis", "Variaveis", "dv /t /v", _COMANDO_DAS_VARIAVEIS_PY,
+     "os valores das variaveis deste momento"),
     ("terminar", "Terminar", "q", "q", "fecha a sessao de depuracao"),
 )
 
@@ -426,6 +429,22 @@ def paragem_atual():
             "linha": linha,
             "queda": queda,
             "acontecimento": bool(motivo) and not motivo.startswith("arranque do programa")}
+
+
+def estado_do_depurador():
+    """O retrato inteiro de onde a execucao esta: o sitio, o motivo, a pilha e as variaveis.
+
+    E este o retrato que a janela do depurador mostra. Sai vazio quando ainda nao ha paragem
+    nenhuma - sem sitio nao ha o que apontar na janela."""
+    with _LEITURA_TRANCA:
+        sobre = dict(_LEITURA["sobre"] or {})
+    estado = paragem_atual()
+    if not estado:
+        return {}
+    estado["motivo"] = (sobre.get("motivo") or "").strip()
+    estado["quadros"] = [dict(quadro) for quadro in (sobre.get("quadros") or [])]
+    estado["variaveis"] = [dict(variavel) for variavel in (sobre.get("variaveis") or [])]
+    return estado
 
 
 def texto_dos_comandos():

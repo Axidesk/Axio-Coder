@@ -5,6 +5,7 @@ import { ALTURA_LINHA } from './metricas.js';
 import { iniciarBarrasDoEditor, reavaliarBarrasDoEditor } from './barras.js';
 import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
 import { ensureEditor, initMonaco, updateEditorWatermark } from './monaco.js';
+import { mostrarEstadoDoDepurador } from './painel_depurador.js';
 import { aplicarShellAtual, basename, clearLog, connectTermSocket, runCommand } from './terminal.js';
 import { cardFinalizar, cardIniciar, cardSaida, escreverNoCardSelecionado, lancarComando, marcarDepuracaoTerminada, temCardSelecionado } from './terminal_cards.js';
 import { ensureTerminal, termFit } from './xterm.js';
@@ -35,6 +36,8 @@ export function handleSSE(data) {
         state.wsStatus.textContent = 'bootstrap ativo';
     } else if (data.type === 'debug_stop') {
         abrirParagemDoDepurador(data);
+    } else if (data.type === 'debug_estado') {
+        mostrarEstadoDoDepurador(data);
     } else if (data.type === 'debug_fim') {
         marcarDepuracaoTerminada(data.terminou);
     } else if (data.type === 'files_changed') {
@@ -988,7 +991,7 @@ export function mountLogDockIntoWorkspace() {
     }
 
     const editorHostWrap = document.getElementById('editor-host-wrap');
-    ['panel-col-3', 'panel-col-3-history', 'panel-col-3-notes'].forEach((id) => {
+    ['panel-col-3', 'panel-col-3-history', 'panel-col-3-notes', 'panel-col-3-debug'].forEach((id) => {
         const camada = document.getElementById(id);
         if (camada && editorHostWrap && camada.parentNode !== editorHostWrap) {
             editorHostWrap.appendChild(camada);

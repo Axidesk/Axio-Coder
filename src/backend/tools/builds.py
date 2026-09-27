@@ -530,7 +530,7 @@ def _vigia_do_depurador(registo_id):
     """Vai lendo a saida do depurador a medida que ela chega: escreve no card, em linguagem
     simples, onde a execucao parou - e avisa o editor da linha, para ele a abrir sozinho."""
     janela = []
-    visto = {"paragem": {}, "erro": None, "terminou": False}
+    visto = {"paragem": {}, "erro": None, "terminou": False, "estado": None}
 
     def vigia(linha):
         if depurar.card_da_sessao() != registo_id:
@@ -544,6 +544,7 @@ def _vigia_do_depurador(registo_id):
         if not paragem:
             _avisar_sem_arranque(registo_id, janela, visto)
             return
+        _avisar_do_estado(registo_id, visto)
         anterior = visto["paragem"]
         agora = (paragem["arquivo"], paragem["linha"], paragem["queda"])
         if anterior and anterior == agora:
@@ -564,6 +565,29 @@ def _avisar_do_fim(registo_id, visto):
         return
     visto["terminou"] = terminou
     emit_event("debug_fim", pid=registo_id, terminou=terminou)
+
+
+def _avisar_do_estado(registo_id, visto):
+    """Manda a janela do depurador o retrato inteiro: onde parou, a pilha e as variaveis.
+
+    Sai so quando o retrato MUDA - a leitura acumula, e pedir as variaveis duas vezes na mesma
+    paragem nao pode voltar a pintar o que ja esta pintado."""
+    estado = depurar.estado_do_depurador()
+    if not estado:
+        return
+    resumo = _resumo_do_estado(estado)
+    if resumo == visto.get("estado"):
+        return
+    visto["estado"] = resumo
+    emit_event("debug_estado", pid=registo_id, **estado)
+
+
+def _resumo_do_estado(estado):
+    """O que distingue um retrato do seguinte, para nao repetir o que ja foi mostrado."""
+    return (estado.get("arquivo"), estado.get("linha"), estado.get("queda"), estado.get("motivo"),
+            tuple((quadro.get("nome"), quadro.get("linha")) for quadro in estado.get("quadros") or []),
+            tuple((variavel.get("nome"), variavel.get("valor"))
+                  for variavel in estado.get("variaveis") or []))
 
 def _avisar_sem_arranque(registo_id, janela, visto):
     """Um erro de sintaxe impede o ficheiro de arrancar, e quem sabe a linha e o interpretador."""

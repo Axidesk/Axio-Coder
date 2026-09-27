@@ -915,12 +915,14 @@ https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
   (Continuar/Passo/Entrar/Sair/Pilha/Variáveis/Terminar), o botão de depurar na barra do terminal e
   o salto do editor para a linha onde parou (tudo feito e provado a 2026-10-06, ver as secções
   próprias). A linha ACESA no código entrou a seguir (ver "A linha do erro acesa no editor") e o
-  AddressSanitizer ja vive como configuracao `asan` (ver a secção própria). **O que falta mesmo:** a
-  camada de stack/variaveis na coluna 3 - e os DADOS ja existem no motor (`leitura_depurador` guarda
-  `quadros` e `variaveis`), o que falta e expo-los: `depurar.paragem_atual` so devolve
-  arquivo/linha/queda e o evento `debug_stop` nao os leva; os pontos de paragem CONDICIONAIS, que so
-  existem por comando (`bp`); e o **JS** do 6c (inspector do Node). A **6c** (Python) ja corre pelo
-  `pdb`, no mesmo card e com os mesmos botoes.
+  AddressSanitizer ja vive como configuracao `asan` (ver a secção própria). A **camada de
+  stack/variaveis na coluna 3 esta FEITA (2026-10-07)** e nao trouxe janela nenhuma: `#panel-col-3-debug`
+  e uma camada a mais da coluna 3, pelo mesmo registo das outras; `depurar.estado_do_depurador()`
+  expoe o retrato, o evento NOVO `debug_estado` leva-o, e as variaveis do Python passaram a ser
+  recolhidas por um comando marcado (ver a secção propria na nota do depurador). Abre pelos botoes
+  Pilha/Variaveis do card. **O que falta mesmo:** os pontos de paragem CONDICIONAIS, que so existem
+  por comando (`bp`); e o **JS** do 6c (inspector do Node). A **6c** (Python) ja corre pelo `pdb`,
+  no mesmo card e com os mesmos botoes.
 - **Instalar componentes da Qt** está bloqueado pelo próprio instalador nesta máquina (ver a secção
   "Instalar o que falta"): o passo seguinte é atualizá-lo (`MaintenanceTool update`), com o custo dito.
 - **Pasta solta de `.cpp`/`.h`** sem ficheiro de projeto: o explorer já a arruma por tipo (Fontes /

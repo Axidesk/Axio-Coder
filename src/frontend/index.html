@@ -660,6 +660,19 @@
         <div id="project-notes-placeholder" class="projeto-notas-placeholder">Escreva aqui as suas anotações...</div>
     </div>
 
+    <div id="panel-col-3-debug" class="shrink-0 bg-[var(--bg-panel)] border-r border-[var(--border)] h-full flex flex-col panel-col-closed">
+        <div id="debug-panel-header" class="depurador-cabecalho">
+            <h2 id="debug-panel-title" class="depurador-titulo">Depurador</h2>
+            <span id="debug-panel-onde" class="depurador-onde"></span>
+            <button id="btn-close-debug-panel" class="depurador-acao" type="button" title="Fechar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div id="debug-panel-corpo" class="depurador-corpo"></div>
+    </div>
+
     <div id="settings-modal" class="opacity-0 pointer-events-none transition-opacity duration-[var(--dur-7)] fixed inset-0 bg-[var(--overlay)] backdrop-blur-sm z-[55] flex justify-center items-center p-6">
         <div id="settings-modal-content" class="bg-[var(--bg-panel)] rounded-2xl shadow-[var(--sombra-card)] flex overflow-hidden transform scale-95 transition-transform duration-[var(--dur-7)]">
             <aside class="w-56 shrink-0 bg-[var(--bg-panel-2)] flex flex-col">

@@ -107,6 +107,11 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         return !!(notas && notas.col3Aberta());
     }
 
+    function camadaDepuradorAberta() {
+        const depurador = vistaDe('depurador');
+        return !!(depurador && depurador.col3Aberta());
+    }
+
     function vistaPreviewAtiva() {
         return state.vistaDocAtual === 'preview';
     }
@@ -116,7 +121,7 @@ const { aiSubmenu, btnCopyTools, btnCopyToolsHistory, btnDockCode, btnDockFiles,
         const historicoNoEditor = state.codigoDoHistoricoNoEditor && !(historico && historico.col3Aberta());
         const preview = vistaPreviewAtiva();
         const camadaDoDock = camadaCol3Aberta();
-        const esconder = preview || camadaNotasAberta() || camadaDoDock || (isHistoryOpen() && !historicoNoEditor);
+        const esconder = preview || camadaNotasAberta() || camadaDepuradorAberta() || camadaDoDock || (isHistoryOpen() && !historicoNoEditor);
         syncWorkspaceTopBar(esconder, preview);
 
         if (col3Header) col3Header.style.display = camadaDoDock ? '' : 'none';
