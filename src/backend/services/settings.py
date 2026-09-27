@@ -22,6 +22,7 @@ DEFAULT_SETTINGS = {
     "interface": {"zoom": 1},
     "git": {"automatico": True, "automatico_escolhido": False},
     "preview": {"abas_fixadas": []},
+    "depurador": {"asan": False},
 }
 
 def _deep_merge(base, extra):
@@ -72,6 +73,10 @@ def migrar_automatico_padrao():
         return False
     atualizar_settings({"git": {"automatico": True, "automatico_escolhido": True}})
     return True
+
+def asan_ligado():
+    """Liga o build instrumentado (AddressSanitizer) ao depurar C++."""
+    return bool((load_settings().get("depurador") or {}).get("asan"))
 
 def save_settings(dados):
     dados = _deep_merge(load_settings(), dados or {})

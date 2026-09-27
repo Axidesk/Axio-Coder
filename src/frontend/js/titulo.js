@@ -5,6 +5,7 @@ const botoes = [
     { el: document.getElementById('title-bar-ferramentas'), lista: itensFerramentas }
 ];
 let inspecionar = false;
+let asan = false;
 let aberto = null;
 let zoom = 1;
 let zoomMinimo = 0.5;
@@ -45,7 +46,8 @@ function itensFerramentas() {
     return [
         { rotulo: 'Dev Tools', atalho: 'Ctrl+Shift+I', acao: 'devtools' },
         { separador: true },
-        { rotulo: 'Modo Inspecionar', marca: inspecionar, acao: 'inspect' }
+        { rotulo: 'Modo Inspecionar', marca: inspecionar, acao: 'inspect' },
+        { rotulo: 'AddressSanitizer (C++)', marca: asan, acao: 'asan' }
     ];
 }
 
@@ -78,6 +80,10 @@ function construirItem(item) {
     }
     botao.addEventListener('click', () => {
         if (item.acao === 'inspect') inspecionar = !inspecionar;
+        if (item.acao === 'asan') {
+            asan = !asan;
+            gravarAsan(asan);
+        }
         agir(item.acao, item.valor);
         fechar();
     });
@@ -153,6 +159,27 @@ function construirZoom() {
     return bloco;
 }
 
+function repintarMenuAberto() {
+    const ferramentas = botoes.find((b) => b.lista === itensFerramentas);
+    if (aberto && ferramentas && aberto === ferramentas.el) abrir(aberto, itensFerramentas);
+}
+
+function gravarAsan(ligado) {
+    fetch('/api/settings/parcial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ depurador: { asan: !!ligado } })
+    }).catch(() => {});
+}
+
+function sincronizarAsan() {
+    fetch('/api/settings').then((resposta) => resposta.json()).then((dados) => {
+        asan = !!(((dados || {}).depurador) || {}).asan;
+        const ipc = ponte();
+        if (ipc) ipc.send('asan:set', asan);
+    }).catch(() => {});
+}
+
 function abrir(botao, lista) {
     fechar();
     balao.innerHTML = '';
@@ -196,8 +223,12 @@ const ipc = ponte();
 if (ipc) {
     ipc.on('menu:set-inspect', (evento, ativo) => {
         inspecionar = !!ativo;
-        const ferramentas = botoes.find((b) => b.lista === itensFerramentas);
-        if (aberto && ferramentas && aberto === ferramentas.el) abrir(aberto, itensFerramentas);
+        repintarMenuAberto();
+    });
+    ipc.on('menu:set-asan', (evento, ativo) => {
+        asan = !!ativo;
+        gravarAsan(asan);
+        repintarMenuAberto();
     });
     ipc.on('menu:set-zoom', (evento, valor) => {
         zoom = Number(valor) || 1;
@@ -208,4 +239,5 @@ if (ipc) {
         zoomMinimo = resposta.minimo;
         zoomMaximo = resposta.maximo;
     }).catch(() => {});
+    sincronizarAsan();
 }

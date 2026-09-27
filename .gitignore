@@ -62,9 +62,8 @@ data/cache_modelos/
 # no git fica o codigo que a reproduz
 gerados/
 
-# Documentos internos de planeamento
-PLANO.md
-REFACTOR_PLAN.md
+# Documentos internos de planeamento (arquivados em docs/planos/)
+docs/planos/
 
 # Projetos de exemplo, so para exercitar as ferramentas (DRAFTCAD e Tibia74)
 DRAFTCAD/

@@ -4,6 +4,7 @@ import time
 from src.backend.builds import construir, depurar, detetar, diagnosticos, instalar, kits
 from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
+from src.backend.services.settings import asan_ligado
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
 from src.backend.tools.process import (correr_como_card, escrever_stdin_processo, iniciar_processo,
                                        parar_processo_reg, registrar_linha_processo,
@@ -86,7 +87,8 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", 
     if acao == "preparar":
         return _preparar(caminho, configuracao)
     if acao == "construir":
-        return _construir(caminho, configuracao, alvo)
+        _, texto = _construir(caminho, configuracao, alvo)
+        return texto
     if acao == "correr":
         return _correr(caminho, configuracao)
     if acao == "depurar":
@@ -133,13 +135,13 @@ def _construir(pasta, configuracao, alvo):
     plano = construir.preparar(pasta, configuracao)
     falha = _bloqueio(plano)
     if falha:
-        return falha
+        return False, falha
     blocos = [_texto_plano(plano)]
     if plano.get("precisa_configurar"):
         ok, texto = _configurar(pasta, plano)
         blocos.append(texto)
         if not ok:
-            return "\n\n".join(blocos)
+            return False, "\n\n".join(blocos)
     comando = plano["construir"] + (f" --target {alvo}" if alvo else "")
     inicio = time.time()
     emit_event("executing", function=f"Compilando {plano['deteccao'].get('projeto') or os.path.basename(pasta)}")
@@ -151,16 +153,16 @@ def _construir(pasta, configuracao, alvo):
     )
     if _interrompido(resultado):
         blocos.append("COMPILACAO INTERROMPIDA: o card do terminal foi parado.")
-        return "\n\n".join(blocos)
+        return False, "\n\n".join(blocos)
     achados = diagnosticos.resumo(saida, raiz=pasta)
     if achados:
         blocos.append(achados)
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
         blocos.append(f"COMPILADO (exit 0).\n{_texto_executaveis(produzidos)}\n{saida}")
-        return "\n\n".join(blocos)
+        return True, "\n\n".join(blocos)
     blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
-    return "\n\n".join(blocos)
+    return False, "\n\n".join(blocos)
 
 def _bloqueio(plano):
     if plano.get("erro"):
@@ -209,6 +211,14 @@ def _depurar(pasta, configuracao, breakpoints, comandos="", alvo=""):
     if not depurar.cdb():
         return ("ERRO: nao encontrei o depurador de consola do Windows SDK (cdb.exe), que vem com os "
                 "\"Debugging Tools for Windows\". Sem ele nao ha como depurar C++ nesta maquina.")
+    blocos = []
+    if asan_ligado():
+        configuracao = "asan"
+        blocos.append(AVISO_ASAN_LIGADO)
+        ok, texto = _construir(pasta, configuracao, alvo)
+        blocos.append(texto)
+        if not ok:
+            return "\n\n".join(blocos)
     plano = construir.preparar(pasta, configuracao)
     falha = _bloqueio(plano)
     if falha:
@@ -237,11 +247,18 @@ def _depurar(pasta, configuracao, breakpoints, comandos="", alvo=""):
     texto = _texto_depuracao(registo_id=registo["id"], executavel=executavel,
                              pontos=pontos_de_paragem, escritos=escritos)
     if comandos:
-        return texto + "\n\n" + _conduzir_depuracao(comandos)
+        texto = texto + "\n\n" + _conduzir_depuracao(comandos)
+    if blocos:
+        return "\n\n".join(blocos + [texto])
     return texto
 
 _AVISO_AXIO_NO_DEPURADOR = ("[axio] e o arranque do proprio Axio: nao escreva 'c' aqui - uma segunda "
                             "instancia dele abriria por cima desta. olhe com p/n/w e saia com q")
+
+AVISO_ASAN_LIGADO = ("AddressSanitizer LIGADO pelo menu Ferramentas: o programa foi compilado instrumentado "
+              "antes de a sessao abrir, para os erros de memoria que NAO rebentam (memoria ja "
+              "libertada a ser usada, escrita fora dos limites) aparecerem no relatorio com o "
+              "ficheiro e a linha. Desligue-o no mesmo menu para depurar o build normal.")
 
 def _depurar_python(pasta, breakpoints, comandos, alvo=""):
     pontos = depurar.pontos_python(breakpoints, pasta)

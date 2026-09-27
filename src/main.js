@@ -27,6 +27,7 @@ let mainWindow;
 let flaskProcess;
 let temaAtual = 'dark';
 let inspectAtivo = false;
+let asanAtivo = false;
 let quitting = false;
 let flaskRestarts = 0;
 let reiniciandoBackend = false;
@@ -361,8 +362,8 @@ const TIPOS_DE_VIEW = ['node', 'web'];
 function tipoDoAlvo(alvo) {
   const texto = String(alvo || '').trim();
   if (!texto) return 'web';
-  if (/^[a-z]:[\\/]/i.test(texto) || texto.startsWith('\\\\') || texto.startsWith('/')) return 'node';
-  return alvoPrecisaNode(texto) ? 'node' : 'web';
+  const resolvido = urlDoAlvo(texto);
+  return alvoPrecisaNode(resolvido ? resolvido.url : texto) ? 'node' : 'web';
 }
 
 function viewDoTipo(tipo) {
@@ -1201,7 +1202,8 @@ app.on('ready', () => {
         submenu: [
           { role: 'toggleDevTools', label: 'Dev Tools' },
           { type: 'separator' },
-          { label: inspectAtivo ? 'Modo Inspecionar  ✓' : 'Modo Inspecionar', click: () => pedirInspect(!inspectAtivo) }
+          { label: inspectAtivo ? 'Modo Inspecionar  ✓' : 'Modo Inspecionar', click: () => pedirInspect(!inspectAtivo) },
+          { label: asanAtivo ? 'AddressSanitizer (C++)  ✓' : 'AddressSanitizer (C++)', click: () => pedirAsan(!asanAtivo) }
         ]
       }
     ]);
@@ -1225,6 +1227,14 @@ app.on('ready', () => {
     inspecionarPreview(previewVivo(), inspectAtivo).catch(() => {});
   }
 
+  function pedirAsan(ativo) {
+    asanAtivo = !!ativo;
+    montarMenu();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('menu:set-asan', asanAtivo);
+    }
+  }
+
   function executarAcaoDoMenu(acao, valor) {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     if (acao === 'tema') return setTema(valor);
@@ -1233,6 +1243,7 @@ app.on('ready', () => {
     if (acao === 'reiniciar-backend') return restartFlask();
     if (acao === 'devtools') return mainWindow.webContents.toggleDevTools();
     if (acao === 'inspect') return pedirInspect(!inspectAtivo);
+    if (acao === 'asan') return pedirAsan(!asanAtivo);
     if (acao === 'zoom') return definirZoomDaInterface(valor);
   }
 
@@ -1252,6 +1263,10 @@ app.on('ready', () => {
     montarMenu();
     if (e.sender && !e.sender.isDestroyed()) e.sender.send('menu:set-inspect', inspectAtivo);
     inspecionarPreview(previewVivo(), inspectAtivo).catch(() => {});
+  });
+  ipcMain.on('asan:set', (e, ativo) => {
+    asanAtivo = !!ativo;
+    montarMenu();
   });
   setTema('dark', false);
 

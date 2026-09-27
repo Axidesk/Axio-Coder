@@ -904,6 +904,16 @@ outro nome: **AddressSanitizer** do MSVC (`/fsanitize=address`, VS 2019 16.9+), 
 out-of-bounds, use-after-free e use-after-scope — erros que não rebentam e não dão erro. É uma opção
 de COMPILAÇÃO, não um botão — e **JA esta feito (2026-10-07)**: e a configuracao `asan` do motor de
 projetos (`configuracao='asan'` no `tool_gerir_projeto`), com prova e armadilhas na nota propria.
+
+**No menu, a pedido do utilizador (2026-10-07).** O ASan nao ficou na interface: virou um TOGGLE
+`AddressSanitizer (C++)` no menu Ferramentas, abaixo do Modo Inspecionar, nos DOIS menus (o do topo e o
+nativo do Electron), com `✓` quando ligado — "feature especial para usuarios experientes". O estado vive
+em `settings.json` -> `depurador.asan` e, com ele ligado, o `depurar` em C++ **compila instrumentado
+antes de abrir a sessao**. Custo assumido: um build na arvore `axio-asan` antes de cada sessao (o
+primeiro completo, os seguintes incrementais). Prova: o item aparece e marca por avaliacao na pagina
+real; `_depurar` (codigo do disco) abre com o aviso, mostra `preset: axio-asan`, `COMPILADO (exit 0)` e
+so depois a sessao do cdb; e o binario que ELE compilou reporta `heap-use-after-free` com `main.cpp:6`
+(a escrita), `:5` (o delete) e `:4` (a alocacao).
 Fonte:
 https://learn.microsoft.com/en-us/cpp/build/reference/fsanitize?view=msvc-170
 
