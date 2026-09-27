@@ -6,6 +6,7 @@ import { abrirPainelDoDepurador } from './painel_depurador.js';
 const LIMITE_SAIDA = 300000;
 const VARREDURA_MS = 120;
 const PULSO_MS = 4000;
+const RECONCILIACAO_MS = 10000;
 
 const SVG_SETA = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 const SVG_REPETIR = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
@@ -151,12 +152,12 @@ function _barraRodando() {
 function _pintarBarra() {
     const barra = _barra();
     if (!barra) return;
-    const rodando = _barraRodando();
-    if (!rodando) {
+    const dono = progressoDaBarra.pid != null ? cards.get(progressoDaBarra.pid) : null;
+    if (!dono || !_estaRodando(dono)) {
         progressoDaBarra.pid = null;
         progressoDaBarra.valor = null;
     }
-    const valor = rodando ? progressoDaBarra.valor : null;
+    const valor = progressoDaBarra.valor;
     barra.classList.toggle('term-progresso-visivel', valor != null);
     if (valor == null) _pararPulso(barra);
     const preenchimento = document.getElementById('term-progresso-fill');
@@ -789,6 +790,14 @@ function _vigiarAberturaDoTerminal() {
     }).observe(alvo, { attributes: true, attributeFilter: ['class'] });
 }
 
+function _vigiarCardsFantasma() {
+    setInterval(() => {
+        if (!_barraRodando()) return;
+        reconciliarCards();
+    }, RECONCILIACAO_MS);
+}
+
 _sincronizarPlaceholder();
 hidratarCards();
 _vigiarAberturaDoTerminal();
+_vigiarCardsFantasma();
