@@ -15,7 +15,8 @@ _RX_CAUDA = re.compile(r"\s*\[[^\]]*\]\s*$")
 _RX_PRAGMA = re.compile(r"^([ \t]*)#\s*pragma\s+warning\s*\(\s*disable\s*:[^)]*\)[^\r\n]*", re.M)
 _RX_DEFINE_SEGURO = re.compile(r"^([ \t]*)#\s*define\s+_(?:CRT_SECURE|WINSOCK_DEPRECATED)_NO_WARNINGS\b[^\r\n]*",
                                re.M | re.I)
-_SUPRESSOES = {"_CRT_SECURE_NO_WARNINGS", "_WINSOCK_DEPRECATED_NO_WARNINGS"}
+_SUPRESSOES = {"_CRT_SECURE_NO_WARNINGS", "_WINSOCK_DEPRECATED_NO_WARNINGS",
+               "BOOST_DISABLE_DEPRECATED_WARNINGS"}
 
 _PLATAFORMAS = {"Win32": "x86", "x64": "x64", "ARM64": "arm64"}
 
@@ -71,8 +72,8 @@ def texto(dados):
     linhas = [f"CENSO DE AVISOS ({len(dados['compilados'])} ficheiros, {dados['plataforma']}):"]
     if dados.get("supressoes_limpas"):
         linhas.append("  (medido numa copia com as supressoes neutralizadas - os '#pragma warning(disable:...)'")
-        linhas.append("   e os '#define _CRT_SECURE_NO_WARNINGS': sao os avisos que elas escondem, e o")
-        linhas.append("   projeto no disco nao foi tocado)")
+        linhas.append("   e as definicoes de supressao da linha de comando: sao os avisos que elas escondem,")
+        linhas.append("   e o projeto no disco nao foi tocado)")
     if dados["por_codigo"]:
         linhas.append(f"  {dados['ocorrencias']} ocorrencias em {dados['distintos']} sitios distintos")
         for codigo, quantos in dados["por_codigo"]:
