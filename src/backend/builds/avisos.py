@@ -13,6 +13,9 @@ TIMEOUT_FICHEIRO = 240
 _RX = re.compile(r"^(.+?)\((\d+)(?:,(\d+))?\)\s*:\s*(warning|error)\s+([A-Z]+\d+)\s*:\s*(.*)$")
 _RX_CAUDA = re.compile(r"\s*\[[^\]]*\]\s*$")
 _RX_PRAGMA = re.compile(r"^([ \t]*)#\s*pragma\s+warning\s*\(\s*disable\s*:[^)]*\)[^\r\n]*", re.M)
+_RX_DEFINE_SEGURO = re.compile(r"^([ \t]*)#\s*define\s+_(?:CRT_SECURE|WINSOCK_DEPRECATED)_NO_WARNINGS\b[^\r\n]*",
+                               re.M | re.I)
+_SUPRESSOES = {"_CRT_SECURE_NO_WARNINGS", "_WINSOCK_DEPRECATED_NO_WARNINGS"}
 
 _PLATAFORMAS = {"Win32": "x86", "x64": "x64", "ARM64": "arm64"}
 
@@ -32,6 +35,7 @@ def censo(pasta, plataforma="", ficheiros=(), ao_progredir=None):
         return {"erro": f"ERRO: nao encontrei nenhum .vcxproj em {pasta}. O censo de avisos so sabe ler "
                         "projetos do Visual Studio (o CMake teria de vir do compile_commands.json)."}
     opcoes = _opcoes(projeto)
+    opcoes["defines"] = _sem_supressoes(opcoes["defines"])
     if not opcoes["fontes"]:
         return {"erro": f"ERRO: o {os.path.basename(projeto)} nao declara nenhum ficheiro para compilar."}
     vcvars = _vcvarsall()
@@ -40,7 +44,7 @@ def censo(pasta, plataforma="", ficheiros=(), ao_progredir=None):
     escolhidos = _escolher(opcoes["fontes"], ficheiros)
     plataforma = plataforma or _plataforma(projeto)
     comando = _prefixo(vcvars, plataforma) + "cl /c /nologo " + _flags(opcoes)
-    raiz, limpa = _arvore_sem_pragmas(os.path.dirname(projeto))
+    raiz, limpa = _arvore_sem_supressoes(os.path.dirname(projeto))
     try:
         with ThreadPoolExecutor(max_workers=WORKERS) as executor:
             pendentes = executor.map(
@@ -56,7 +60,7 @@ def censo(pasta, plataforma="", ficheiros=(), ao_progredir=None):
         if limpa:
             shutil.rmtree(raiz, ignore_errors=True)
     dados = _somar(saidas, os.path.basename(projeto), plataforma)
-    dados["pragmas_limpos"] = limpa
+    dados["supressoes_limpas"] = limpa
     return dados
 
 
@@ -65,20 +69,21 @@ def texto(dados):
     if dados.get("erro"):
         return dados["erro"]
     linhas = [f"CENSO DE AVISOS ({len(dados['compilados'])} ficheiros, {dados['plataforma']}):"]
-    if dados.get("pragmas_limpos"):
-        linhas.append("  (medido numa copia com os '#pragma warning(disable:...)' neutralizados: sao os avisos")
-        linhas.append("   que os pragmas escondem, e o projeto no disco nao foi tocado)")
-    if not dados["por_codigo"]:
-        linhas.append("  nenhum aviso - compilou limpo")
-        return "\n".join(linhas)
-    linhas.append(f"  {dados['ocorrencias']} ocorrencias em {dados['distintos']} sitios distintos")
-    for codigo, quantos in dados["por_codigo"]:
-        linhas.append(f"  {codigo}: {quantos} ocorrencias | {len(dados['locais'][codigo])} sitios distintos")
-    linhas.append("  sitios, por ficheiro, com o texto do aviso:")
-    for ficheiro in sorted(dados["locais_por_ficheiro"]):
-        for linha_local, codigo in dados["locais_por_ficheiro"][ficheiro]:
-            mensagem = dados.get("mensagens", {}).get((ficheiro, linha_local), "")
-            linhas.append(f"    {ficheiro}:{linha_local}: {codigo}: {mensagem}")
+    if dados.get("supressoes_limpas"):
+        linhas.append("  (medido numa copia com as supressoes neutralizadas - os '#pragma warning(disable:...)'")
+        linhas.append("   e os '#define _CRT_SECURE_NO_WARNINGS': sao os avisos que elas escondem, e o")
+        linhas.append("   projeto no disco nao foi tocado)")
+    if dados["por_codigo"]:
+        linhas.append(f"  {dados['ocorrencias']} ocorrencias em {dados['distintos']} sitios distintos")
+        for codigo, quantos in dados["por_codigo"]:
+            linhas.append(f"  {codigo}: {quantos} ocorrencias | {len(dados['locais'][codigo])} sitios distintos")
+        linhas.append("  sitios, por ficheiro, com o texto do aviso:")
+        for ficheiro in sorted(dados["locais_por_ficheiro"]):
+            for linha_local, codigo in dados["locais_por_ficheiro"][ficheiro]:
+                mensagem = dados.get("mensagens", {}).get((ficheiro, linha_local), "")
+                linhas.append(f"    {ficheiro}:{linha_local}: {codigo}: {mensagem}")
+    else:
+        linhas.append("  nenhum aviso por codigo")
     if dados["sem_saida"]:
         linhas.append("  NAO COMPILARAM: " + ", ".join(dados["sem_saida"]))
     if dados.get("falhados"):
@@ -93,8 +98,8 @@ def _projeto(pasta):
     return achados[0] if achados else ""
 
 
-def _arvore_sem_pragmas(pasta):
-    """Copia a pasta src para uma temporaria com os #pragma warning(disable) neutralizados, sem mexer no projeto."""
+def _arvore_sem_supressoes(pasta):
+    """Copia a pasta src para uma temporaria com as supressoes neutralizadas, sem mexer no projeto."""
     origem = os.path.join(pasta, "src")
     if not os.path.isdir(origem):
         return pasta, False
@@ -103,18 +108,23 @@ def _arvore_sem_pragmas(pasta):
     for raiz, _, ficheiros in os.walk(destino):
         for nome in ficheiros:
             if nome.endswith((".h", ".hpp", ".cpp", ".c", ".cc")):
-                _neutralizar_pragmas(os.path.join(raiz, nome))
+                _neutralizar_supressoes(os.path.join(raiz, nome))
     return destino, True
 
 
-def _neutralizar_pragmas(caminho):
+def _neutralizar_supressoes(caminho):
     with open(caminho, "rb") as ficheiro:
         texto = ficheiro.read().decode("latin-1")
-    limpo = _RX_PRAGMA.sub(r"\1", texto)
+    limpo = _RX_DEFINE_SEGURO.sub(r"\1", _RX_PRAGMA.sub(r"\1", texto))
     if limpo == texto:
         return
     with open(caminho, "wb") as ficheiro:
         ficheiro.write(limpo.encode("latin-1"))
+
+
+def _sem_supressoes(definicoes):
+    """Tira das definicoes do projeto as supressoes que o censo mede a parte (vinham tambem pela linha de comando)."""
+    return [d for d in definicoes if d.strip().split("=")[0].upper() not in _SUPRESSOES]
 
 
 def _plataforma(projeto):
