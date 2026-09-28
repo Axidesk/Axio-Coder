@@ -1579,9 +1579,10 @@ def _correr_trecho(chave, trecho, timeout, rotulo=""):
         limite = 60
     raiz_projeto = estado.get("pasta_raiz") or APP_ROOT
     pid = id_processo()
-    emit_event("executing", function=f"Executando {cfg['rotulo']} em processo novo")
+    nome = (rotulo or "").strip() or _rotulo_teste(trecho, cfg["rotulo"])
+    emit_event("executing", function=f"Executando {cfg['rotulo']} em processo novo: {nome}")
     emit_event("process_started", pid=pid,
-               comando=f"{cfg['executavel']} {(rotulo or '').strip() or _rotulo_teste(trecho, cfg['rotulo'])}",
+               comando=f"{cfg['executavel']} {nome}",
                modo="aguardar")
     fd, caminho = tempfile.mkstemp(prefix=cfg["prefixo"], suffix=cfg["sufixo"])
     try:
