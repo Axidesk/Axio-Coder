@@ -74,10 +74,11 @@ def texto(dados):
     linhas.append(f"  {dados['ocorrencias']} ocorrencias em {dados['distintos']} sitios distintos")
     for codigo, quantos in dados["por_codigo"]:
         linhas.append(f"  {codigo}: {quantos} ocorrencias | {len(dados['locais'][codigo])} sitios distintos")
-    linhas.append("  sitios, por ficheiro:")
+    linhas.append("  sitios, por ficheiro, com o texto do aviso:")
     for ficheiro in sorted(dados["locais_por_ficheiro"]):
-        itens = dados["locais_por_ficheiro"][ficheiro]
-        linhas.append(f"    {ficheiro}: " + ", ".join(f"{l}:{c}" for l, c in itens))
+        for linha_local, codigo in dados["locais_por_ficheiro"][ficheiro]:
+            mensagem = dados.get("mensagens", {}).get((ficheiro, linha_local), "")
+            linhas.append(f"    {ficheiro}:{linha_local}: {codigo}: {mensagem}")
     if dados["sem_saida"]:
         linhas.append("  NAO COMPILARAM: " + ", ".join(dados["sem_saida"]))
     if dados.get("falhados"):
@@ -204,7 +205,7 @@ def _compilar(origem, comando):
 
 
 def _somar(saidas, projeto, plataforma):
-    por_codigo, locais, compilados, sem_saida, falhados = {}, {}, [], [], {}
+    por_codigo, locais, mensagens, compilados, sem_saida, falhados = {}, {}, {}, [], [], {}
     for rel, saida in saidas:
         if not saida.strip():
             sem_saida.append(rel)
@@ -222,6 +223,7 @@ def _somar(saidas, projeto, plataforma):
             local = (ficheiro, int(achado.group(2)))
             por_codigo[codigo] = por_codigo.get(codigo, 0) + 1
             locais.setdefault(codigo, set()).add(local)
+            mensagens.setdefault(local, _RX_CAUDA.sub("", achado.group(6)).strip())
     juncao = set()
     for conjunto in locais.values():
         juncao |= conjunto
@@ -240,6 +242,7 @@ def _somar(saidas, projeto, plataforma):
         "distintos": len(juncao),
         "por_codigo": sorted(por_codigo.items(), key=lambda par: (-par[1], par[0])),
         "locais": locais,
+        "mensagens": mensagens,
         "locais_por_ficheiro": por_ficheiro,
     }
 
