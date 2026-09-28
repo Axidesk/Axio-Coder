@@ -129,7 +129,8 @@ def _pacotes(instalador, argumentos, timeout):
 def _saida(instalador, argumentos, timeout):
     try:
         resultado = subprocess.run(
-            [instalador, *argumentos], capture_output=True, text=True, timeout=timeout, check=False,
+            [instalador, *argumentos], capture_output=True, text=True, errors="replace",
+            timeout=timeout, check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return ""

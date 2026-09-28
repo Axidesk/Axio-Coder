@@ -35,6 +35,7 @@ _PREFIXO_TEMP_JS = "axio_js_"
 _CABECALHO_PYTHON = '''# -*- coding: utf-8 -*-
 """Gerado por tool_executar_python num ficheiro temporario; apagado no fim."""
 import os
+import subprocess as _subprocess
 import sys
 
 for _raiz in ({raiz_app!r}, {raiz_projeto!r}):
@@ -57,6 +58,47 @@ for _fluxo in (sys.stdout, sys.stderr):
 #   import app as axio_app; c = axio_app.app.test_client()
 # Importar so 'src.backend.extensions' responde 404 em TODAS as rotas (o objeto
 # app existe, mas sem blueprint nenhum registado).
+#
+# Para correr um COMANDO do sistema dentro de um trecho use correr() - NUNCA escreva
+# subprocess.run(..., text=True) a mao: um byte fora do UTF-8 (a cp850 de uma ferramenta
+# do Windows) mata a thread leitora do subprocesso, imprime um traceback e a saida
+# perde-se INTEIRA (chega como None). Esta leitura e binaria e descodifica com tolerancia:
+#   texto, codigo = correr(["cmake", "--help"])
+#   texto, _ = correr("git status", shell=True)
+#   pids = processos("cl.exe")        # [] = nenhum build a correr
+
+def _texto_do_subprocesso(bruto):
+    if not bruto:
+        return ""
+    for _enc in ("utf-8", "cp850", "cp1252", "latin-1"):
+        try:
+            return bruto.decode(_enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return bruto.decode("latin-1", "replace")
+
+def correr(comando, cwd=None, timeout=120, shell=False):
+    """Roda um comando do sistema e devolve (saida, codigo de saida); nunca rebenta."""
+    if isinstance(comando, str) and not shell:
+        comando = [comando]
+    try:
+        proc = _subprocess.run(comando, cwd=cwd, shell=shell, capture_output=True, timeout=timeout)
+    except (OSError, _subprocess.SubprocessError) as _erro:
+        return "(falha a executar " + str(comando) + ": " + str(_erro) + ")", -1
+    return _texto_do_subprocesso(proc.stdout) + _texto_do_subprocesso(proc.stderr), proc.returncode
+
+def processos(nome):
+    """Pids dos processos do sistema com esse nome exato (ex: 'cl.exe'); lista vazia = nenhum."""
+    texto, _ = correr(["tasklist", "/FI", "IMAGENAME eq " + nome, "/NH", "/FO", "CSV"])
+    pids = []
+    for linha in (texto or "").splitlines():
+        campos = [campo.strip().strip('"') for campo in linha.split('","')]
+        if len(campos) >= 2 and campos[0].lower().endswith(nome.lower()):
+            try:
+                pids.append(int(campos[1]))
+            except ValueError:
+                pass
+    return pids
 
 '''
 
@@ -1595,7 +1637,9 @@ def _correr_trecho(chave, trecho, timeout, rotulo=""):
     "e e apagado no fim, por isso nada fica na pasta do projeto. E o caminho para PROVAR comportamento "
     "(um assert sobre a funcao real, um calculo, um resultado do despacho) em vez de criar scripts de "
     "prova na raiz. Nao substitui as ferramentas nativas: ler/editar/buscar/validar sintaxe tem "
-    "ferramenta propria e a app Flask a responder tem tool_auditar_rotas.",
+    "ferramenta propria e a app Flask a responder tem tool_auditar_rotas. O cabecalho traz correr() e "
+    "processos() para correr um comando do sistema ou saber se um build esta a correr, sem escrever "
+    "subprocess.run a mao - que perde a saida INTEIRA quando ela nao e UTF-8.",
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo Python a executar (varios imports e asserts sao bem-vindos)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},

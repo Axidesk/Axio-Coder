@@ -296,7 +296,7 @@ def _visual_studio():
     try:
         saida = subprocess.run(
             [vswhere, "-all", "-products", "*", "-format", "json", "-utf8"],
-            capture_output=True, text=True, timeout=60, check=False,
+            capture_output=True, text=True, errors="replace", timeout=60, check=False,
         ).stdout
         instalacoes = json.loads(saida or "[]")
     except (OSError, ValueError, subprocess.SubprocessError):
@@ -421,8 +421,8 @@ def _cmakes_do_visual_studio(instalacoes):
 def _versao_da_ferramenta(caminho):
     for argumento in ("--version", "-version", "/?"):
         try:
-            saida = subprocess.run([caminho, argumento], capture_output=True, text=True, timeout=30,
-                                   check=False)
+            saida = subprocess.run([caminho, argumento], capture_output=True, text=True,
+                                   errors="replace", timeout=30, check=False)
         except (OSError, subprocess.SubprocessError):
             continue
         texto = (saida.stdout or "") + (saida.stderr or "")
@@ -563,8 +563,8 @@ def _geradores_do_cmake(caminho):
         return ()
     if caminho not in _GERADORES_SUPORTADOS:
         try:
-            saida = subprocess.run([caminho, "--help"], capture_output=True, text=True, timeout=60,
-                                   check=False)
+            saida = subprocess.run([caminho, "--help"], capture_output=True, text=True,
+                                   errors="replace", timeout=60, check=False)
             texto = (saida.stdout or "") + (saida.stderr or "")
         except (OSError, subprocess.SubprocessError):
             texto = ""
