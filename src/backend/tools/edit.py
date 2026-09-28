@@ -14,6 +14,22 @@ from src.backend.services.diff import gerar_diff
 from src.backend.tools.syntax import aviso_estrutural_pos_edicao, aviso_import_local, bloquear_import_local, validar_arquivo_apos_edicao
 
 
+def codificacao_do_ficheiro(caminho_absoluto):
+    """A codificacao em que o ficheiro esta gravado, para o ler e gravar sem o corromper."""
+    try:
+        with open(caminho_absoluto, "rb") as f:
+            bruto = f.read()
+    except OSError:
+        return "utf-8"
+    for codificacao in ("utf-8", "cp1252"):
+        try:
+            bruto.decode(codificacao)
+            return codificacao
+        except UnicodeDecodeError:
+            continue
+    return "latin-1"
+
+
 def _ler_para_edicao(caminho_relativo, rotulo):
     if estado.get("bloquear_edicao"):
         return None, "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
@@ -24,7 +40,7 @@ def _ler_para_edicao(caminho_relativo, rotulo):
     if not os.path.exists(caminho_absoluto):
         return None, f"ERRO: O arquivo '{caminho_relativo}' não existe."
     try:
-        with open(caminho_absoluto, 'r', encoding='utf-8') as f:
+        with open(caminho_absoluto, 'r', encoding=codificacao_do_ficheiro(caminho_absoluto)) as f:
             conteudo = f.read()
     except Exception as e:
         return None, f"ERRO: {str(e)}"
@@ -110,8 +126,14 @@ def gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_co
     bloqueio = bloquear_import_local(caminho_relativo, conteudo, novo_conteudo)
     if bloqueio:
         raise ValueError(bloqueio)
+    codificacao = codificacao_do_ficheiro(caminho_absoluto)
+    try:
+        novo_conteudo.encode(codificacao)
+    except UnicodeEncodeError:
+        raise ValueError(f"ERRO: '{caminho_relativo}' esta gravado em {codificacao} e o texto novo tem "
+                         f"caracteres que essa codificacao nao representa. Nada foi gravado.")
     registrar_edicao(caminho_absoluto, conteudo, novo_conteudo)
-    with open(caminho_absoluto, 'w', encoding='utf-8') as f:
+    with open(caminho_absoluto, 'w', encoding=codificacao) as f:
         f.write(novo_conteudo)
     diff = gerar_diff(conteudo, novo_conteudo)
     emit_event("action_diff", actionName=action_name, diff=diff)
