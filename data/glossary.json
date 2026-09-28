@@ -464,10 +464,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 581,
+        "linha": 586,
         "conferido": [
-          1790435995.695,
-          31696
+          1790558455.398,
+          31996
         ]
       }
     },
@@ -823,10 +823,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 715,
+        "linha": 720,
         "conferido": [
-          1790435995.695,
-          31696
+          1790558455.398,
+          31996
         ]
       }
     },
@@ -1170,10 +1170,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1641,
+        "linha": 1642,
         "conferido": [
-          1790549424.891,
-          80184
+          1790560526.976,
+          80209
         ]
       }
     },
@@ -2245,8 +2245,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1198,
         "conferido": [
-          1790549424.891,
-          80184
+          1790560526.976,
+          80209
         ]
       }
     },
@@ -5508,10 +5508,10 @@
       "descricao": "Aviso que aparece no retorno de qualquer edicao de um .py (CHECKLIST ESTRUTURAL) quando uma chamada a funcao do proprio modulo usa uma palavra-chave que a assinatura dela nao tem. A sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta - foi o caso do _texto_depuracao(registo_id=) contra def _texto_depuracao(registro_id,...). Nao bloqueia a escrita; confirma no codigo real e acerta a chamada ou a assinatura.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 655,
+        "linha": 660,
         "conferido": [
-          1790435995.695,
-          31696
+          1790558455.398,
+          31996
         ]
       }
     },

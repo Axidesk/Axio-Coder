@@ -29,7 +29,8 @@ _FONTES_QUE_VALEM_NOME = 5
     "da Qt os modulos que o projeto pede e o kit nao tem - sem uma unica janela). "
     "'avisos' compila os ficheiros do projeto com os avisos LIGADOS e conta-os por codigo e por "
     "sitio, dizendo o que os '#pragma warning(disable)' e o '/wd' estao a esconder - sem tocar no "
-    "projeto e sem depender de ele compilar ate ao fim. "
+    "projeto e sem depender de ele compilar ate ao fim (com 'ficheiros' mede so os nomeados, que "
+    "num projeto grande e a diferenca entre segundos e minutos). "
     "'construir' e 'correr' fazem o preparo sozinhos. "
     "build corre como card do terminal (saida a vivo, com botao de parar). "
     "Nao serve para ler nem editar codigo (para isso ha as ferramentas de arquivo) nem para construir o "
@@ -60,6 +61,12 @@ _FONTES_QUE_VALEM_NOME = 5
             "desc": "Alvo (target) especifico a compilar. Vazio compila o projeto todo.",
             "padrao": "",
         },
+        "ficheiros": {
+            "tipo": "STRING",
+            "desc": "No 'avisos': os ficheiros a medir, por nome, separados por ';' (ex: "
+                    "container.cpp;depot.cpp). Vazio mede o projeto inteiro.",
+            "padrao": "",
+        },
         "breakpoints": {
             "tipo": "STRING",
             "desc": "Pontos de paragem para 'depurar', no formato ficheiro:linha (um por linha ou "
@@ -79,7 +86,8 @@ _FONTES_QUE_VALEM_NOME = 5
         },
     },
 )
-def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", breakpoints="", comandos=""):
+def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", ficheiros="",
+                       breakpoints="", comandos=""):
     if acao == "depurar" and comandos and not breakpoints:
         return _depurar("", configuracao, breakpoints, comandos)
     caminho, erro = _pasta(pasta)
@@ -95,7 +103,7 @@ def tool_gerir_projeto(acao="detetar", pasta="", configuracao="debug", alvo="", 
         _, texto = _construir(caminho, configuracao, alvo)
         return texto
     if acao == "avisos":
-        return _texto_avisos(caminho)
+        return _texto_avisos(caminho, ficheiros)
     if acao == "correr":
         return _correr(caminho, configuracao)
     if acao == "depurar":
@@ -456,14 +464,15 @@ def _instalar(pasta, configuracao):
 def _texto_do_processo(resultado):
     return ((resultado.stdout or "") + (resultado.stderr or "")).strip()
 
-def _texto_avisos(pasta):
+def _texto_avisos(pasta, ficheiros=""):
     nome = os.path.basename(pasta)
+    pedidos = [p.strip() for p in (ficheiros or "").replace(",", ";").split(";") if p.strip()]
 
     def _progresso(feitos, total):
         emit_event("executing", function=f"Medindo os avisos de {nome} ({feitos}/{total})")
 
     emit_event("executing", function=f"Medindo os avisos de {nome}")
-    return avisos.texto(avisos.censo(pasta, ao_progredir=_progresso))
+    return avisos.texto(avisos.censo(pasta, ficheiros=pedidos, ao_progredir=_progresso))
 
 def _texto_instalado(pasta, plano, saida):
     deteccao = detetar.detetar(pasta)
