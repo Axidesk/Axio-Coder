@@ -88,8 +88,8 @@ def texto(dados):
         linhas.append("  NAO COMPILARAM: " + ", ".join(dados["sem_saida"]))
     if dados.get("falhados"):
         linhas.append("  ERROS DE COMPILACAO (o censo destes ficheiros nao vale):")
-        for ficheiro, lista in dados["falhados"].items():
-            linhas.append(f"    {ficheiro}: " + "; ".join(lista[:3]))
+        for ficheiro, lista in sorted(dados["falhados"].items()):
+            linhas.append(f"    {ficheiro} ({len(lista)}): " + "; ".join(lista))
     return "\n".join(linhas)
 
 
