@@ -1,4 +1,5 @@
 import os
+import re
 
 from src.backend.builds import cmake_api, detetar, kits, msbuild, presets
 
@@ -6,6 +7,10 @@ TIMEOUT_CONFIGURAR = 420
 TIMEOUT_CONSTRUIR = 3000
 
 _PASTAS_DE_SONDA = ("CMakeFiles", "CMakeScratch", "_deps", ".git")
+_PASTAS_FORA_DO_CENSO = ("Release", "Debug", "RelWithDebInfo", "MinSizeRel", "obj", "bin", "x64")
+_SUFIXOS_DE_FONTE = (".cpp", ".cxx", ".cc", ".c", ".m", ".mm")
+_SUFIXOS_DE_CABECALHO = (".h", ".hpp", ".hxx", ".hh")
+_PASSO_NO_LOG = re.compile(r"^\[(\d+)/(\d+)\]")
 
 
 def preparar(pasta, configuracao="debug", plataforma=""):
@@ -284,5 +289,58 @@ def exe_produzido(pasta_build, desde=None, nome=""):
     alvo = (nome or "").lower() + ".exe"
     achados.sort(key=lambda a: (a["nome"].lower() != alvo, -a["mtime"]))
     return achados
+
+
+def fontes_compiladas(saida):
+    """As fontes que este build recompilou, lidas da saida do compilador.
+
+    O MSBuild imprime cada fonte numa linha indentada ('  item.cpp'); o Ninja e o Make escrevem
+    '[12/72]' e sao contados por passos_do_build. Ler a saida e o unico caminho que nao adivinha:
+    quem decide o que esta velho e o compilador, nao o Axio.
+    """
+    nomes = []
+    vistas = set()
+    for linha in (saida or "").splitlines():
+        texto = linha.strip()
+        if " " in texto or not texto.lower().endswith(_SUFIXOS_DE_FONTE):
+            continue
+        if texto not in vistas:
+            vistas.add(texto)
+            nomes.append(texto)
+    return nomes
+
+
+def passos_do_build(saida):
+    """O par (feito, total) que o Ninja e o Make escrevem como '[12/72]'; (0, 0) sem eles."""
+    feito = total = 0
+    for linha in (saida or "").splitlines():
+        casado = _PASSO_NO_LOG.match(linha.strip())
+        if casado:
+            feito = max(feito, int(casado.group(1)))
+            total = max(total, int(casado.group(2)))
+    return feito, total
+
+
+def cabecalho_mais_recente(pasta, desde):
+    """O cabecalho tocado depois de 'desde' (o mtime do executavel anterior), do mais novo.
+
+    Um cabecalho mexido obriga o compilador a refazer tudo o que o inclui - e e isso que
+    transforma um build de segundos num build de minutos.
+    """
+    melhor, quando = "", 0.0
+    for raiz, pastas, ficheiros in os.walk(pasta or ""):
+        pastas[:] = [p for p in pastas if p not in _PASTAS_DE_SONDA
+                     and p not in _PASTAS_FORA_DO_CENSO and not p.startswith(".")]
+        for ficheiro in ficheiros:
+            if not ficheiro.lower().endswith(_SUFIXOS_DE_CABECALHO):
+                continue
+            caminho = os.path.join(raiz, ficheiro)
+            try:
+                mtime = os.path.getmtime(caminho)
+            except OSError:
+                continue
+            if mtime > desde and mtime > quando:
+                melhor, quando = os.path.relpath(caminho, pasta).replace("\\", "/"), mtime
+    return melhor, quando
 
 

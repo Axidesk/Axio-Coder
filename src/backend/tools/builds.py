@@ -6,10 +6,12 @@ from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
 from src.backend.services.settings import asan_ligado
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
-from src.backend.tools.process import (correr_como_card, escrever_stdin_processo, iniciar_processo,
-                                       parar_processo_reg, registrar_linha_processo,
+from src.backend.tools.process import (correr_como_card, duracao_texto, escrever_stdin_processo,
+                                       iniciar_processo, parar_processo_reg, registrar_linha_processo,
                                        seguir_saida_processo)
 from src.backend.tools.registry import register
+
+_FONTES_QUE_VALEM_NOME = 5
 
 
 @register(
@@ -154,14 +156,16 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
         if not ok:
             return False, "\n\n".join(blocos)
     comando = _comando_com_alvo(plano, alvo)
+    nome = plano["deteccao"].get("projeto", "")
+    anteriores = construir.exe_produzido(plano["pasta_build"], nome=nome)
+    marca = anteriores[0]["mtime"] if anteriores else 0.0
     inicio = time.time()
     emit_event("executing", function=f"Compilando {plano['deteccao'].get('projeto') or os.path.basename(pasta)}")
     resultado = correr_como_card(comando, cwd=pasta, timeout=construir.TIMEOUT_CONSTRUIR,
                                  caminhos_extra=plano["escolha"].get("caminhos"))
-    saida = recortar_texto(_texto_do_processo(resultado))
-    produzidos = construir.exe_produzido(
-        plano["pasta_build"], desde=inicio, nome=plano["deteccao"].get("projeto", "")
-    )
+    crua = _texto_do_processo(resultado)
+    saida = recortar_texto(crua)
+    produzidos = construir.exe_produzido(plano["pasta_build"], desde=inicio, nome=nome)
     achados = diagnosticos.resumo(saida, raiz=pasta)
     if _interrompido(resultado):
         blocos.append("COMPILACAO INTERROMPIDA: o card do terminal foi parado. O que sai abaixo e o que "
@@ -175,7 +179,8 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
         blocos.append(achados)
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
-        blocos.append(f"COMPILADO (exit 0).\n{_texto_executaveis(produzidos)}\n{saida}")
+        resumo = _resumo_do_build(pasta, crua, time.time() - inicio, marca)
+        blocos.append(f"{resumo}\n{_texto_executaveis(produzidos)}\n{saida}")
         return True, "\n\n".join(blocos)
     blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
     return False, "\n\n".join(blocos)
@@ -187,6 +192,35 @@ def _comando_com_alvo(plano, alvo):
     if plano["escolha"].get("msbuild"):
         return plano["construir"].replace("/t:Build", f"/t:{alvo}")
     return f"{plano['construir']} --target {alvo}"
+
+def _resumo_do_build(pasta, saida_crua, decorrido, marca):
+    """O que este build custou de verdade: quantas fontes recompilou, em quanto tempo, e porque.
+
+    Um '.cpp' editado custa segundos; um cabecalho editado obriga a refazer tudo o que o inclui e
+    custa minutos. A resposta nao dizia qual dos dois tinha acontecido, e era isso que levava a
+    planear os lotes pelo pior caso.
+    """
+    nomes = construir.fontes_compiladas(saida_crua)
+    feito, total = construir.passos_do_build(saida_crua)
+    quantas = len(nomes) or feito
+    tempo = duracao_texto(decorrido)
+    if not quantas:
+        return f"COMPILADO (exit 0) em {tempo} - NADA recompilado: tudo ja estava atualizado."
+    conta = f"{quantas} de {total} fontes" if total > quantas else (
+        "1 fonte" if quantas == 1 else f"{quantas} fontes")
+    linhas = [f"COMPILADO (exit 0) em {tempo} - recompilou {conta}."]
+    if quantas <= _FONTES_QUE_VALEM_NOME:
+        if nomes:
+            linhas.append(f"  recompiladas: {', '.join(nomes)}")
+    elif marca:
+        culpado, _ = construir.cabecalho_mais_recente(pasta, desde=marca)
+        if culpado:
+            linhas.append(
+                f"  cabecalho tocado: {culpado} - um cabecalho refaz tudo o que o inclui, e e por "
+                f"isso que este build saiu caro: junte as edicoes de cabecalho num so build e "
+                f"edite os .cpp um a um."
+            )
+    return "\n".join(linhas)
 
 def _bloqueio(plano):
     if plano.get("erro"):

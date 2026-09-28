@@ -1101,7 +1101,7 @@ def _rotulo_do_comando(comando):
     return nome[:_ROTULO_CURTO]
 
 
-def _duracao(decorrido):
+def duracao_texto(decorrido):
     total = int(decorrido)
     if total < 60:
         return f"{total}s"
@@ -1127,7 +1127,7 @@ def _ultima_linha_legivel(log):
 
 
 def _texto_de_progresso(reg, decorrido):
-    partes = [_rotulo_do_comando(reg.get("comando")), "-", _duracao(decorrido)]
+    partes = [_rotulo_do_comando(reg.get("comando")), "-", duracao_texto(decorrido)]
     cauda = _ultima_linha_legivel(reg.get("log") or [])
     if cauda:
         partes.append("| " + cauda)
