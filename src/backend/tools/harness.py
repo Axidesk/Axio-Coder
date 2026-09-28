@@ -16,7 +16,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
@@ -24,7 +23,7 @@ import time
 from src.backend.config import APP_ROOT
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado
-from src.backend.tools.process import id_processo, run_com_timeout
+from src.backend.tools.process import correr_como_card
 from src.backend.tools.registry import register
 
 _TIMEOUT_TRECHO_MAX = 300
@@ -1525,18 +1524,6 @@ def _rotulo_teste(trecho, padrao):
             return limpa[:100]
     return primeira[:100] or padrao
 
-def _espelhar_teste_no_terminal(pid, proc):
-    """Publica no terminal da doc a saida do trecho, para o utilizador acompanhar o
-    que corre. E so espelho: o resultado continua a voltar inteiro para o modelo."""
-    saida = proc.stdout or ""
-    erro = proc.stderr or ""
-    if erro.strip():
-        saida = f"{saida}\n--- stderr ---\n{erro}"
-    texto = recortar_texto(saida) or "(sem saida)"
-    emit_event("process_output", pid=pid, chunk=texto + "\n")
-    emit_event("process_finished", pid=pid, exit_code=proc.returncode,
-               status="ok" if proc.returncode == 0 else "erro")
-
 def _interpretador_python():
     return sys.executable
 
@@ -1578,52 +1565,28 @@ def _correr_trecho(chave, trecho, timeout, rotulo=""):
     except (TypeError, ValueError):
         limite = 60
     raiz_projeto = estado.get("pasta_raiz") or APP_ROOT
-    pid = id_processo()
     nome = (rotulo or "").strip() or _rotulo_teste(trecho, cfg["rotulo"])
     emit_event("executing", function=f"Executando {cfg['rotulo']} em processo novo: {nome}")
-    emit_event("process_started", pid=pid,
-               comando=f"{cfg['executavel']} {nome}",
-               modo="aguardar")
     fd, caminho = tempfile.mkstemp(prefix=cfg["prefixo"], suffix=cfg["sufixo"])
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(cfg["snippet"](trecho, raiz_projeto))
-        proc = run_com_timeout([interpretador, *cfg.get("argumentos", []), caminho], timeout=limite)
-    except subprocess.TimeoutExpired as e:
-        emit_event("process_finished", pid=pid, exit_code=None, status="timeout")
-        aviso = (f"ERRO: o trecho passou de {limite}s e a arvore de processos foi encerrada. Se o codigo "
-                 "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
-        parcial = _saida_ate_ao_timeout(e)
-        return f"{aviso}\n{parcial}" if parcial else aviso
+        linha = " ".join(f'"{parte}"' for parte in [interpretador, *cfg.get("argumentos", []), caminho])
+        resultado = correr_como_card(linha, cwd=raiz_projeto, timeout=limite,
+                                     rotulo=f"{cfg['executavel']} {nome}")
     except OSError as e:
-        emit_event("process_finished", pid=pid, exit_code=None, status="erro")
         return f"ERRO: nao consegui executar o trecho ({e})."
     finally:
         try:
             os.remove(caminho)
         except OSError:
             pass
-    _espelhar_teste_no_terminal(pid, proc)
-    return _relatorio_execucao(proc, limite, cfg["linguagem"])
-
-def _saida_ate_ao_timeout(erro):
-    """O que o processo ja tinha impresso quando o limite estourou, para a medicao nao se perder."""
-    partes = []
-    for rotulo, atributo in (("stdout", "output"), ("stderr", "stderr")):
-        texto = getattr(erro, atributo, None)
-        if not texto:
-            continue
-        if not isinstance(texto, str):
-            texto = texto.decode("utf-8", "replace")
-        if not texto.strip():
-            continue
-        if len(texto) > _LIMITE_SAIDA_PARCIAL:
-            texto = texto[:_LIMITE_SAIDA_PARCIAL] + "\n[... cortado no limite de tempo]"
-        partes.append(f"--- {rotulo} (ate ao limite) ---\n{texto}")
-    if not partes:
-        return ""
-    return ("O processo ja tinha impresso isto antes de ser encerrado - aproveita-o em vez de "
-            "repetir a medicao:\n" + "\n".join(partes))
+    if getattr(resultado, "status", "") == "timeout":
+        aviso = (f"ERRO: o trecho passou de {limite}s e a arvore de processos foi encerrada. Se o codigo "
+                 "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
+        parcial = recortar_texto(resultado.stdout)
+        return f"{aviso}\n--- stdout (ate ao limite) ---\n{parcial}" if parcial.strip() else aviso
+    return _relatorio_execucao(resultado, limite, cfg["linguagem"])
 
 @register(
     "tool_executar_python",

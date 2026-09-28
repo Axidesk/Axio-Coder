@@ -213,7 +213,11 @@ def _resumo_do_build(pasta, saida_crua, decorrido, marca):
     quantas = len(nomes) or feito
     tempo = duracao_texto(decorrido)
     if not quantas:
-        return f"COMPILADO (exit 0) em {tempo} - NADA recompilado: tudo ja estava atualizado."
+        return (f"NADA COMPILADO (exit 0) em {tempo}: as saidas ja estavam atualizadas, logo este build "
+                "NAO PROVA NADA sobre o codigo.\n"
+                "  Se acabou de mexer na CONFIGURACAO (caminhos de include/lib, defines, plataforma), o "
+                "MSBuild nao a reavalia sozinho e responde 'atualizado' em segundos: repita com "
+                "alvo='Rebuild' ou apague a pasta dos objetos - sem isso o verde nao vale nada.")
     conta = f"{quantas} de {total} fontes" if total > quantas else (
         "1 fonte" if quantas == 1 else f"{quantas} fontes")
     linhas = [f"COMPILADO (exit 0) em {tempo} - recompilou {conta}."]

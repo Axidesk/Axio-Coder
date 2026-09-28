@@ -2,7 +2,6 @@ import ast
 import hashlib
 import os
 import re
-import shutil
 import uuid
 
 from src.backend.services.diff import gerar_diff
@@ -709,60 +708,3 @@ def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, l
         f"Verificações:\n" + "\n".join(f"  - {v}" for v in verificacoes)
     )
 
-@register(
-    "tool_mover_arquivo_binario",
-    'Move um arquivo binário ou uma pasta inteira (ícones, imagens, fontes, binários) de um lugar para outro byte a byte usando shutil.move. Use para mover .ico, .png, .exe ou pastas inteiras que tool_mover_bloco_verbatim não consegue (só lida com texto). Retorna o SHA-256 do arquivo movido e verifica que a origem sumiu e o destino apareceu.',
-    {
-        'origem': {"tipo": "STRING", "desc": 'Caminho relativo do arquivo ou pasta a mover', "obrig": True, "padrao": ""},
-        'destino': {"tipo": "STRING", "desc": 'Caminho relativo de destino (arquivo ou pasta)', "obrig": True, "padrao": ""},
-        'sobrescrever': {"tipo": "BOOLEAN", "desc": 'Se True, substitui o destino caso já exista', "padrao": False},
-    },
-    disponivel="edicao",
-)
-def tool_mover_arquivo_binario(origem, destino, sobrescrever=False):
-    if estado.get("bloquear_edicao"):
-        return "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
-    emit_event("executing", function=f"Movendo arquivo/pasta (binário): {origem}")
-    if isinstance(sobrescrever, str):
-        sobrescrever = sobrescrever.strip().lower() in ("1", "true", "sim", "yes", "s")
-    origem_abs, erro = resolver_caminho(origem, permitir_extra=True)
-    if erro:
-        return erro
-    if not os.path.exists(origem_abs):
-        return f"ERRO: Origem '{origem}' não existe."
-    dest_abs, erro_dest = resolver_caminho(destino, permitir_extra=False, permitir_escrita=True)
-    if erro_dest:
-        return erro_dest
-    if os.path.exists(dest_abs) and not sobrescrever:
-        return f"ERRO: Destino '{destino}' já existe. Use sobrescrever=True para substituí-lo."
-    os.makedirs(os.path.dirname(dest_abs), exist_ok=True)
-    hash_orig = None
-    if os.path.isfile(origem_abs):
-        try:
-            with open(origem_abs, "rb") as f:
-                hash_orig = hashlib.sha256(f.read()).hexdigest()
-        except OSError as e:
-            return f"ERRO ao ler a origem para calcular o hash: {e}"
-    try:
-        if sobrescrever and os.path.isdir(dest_abs):
-            shutil.rmtree(dest_abs)
-        shutil.move(origem_abs, dest_abs)
-    except OSError as e:
-        return f"ERRO ao mover '{origem}' para '{destino}': {e}"
-    verificacoes = []
-    verificacoes.append("ORIGEM: OK (removida após o move)" if not os.path.exists(origem_abs) else "ORIGEM: FALHOU (ainda existe após o move)")
-    verificacoes.append("DESTINO: OK (presente após o move)" if os.path.exists(dest_abs) else "DESTINO: FALHOU (não encontrado após o move)")
-    if hash_orig and os.path.isfile(dest_abs):
-        try:
-            with open(dest_abs, "rb") as f:
-                hash_dest = hashlib.sha256(f.read()).hexdigest()
-            verificacoes.append("HASH: OK (byte a byte idêntico)" if hash_dest == hash_orig else "HASH: FALHOU (hash do destino difere da origem)")
-        except OSError:
-            verificacoes.append("HASH: INDETERMINADO (não foi possível reler o destino)")
-    emit_event("action_diff", actionName=destino, actionType="moved", origem=origem, destino=destino, diff=[])
-    notificar_mudanca_arquivos()
-    return (
-        f"SUCESSO: '{origem}' movido para '{destino}' (shutil.move byte a byte).\n"
-        + "\n".join(f"  - {v}" for v in verificacoes)
-        + (f"\n  - SHA-256: {hash_orig}" if hash_orig else "")
-    )

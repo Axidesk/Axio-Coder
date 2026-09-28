@@ -61,6 +61,7 @@ from src.backend.tools import (
     similarity,
     structure,
     syntax,
+    transfer,
     trash,
     undo,
     vision,

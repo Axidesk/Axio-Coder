@@ -124,6 +124,11 @@
       "area": "comunicacao",
       "texto": "Ele le como leigo em programacao: a resposta comeca pelo EFEITO pratico (\"isto muda o jogo?\"), e so depois vem o detalhe tecnico - o numero sozinho nao lhe diz nada. Ele escreve em portugues informal (vc, n, pra, q, eh) e aceita o mesmo tom: nada de relatorio cerimonial, cabecalhos vazios nem a mesma estrutura repetida rodada apos rodada. Quando pergunta \"o que ganhamos com isto\", responder com o concreto (o bug que foi apanhado, o que deixa de acontecer, a rede de seguranca que fica) e nunca com \"e boa pratica\". Avisa-lo ANTES de uma fase que mexe em codigo que corre, com o risco e o custo ditos numa linha - pedido dele no Tibia74. E ele gosta de saber no fim o que a rodada melhorou nas minhas ferramentas, explicado sem jargao.",
       "atualizado": "2026-09-28 20:09:54"
+    },
+    {
+      "area": "operacoes longas",
+      "texto": "NUNCA ficar 98 minutos numa rodada à espera de uma operação (foi o que aconteceu a copiar o boost). Regra: (1) MEDIR antes de arrancar qualquer coisa que mexa em muitos ficheiros ou gigabytes - contar, sondar a velocidade real e dizer o tempo previsto com a margem; (2) se o previsto passar ~2 minutos, NÃO fazer sozinho: dizer ao utilizador o que ele faz à mão (arrastar no Explorador, que copia com vários fios) e seguir; (3) o que correr demora tem de aparecer na BARRA DE PROGRESSO do terminal, com o tempo que falta medido a sério - instalação, compilação, cópia, um trecho longo; (4) nada de varrer/polling repetido do mesmo estado em chamadas seguidas - se é longo e não tem barra, é porque devia correr como card.",
+      "atualizado": "2026-09-28 22:19:58"
     }
   ]
 }

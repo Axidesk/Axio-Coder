@@ -958,10 +958,10 @@
       "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
       "localizacao": {
         "arquivo": "src/backend/services/file_service.py",
-        "linha": 609,
+        "linha": 616,
         "conferido": [
-          1790443733.499,
-          32832
+          1790628854.422,
+          33329
         ]
       }
     },
@@ -5675,6 +5675,25 @@
           1790561251.835,
           39851
         ]
+      }
+    },
+    {
+      "termo": "copiar, mover, recortar (ficheiros e pastas)",
+      "aliases": [
+        "copiar uma pasta",
+        "mover uma pasta",
+        "recortar",
+        "transferir",
+        "copiar coisas demoradas",
+        "copiar ficheiros grandes",
+        "medir antes de copiar",
+        "arrastar a pasta"
+      ],
+      "identificador": "tool_transferir / transferencia.planear",
+      "descricao": "A ferramenta de transferencias: MEDE primeiro (conta os ficheiros e copia uma amostra real de 24 para cronometrar), decide se faz sozinha (limite 2 min: acima disso recusa e manda arrastar no Explorador, ou aceita forcar=True) e corre como card do terminal, com a barra de progresso e o tempo que falta. Nao existe 'copiar a olho': se demora mais de 2 minutos, o trabalho e' do utilizador.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/transfer.py",
+        "linha": 52
       }
     }
   ]

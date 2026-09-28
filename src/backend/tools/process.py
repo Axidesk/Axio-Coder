@@ -74,12 +74,12 @@ FERRAMENTA_NATIVA = {
     "erase": "tool_deletar_arquivo (passa pela lixeira)",
     "rmdir": "tool_deletar_arquivo (passa pela lixeira)",
     "rd": "tool_deletar_arquivo (passa pela lixeira)",
-    "cp": "tool_salvar_arquivo",
-    "copy": "tool_salvar_arquivo",
-    "xcopy": "tool_salvar_arquivo",
-    "mv": "tool_mover_arquivo_binario",
-    "move": "tool_mover_arquivo_binario",
-    "ren": "tool_mover_arquivo_binario",
+    "cp": "tool_transferir",
+    "copy": "tool_transferir",
+    "xcopy": "tool_transferir",
+    "mv": "tool_transferir",
+    "move": "tool_transferir",
+    "ren": "tool_transferir",
     "dir": "tool_listar_pasta ou tool_listar_arvore",
     "ls": "tool_listar_pasta ou tool_listar_arvore",
     "tree": "tool_listar_arvore",
@@ -1284,10 +1284,15 @@ def _esperar_com_progresso(popen, pid, timeout):
     return False
 
 
-def correr_como_card(comando, cwd=None, timeout=300, caminhos_extra=None):
-    """Corre o comando como card do terminal (visivel, com parar) e espera pelo fim."""
+def correr_como_card(comando, cwd=None, timeout=300, caminhos_extra=None, rotulo=None):
+    """Corre o comando como card do terminal (visivel, com parar) e espera pelo fim.
+
+    Quem espera e _esperar_card, que a cada passo publica o progresso lido do proprio
+    log do processo: qualquer programa que imprima '[feitos/total]' enche a barra, sem
+    precisar de saber nada do Axio.
+    """
     reg = iniciar_processo(comando, cwd=cwd, modo="card", acompanhar=True,
-                           caminhos_extra=caminhos_extra)
+                           caminhos_extra=caminhos_extra, rotulo=rotulo)
     return _esperar_card(reg, timeout)
 
 
