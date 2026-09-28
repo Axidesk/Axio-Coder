@@ -156,10 +156,17 @@ def raiz_repositorio(caminho):
             return ""
         atual = pai
 
+GIT_TIMEOUT = 600
+
 def git_saida(raiz, *args):
     """Roda git dentro da raiz do repositorio. Devolve (saida_texto, erro)."""
     try:
-        proc = subprocess.run(["git", "-C", raiz] + list(args), capture_output=True, timeout=30)
+        proc = subprocess.run(["git", "-C", raiz] + list(args), capture_output=True, timeout=GIT_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return None, (f"git {' '.join(args)} passou de {GIT_TIMEOUT}s e foi interrompido. Nao e falha do git: "
+                      "e o limite desta ferramenta. Num repositorio que recebe milhares de ficheiros de uma vez "
+                      "(bibliotecas, binarios) o add e o commit levam minutos, e o que ja entrou no stage fica "
+                      "la - repita o que faltar em vez de procurar um erro no git.")
     except Exception as e:
         return None, f"falha ao executar git: {e}"
     if proc.returncode != 0:
