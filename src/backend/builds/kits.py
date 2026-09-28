@@ -29,6 +29,18 @@ _MSBUILD_DA_INSTALACAO = (
     "MSBuild/14.0/Bin/MSBuild.exe",
 )
 
+_CMAKES_DO_VISUAL_STUDIO = (
+    "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
+)
+
+_GERADOR_POR_VISUAL_STUDIO = {
+    18: "Visual Studio 18 2026",
+    17: "Visual Studio 17 2022",
+    16: "Visual Studio 16 2019",
+    15: "Visual Studio 15 2017",
+    14: "Visual Studio 14 2015",
+}
+
 _TIPOS_COMPILADOS = ("cmake", "msbuild", "qmake", "make")
 
 _LINGUAGENS_SEM_KIT = {
@@ -42,11 +54,13 @@ _LINGUAGENS_SEM_KIT = {
 def kits_instalados(prefixos=()):
     """O que esta instalado NESTA maquina: Qt (por versao e kit), MSVC, CMake, Ninja, glslc, Vulkan, vcpkg."""
     raizes = _raizes_qt(prefixos)
+    msvc = _visual_studio()
     return {
         "qt": [kit for raiz in raizes for kit in _kits_qt(raiz)],
         "raizes_qt": raizes,
-        "msvc": _visual_studio(),
-        "cmake": _ferramentas_em_disco("cmake") + _ferramentas_da_qt(raizes, "CMake_64/bin/cmake.exe", "cmake"),
+        "msvc": msvc,
+        "cmake": (_ferramentas_em_disco("cmake") + _cmakes_do_visual_studio(msvc)
+                  + _ferramentas_da_qt(raizes, "CMake_64/bin/cmake.exe", "cmake")),
         "ninja": _ferramentas_em_disco("ninja") + _ferramentas_da_qt(raizes, "Ninja/ninja.exe", "ninja"),
         "glslc": _ferramentas_em_disco("glslc"),
         "vulkan": _vulkan(),
@@ -94,7 +108,9 @@ def escolher_kit(deteccao, instalado):
                 faltam.append("O projeto compila shaders e o 'glslc' do Vulkan SDK nao esta no PATH.")
     if "Vulkan" in deteccao.get("vertentes", []) and not vulkan.get("lib"):
         faltam.append("O projeto pede Vulkan e nao encontrei a biblioteca do Vulkan SDK.")
-    gerador, arquitetura = _gerador(qt, msvc, ninja)
+    gerador, arquitetura = _gerador(qt, msvc, ninja, cmake)
+    if not gerador and msvc:
+        faltam.append(_falta_gerador(cmake, msvc))
     if qt and qt["compilador"] != "msvc" and not ninja:
         faltam.append(f"O kit de Qt '{qt['kit']}' e {qt['compilador']} e falta o Ninja para o compilar.")
     variaveis = {}
@@ -383,6 +399,25 @@ def _ferramentas_da_qt(raizes, relativo, nome):
     return resultado
 
 
+def _cmakes_do_visual_studio(instalacoes):
+    """O CMake que cada instalacao do Visual Studio traz dentro do IDE.
+
+    Um CMake instalado a parte pode ser mais antigo que o Visual Studio e nao conhecer o gerador dele;
+    o que vem com o IDE nasce com o gerador daquela versao. Entra na lista como qualquer candidato e o
+    mais recente ganha - e o que mantem o CMake e o compilador a par sem ninguem decidir isso a mao.
+    """
+    resultado = []
+    for instalacao in instalacoes:
+        raiz = instalacao["caminho"].replace("/", os.sep)
+        for relativo in _CMAKES_DO_VISUAL_STUDIO:
+            alvo = os.path.join(raiz, relativo.replace("/", os.sep))
+            if os.path.isfile(alvo):
+                resultado.append({"caminho": alvo.replace("\\", "/"),
+                                  "versao": _versao_da_ferramenta(alvo),
+                                  "do_visual_studio": instalacao.get("produto", "")})
+    return resultado
+
+
 def _versao_da_ferramenta(caminho):
     for argumento in ("--version", "-version", "/?"):
         try:
@@ -490,22 +525,59 @@ def _texto_dos_modulos(kit, ausentes, exigencia):
     ]
 
 
-def _gerador(qt, msvc, ninja):
+def _gerador(qt, msvc, ninja, cmake=None):
     if qt and qt["compilador"] == "msvc" and msvc:
-        return _gerador_visual_studio(msvc), "x64"
+        return _gerador_visual_studio(msvc, cmake), "x64"
     if qt and qt["compilador"] == "mingw" and ninja:
         return "Ninja", ""
     if not qt and msvc:
-        return _gerador_visual_studio(msvc), "x64"
+        return _gerador_visual_studio(msvc, cmake), "x64"
     if ninja:
         return "Ninja", ""
     return "", ""
 
 
-def _gerador_visual_studio(msvc):
+def _gerador_visual_studio(msvc, cmake=None):
+    """O gerador que combina com a instalacao do Visual Studio escolhida, conferido contra o CMake.
+
+    Escrever no preset um gerador que o CMake instalado nao conhece nao falha aqui: falha na hora de
+    configurar, longe da causa. Por isso o nome so sai depois de o proprio CMake o listar; quando ele
+    nao o tem, sai vazio e quem chama explica o que falta.
+    """
     major = _versao_tupla(msvc["versao"])
-    if major and major[0] >= 17:
-        return "Visual Studio 17 2022"
-    if major and major[0] == 16:
-        return "Visual Studio 16 2019"
-    return "Visual Studio 17 2022"
+    desejado = _GERADOR_POR_VISUAL_STUDIO.get(major[0] if major else 0, "")
+    if not desejado:
+        return ""
+    conhecidos = _geradores_do_cmake((cmake or {}).get("caminho", ""))
+    if not conhecidos:
+        return desejado
+    return desejado if desejado in conhecidos else ""
+
+
+_GERADORES_SUPORTADOS = {}
+
+
+def _geradores_do_cmake(caminho):
+    """Os geradores que ESTE cmake conhece, lidos dele proprio e guardados por caminho."""
+    if not caminho:
+        return ()
+    if caminho not in _GERADORES_SUPORTADOS:
+        try:
+            saida = subprocess.run([caminho, "--help"], capture_output=True, text=True, timeout=60,
+                                   check=False)
+            texto = (saida.stdout or "") + (saida.stderr or "")
+        except (OSError, subprocess.SubprocessError):
+            texto = ""
+        _GERADORES_SUPORTADOS[caminho] = tuple(
+            dict.fromkeys(re.findall(r"Visual Studio [0-9]+ [0-9]+", texto))
+        )
+    return _GERADORES_SUPORTADOS[caminho]
+
+
+def _falta_gerador(cmake, msvc):
+    versao_cmake = (cmake or {}).get("versao") or "instalado"
+    return (
+        f"O CMake {versao_cmake} desta maquina nao conhece o gerador do {msvc['produto']} "
+        f"({msvc['versao']}), logo nao ha como gerar o projeto para esse compilador. Atualize o CMake "
+        "(o proprio Visual Studio traz um, em Common7/IDE/CommonExtensions/Microsoft/CMake)."
+    )

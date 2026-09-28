@@ -805,8 +805,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 200,
         "conferido": [
-          1790554152.739,
-          53987
+          1790629800.234,
+          54190
         ]
       }
     },
@@ -1170,10 +1170,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1642,
+        "linha": 1605,
         "conferido": [
-          1790560526.976,
-          80209
+          1790630319.267,
+          78563
         ]
       }
     },
@@ -2243,10 +2243,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1198,
+        "linha": 1197,
         "conferido": [
-          1790560526.976,
-          80209
+          1790630319.267,
+          78563
         ]
       }
     },
@@ -2328,8 +2328,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 347,
         "conferido": [
-          1790554152.739,
-          53987
+          1790629800.234,
+          54190
         ]
       }
     },
@@ -4672,8 +4672,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 375,
         "conferido": [
-          1790554152.739,
-          53987
+          1790629800.234,
+          54190
         ]
       }
     },
@@ -5468,10 +5468,10 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 647,
+        "linha": 651,
         "conferido": [
-          1790561251.835,
-          39851
+          1790629778.674,
+          40219
         ]
       }
     },
@@ -5670,10 +5670,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 467,
+        "linha": 471,
         "conferido": [
-          1790561251.835,
-          39851
+          1790629778.674,
+          40219
         ]
       }
     },
@@ -5693,7 +5693,11 @@
       "descricao": "A ferramenta de transferencias: MEDE primeiro (conta os ficheiros e copia uma amostra real de 24 para cronometrar), decide se faz sozinha (limite 2 min: acima disso recusa e manda arrastar no Explorador, ou aceita forcar=True) e corre como card do terminal, com a barra de progresso e o tempo que falta. Nao existe 'copiar a olho': se demora mais de 2 minutos, o trabalho e' do utilizador.",
       "localizacao": {
         "arquivo": "src/backend/tools/transfer.py",
-        "linha": 52
+        "linha": 52,
+        "conferido": [
+          1790630299.709,
+          13101
+        ]
       }
     }
   ]
