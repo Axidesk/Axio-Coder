@@ -119,6 +119,11 @@
       "area": "avisos",
       "texto": "AVISO NUNCA SE SUPRIME - CORRIGE-SE NA FONTE. Vale para qualquer linguagem e qualquer projeto (C/C++, Python, JS, CSS): nada de #pragma warning(disable), /WX-, lint ignore, try/except a tapar, comentario a desligar a regra. Se aparecer um aviso, corrige-se o CODIGO que o produz. So se admite silenciar quando for TECNICAMENTE IMPOSSIVEL ou quando o custo for desproporcionado (refazer heranca em diamante de um servidor de 2008, recompilar uma lib partilhada por outro compilador) - e nesse caso EU AVISO o utilizador ANTES, com o custo medido, e a decisao e dele. Regra de ouro: build tem de terminar a 0 avisos e 0 erros. No C++ do Visual Studio o /WX (TreatWarningAsError) fica LIGADO, para o build PARAR no primeiro aviso em segundos em vez de correr ate ao fim - aviso novo e analisado logo, nao minutos depois.",
       "atualizado": "2026-09-27 21:23:45"
+    },
+    {
+      "area": "comunicacao",
+      "texto": "Ele le como leigo em programacao: a resposta comeca pelo EFEITO pratico (\"isto muda o jogo?\"), e so depois vem o detalhe tecnico - o numero sozinho nao lhe diz nada. Ele escreve em portugues informal (vc, n, pra, q, eh) e aceita o mesmo tom: nada de relatorio cerimonial, cabecalhos vazios nem a mesma estrutura repetida rodada apos rodada. Quando pergunta \"o que ganhamos com isto\", responder com o concreto (o bug que foi apanhado, o que deixa de acontecer, a rede de seguranca que fica) e nunca com \"e boa pratica\". Avisa-lo ANTES de uma fase que mexe em codigo que corre, com o risco e o custo ditos numa linha - pedido dele no Tibia74. E ele gosta de saber no fim o que a rodada melhorou nas minhas ferramentas, explicado sem jargao.",
+      "atualizado": "2026-09-28 20:09:54"
     }
   ]
 }
