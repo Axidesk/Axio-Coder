@@ -11,6 +11,7 @@ WORKERS = 8
 TIMEOUT_FICHEIRO = 240
 
 _RX = re.compile(r"^(.+?)\((\d+)(?:,(\d+))?\)\s*:\s*(warning|error)\s+([A-Z]+\d+)\s*:\s*(.*)$")
+_RX_NOTA = re.compile(r"^(.+?)\((\d+)(?:,(\d+))?\)\s*:\s*note\s*:\s*(.*)$")
 _RX_CAUDA = re.compile(r"\s*\[[^\]]*\]\s*$")
 _RX_PRAGMA = re.compile(r"^([ \t]*)#\s*pragma\s+warning\s*\(\s*disable\s*:[^)]*\)[^\r\n]*", re.M)
 _RX_DEFINE_SEGURO = re.compile(r"^([ \t]*)#\s*define\s+_(?:CRT_SECURE|WINSOCK_DEPRECATED)_NO_WARNINGS\b[^\r\n]*",
@@ -84,7 +85,13 @@ def texto(dados):
                 mensagem = dados.get("mensagens", {}).get((ficheiro, linha_local), "")
                 linhas.append(f"    {ficheiro}:{linha_local}: {codigo}: {mensagem}")
     else:
-        linhas.append("  nenhum aviso por codigo")
+        linhas.append("  nenhum aviso por codigo" + (" (mas ha notas - ver abaixo)" if dados.get("notas") else ""))
+    if dados.get("notas"):
+        linhas.append(f"  NOTAS ({len(dados['notas'])} distintas): nao contam como aviso e nao travam o /WX,")
+        linhas.append("   mas revelam o que o codigo usa de deprecado - o relatorio do build esconde-as:")
+        for mensagem in sorted(dados["notas"], key=lambda m: -dados["notas"][m]["ocorrencias"]):
+            registo = dados["notas"][mensagem]
+            linhas.append(f"    {registo['ocorrencias']}x {registo['exemplo']}: {mensagem[:160]}")
     if dados["sem_saida"]:
         linhas.append("  NAO COMPILARAM: " + ", ".join(dados["sem_saida"]))
     if dados.get("falhados"):
@@ -216,13 +223,21 @@ def _compilar(origem, comando):
 
 
 def _somar(saidas, projeto, plataforma):
-    por_codigo, locais, mensagens, compilados, sem_saida, falhados = {}, {}, {}, [], [], {}
+    por_codigo, locais, mensagens, compilados, sem_saida, falhados, notas = {}, {}, {}, [], [], {}, {}
     for rel, saida in saidas:
         if not saida.strip():
             sem_saida.append(rel)
             continue
         compilados.append(rel)
         for linha in saida.splitlines():
+            registo = _RX_NOTA.match(linha.strip())
+            if registo:
+                mensagem = _RX_CAUDA.sub("", registo.group(4)).strip()
+                entrada = notas.setdefault(mensagem, {"ocorrencias": 0, "exemplo": ""})
+                entrada["ocorrencias"] += 1
+                if not entrada["exemplo"]:
+                    entrada["exemplo"] = f"{os.path.basename(registo.group(1))}:{registo.group(2)}"
+                continue
             achado = _RX.match(linha.strip())
             if not achado:
                 continue
@@ -251,6 +266,7 @@ def _somar(saidas, projeto, plataforma):
         "falhados": falhados,
         "ocorrencias": sum(por_codigo.values()),
         "distintos": len(juncao),
+        "notas": notas,
         "por_codigo": sorted(por_codigo.items(), key=lambda par: (-par[1], par[0])),
         "locais": locais,
         "mensagens": mensagens,
