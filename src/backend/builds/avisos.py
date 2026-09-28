@@ -25,7 +25,7 @@ _BIBLIOTECA = {
 }
 
 
-def censo(pasta, plataforma="", ficheiros=()):
+def censo(pasta, plataforma="", ficheiros=(), ao_progredir=None):
     """Compila os ficheiros de um projeto do Visual Studio com os avisos ligados e conta-os por codigo e por local."""
     projeto = _projeto(pasta)
     if not projeto:
@@ -43,10 +43,15 @@ def censo(pasta, plataforma="", ficheiros=()):
     raiz, limpa = _arvore_sem_pragmas(os.path.dirname(projeto))
     try:
         with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-            saidas = list(executor.map(
+            pendentes = executor.map(
                 lambda rel: (rel, _compilar(os.path.join(raiz, rel), comando)),
                 escolhidos,
-            ))
+            )
+            saidas = []
+            for resultado in pendentes:
+                saidas.append(resultado)
+                if ao_progredir:
+                    ao_progredir(len(saidas), len(escolhidos))
     finally:
         if limpa:
             shutil.rmtree(raiz, ignore_errors=True)

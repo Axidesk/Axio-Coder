@@ -457,8 +457,13 @@ def _texto_do_processo(resultado):
     return ((resultado.stdout or "") + (resultado.stderr or "")).strip()
 
 def _texto_avisos(pasta):
-    emit_event("executing", function=f"Medindo os avisos de {os.path.basename(pasta)}")
-    return avisos.texto(avisos.censo(pasta))
+    nome = os.path.basename(pasta)
+
+    def _progresso(feitos, total):
+        emit_event("executing", function=f"Medindo os avisos de {nome} ({feitos}/{total})")
+
+    emit_event("executing", function=f"Medindo os avisos de {nome}")
+    return avisos.texto(avisos.censo(pasta, ao_progredir=_progresso))
 
 def _texto_instalado(pasta, plano, saida):
     deteccao = detetar.detetar(pasta)
