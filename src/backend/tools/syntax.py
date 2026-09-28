@@ -335,6 +335,9 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
     else:
         return f"ERRO: linguagem '{lang}' não suportada para validação."
     if erro_msg:
+        if lang == "cpp":
+            return (f"NAO FOI POSSIVEL LER '{caminho_relativo}' (cpp, a arvore nao substitui o "
+                    f"compilador):\n{erro_msg}")
         return f"ERRO DE SINTAXE em '{caminho_relativo}' ({lang}):\n{erro_msg}"
     return f"SINTAXE OK: '{caminho_relativo}' ({lang})"
 
@@ -387,6 +390,8 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
     except OSError:
         return ""
     if erro:
+        if lang == "cpp":
+            return f" | AVISO: a arvore de C++ nao leu o ficheiro (nao e' o compilador): {erro}"
         return f" | AVISO SINTAXE {lang}: {erro}"
     return ""
 

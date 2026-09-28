@@ -28,11 +28,15 @@ _RESERVADAS = {"public", "private", "protected", "signals", "slots", "friend", "
                "static", "inline", "template", "typedef", "using", "class", "struct", "union",
                "enum", "namespace", "operator", "explicit", "constexpr", "mutable"}
 _MARCAS_DE_MACRO = {"explicit", "signals", "slots", "emit", "override", "final", "noexcept",
-                    "public", "private", "protected", "tr", "foreach"}
+                    "public", "private", "protected", "tr", "foreach",
+                    "__stdcall", "__cdecl", "__fastcall", "__thiscall", "__declspec",
+                    "WINAPI", "CALLBACK", "APIENTRY"}
 _RE_NOME_VALIDO = re.compile(r"[A-Za-z_~][\w:~<>]*")
 _RE_INCLUDE = re.compile(r"#[ \t]*include[ \t]*([<\"])([^>\"]+)[>\"]")
 _MAX_CAMPOS = 12
 _MAX_ERROS_SINTAXE = 5
+_LINHAS_DO_FIO_PERDIDO = 25
+_RE_CONDICIONAL = re.compile(r"[ \t]*#[ \t]*(?:if|ifdef|ifndef|elif|else|endif)\b")
 
 
 def eh_cpp(caminho):
@@ -456,14 +460,49 @@ def _erros_do_texto(src_bytes, rotulo):
             trecho = src_bytes[no.start_byte:no.end_byte].decode("utf-8", "replace")
             if _e_marca_de_macro(trecho):
                 return
-            problemas.append(f"linha {no.start_point[0] + 1}, coluna {no.start_point[1] + 1}: "
-                             f"{_uma_linha(trecho, 60) or '(falta token)'}")
+            problemas.append(_descreve_o_erro(no, src_bytes, trecho))
             return
         for filho in no.children:
             anda(filho)
 
     anda(arvore.root_node)
     return "\n    ".join(problemas) if problemas else None
+
+
+def _descreve_o_erro(no, src_bytes, trecho):
+    """Linha exata quando o no' de erro e' pequeno; regiao quando a gramatica desiste do ficheiro."""
+    inicio = no.start_point[0] + 1
+    fim = no.end_point[0] + 1
+    if not _perdeu_o_fio(inicio, fim, src_bytes):
+        return (f"linha {inicio}, coluna {no.start_point[1] + 1}: "
+                f"{_uma_linha(trecho, 60) or '(falta token)'}")
+    return _relato_do_fio_perdido(inicio, fim, src_bytes)
+
+
+def _perdeu_o_fio(inicio, fim, src_bytes):
+    """Erro que arrasta uma fatia grande do ficheiro: parou a gramatica, nao o codigo.
+
+    Um erro a serio (falta um ';', uma chaveta trocada) produz um no' de erro de poucas linhas;
+    quando ele engole o resto do ficheiro, a causa e' construcao que o C++ padrao nao descreve e
+    a linha do primeiro token e' o principio de uma funcao que esta' certa - foi o que aconteceu a
+    quatro ficheiros do Tibia74, todos a compilar a 0 erros.
+    """
+    linhas = src_bytes.count(b"\n") + 1
+    return (fim - inicio) >= _LINHAS_DO_FIO_PERDIDO and (fim - inicio) * 5 >= linhas
+
+
+def _relato_do_fio_perdido(inicio, fim, src_bytes):
+    """O que trava a gramatica e' quase sempre um #if a dividir uma instrucao - diga-se qual."""
+    corpo = src_bytes.decode("utf-8", "replace").splitlines()[inicio - 1:fim]
+    diretivas = [inicio + i for i, linha in enumerate(corpo) if _RE_CONDICIONAL.match(linha)]
+    relato = (f"o parser de C++ perdeu o fio na linha {inicio} e arrastou ate' {fim}: "
+              "nao ha erro de uma linha para apontar.")
+    if not diretivas:
+        return relato + " Chaveta por fechar ou construcao fora da gramatica: confirmar com o build."
+    faixa = str(diretivas[0]) if len(diretivas) == 1 else f"{diretivas[0]}-{diretivas[-1]}"
+    return (relato + f" As diretivas de pre-processador das linhas {faixa} dividem uma instrucao ao "
+            "meio - o compilador resolve isso antes de ler e a gramatica nao. Se o build passa, e' "
+            "limitacao do parser.")
 
 
 def _e_marca_de_sinal(tipo, bruto):
