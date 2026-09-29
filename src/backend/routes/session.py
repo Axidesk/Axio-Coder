@@ -14,6 +14,7 @@ from src.backend.services.session import (
     ler_cabecalho_log_sessao,
     gravar_log_sessao,
     prune_session_logs,
+    sem_snapshot_nos_grupos,
     summary_de_logs,
     fundir_grupos_de_log,
     snapshot_sessao_anterior,
@@ -198,10 +199,13 @@ def session_log_save():
         caminho_dia = os.path.join(pasta_logs, f"sessionlog_{sid}.json") if sid else ""
         pay_dia = None
         if sid and os.path.exists(caminho_dia):
-            try:
-                pay_dia = ler_log_sessao(caminho_dia)
-            except Exception:
-                pay_dia = None
+            if payload is not None and os.path.abspath(caminho_dia) == os.path.abspath(caminho):
+                pay_dia = payload
+            else:
+                try:
+                    pay_dia = ler_log_sessao(caminho_dia)
+                except Exception:
+                    pay_dia = None
             data_sessao = (pay_dia.get("datetime") or "").split(" ")[0] if pay_dia else ""
             if data_sessao and data_sessao != dia:
                 sid = ""
@@ -227,8 +231,7 @@ def session_log_save():
                 anterior = ja_gravados.get(str(grupo.get("id") or ""))
                 if anterior:
                     grupo["commit"] = anterior
-            grupo["snapshot"] = snapshot_cumulativo
-        pay_dia["logs"] = fundir_grupos_de_log(pay_dia["logs"], grupos_dia)
+        pay_dia["logs"] = sem_snapshot_nos_grupos(fundir_grupos_de_log(pay_dia["logs"], grupos_dia))
         pay_dia["summary"] = summary_de_logs(pay_dia["logs"]) or (data.get("summary") or "").strip()[:160]
         pay_dia["snapshot"] = snapshot_cumulativo
 

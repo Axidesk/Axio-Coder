@@ -237,6 +237,15 @@ function paginaDeEspera() {
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
 }
 
+function pidVivo(pid) {
+  try {
+    const saida = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+    return saida.includes(`"${pid}"`);
+  } catch (e) {
+    return false;
+  }
+}
+
 function killProcessOnPort(port) {
   const { execSync } = require('child_process');
   try {
@@ -260,10 +269,14 @@ function killProcessOnPort(port) {
           name = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().split(',')[0].replace(/"/g, '').trim();
         } catch (e) {}
         try {
-          execSync(`taskkill /F /PID ${pid}`);
+          execSync(`taskkill /F /PID ${pid}`, { stdio: ['ignore', 'pipe', 'ignore'] });
           console.log(`[main] killProcessOnPort(${port}): PID ${pid} (${name || 'desconhecido'}) finalizado.`);
         } catch (e) {
-          console.log(`[main] killProcessOnPort(${port}): falha ao matar PID ${pid} (${name || 'desconhecido'}): ${e.message}`);
+          if (pidVivo(pid)) {
+            console.log(`[main] killProcessOnPort(${port}): PID ${pid} (${name || 'desconhecido'}) resistiu ao taskkill.`);
+          } else {
+            console.log(`[main] killProcessOnPort(${port}): PID ${pid} (${name || 'desconhecido'}) ja tinha saido sozinho.`);
+          }
         }
       }
       if (!pids.size) console.log(`[main] killProcessOnPort(${port}): nenhum processo segurando a porta.`);

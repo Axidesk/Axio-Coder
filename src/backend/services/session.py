@@ -512,6 +512,22 @@ def fundir_grupos_de_log(existentes, novos):
         fusao.append(grupo)
     return fusao
 
+def sem_snapshot_nos_grupos(grupos):
+    """Tira do turno a COPIA do snapshot do projeto, que fica uma vez no topo.
+
+    O snapshot cumulativo (que carrega o CONTEUDO dos arquivos tocados) era gravado
+    dentro de cada turno, alem de uma vez no topo do ficheiro - o mesmo conteudo
+    repetido por turno. Medido no maior log deste projeto: 12 turnos, ~177 MB de
+    snapshot por turno, 2,3 GB de ficheiro. Todos os leitores preferem o do turno e
+    RECUAM para o do topo quando ele falta (restauracao, heranca, indice), e o topo
+    tem sempre o mesmo valor que os turnos recebiam - logo tirar as copias nao muda
+    o que se le, so o que se grava.
+    """
+    for grupo in grupos or []:
+        if isinstance(grupo, dict):
+            grupo.pop("snapshot", None)
+    return grupos
+
 def _iter_snapshot_caminhos(pasta_raiz, snapshot):
     """Itera (rel, meta, caminho) de um snapshot, ignorando metas nao-dict."""
     for rel, meta in (snapshot or {}).items():
