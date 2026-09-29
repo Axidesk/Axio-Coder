@@ -319,6 +319,81 @@ def ler_log_sessao(caminho):
         return dados
     raise ultimo_erro
 
+_BLOCO_CAUDA = 1 << 26
+
+def _parece_snapshot(dados):
+    if not isinstance(dados, dict):
+        return False
+    if not dados:
+        return True
+    for meta in dados.values():
+        if isinstance(meta, dict) and ("hash" in meta or "conteudo" in meta):
+            return True
+    return False
+
+def _recortar_snapshot(texto):
+    """O snapshot de topo a partir do ultimo marcador do ficheiro, sem o resto."""
+    pos = texto.rfind('"snapshot"')
+    if pos == -1:
+        return None
+    valor = texto.find(":", pos)
+    if valor == -1:
+        return None
+    abre = texto.find("{", valor)
+    if abre == -1:
+        return None
+    recorte = texto[abre:].rstrip()
+    candidatos = [recorte]
+    if recorte.endswith("}"):
+        candidatos.append(recorte[:-1])
+    corte = recorte.rfind("}")
+    if corte != -1:
+        candidatos.append(recorte[:corte + 1])
+    for candidato in candidatos:
+        try:
+            dados = json.loads(candidato)
+        except ValueError:
+            continue
+        if _parece_snapshot(dados):
+            return dados
+    return None
+
+def ler_snapshot_de_log(caminho):
+    """O snapshot de topo de um log, sem carregar os turnos.
+
+    O snapshot e a ULTIMA chave do ficheiro e, num log grande, e so ele que
+    interessa a quem reconstroi a heranca de um ponto: as rodadas valem 99,9% do
+    ficheiro e ficam de fora. A cauda e lida em blocos crescentes e o objecto sai
+    do ultimo marcador do texto - dentro de uma string JSON as aspas vao
+    escapadas, logo o marcador so encontra chaves a serio.
+
+    Devolve {} quando nao ha snapshot utilizavel; um log que nao se deixe ler
+    pela cauda cai na leitura completa.
+    """
+    try:
+        tamanho = os.path.getsize(caminho)
+    except OSError:
+        return {}
+    bloco = _BLOCO_CAUDA
+    while True:
+        inicio = max(0, tamanho - bloco)
+        try:
+            with open(caminho, "rb") as f:
+                f.seek(inicio)
+                cauda = f.read().decode("utf-8", "replace")
+        except OSError:
+            return {}
+        dados = _recortar_snapshot(cauda)
+        if dados is not None:
+            return dados
+        if inicio == 0:
+            break
+        bloco = min(bloco * 4, tamanho)
+    try:
+        return ler_log_sessao(caminho).get("snapshot") or {}
+    except Exception:
+        return {}
+
 CABECALHO_LOG_BYTES = 8192
 
 def ler_cabecalho_log_sessao(caminho):
@@ -654,10 +729,7 @@ def snapshot_sessao_anterior(pasta_logs, ignorar_session_id, antes_de=0):
             melhor_arq = arq
     if not melhor_arq:
         return {}
-    try:
-        snapshot = ler_log_sessao(os.path.join(pasta_logs, melhor_arq)).get("snapshot") or {}
-    except Exception:
-        return {}
+    snapshot = ler_snapshot_de_log(os.path.join(pasta_logs, melhor_arq))
     if not snapshot:
         return snapshot_sessao_anterior(pasta_logs, ignorar_session_id, melhor_ts)
     return snapshot
@@ -706,11 +778,7 @@ def snapshot_recomposto(pasta_logs, arq_alvo, teto=8):
     candidatos.sort()
     acumulado = {}
     for _ts, arq in candidatos[-teto:]:
-        try:
-            dados = ler_log_sessao(os.path.join(pasta_logs, arq))
-        except Exception:
-            continue
-        for rel, meta in (dados.get("snapshot") or {}).items():
+        for rel, meta in ler_snapshot_de_log(os.path.join(pasta_logs, arq)).items():
             if isinstance(meta, dict):
                 acumulado[rel] = meta
     return acumulado
@@ -739,7 +807,7 @@ def varredura_dos_logs(pasta_logs, arq_alvo=""):
 
     Devolve (aparicoes, versoes) e as duas saem da mesma leitura:
 
-    - `aparicoes`: {rel: ts da primeira aparição} em qualquer log (topo ou rodada).
+    - `aparicoes`: {rel: ts da primeira aparição} no snapshot de topo de cada log.
       Substitui a inferência por diferença de conjuntos: um arquivo só é
       considerado "criado depois do ponto" quando a sua primeira aparição
       registrada é posterior ao timestamp do checkpoint restaurado — o que
@@ -777,14 +845,8 @@ def varredura_dos_logs(pasta_logs, arq_alvo=""):
                 continue
         except OSError:
             continue
-        try:
-            dados = ler_log_sessao(caminho)
-        except Exception:
-            continue
-        snap = dados.get("snapshot") or {}
+        snap = ler_snapshot_de_log(caminho)
         caminhos = set(snap.keys())
-        for grupo in dados.get("logs", []):
-            caminhos.update((grupo.get("snapshot") or {}).keys())
         for rel in caminhos:
             atual = aparicoes.get(rel)
             if atual is None or ts < atual:
