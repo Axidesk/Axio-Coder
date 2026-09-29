@@ -668,16 +668,24 @@ def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, l
 
     dest_existia = os.path.exists(dest_abs)
     conteudo_dest = ""
+    ja_no_destino = False
     if dest_existia:
         with open(dest_abs, "r", encoding="utf-8", errors="ignore") as f:
             conteudo_dest = f.read()
         if corpo in conteudo_dest.replace("\r\n", "\n"):
-            return f"ERRO: O bloco já existe no destino '{arquivo_destino}'. Mover novamente causaria duplicação."
+            if not remover_origem:
+                return f"ERRO: O bloco já existe no destino '{arquivo_destino}'. Mover novamente causaria duplicação."
+            ja_no_destino = True
 
-    gravacao = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors="ignore")
-    diff_dest, grupo_mover = gravacao.diff, gravacao.grupo
+    if ja_no_destino:
+        diff_dest, grupo_mover = [], f"mover-{uuid.uuid4().hex[:12]}"
+    else:
+        gravacao = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors="ignore")
+        diff_dest, grupo_mover = gravacao.diff, gravacao.grupo
 
     verificacoes = []
+    if ja_no_destino:
+        verificacoes.append("DESTINO: ja tinha o bloco (movimento anterior interrompido) - nada reescrito")
     with open(dest_abs, "r", encoding="utf-8", errors="ignore") as f:
         conteudo_dest_final = f.read()
     if corpo in conteudo_dest_final.replace("\r\n", "\n"):
