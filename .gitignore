@@ -35,6 +35,15 @@ out/
 src/frontend/vendor/viewer/dist/
 src/frontend/vendor/viewer/pptx.browser.es.js
 
+# Artefactos de compilacao nativa (um build nativo que corra com a raiz do Axio
+# como pasta de trabalho deixa o simbolo e o objeto aqui, nunca os versionar)
+*.pdb
+*.ilk
+*.obj
+*.idb
+*.exp
+*.tlog
+
 # Custom
 .axio/
 .ai_memory/

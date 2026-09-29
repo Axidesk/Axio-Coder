@@ -340,6 +340,13 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
     todas_antes = _ficheiros_em_stage(raiz)
     linhas = []
     if lista:
+        pedidos = [p.replace("\\", "/").removeprefix("./") for p in lista]
+        sobra = [n for n in todas_antes if n.replace("\\", "/").removeprefix("./") not in pedidos]
+        if sobra:
+            git_saida(raiz, "reset")
+            linhas.append("STAGE ANTERIOR LIMPO: estava em stage o que nao foi pedido (" +
+                          ", ".join(sobra[:8]) + (f" e mais {len(sobra) - 8}" if len(sobra) > 8 else "") +
+                          ") - o commit leva so os caminhos indicados.")
         _, erro = git_saida(raiz, "add", "--", *lista)
         linhas.append("git add " + " ".join(lista) + ": " + (f"ERRO: {erro}" if erro else "ok"))
     elif prefixo:
@@ -526,7 +533,8 @@ def tool_estado_git(caminho="", tags=_TAGS_POR_OMISSAO, vitrine=True, diff=True)
     "nada, nem no stage. RECUSA tambem quando um 'add -A' cego apanharia material de OUTRO projeto "
     "(um .sln/.vcxproj/.pro/.props/CMakeLists.txt dentro da pasta): este repositorio nao tem nenhum, "
     "logo pertence a um projeto que vive ali dentro (um projeto de exemplo, uma copia do Visual "
-    "Studio) e entrava misturado no commit. Com 'ficheiros' indicado a mao, a escolha e do utilizador "
+    "Studio) e entrava misturado no commit. Com 'ficheiros' indicado a mao, o commit leva EXATAMENTE "
+    "esses caminhos - o que estivesse em stage de outra operacao e tirado antes, e a resposta di-lo - "
     "e so os segredos continuam a bloquear. Quando a pasta do projeto ainda nao tem repositorio, RECUSA - a nao ser que "
 "criar=True, e entao cria um repositorio git ALI, na pasta do projeto (nunca no repositorio de outro "
 "projeto); vale o mesmo para uma pasta HOSPEDE, que vive dentro do repositorio de outra coisa mas esta "
