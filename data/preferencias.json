@@ -129,6 +129,11 @@
       "area": "operacoes longas",
       "texto": "NUNCA ficar 98 minutos numa rodada à espera de uma operação (foi o que aconteceu a copiar o boost). Regra: (1) MEDIR antes de arrancar qualquer coisa que mexa em muitos ficheiros ou gigabytes - contar, sondar a velocidade real e dizer o tempo previsto com a margem; (2) se o previsto passar ~2 minutos, NÃO fazer sozinho: dizer ao utilizador o que ele faz à mão (arrastar no Explorador, que copia com vários fios) e seguir; (3) o que correr demora tem de aparecer na BARRA DE PROGRESSO do terminal, com o tempo que falta medido a sério - instalação, compilação, cópia, um trecho longo; (4) nada de varrer/polling repetido do mesmo estado em chamadas seguidas - se é longo e não tem barra, é porque devia correr como card.",
       "atualizado": "2026-09-28 22:19:58"
+    },
+    {
+      "area": "portabilidade",
+      "texto": "NENHUM caminho absoluto no que vai para o repositorio (pedido a 2026-10-10, repetido: \"eu n queria absolutamente nenhum caminho hardcoded\"). O projeto tem de funcionar em qualquer maquina e em qualquer pasta - um clone, um Build, zero configuracao; e o mesmo vale se ele mudar o projeto de sitio ou formatar o PC. Ordem de preferencia: (1) caminho CALCULADO em runtime a partir do proprio ficheiro (subir a arvore ate encontrar um marcador de conteudo, nunca por nome de pasta); (2) variavel de ambiente; (3) ficheiro de sobreposicao local FORA do git (config.local.php) para quem tiver de fixar um caminho a mao. O `Directory.Build.props`/$(TibiaLibs) do Tibia74 e o `data_dir.php` do site sao os modelos. Isto vale para o codigo, para os ficheiros de projeto de build, para os scripts de configuracao e para os caminhos escritos em ficheiros de configuracao de servidor. Quando so houver mesmo um caminho absoluto como solucao, ele fica num ficheiro ignorado pelo git e digo-o.",
+      "atualizado": "2026-09-29 00:40:05"
     }
   ]
 }

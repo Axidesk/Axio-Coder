@@ -1,4 +1,5 @@
 import ast
+import collections
 import hashlib
 import os
 import re
@@ -281,9 +282,11 @@ def _include_da_classe(origem_abs, dest_abs, nome_funcao):
     return f'#include "{relativo}"'
 
 
+ResultadoGravacao = collections.namedtuple("ResultadoGravacao", ("diff", "grupo", "include_novo"))
+
 def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem,
                               include_extra="", errors=None):
-    """Anexa `corpo` ao destino, registra no undo e grava. Devolve (diff, grupo, include_novo)."""
+    """Anexa `corpo` ao destino, registra no undo e grava. Devolve ResultadoGravacao (campos por nome)."""
     novo_dest = conteudo_dest
     include_novo = False
     if include_extra:
@@ -299,7 +302,7 @@ def _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remo
     registrar_edicao(dest_abs, None if not dest_existia else conteudo_dest, novo_dest, grupo=grupo_mover)
     with open(dest_abs, "w", encoding="utf-8", errors=errors) as f:
         f.write(novo_dest)
-    return gerar_diff(conteudo_dest, novo_dest), grupo_mover, include_novo
+    return ResultadoGravacao(gerar_diff(conteudo_dest, novo_dest), grupo_mover, include_novo)
 
 def _emitir_diff_movido(arquivo_origem, arquivo_destino, conteudo_orig, novo_orig, diff_dest):
     """Gera o diff da origem e o diff combinado (removido + adicionado) e emite o evento 'moved'."""
@@ -387,8 +390,9 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
     include_extra = ""
     if cpp.eh_cpp(origem_abs) and cpp.eh_cpp(dest_abs):
         include_extra = _include_da_classe(origem_abs, dest_abs, nome_funcao)
-    diff_dest, grupo_mover, include_novo = _gravar_destino_com_corpo(
+    gravacao = _gravar_destino_com_corpo(
         dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, include_extra)
+    diff_dest, grupo_mover, include_novo = gravacao.diff, gravacao.grupo, gravacao.include_novo
     if remover_origem:
         with open(origem_abs, "r", encoding="utf-8") as f:
             conteudo_orig = f.read()
@@ -670,7 +674,8 @@ def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, l
         if corpo in conteudo_dest.replace("\r\n", "\n"):
             return f"ERRO: O bloco já existe no destino '{arquivo_destino}'. Mover novamente causaria duplicação."
 
-    diff_dest, grupo_mover = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors="ignore")
+    gravacao = _gravar_destino_com_corpo(dest_abs, dest_existia, conteudo_dest, corpo, remover_origem, errors="ignore")
+    diff_dest, grupo_mover = gravacao.diff, gravacao.grupo
 
     verificacoes = []
     with open(dest_abs, "r", encoding="utf-8", errors="ignore") as f:
