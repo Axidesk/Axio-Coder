@@ -5,6 +5,7 @@ import ctypes
 import os
 import re
 import sysconfig
+import threading
 from pathlib import Path
 
 MODELOS_DE_SONDA = ("PP-OCRv6_det_small.onnx", "PP-OCRv6_rec_small.onnx")
@@ -12,6 +13,7 @@ MODELOS_DE_SONDA = ("PP-OCRv6_det_small.onnx", "PP-OCRv6_rec_small.onnx")
 MAX_ERRO = 220
 
 _ESTADO = {}
+_PRE_CARGA = None
 
 
 def _site_packages():
@@ -63,22 +65,52 @@ def precarregar_cudnn():
     return falhadas
 
 
-def preparar():
-    """(ok, motivo): regista as pastas e pre-carrega o cuDNN uma so vez por processo."""
-    if "preparado" in _ESTADO:
-        return _ESTADO["preparado"]
+def _veredicto(registadas, falhadas):
+    if falhadas:
+        return (False, "DLLs do cuDNN que nao carregaram: " + ", ".join(falhadas[:3]))
+    if not registadas:
+        return (False, "runtime CUDA do pip ausente (pip install onnxruntime-gpu[cuda,cudnn])")
+    return (True, f"{registadas} pasta(s) de runtime registadas")
+
+
+def iniciar_preparacao():
+    """Solta o arranque do servidor: regista as pastas (rapido) e carrega o cuDNN numa
+    thread, que e a parte lenta (medido: 24s a carregar as DLLs antes de o socket abrir)."""
+    global _PRE_CARGA
+    if "preparado" in _ESTADO or _PRE_CARGA is not None:
+        return
     try:
-        registadas = registar_dlls()
-        falhadas = precarregar_cudnn()
+        _ESTADO["registadas"] = registar_dlls()
     except Exception as erro:
         _ESTADO["preparado"] = (False, f"falhou ao preparar as DLLs ({type(erro).__name__})")
+        return
+
+    def _carregar():
+        try:
+            _ESTADO["falhadas"] = precarregar_cudnn()
+        except Exception:
+            _ESTADO["falhadas"] = ["falha ao pre-carregar o cuDNN"]
+
+    _PRE_CARGA = threading.Thread(target=_carregar, daemon=True, name="pre-carga-cudnn")
+    _PRE_CARGA.start()
+
+
+def preparar():
+    """(ok, motivo): regista as pastas e pre-carrega o cuDNN uma so vez por processo.
+    Se a pre-carga estiver a decorrer em segundo plano, espera por ela - o veredicto
+    nunca sai antes de as DLLs estarem carregadas."""
+    if "preparado" in _ESTADO:
         return _ESTADO["preparado"]
-    if falhadas:
-        _ESTADO["preparado"] = (False, "DLLs do cuDNN que nao carregaram: " + ", ".join(falhadas[:3]))
-    elif not registadas:
-        _ESTADO["preparado"] = (False, "runtime CUDA do pip ausente (pip install onnxruntime-gpu[cuda,cudnn])")
+    if _PRE_CARGA is None:
+        try:
+            _ESTADO["registadas"] = registar_dlls()
+            _ESTADO["falhadas"] = precarregar_cudnn()
+        except Exception as erro:
+            _ESTADO["preparado"] = (False, f"falhou ao preparar as DLLs ({type(erro).__name__})")
+            return _ESTADO["preparado"]
     else:
-        _ESTADO["preparado"] = (True, f"{registadas} pasta(s) de runtime registadas")
+        _PRE_CARGA.join()
+    _ESTADO["preparado"] = _veredicto(_ESTADO.get("registadas", 0), _ESTADO.get("falhadas") or [])
     return _ESTADO["preparado"]
 
 

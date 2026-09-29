@@ -23,8 +23,11 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
+const ENDERECO_DA_APP = 'http://127.0.0.1:5000/';
+const ESPERA_MAXIMA_DO_SERVIDOR = 600000;
 let mainWindow;
 let flaskProcess;
+let esperaEmCurso = false;
 let temaAtual = 'dark';
 let inspectAtivo = false;
 let asanAtivo = false;
@@ -107,18 +110,13 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoomDaInterface);
     descartarRaciocinioView();
   });
-  mainWindow.loadURL('http://127.0.0.1:5000/');
+  mainWindow.loadURL(paginaDeEspera());
 
-  let loadAttempts = 0;
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    if (errorDescription === 'ERR_CONNECTION_REFUSED' && loadAttempts < 30) {
-      loadAttempts += 1;
-      setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.loadURL('http://127.0.0.1:5000/');
-        }
-      }, 1000);
-    }
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (errorDescription !== 'ERR_CONNECTION_REFUSED') return;
+    if (typeof validatedURL === 'string' && validatedURL.indexOf('data:') === 0) return;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(paginaDeEspera());
+    esperarServidorECarregar();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -159,26 +157,84 @@ function createWindow() {
 }
 
 function waitForFlask(url, cb) {
-  let attempts = 0;
+  const inicio = Date.now();
+  let ultimoAviso = 0;
+  const carregarNaMesma = () => {
+    console.log('[main] O servidor nao ficou pronto; a carregar a janela mesmo assim.');
+    cb();
+  };
   const tryConnect = () => {
     const req = http.get(url, (res) => {
       res.resume();
+      if (res.statusCode < 200 || res.statusCode >= 400) {
+        setTimeout(tryConnect, 250);
+        return;
+      }
       flaskRestarts = 0;
+      console.log(`[main] Servidor pronto em ${((Date.now() - inicio) / 1000).toFixed(1)}s -> ${url}`);
       cb();
     });
     req.on('error', () => {
-      attempts += 1;
-      if (attempts > 60) {
-        cb();
-      } else {
-        setTimeout(tryConnect, 500);
+      const decorrido = Date.now() - inicio;
+      if (flaskRestarts > 5 && !flaskProcess && !reiniciandoBackend) {
+        console.log('[main] O backend caiu e esgotou as reinicializacoes.');
+        carregarNaMesma();
+        return;
       }
+      if (decorrido > ESPERA_MAXIMA_DO_SERVIDOR) {
+        carregarNaMesma();
+        return;
+      }
+      if (decorrido - ultimoAviso >= 5000) {
+        ultimoAviso = decorrido;
+        console.log(`[main] Backend ainda a arrancar: a espera vai em ${(decorrido / 1000).toFixed(0)}s (nada e pedido ao servidor ate ele responder).`);
+      }
+      setTimeout(tryConnect, 250);
     });
     req.setTimeout(2000, () => {
       req.destroy();
     });
   };
   tryConnect();
+}
+
+function esperarServidorECarregar() {
+  if (esperaEmCurso) return;
+  esperaEmCurso = true;
+  waitForFlask(ENDERECO_DA_APP, () => {
+    esperaEmCurso = false;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(ENDERECO_DA_APP);
+  });
+}
+
+function paginaDeEspera() {
+  const html = `<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: #1e1e1e; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+  .caixa { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .anel { width: 34px; height: 34px; border-radius: 50%; background: #3f8cff; opacity: .35; animation: pulso 1.4s ease-in-out infinite; }
+  @keyframes pulso { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+  .texto { color: #9ca3af; font-size: 13px; letter-spacing: .3px; }
+  .contador { color: #5b6169; font-size: 11px; }
+</style>
+</head>
+<body>
+  <div class="caixa">
+    <div class="anel"></div>
+    <div class="texto">A preparar o Axio...</div>
+    <div class="contador" id="contador"></div>
+  </div>
+  <script>
+    let s = 0;
+    setInterval(() => { s += 1; document.getElementById('contador').textContent = s + 's'; }, 1000);
+  </script>
+</body>
+</html>`;
+  return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
 }
 
 function killProcessOnPort(port) {
@@ -269,6 +325,7 @@ function startFlask() {
     setTimeout(() => {
       killProcessOnPort(5000);
       startFlask();
+      esperarServidorECarregar();
     }, 1000);
   });
 }
@@ -289,7 +346,7 @@ function restartFlask() {
   setTimeout(() => {
     killProcessOnPort(5000);
     startFlask();
-    waitForFlask('http://127.0.0.1:5000/', () => {
+    waitForFlask(ENDERECO_DA_APP, () => {
       reiniciandoBackend = false;
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.reloadIgnoringCache();
@@ -1346,8 +1403,9 @@ app.on('ready', () => {
     pontePorta = porta;
     ponteToken = token;
     if (porta) console.log(`[main] Ponte do preview a escutar em 127.0.0.1:${porta}`);
+    createWindow();
     startFlask();
-    waitForFlask('http://127.0.0.1:5000/', createWindow);
+    esperarServidorECarregar();
   });
 });
 

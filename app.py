@@ -7,9 +7,9 @@ os.environ.setdefault("OMP_NUM_THREADS", "4")
 
 carregar_env()
 
-from src.backend.services.aceleracao import preparar as _registar_runtime_cuda
+from src.backend.services.aceleracao import iniciar_preparacao as _iniciar_runtime_cuda
 
-_registar_runtime_cuda()
+_iniciar_runtime_cuda()
 
 import sys
 import logging
