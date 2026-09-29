@@ -187,7 +187,7 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
         blocos.append(achados)
     if resultado.returncode == 0:
         notificar_mudanca_arquivos()
-        resumo = _resumo_do_build(pasta, crua, time.time() - inicio, marca)
+        resumo = _resumo_do_build(pasta, crua, time.time() - inicio, marca, produzidos)
         blocos.append(f"{resumo}\n{_texto_executaveis(produzidos)}\n{saida}")
         return True, "\n\n".join(blocos)
     blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
@@ -201,7 +201,7 @@ def _comando_com_alvo(plano, alvo):
         return plano["construir"].replace("/t:Build", f"/t:{alvo}")
     return f"{plano['construir']} --target {alvo}"
 
-def _resumo_do_build(pasta, saida_crua, decorrido, marca):
+def _resumo_do_build(pasta, saida_crua, decorrido, marca, produzidos=()):
     """O que este build custou de verdade: quantas fontes recompilou, em quanto tempo, e porque.
 
     Um '.cpp' editado custa segundos; um cabecalho editado obriga a refazer tudo o que o inclui e
@@ -213,6 +213,14 @@ def _resumo_do_build(pasta, saida_crua, decorrido, marca):
     quantas = len(nomes) or feito
     tempo = duracao_texto(decorrido)
     if not quantas:
+        if produzidos:
+            escritos = ", ".join(p["caminho"].replace("\\", "/") for p in produzidos[:3])
+            return (f"LIGADO (exit 0) em {tempo}: nenhuma fonte recompilada, mas a ligacao correu e "
+                    f"escreveu {escritos}.\n"
+                    "  Isto PROVA a mudanca de bibliotecas, de opcoes de ligacao ou de plataforma - nao "
+                    "a mudanca de codigo-fonte.\n"
+                    "  Se o que mudou foi um include, um define ou um caminho de include, o MSBuild nao "
+                    "o reavalia sozinho: repita com alvo='Rebuild' ou apague a pasta dos objetos.")
         return (f"NADA COMPILADO (exit 0) em {tempo}: as saidas ja estavam atualizadas, logo este build "
                 "NAO PROVA NADA sobre o codigo.\n"
                 "  Se acabou de mexer na CONFIGURACAO (caminhos de include/lib, defines, plataforma), o "
