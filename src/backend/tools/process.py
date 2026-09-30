@@ -281,7 +281,16 @@ def _validar_comando_processo(comando):
         )
     sugestao = ferramenta_nativa_do_comando(cmd)
     dica = f" Use: {sugestao}." if sugestao else ""
-    return False, f"Executável '{exe}' não está na lista permitida.{dica}"
+    permitidos = ", ".join(sorted(set(
+        COMPILADORES + FERRAMENTAS_DE_CODIGO + VERSIONAMENTO_E_NUVEM + MIDIA + REDE_E_SISTEMA
+        + INSTALADORES_DE_PACOTES + ALIASES_DE_PYTHON
+        + ("pip", "pip3", "uv", "poetry", "pipx", "npx", "bunx", "npm", "yarn", "pnpm",
+           "bun", "deno", "node", "flask", "winget")
+    ) - {"winget"}))
+    return False, (
+        f"Executável '{exe}' não está na lista permitida.{dica}\n"
+        f"Permitidos: {permitidos}."
+    )
 
 
 def ferramenta_nativa_do_comando(comando):
