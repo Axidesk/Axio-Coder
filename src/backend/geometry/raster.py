@@ -2,24 +2,12 @@ import math
 
 import numpy as np
 
-try:
-    from numba import njit
-
-    _COMPILADO = True
-except ImportError:
-    _COMPILADO = False
-
-    def njit(**configuracao):
-        def envolver(funcao):
-            return funcao
-
-        return envolver
+_MOTOR = None
 
 
 TOLERANCIA_BORDA = 1e-6
 
 
-@njit(cache=True)
 def _rasterizar_compilado(pixels, profundidades, cores, buffer_z, buffer_cor, dono):
     pintados = 0
     for t in range(pixels.shape[0]):
@@ -122,6 +110,20 @@ def _rasterizar_vetorizado(pixels, profundidades, cores, buffer_z, buffer_cor, d
     return pintados
 
 
+def _motor_de_rasterizacao():
+    """Escolhe o motor na PRIMEIRA chamada - importar numba no topo custa 0,6s e 120 MB de DLL."""
+    global _MOTOR
+
+    if _MOTOR is None:
+        try:
+            from numba import njit
+
+            _MOTOR = njit(cache=True)(_rasterizar_compilado)
+        except ImportError:
+            _MOTOR = _rasterizar_vetorizado
+    return _MOTOR
+
+
 class Rasterizador:
     def __init__(self, largura, altura, fundo):
         self.largura = int(largura)
@@ -138,7 +140,7 @@ class Rasterizador:
         cores = np.ascontiguousarray(cores, dtype=np.uint8)
         if not len(pixels):
             return 0
-        motor = _rasterizar_compilado if _COMPILADO else _rasterizar_vetorizado
+        motor = _motor_de_rasterizacao()
         self.pintados = motor(pixels, profundidades, cores, self.profundidade, self.cor, self.dono)
         return self.pintados
 

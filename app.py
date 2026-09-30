@@ -7,7 +7,10 @@ os.environ.setdefault("OMP_NUM_THREADS", "4")
 
 carregar_env()
 
-from src.backend.services.aceleracao import iniciar_preparacao as _iniciar_runtime_cuda
+from src.backend.services.aceleracao import (
+    aquecer_em_segundo_plano as _aquecer_cudnn,
+    iniciar_preparacao as _iniciar_runtime_cuda,
+)
 
 _iniciar_runtime_cuda()
 
@@ -65,4 +68,5 @@ if __name__ == '__main__':
     migrar_automatico_padrao()
     preaquecer_mempalace()
     iniciar_vigia_do_envio()
+    _aquecer_cudnn(5000)
     socketio.run(app, port=5000, debug=False, allow_unsafe_werkzeug=True)

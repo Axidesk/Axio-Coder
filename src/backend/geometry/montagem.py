@@ -1,12 +1,24 @@
 import math
 
-import ifcopenshell
-import ifcopenshell.geom
-import ifcopenshell.guid
-import ifcopenshell.util.shape
-import ifcopenshell.validate
-
 from src.backend.geometry.pecas import Extrusao, Revolucao
+
+
+class _IfcopenshellAdiado:
+    """Carrega o ifcopenshell no primeiro uso - no topo custa 0,45s e 56 MB de DLL no arranque."""
+
+    def __getattr__(self, nome):
+        global ifcopenshell
+
+        import ifcopenshell
+        import ifcopenshell.geom
+        import ifcopenshell.guid
+        import ifcopenshell.util.shape
+        import ifcopenshell.validate
+
+        return getattr(ifcopenshell, nome)
+
+
+ifcopenshell = _IfcopenshellAdiado()
 
 
 class Montador:

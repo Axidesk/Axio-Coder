@@ -1,11 +1,11 @@
 import math
 
-import cadquery as cq
-
 from src.backend.geometry.pecas import Extrusao, Malha, Revolucao
 
 
 def escrever_step(caminho, modelo):
+    import cadquery as cq  # adiado de proposito: no topo custa 2,9s e ~800 MB de DLL no arranque
+
     motivo = motivo_de_recusa(modelo)
     if motivo:
         raise ValueError(motivo)
@@ -26,6 +26,8 @@ def motivo_de_recusa(modelo):
 
 
 def medir_step(caminho):
+    import cadquery as cq
+
     importado = cq.importers.importStep(caminho)
     volumes = []
     for forma in importado.vals():
@@ -38,6 +40,8 @@ def medir_step(caminho):
 
 
 def _solido(peca):
+    import cadquery as cq
+
     plano = cq.Plane(origin=peca.origem, xDir=peca.eixo_x, normal=peca.eixo_z)
     contorno = cq.Workplane(plano).polyline(list(peca.perfil.pontos)).close()
     if isinstance(peca.operacao, Extrusao):

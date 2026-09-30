@@ -4,8 +4,10 @@ runtime CUDA, pre-carga do cuDNN e veredicto por inferencia real.
 import ctypes
 import os
 import re
+import socket
 import sysconfig
 import threading
+import time
 from pathlib import Path
 
 MODELOS_DE_SONDA = ("PP-OCRv6_det_small.onnx", "PP-OCRv6_rec_small.onnx")
@@ -73,25 +75,48 @@ def _veredicto(registadas, falhadas):
     return (True, f"{registadas} pasta(s) de runtime registadas")
 
 
+def _carregar_cudnn():
+    try:
+        _ESTADO["falhadas"] = precarregar_cudnn()
+    except Exception:
+        _ESTADO["falhadas"] = ["falha ao pre-carregar o cuDNN"]
+
+
 def iniciar_preparacao():
-    """Solta o arranque do servidor: regista as pastas (rapido) e carrega o cuDNN numa
-    thread, que e a parte lenta (medido: 24s a carregar as DLLs antes de o socket abrir)."""
-    global _PRE_CARGA
-    if "preparado" in _ESTADO or _PRE_CARGA is not None:
+    """Regista as pastas bin/ do runtime CUDA. Nao carrega DLL nenhuma: e so apontar o
+    caminho, por isso cabe no arranque - a carga do cuDNN (1,1 GB) fica para depois."""
+    if "preparado" in _ESTADO or "registadas" in _ESTADO:
         return
     try:
         _ESTADO["registadas"] = registar_dlls()
     except Exception as erro:
         _ESTADO["preparado"] = (False, f"falhou ao preparar as DLLs ({type(erro).__name__})")
+
+
+def aquecer_em_segundo_plano(porta=5000, espera=20.0):
+    """Carrega o cuDNN SO depois de o servidor estar a atender. As 10 DLLs do cuDNN somam
+    1,1 GB e, a competir com os imports e com a propria pagina a carregar, levavam o
+    arranque de segundos a minutos - medido: 130s com a thread a puxar pelo disco."""
+    global _PRE_CARGA
+    if _PRE_CARGA is not None or "preparado" in _ESTADO:
         return
 
-    def _carregar():
-        try:
-            _ESTADO["falhadas"] = precarregar_cudnn()
-        except Exception:
-            _ESTADO["falhadas"] = ["falha ao pre-carregar o cuDNN"]
+    def _espera():
+        limite = time.time() + 120
+        while time.time() < limite:
+            sonda = socket.socket()
+            try:
+                sonda.settimeout(0.2)
+                sonda.connect(("127.0.0.1", porta))
+                sonda.close()
+                break
+            except OSError:
+                sonda.close()
+                time.sleep(0.2)
+        time.sleep(espera)
+        _carregar_cudnn()
 
-    _PRE_CARGA = threading.Thread(target=_carregar, daemon=True, name="pre-carga-cudnn")
+    _PRE_CARGA = threading.Thread(target=_espera, daemon=True, name="pre-carga-cudnn")
     _PRE_CARGA.start()
 
 
@@ -101,13 +126,11 @@ def preparar():
     nunca sai antes de as DLLs estarem carregadas."""
     if "preparado" in _ESTADO:
         return _ESTADO["preparado"]
+    iniciar_preparacao()
+    if "preparado" in _ESTADO:
+        return _ESTADO["preparado"]
     if _PRE_CARGA is None:
-        try:
-            _ESTADO["registadas"] = registar_dlls()
-            _ESTADO["falhadas"] = precarregar_cudnn()
-        except Exception as erro:
-            _ESTADO["preparado"] = (False, f"falhou ao preparar as DLLs ({type(erro).__name__})")
-            return _ESTADO["preparado"]
+        _carregar_cudnn()
     else:
         _PRE_CARGA.join()
     _ESTADO["preparado"] = _veredicto(_ESTADO.get("registadas", 0), _ESTADO.get("falhadas") or [])
