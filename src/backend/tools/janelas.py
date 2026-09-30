@@ -935,10 +935,10 @@ def _teclas_viraram_texto(antes, depois, tecla):
     return [p for p in palavras if p.lower() in ganho.lower() and p.lower() not in antes.lower()]
 
 
-def _pontos(pedido):
+def _pontos(pedido, minimo=4):
     """[(x, y), ...] de 'x,y' ou de varios pares seguidos ('x1,y1 x2,y2 ...'), em coordenadas do ecra."""
     numeros = [int(n) for n in re.findall(r"-?\d+", str(pedido or ""))]
-    if len(numeros) < 4 or len(numeros) % 2:
+    if len(numeros) < minimo or len(numeros) % 2:
         return []
     return list(zip(numeros[::2], numeros[1::2]))
 
@@ -974,7 +974,7 @@ def _arrastar(pontos):
 
 
 def _acao_clique_ponto(janela, pedido):
-    pontos = _pontos(pedido)
+    pontos = _pontos(pedido, minimo=2)
     if not pontos:
         return "ERRO: em acao='clicar' com 'ponto', escreva 'x,y' em coordenadas do ecra."
     erro = _focar(janela)
