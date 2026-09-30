@@ -28,6 +28,9 @@ PASTAS_IGNORADAS = {
     "ipch", "CMakeFiles", "out",
 }
 
+SUFIXOS_DE_PROJETO = (".sln", ".vcxproj", ".props", ".pro")
+NOMES_DE_PROJETO = ("CMakeLists.txt",)
+
 ARQUIVOS_IGNORADOS = {"busca.txt"}
 
 TAMANHO_MAX = 2 * 1024 * 1024
@@ -35,6 +38,7 @@ LIMITE_PRE_CACHE = 2000
 
 _cache = {}
 _vistos = {}
+_pastas_de_projeto = {}
 _lock = threading.Lock()
 _stop_event = None
 _thread = None
@@ -49,6 +53,35 @@ def _rel(caminho):
     except ValueError:
         return caminho.replace("\\", "/")
 
+def e_pasta_de_outro_projeto(caminho):
+    """Pasta que traz o proprio projeto (solucao, cmake, git) e um projeto a parte.
+
+    O Axio nao a vigia nem a guarda no snapshot, tal como o .gitignore dele ja nao a
+    versiona. Sem esta poda o boost de um projeto vizinho dentro de docs/ entrava na
+    arvore: medido, 18754 ficheiros e 205 MB lidos a cada gravacao (67s a frio).
+    """
+    try:
+        nomes = os.listdir(caminho)
+    except OSError:
+        return False
+    if ".git" in nomes:
+        return True
+    return any(n in NOMES_DE_PROJETO or n.endswith(SUFIXOS_DE_PROJETO) for n in nomes)
+
+def _em_pasta_de_outro_projeto(caminho):
+    """Sobe a arvore a partir do ficheiro e diz se algum nivel e um projeto a parte."""
+    raiz = os.path.abspath(estado.get("pasta_raiz", "") or "")
+    pasta = os.path.dirname(os.path.abspath(caminho))
+    while pasta and pasta != raiz and os.path.dirname(pasta) != pasta:
+        marca = _pastas_de_projeto.get(pasta)
+        if marca is None:
+            marca = e_pasta_de_outro_projeto(pasta)
+            _pastas_de_projeto[pasta] = marca
+        if marca:
+            return True
+        pasta = os.path.dirname(pasta)
+    return False
+
 def _deve_avisar(caminho):
     """Portao de CAMINHO: decide o que a interface tem de ver, seja texto ou binario.
 
@@ -61,7 +94,9 @@ def _deve_avisar(caminho):
     if nome.endswith(("~", ".swp", ".tmp", ".bak", ".orig")):
         return False
     partes = _rel(caminho).replace("\\", "/").split("/")
-    return not any(p in PASTAS_IGNORADAS for p in partes)
+    if any(p in PASTAS_IGNORADAS for p in partes):
+        return False
+    return not _em_pasta_de_outro_projeto(caminho)
 
 def _tem_conteudo_texto(caminho):
     nome = os.path.basename(caminho)
@@ -107,7 +142,8 @@ def _preencher_cache(raiz):
     with _lock:
         _cache.clear()
     for root, dirs, files in os.walk(raiz):
-        dirs[:] = [d for d in dirs if d not in PASTAS_IGNORADAS]
+        dirs[:] = [d for d in dirs if d not in PASTAS_IGNORADAS
+                   and not e_pasta_de_outro_projeto(os.path.join(root, d))]
         for nome in files:
             if contador >= LIMITE_PRE_CACHE:
                 return

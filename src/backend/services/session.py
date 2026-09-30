@@ -3,7 +3,7 @@ import json
 import re
 import time
 
-from src.backend.services.file_watcher import PASTAS_IGNORADAS, TAMANHO_MAX
+from src.backend.services.file_watcher import PASTAS_IGNORADAS, TAMANHO_MAX, e_pasta_de_outro_projeto
 from src.backend.services.persistencia import gravar_json_atomico
 from src.backend.state import estado, caminho_estado_projeto
 def _caminho_checkpoint():
@@ -666,7 +666,11 @@ def capturar_arvore(pasta_raiz, referencia=None, teto_bytes=TAMANHO_MAX):
     isso nunca era restaurado nem removido. Aqui a arvore e lida inteira e
     comparada com `referencia` (o snapshot herdado, ja em memoria) - entra o
     caminho que falta e o que tem conteudo diferente. Medido no projeto real:
-    136 arquivos / 2,1 MB em 0,033s.
+    282 arquivos / 5,7 MB em 0,1s.
+
+    Uma pasta que traz o proprio projeto (`.git`, `.sln`, `.vcxproj`, `CMakeLists.txt`)
+    e um projeto A PARTE e nao entra: os projetos vizinhos dentro de `docs/projetos/`
+    punham 18754 arquivos (205 MB, 67s a frio) nesta leitura a cada gravacao.
 
     `PASTAS_IGNORADAS` e a MESMA lista que alimenta o file_watcher, para o
     registo descrever exatamente o que a arvore do editor mostra. Binarios e
@@ -678,7 +682,8 @@ def capturar_arvore(pasta_raiz, referencia=None, teto_bytes=TAMANHO_MAX):
     referencia = referencia or {}
     capturado = {}
     for dirpath, dirnames, filenames in os.walk(pasta_raiz):
-        dirnames[:] = [d for d in dirnames if d not in PASTAS_IGNORADAS]
+        dirnames[:] = [d for d in dirnames if d not in PASTAS_IGNORADAS
+                       and not e_pasta_de_outro_projeto(os.path.join(dirpath, d))]
         for nome in filenames:
             caminho = os.path.join(dirpath, nome)
             try:
