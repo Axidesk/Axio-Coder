@@ -127,6 +127,8 @@ def _preparar(pasta, configuracao):
     falha = _bloqueio(plano)
     if falha:
         return falha
+    if not plano.get("configurar"):
+        return _texto_plano(plano) + "\n\n" + _texto_sem_configuracao(plano)
     _, texto = _configurar(pasta, plano)
     return _texto_plano(plano) + "\n\n" + texto
 
@@ -522,6 +524,13 @@ def _texto_faltam(plano):
     if deteccao:
         linhas += ["", _texto_deteccao(deteccao)]
     return "\n".join(linhas)
+
+def _texto_sem_configuracao(plano):
+    """Projeto que o motor de build compila sem passo de configuracao - um .sln do Visual Studio."""
+    if (plano.get("escolha") or {}).get("msbuild"):
+        return ("NADA A CONFIGURAR: um projeto do Visual Studio compila direto dos ficheiros do "
+                "projeto, sem preset nem cache de configuracao. Corra acao='construir'.")
+    return "NADA A CONFIGURAR: este projeto nao tem passo de configuracao. Corra acao='construir'."
 
 def _texto_plano(plano):
     deteccao = plano["deteccao"]
