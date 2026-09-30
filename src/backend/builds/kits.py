@@ -50,6 +50,15 @@ _LINGUAGENS_SEM_KIT = {
     "go": ("a ferramenta do Go", ("go",)),
 }
 
+_PASTAS_PLAUSIVEIS = {
+    "cargo": ("~/.cargo/bin", "~/.rustup/toolchains/*/bin"),
+    "rustc": ("~/.cargo/bin", "~/.rustup/toolchains/*/bin"),
+    "node": ("%ProgramFiles%/nodejs", "%ProgramFiles(x86)%/nodejs"),
+    "go": ("%ProgramFiles%/Go/bin", "%ProgramFiles(x86)%/Go/bin", "C:/Go/bin"),
+    "python": ("%LocalAppData%/Programs/Python/*", "%ProgramFiles%/Python*"),
+    "python3": ("%LocalAppData%/Programs/Python/*", "%ProgramFiles%/Python*"),
+}
+
 
 def kits_instalados(prefixos=()):
     """O que esta instalado NESTA maquina: Qt (por versao e kit), MSVC, CMake, Ninja, glslc, Vulkan, vcpkg."""
@@ -65,7 +74,23 @@ def kits_instalados(prefixos=()):
         "glslc": _ferramentas_em_disco("glslc"),
         "vulkan": _vulkan(),
         "vcpkg": _vcpkg(raizes),
+        "linguagens": linguagens_instaladas(),
     }
+
+
+def linguagens_instaladas():
+    """Os executaveis das linguagens que nao se compilam com kit C++, encontrados NESTA maquina."""
+    encontrados = []
+    for tipo, (rotulo, executaveis) in _LINGUAGENS_SEM_KIT.items():
+        achados = [caminho for caminho in (_onde_esta(nome) for nome in executaveis) if caminho]
+        if achados:
+            encontrados.append({
+                "tipo": tipo,
+                "rotulo": rotulo,
+                "caminho": achados[0].replace("\\", "/"),
+                "versao": _versao_da_ferramenta(achados[0]),
+            })
+    return encontrados
 
 
 def escolher_kit(deteccao, instalado):
@@ -155,15 +180,15 @@ def _kit_sem_compilador(deteccao):
             ".sln, .pro, pyproject.toml, package.json...): nao ha kit a escolher."
         )
     else:
-        rotulo, executaveis = _LINGUAGENS_SEM_KIT[tipo]
-        achados = [achado for achado in (shutil.which(nome) for nome in executaveis) if achado]
+        rotulo = _LINGUAGENS_SEM_KIT[tipo][0]
+        achado = next((item for item in linguagens_instaladas() if item["tipo"] == tipo), None)
         notas.append(
             f"Projeto {deteccao['rotulo']}: nao se compila com um kit C++. "
-            + (f"Corre sobre {rotulo}, encontrado em {', '.join(achados)}." if achados
-               else f"Corre sobre {rotulo}, que nao esta no PATH.")
+            + (f"Corre sobre {rotulo}, encontrado em {achado['caminho']}." if achado
+               else f"Corre sobre {rotulo}, que nao esta instalado nesta maquina.")
         )
-        if not achados:
-            faltam.append(f"Este projeto corre sobre {rotulo} e nao encontrei nenhum desses programas no PATH.")
+        if not achado:
+            faltam.append(f"Este projeto corre sobre {rotulo} e nao encontrei nenhum desses programas.")
     return {
         "gerador": "",
         "arquitetura": "",
@@ -383,8 +408,22 @@ def _msbuild_do_visual_studio(instalacoes):
     return None
 
 
-def _ferramentas_em_disco(nome):
+def _onde_esta(nome):
+    """O caminho do executavel: no PATH e, nao estando la, nas pastas onde a linguagem costuma instalar-se."""
     achado = shutil.which(nome)
+    if achado:
+        return achado
+    for padrao in _PASTAS_PLAUSIVEIS.get(nome, ()):
+        base = os.path.expandvars(os.path.expanduser(padrao)).replace("/", os.sep)
+        for pasta in sorted(glob.glob(base, recursive=True), reverse=True):
+            alvo = os.path.join(pasta, nome + ".exe")
+            if os.path.isfile(alvo):
+                return alvo
+    return ""
+
+
+def _ferramentas_em_disco(nome):
+    achado = _onde_esta(nome)
     if not achado:
         return []
     return [{"caminho": achado.replace("\\", "/"), "versao": _versao_da_ferramenta(achado)}]

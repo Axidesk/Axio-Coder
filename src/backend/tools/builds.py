@@ -613,6 +613,10 @@ def _texto_kits(pasta):
     ]
     for chave, rotulo in (("cmake", "CMake"), ("ninja", "Ninja"), ("glslc", "glslc")):
         linhas += [f"  {rotulo} {f.get('versao') or '?'} - {f['caminho']}" for f in instalado[chave]]
+    linhas += [
+        f"  {ling['rotulo']} {ling['versao'] or '?'} - {ling['caminho']}"
+        for ling in instalado.get("linguagens", ())
+    ]
     if instalado["vulkan"]["raiz"]:
         linhas.append(f"  Vulkan SDK - {instalado['vulkan']['raiz']}")
     if instalado["vcpkg"]:
