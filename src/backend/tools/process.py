@@ -112,6 +112,9 @@ COMANDOS_DESTRUTIVOS = (
     (r"\b(shutdown|reboot)\b", "desliga ou reinicia a maquina"),
     (r"\bdocker\s+(system|volume|image|builder)\s+prune\b", "docker prune apaga volumes e imagens"),
     (r"\btaskkill\s+[^|;&]*/f\b[^|;&]*/im\b", "taskkill /F /IM mata TODOS os processos com esse nome"),
+    (r"\bdrop\s+(database|schema)\b", "DROP DATABASE descarta a base inteira, com todos os dados"),
+    (r"\bdrop\s+table\b", "DROP TABLE descarta a tabela e os dados dela"),
+    (r"\btruncate\s+table\b", "TRUNCATE TABLE esvazia a tabela sem passar por backup"),
 )
 
 MODULOS_PYTHON = (
@@ -167,6 +170,7 @@ MIDIA = ("ffmpeg", "ffprobe", "magick", "sox", "scenedetect")
 
 REDE_E_SISTEMA = (
     "curl", "wget", "ping", "netstat", "tasklist", "taskkill", "sqlite3",
+    "mysql", "mysqldump",
     "tar", "unzip", "zip", "7z",
 )
 
