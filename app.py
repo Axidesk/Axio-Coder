@@ -2,6 +2,8 @@
 import os
 from src.backend.config import APP_ROOT, DATA_DIR, carregar_env
 
+PORTA_DO_SERVIDOR = 5000
+
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "4")
 
@@ -24,6 +26,7 @@ from src.backend.services.persistencia import limpar_temporarios_orfaos
 from src.backend.services.envio_automatico import iniciar_vigia_do_envio
 from src.backend.services.session import pasta_session_logs_em
 from src.backend.services.settings import migrar_automatico_padrao
+from src.backend.tools.registry import carregar_ferramentas_em_segundo_plano
 from src.backend.routes.static import static_bp
 from src.backend.routes.chat import chat_bp
 from src.backend.routes.terminal import terminal_bp
@@ -68,5 +71,6 @@ if __name__ == '__main__':
     migrar_automatico_padrao()
     preaquecer_mempalace()
     iniciar_vigia_do_envio()
-    _aquecer_cudnn(5000)
-    socketio.run(app, port=5000, debug=False, allow_unsafe_werkzeug=True)
+    carregar_ferramentas_em_segundo_plano(PORTA_DO_SERVIDOR)
+    _aquecer_cudnn(PORTA_DO_SERVIDOR)
+    socketio.run(app, port=PORTA_DO_SERVIDOR, debug=False, allow_unsafe_werkzeug=True)

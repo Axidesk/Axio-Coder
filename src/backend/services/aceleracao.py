@@ -4,11 +4,10 @@ runtime CUDA, pre-carga do cuDNN e veredicto por inferencia real.
 import ctypes
 import os
 import re
-import socket
 import sysconfig
-import threading
-import time
 from pathlib import Path
+
+from src.backend.services.aquecimento import depois_do_arranque
 
 MODELOS_DE_SONDA = ("PP-OCRv6_det_small.onnx", "PP-OCRv6_rec_small.onnx")
 
@@ -94,30 +93,14 @@ def iniciar_preparacao():
 
 
 def aquecer_em_segundo_plano(porta=5000, espera=20.0):
-    """Carrega o cuDNN SO depois de o servidor estar a atender. As 10 DLLs do cuDNN somam
-    1,1 GB e, a competir com os imports e com a propria pagina a carregar, levavam o
-    arranque de segundos a minutos - medido: 130s com a thread a puxar pelo disco."""
+    """Carrega o cuDNN SO depois de o servidor estar a atender, com a espera pedida a frente.
+    As 10 DLLs do cuDNN somam 1,1 GB e, a competir com os imports e com a propria pagina a
+    carregar, levavam o arranque de segundos a minutos - medido: 130s com a thread a puxar
+    pelo disco. A espera pela porta e o tempo vivem no aquecimento generico; aqui fica a tarefa."""
     global _PRE_CARGA
     if _PRE_CARGA is not None or "preparado" in _ESTADO:
         return
-
-    def _espera():
-        limite = time.time() + 120
-        while time.time() < limite:
-            sonda = socket.socket()
-            try:
-                sonda.settimeout(0.2)
-                sonda.connect(("127.0.0.1", porta))
-                sonda.close()
-                break
-            except OSError:
-                sonda.close()
-                time.sleep(0.2)
-        time.sleep(espera)
-        _carregar_cudnn()
-
-    _PRE_CARGA = threading.Thread(target=_espera, daemon=True, name="pre-carga-cudnn")
-    _PRE_CARGA.start()
+    _PRE_CARGA = depois_do_arranque(porta, _carregar_cudnn, espera=espera, nome="pre-carga-cudnn")
 
 
 def preparar():

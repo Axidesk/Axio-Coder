@@ -32,6 +32,7 @@ Disponibilidade ('disponivel'):
 Adicionar uma ferramenta passou a ser: 1 funcao no modulo dela + este decorador
 acima dela.
 """
+import importlib
 
 TOOL_REGISTRY = {}
 
@@ -161,3 +162,16 @@ def dispatch(nome, args):
     if entry is None:
         return None, False
     return entry["handler"](**resolver_kwargs(entry["params"], args or {})), True
+
+
+def carregar_ferramentas_em_segundo_plano(porta=5000):
+    """Importa o motor da IA - que arrasta o registo inteiro de ferramentas - so depois de o
+    servidor atender. Sao ~550 modulos e ~1s de importacao que nao tem de atrasar a janela:
+    quem despacha uma ferramenta e o proprio motor, logo o registo esta completo quando ele
+    corre, e o primeiro turno nao paga a espera."""
+    from src.backend.services.aquecimento import depois_do_arranque  # import-local: o registo nao pode depender de services no arranque
+
+    def carregar():
+        importlib.import_module("src.backend.ai.loop")
+
+    return depois_do_arranque(porta, carregar, nome="ferramentas")
