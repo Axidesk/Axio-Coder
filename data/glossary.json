@@ -606,8 +606,8 @@
         "arquivo": "src/backend/services/process_manager.py",
         "linha": 70,
         "conferido": [
-          1790367916.333,
-          9589
+          1790800939.644,
+          9995
         ]
       }
     },
@@ -805,8 +805,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 200,
         "conferido": [
-          1790797566.45,
-          55071
+          1790800968.436,
+          55351
         ]
       }
     },
@@ -2158,10 +2158,10 @@
       "descricao": "Aviso de sessao nova do PTY, emitido por _pty_spawn_locked (src/backend/services/process_manager.py) logo apos cada spawn, com o nome do shell no payload. O frontend escuta-o em terminal.js:connectTermSocket e chama termClear() antes de o banner chegar - por isso cada sessao mostra UM banner e nao a soma das anteriores (era o que enchia o ecra de banners repetidos a cada troca de shell ou respawn). Sai da mesma thread/fila que o pty:output, logo a ordem limpeza -> banner esta garantida. Cobre SO a troca de shell/respawn: para o caso da recarga de pagina e do xterm que nasce tarde (o pty:session nao e reemitido, porque o PTY ja existe) quem devolve o ecra inteiro e o REPLAY ('replay do terminal'). O spawn limpa a historia do replay (`_pty_hist_limpar`) antes de anunciar a sessao, para o replay de uma sessao nova nunca trazer o banner da anterior.",
       "localizacao": {
         "arquivo": "src/backend/services/process_manager.py",
-        "linha": 143,
+        "linha": 145,
         "conferido": [
-          1790367916.333,
-          9589
+          1790800939.644,
+          9995
         ]
       }
     },
@@ -2201,10 +2201,10 @@
       "descricao": "O backend guarda os bytes que o PTY produziu desde o ultimo spawn (`_pty_hist`, teto de 200000 chars em process_manager.py) e reenvia-os a quem pedir `pty:replay`; o frontend limpa o xterm (`termClear`) e escreve o que recebe. E o que faz o ecra do shell voltar inteiro depois de um Ctrl+R e o que impede o desencontro de estado entre o xterm e o ConPTY - o sintoma era texto escrito por cima (caudas da linha antiga por baixo da nova) porque o ConPTY so reescreve as celulas que mudam. Corre no `_pty_pump`, com o append ANTES do emit do `pty:output`: por isso tudo o que o cliente ja recebeu esta garantidamente na historia, e limpar antes de escrever o replay nunca perde nem duplica.",
       "localizacao": {
         "arquivo": "src/backend/services/process_manager.py",
-        "linha": 209,
+        "linha": 216,
         "conferido": [
-          1790367916.333,
-          9589
+          1790800939.644,
+          9995
         ]
       }
     },
@@ -2328,8 +2328,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 356,
         "conferido": [
-          1790797566.45,
-          55071
+          1790800968.436,
+          55351
         ]
       }
     },
@@ -4672,8 +4672,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 384,
         "conferido": [
-          1790797566.45,
-          55071
+          1790800968.436,
+          55351
         ]
       }
     },
@@ -5468,10 +5468,10 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 659,
+        "linha": 672,
         "conferido": [
-          1790720542.539,
-          40878
+          1790803223.152,
+          41630
         ]
       }
     },
@@ -5670,10 +5670,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 479,
+        "linha": 481,
         "conferido": [
-          1790720542.539,
-          40878
+          1790803223.152,
+          41630
         ]
       }
     },
@@ -5721,6 +5721,27 @@
         "conferido": [
           1790791246.55,
           2674
+        ]
+      }
+    },
+    {
+      "termo": "o sql da base",
+      "aliases": [
+        "o sql",
+        "a base de dados",
+        "o dump",
+        "database.sql",
+        "nova.sql",
+        "o banco de dados"
+      ],
+      "identificador": "SQL_DB",
+      "descricao": "O ficheiro .sql da raiz do projeto (hoje database.sql, nome livre) e a base dentro do MySQL sao coisas diferentes: o nome da base vive num sitio so, o SQL_DB do config.lua do servidor. O site le-o por axio_db_nome() (xampp/htdocs/data_dir.php) e o Server/backup.bat le-o por findstr ao config.lua ao lado dele. Renomear o ficheiro nao toca em nada; renomear a BASE e editar essa unica linha.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Server/config.lua",
+        "linha": 42,
+        "conferido": [
+          1768769257.241,
+          5840
         ]
       }
     }
