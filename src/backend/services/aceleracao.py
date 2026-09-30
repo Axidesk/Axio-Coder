@@ -27,17 +27,28 @@ def _pastas_bin():
     raiz = _site_packages() / "nvidia"
     if not raiz.is_dir():
         return []
-    return sorted(pasta for pasta in raiz.iterdir() if (pasta / "bin").is_dir())
+    return sorted(pasta / "bin" for pasta in raiz.iterdir() if (pasta / "bin").is_dir())
+
+
+def _por_no_path(pastas):
+    """Antepoe as pastas ao PATH do processo: e por ai que o onnxruntime procura as
+    dependencias das suas DLLs de provedor quando carrega o CUDA/cuDNN."""
+    caminho = os.environ.get("PATH", "")
+    for pasta in pastas:
+        texto = str(pasta)
+        if texto not in caminho:
+            caminho = texto + os.pathsep + caminho
+    return caminho
 
 
 def registar_dlls():
     """Regista as pastas bin/ do runtime CUDA instalado pelo pip. Devolve quantas existem."""
+    pastas = [pasta for pasta in _pastas_bin() if pasta.is_dir()]
+    os.environ["PATH"] = _por_no_path(pastas)
     registadas = 0
-    for pasta in _pastas_bin():
-        if not pasta.is_dir():
-            continue
+    for pasta in pastas:
         try:
-            os.add_dll_directory(str(pasta))
+            _ESTADO.setdefault("handles", []).append(os.add_dll_directory(str(pasta)))
             registadas += 1
         except (OSError, AttributeError):
             pass
