@@ -139,6 +139,8 @@ def _pty_spawn_locked():
     elif shell["nome"] == "cmd":
         args += ["/Q", "/D"]
     _pty_proc = PtyProcess.spawn(args, cwd=cwd, env=_pty_env(), dimensions=_pty_dims)
+    from src.backend.tools.process import juntar_processo_ao_axio  # import-local: evita o ciclo services <-> tools
+    juntar_processo_ao_axio(getattr(_pty_proc, "pid", None))
     _pty_hist_limpar()
     socketio.emit('pty:session', {'shell': shell['nome']})
     return _pty_proc
@@ -148,6 +150,11 @@ def pty_kill_locked():
     proc = _pty_proc
     _pty_proc = None
     if proc is not None:
+        try:
+            from src.backend.tools.process import fechar_junta  # import-local: evita o ciclo services <-> tools
+            fechar_junta(getattr(proc, "pid", None))
+        except Exception:
+            pass
         try:
             proc.terminate(force=True)
         except Exception:

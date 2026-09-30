@@ -7,8 +7,8 @@
     },
     {
       "area": "transicoes",
-      "texto": "Tudo com transicao suave (var(--dur-*) + var(--ease-fluid)): recolher, aparecer, mudar de estado. Nunca saltos secos. Cascata de entrada de listas: o atraso entre itens nao pode passar de ~0.12s - uma pasta com 50 ficheiros tem de estar toda visivel em ~0.4s, nunca a gotejar por mais de meio segundo.",
-      "atualizado": "2026-09-19 18:59:04"
+      "texto": "Vale para QUALQUER interface, em QUALQUER projeto - nao so no Axio (reforcado a 2026-10-11). Tudo o que aparece, recolhe, abre, muda de estado ou troca de vista tem transicao suave, nunca um salto seco: no Axio com var(--dur-*) + var(--ease-fluid), noutro projeto com os tokens equivalentes do proprio projeto e a mesma fisica (ease-out suave, 150-250ms). Botoes, icones, campos e cards separam-se por COR, fundo suave e hover - nunca por uma linha a contornar. Cascata de entrada de listas: o atraso entre itens nao pode passar de ~0.12s - uma pasta com 50 ficheiros tem de estar toda visivel em ~0.4s, nunca a gotejar por mais de meio segundo.",
+      "atualizado": "2026-09-30 20:35:14"
     },
     {
       "area": "recolher",
@@ -134,6 +134,16 @@
       "area": "portabilidade",
       "texto": "NENHUM caminho absoluto no que vai para o repositorio (pedido a 2026-10-10, repetido: \"eu n queria absolutamente nenhum caminho hardcoded\"). O projeto tem de funcionar em qualquer maquina e em qualquer pasta - um clone, um Build, zero configuracao; e o mesmo vale se ele mudar o projeto de sitio ou formatar o PC. Ordem de preferencia: (1) caminho CALCULADO em runtime a partir do proprio ficheiro (subir a arvore ate encontrar um marcador de conteudo, nunca por nome de pasta); (2) variavel de ambiente; (3) ficheiro de sobreposicao local FORA do git (config.local.php) para quem tiver de fixar um caminho a mao. O `Directory.Build.props`/$(TibiaLibs) do Tibia74 e o `data_dir.php` do site sao os modelos. Isto vale para o codigo, para os ficheiros de projeto de build, para os scripts de configuracao e para os caminhos escritos em ficheiros de configuracao de servidor. Quando so houver mesmo um caminho absoluto como solucao, ele fica num ficheiro ignorado pelo git e digo-o.",
       "atualizado": "2026-09-29 00:40:05"
+    },
+    {
+      "area": "organizacao",
+      "texto": "NUNCA criar ficheiros ou pastas novos sem necessidade real. A solucao preferida e editar/acrescentar ao que ja existe, nunca \"criar mais uma pasta\" ou \"criar mais um config\". Dito a 2026-10-10 a proposito do x64 do Tibia74, que exigiria uma segunda pasta de execucao com as suas 7 DLLs: \"n quero sair criando mais arquivos ou pastas\". Quando uma solucao exigir mesmo estrutura nova, dizer o custo e o porque ANTES de a fazer. Corolario para projetos C++: acrescentar uma plataforma/configuracao ao projeto existente (que nao toca no que ja funciona) e aceitavel; duplicar a arvore de ficheiros nao e.",
+      "atualizado": "2026-09-29 22:36:34"
+    },
+    {
+      "area": "organizacao-de-janelas",
+      "texto": "Num programa com varias janelas ou abas, cada opcao vive na janela a que pertence pela LOGICA - nunca misturada com outra (pedido a 2026-10-11, a proposito do Painel de Controlo do Tibia74). Configuracao do servidor na janela do servidor; conteudo do jogo (Lua/XML) na janela do conteudo; comandos (incluindo a mensagem global) na janela dos comandos; site (postagem, email, nome do mundo) na janela do site; base de dados na dela. Quando ele pedir para meter uma opcao numa janela que nao e a dela, eu digo em uma linha onde ela encaixa melhor e por que, e so a ponho no sitio errado se ele insistir depois de avisado.",
+      "atualizado": "2026-09-30 20:35:26"
     }
   ]
 }

@@ -464,15 +464,19 @@ def _monitorar_processo_segundo_plano(pid, popen):
 _JUNTAS_PROCESSO = {}
 
 
-def _juntar_ao_job(popen):
-    """Poe o processo novo numa junta (Job Object) do Windows, com ordem de morrer com ela.
+def juntar_processo_ao_axio(pid):
+    """Poe um processo numa junta (Job Object) do Windows, com ordem de morrer com ela.
 
     O Windows nao guarda a relacao pai-filho: o 'taskkill /T' percorre uma fotografia feita
     na hora e falha quando o pai ja saiu, deixando o neto vivo - foi assim que o Electron
     sobrevivia ao 'npm start' e ficava a segurar a camara. A junta agrupa-os pelo lado do
     sistema e morre com o Axio, que e o que impede os fantasmas entre reinicios.
+
+    Serve qualquer processo, venha ele do iniciar_processo ou do shell do terminal: um cmd
+    interativo com o cwd dentro de uma pasta prende-a, e o Move-Item do utilizador rebenta a
+    meio (medido: 1h19 preso, partindo o projeto em dois).
     """
-    if os.name != "nt":
+    if os.name != "nt" or not pid:
         return None
     try:
         import win32api
@@ -486,16 +490,16 @@ def _juntar_ao_job(popen):
         info["BasicLimitInformation"]["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
         win32job.SetInformationJobObject(junta, win32job.JobObjectExtendedLimitInformation, info)
         alca = win32api.OpenProcess(
-            win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE, False, popen.pid
+            win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE, False, pid
         )
         win32job.AssignProcessToJobObject(junta, alca)
     except Exception:
         return None
-    _JUNTAS_PROCESSO[getattr(popen, "pid", None)] = junta
+    _JUNTAS_PROCESSO[pid] = junta
     return junta
 
 
-def _fechar_junta(pid):
+def fechar_junta(pid):
     """Encerra a junta do processo: mata tudo o que ela agrupa, filhos desligados incluidos."""
     junta = _JUNTAS_PROCESSO.pop(pid, None)
     if junta is None:
@@ -515,7 +519,7 @@ def _fechar_junta(pid):
 def matar_arvore(popen):
     if popen is None:
         return
-    _fechar_junta(getattr(popen, "pid", None))
+    fechar_junta(getattr(popen, "pid", None))
     try:
         if popen.poll() is not None:
             return
@@ -687,10 +691,12 @@ def _abrir_quando_pronto(pid, porta):
         'modo': {"tipo": "STRING", "enum": ['aguardar', 'segundo_plano'], "padrao": "aguardar"},
         'timeout': {"tipo": "INTEGER", "padrao": None},
         'cwd': {"tipo": "STRING", "desc": "Pasta onde o processo corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
+        'caminhos_extra': {"tipo": "STRING", "desc": "Pastas a por A FRENTE do PATH, separadas por ';'. Para programas fora do Python que precisam do seu proprio bin para arrancar (um toolchain, um kit do Qt) - o build script dessa linguagem procura o seu compilador no PATH.", "padrao": ""},
     },
     disponivel="edicao",
 )
-def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, cwd: str = ""):
+def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, cwd: str = "",
+                           caminhos_extra: str = ""):
     pasta_de_trabalho, erro_pasta = _pasta_de_trabalho(cwd)
     if erro_pasta:
         return erro_pasta
@@ -719,8 +725,9 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
 
     emit_event("executing", function=f"Executando: {comando}")
     try:
+        extras = [p.strip().strip('"') for p in (caminhos_extra or "").split(";") if p.strip()]
         reg = iniciar_processo(comando, cwd=pasta_de_trabalho, porta_env=porta_env, modo=modo,
-                               acompanhar=(modo == "segundo_plano"))
+                               acompanhar=(modo == "segundo_plano"), caminhos_extra=extras)
     except OSError as e:
         return f"ERRO: nao consegui iniciar o processo ({e})."
     pid = reg["id"]
@@ -838,7 +845,7 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
         raise
     reg["popen"] = popen
     reg["stdin"] = popen.stdin
-    reg["junta"] = _juntar_ao_job(popen)
+    reg["junta"] = juntar_processo_ao_axio(popen.pid)
     reg["_leitor"] = threading.Thread(target=ler_saida_stream, args=(pid, popen), daemon=True)
     reg["_leitor"].start()
     if acompanhar:
@@ -987,7 +994,7 @@ def limpar_processos_encerrados():
     mortos = [pid for pid, reg in list(registros.items()) if not _processo_vivo(reg)]
     for pid in mortos:
         registros.pop(pid, None)
-        _fechar_junta(pid)
+        fechar_junta(pid)
     return len(mortos)
 
 
@@ -1046,7 +1053,7 @@ def run_com_timeout(cmd, timeout=60, cwd=None):
         shell=isinstance(cmd, str),
         cwd=cwd or None,
     )
-    _juntar_ao_job(proc)
+    juntar_processo_ao_axio(proc.pid)
     try:
         out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -1333,6 +1340,7 @@ def _resultado_do_card(reg):
             codigo = popen.returncode if popen.returncode is not None else popen.poll()
         except Exception:
             codigo = None
+    matar_arvore(popen)
     resultado = subprocess.CompletedProcess(reg.get("comando"), codigo,
                                             "\n".join(reg.get("log") or []), "")
     resultado.status = reg.get("status")

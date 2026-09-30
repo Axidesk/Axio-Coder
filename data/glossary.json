@@ -805,8 +805,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 200,
         "conferido": [
-          1790629800.234,
-          54190
+          1790797566.45,
+          55071
         ]
       }
     },
@@ -1020,10 +1020,10 @@
       "descricao": "Circulo de 12px com \"i\" italico serifado (Georgia) em var(--perigo) ao lado do nome do pacote no painel de informacoes do projeto. Posto por marcarPacotesDesatualizados (js/chat/projeto.js) a partir de GET /api/projeto/outdated. E o UNICO elemento que mantem o balao automatico no hover (recebe alerta.title = titulo); nos pacotes o balao e do clique. O texto e SO as versoes (ex: \"1.83.1 -> 1.84.0\" ou, em dia, \"3.1.3\"), sem o nome do pacote. Mesmo desenho do .settings-info das Configuracoes.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 323,
+        "linha": 328,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1040,10 +1040,10 @@
       "descricao": "Variante amarela do \"i\" do painel de informacoes do projeto: a versao nova existe no registo (PyPI) mas o pacote instalado que a exige nao a aceita (ex: sympy exige mpmath<1.4), logo nao e uma atualizacao ao alcance do utilizador. O tooltip diz quem exige o que. A cor normal, vermelha, e do .projeto-alerta.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 337,
+        "linha": 342,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1062,10 +1062,10 @@
       "descricao": "Cursor de mao e realce nos pacotes de dependencia do painel de informacoes do projeto. Ao passar o rato o pacote ganha o MESMO realce de fundo dos cabecalhos/grupos (.projeto-pacote:hover { background: var(--bg-hover-suave }, com o border-radius 6px e o padding 1px 6px do .projeto-linha); o padding-left da grade desceu de 24 para 18px para o texto continuar a comecar a 24px. O cursor pointer denuncia que responde ao CLIQUE (abre o balao com a versao). O texto do balao vive em `item.dataset.info` (nao em `title`, para nao saltar no hover), e aberto por `_mostrarTooltipPacote` (js/chat/projeto.js) via `mostrarIconTooltip(item, texto, true)`; o 3o argumento `imediato` (js/chat/ui.js:213) salta os 500ms de espera. O balao mostra SO a versao (ex: \"1.83.1 -> 1.84.0\"), sem repetir o nome do pacote. Um clique fora de qualquer `.projeto-pacote` fecha-o.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 298,
+        "linha": 303,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1084,10 +1084,10 @@
       "descricao": "Rota que fixa a pasta de projeto na sessao e a grava para o arranque seguinte: chama `atualizar_settings({\"projeto\": {\"ultima_pasta\": pasta}})` (settings.json, sem reset dos clientes de IA). No frontend, `restaurarPastaSelecionada` (js/chat/files.js) le \"ultima_pasta\" de GET /api/env_info e reabre sozinha no arranque; o dialogo nativo recebe a pasta em uso como `defaultPath` (ipcMain 'select-folder', src/main.js). A rota NAO escreve na barra de estado (nao emite \"Diretorio carregado\"): quem escreve e o frontend, em `abrirPasta(folderPath, recarregando)`, que mostra \"Carregando diretorio...\" e depois \"Diretorio carregado.\" ou \"Diretorio recarregado.\" conforme venha da escolha do utilizador ou do restauro do arranque. `restaurarPastaSelecionada` deduplica a dupla chamada do arranque (renderer ao ligar + onopen do SSE) com a promise em `restauracaoEmCurso`, para nao sairem dois POST /api/set_folder nem dois avisos seguidos.",
       "localizacao": {
         "arquivo": "src/backend/routes/chat.py",
-        "linha": 38,
+        "linha": 37,
         "conferido": [
-          1790444392.59,
-          7697
+          1790791231.264,
+          7703
         ]
       }
     },
@@ -1170,10 +1170,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1649,
+        "linha": 1654,
         "conferido": [
-          1790638214.503,
-          80776
+          1790795103.339,
+          80952
         ]
       }
     },
@@ -1189,10 +1189,10 @@
       "descricao": "Rotulo curto (#endpoints http) a direita de cada pasta/ficheiro na arvore do painel de informacoes do projeto, dentro de uma coluna de largura fixa (--projeto-coluna-tags, 180px) separada por um fio vertical. A coluna e reservada em TODA a linha, tenha ela etiqueta ou nao: aplicarEtiquetas (js/chat/projeto_etiquetas.js) poe um .projeto-tag VAZIO nas linhas sem rotulo - sem esse span o nome e a contagem correm por baixo do fio (medido: a contagem terminava 19px depois da linha; com o span para 5px antes). Fonte 10.72px peso 600, cor --text-mutado, com reticencias. O olho recolhe-as com animacao (width da etiqueta e opacity em 0.3s) e o texto completo so aparece em tooltip quando a etiqueta esta mesmo cortada. Gravado em .axio/etiquetas.json (assinatura = mtime do ficheiro, nomes dos filhos da pasta) e gerado por src/backend/services/etiquetas.py. A primeira etiquetagem dispara sozinha ao abrir a arvore de um projeto novo.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 498,
+        "linha": 503,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1251,10 +1251,10 @@
       "descricao": "Fio vertical de 1px que separa os nomes das etiquetas na arvore do painel de informacoes do projeto. E UM UNICO elemento para a arvore inteira (nasce em .projeto-arvore, montado por projeto.js:_renderEstrutura), nao um ::after por linha: 124 riscos de 1px, cada um no seu contexto de pintura (o content-visibility das linhas cria-o), arredondavam para a grelha de pixels de forma diferente e apareciam uns mais grossos que outros. O olho desloca-o com transform: translateX(0) e desvanece-o.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 477,
+        "linha": 482,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1272,10 +1272,10 @@
       "descricao": "Guia horizontal da arvore do painel de informacoes do projeto: pseudo-elemento de 20x1px (left: 0, top: 11px) em cada filho do clip da pasta, a ligar a guia vertical (o ::after do mesmo filho) ao nome do ficheiro/pasta. O recuo (padding-left) vive no FILHO - 20px na linha, 14px no bloco de pasta - e nao no clip: as linhas tem content-visibility, que implica paint containment, e um elemento contido so pinta dentro da propria caixa (com o recuo no clip a guia era recortada e sobrava um coto de 6px).",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 248,
+        "linha": 253,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1291,10 +1291,10 @@
       "descricao": "Guia vertical da arvore do painel de informacoes do projeto: um traco de 1x100% (background --border-suave) desenhado pelo ::after de CADA filho do clip, e nao o border-left do clip. Por filho porque so assim a guia pode PARAR no ultimo (o cotovelo): *:last-child::after mede 11px em vez de 100%. O clip leva padding-left 1px so para reservar a coluna. ARMADILHA: as linhas tem content-visibility (paint containment) e o recorte segue o border-radius - por isso as linhas do clip tem border-radius 0 6px 6px 0 (canto esquerdo quadrado), senao o arco de 6px come ~3,6px da guia em cima e em baixo de cada linha e a vertical fica com lacunas. NAO confundir com o .projeto-fio, que e o separador vertical das etiquetas.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 257,
+        "linha": 262,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1310,10 +1310,10 @@
       "descricao": "Guias verticais e horizontais que ligam uma pasta aos seus filhos na arvore do painel de informacoes do projeto. Tom --border-suave (#444), o mesmo do fio das etiquetas. A vertical e o ::after de cada filho (para poder parar no ultimo, o cotovelo) e a horizontal e o ::before. O recuo vive no filho (padding 20px na linha, 14px na pasta), nunca no clip, por causa do paint containment do content-visibility; e as linhas do clip tem o canto esquerdo quadrado (border-radius 0 6px 6px 0) porque o recorte do containment segue o arredondamento e cortaria a guia.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 232,
+        "linha": 237,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1332,10 +1332,10 @@
       "descricao": "Cotovelo da arvore do painel de informacoes do projeto: a guia vertical tem de PARAR na altura da linha horizontal do ULTIMO filho da pasta, em vez de passar reto ate a base do clip (era o defeito que o utilizador via, com 12px de cauda). Feito com > *:last-child::after { height: 11px } - 11px e onde esta a horizontal (top: 11px do filho), logo as duas guias tocam-se no mesmo pixel. Vale para o ultimo filho ficheiro e para o ultimo filho pasta.",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 266,
+        "linha": 271,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -1871,10 +1871,10 @@
       "descricao": "Primeira linha da arvore do painel de informacoes do projeto: o nome da pasta raiz, com o icone amarelo (--alerta) e a contagem (--text-suave). Nasce FECHADA em projeto.js:_noDaArvore e abre/recolhe no clique da propria linha (toggle de projeto-aberto), como as subpastas - nao tem cruz (o SVG_MAIS foi apagado). Usa o padding base das .projeto-linha (1px 6px), logo o icone comeca a x=6, o mesmo x do texto dos subelementos das outras secoes (requirements.txt).",
       "localizacao": {
         "arquivo": "src/frontend/css/projeto.css",
-        "linha": 208,
+        "linha": 213,
         "conferido": [
-          1790394685.807,
-          13476
+          1790795031.892,
+          13586
         ]
       }
     },
@@ -2243,10 +2243,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1239,
+        "linha": 1244,
         "conferido": [
-          1790638214.503,
-          80776
+          1790795103.339,
+          80952
         ]
       }
     },
@@ -2326,10 +2326,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 347,
+        "linha": 356,
         "conferido": [
-          1790629800.234,
-          54190
+          1790797566.45,
+          55071
         ]
       }
     },
@@ -3433,10 +3433,10 @@
       "descricao": "Portao do watcher que decide o que avisar a interface e emissor do SSE files_changed que faz o explorer.js:reloadExplorer redeszenhar a arvore. Antes nao chamava notificar_mudanca_arquivos (a arvore so se atualizava ao navegar de pasta) e filtrava por extensao de texto (um PNG/IFC/DXF largado de fora nem era considerado). A interface espera 250ms e respeita um recuo de 1200ms depois de navegar (scroll.js:scheduleExplorerReload), que agora re-agenda em vez de descartar.",
       "localizacao": {
         "arquivo": "src/backend/services/file_watcher.py",
-        "linha": 52,
+        "linha": 85,
         "conferido": [
-          1790394594.113,
-          6163
+          1790730964.035,
+          7650
         ]
       }
     },
@@ -4351,10 +4351,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 502,
+        "linha": 504,
         "conferido": [
-          1790393700.881,
-          32641
+          1790795032.063,
+          32761
         ]
       }
     },
@@ -4412,10 +4412,10 @@
       "descricao": "Botao que vive NO CARD da pilha (2026-10): cards.js:_injectMarcas cria-o ao lado do marcador do ponto sempre que git_panel.js:podeRestaurar(grupo) deixa (commit OU __session), e o CSS troca-o pelo marcador quando o card esta selecionado - por isso ele aparece APENAS no card selecionado. A troca e PURA CSS em style.css: .history-round-restore-icon nasce display:none, .history-round-card.history-round-selected esconde o .history-round-saved-icon e mostra o restaurar. Nao ha repintura por JS na selecao. O clique faz stopPropagation (para nao cair no clique do card, que seleciona/abre) e chama a API registada em cards.js:registrarRestauroDaTarefa, ligada em renderer.js a git_panel.js:restaurarTarefa(grupo) - que escolhe o MOTOR: com commit -> requestGitRestore (previa + modal), sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o #btn-git-restore-history do cabecalho da coluna 1, REMOVIDO a 2026-10; com ele sairam sincronizarBotaoRestauro (git_panel.js), btnGitRestoreHistory (dom.js) e o registo registrarSincronizacaoDeRestauro (acoes.js). O registo novo existe pelo ciclo de imports: git_panel importa cards, logo cards nao pode importar git_panel. MEDIDO (tool_medir_pintura, CSS real): card fechado pinta o marcador 14x14 e o restaurar 0x0; selecionado, o marcador vai a 0x0 e o restaurar pinta 14x14 na MESMA posicao - o icone nao salta.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 231,
+        "linha": 233,
         "conferido": [
-          1790393700.881,
-          32641
+          1790795032.063,
+          32761
         ]
       }
     },
@@ -4649,10 +4649,10 @@
       "descricao": "Regista o runtime CUDA do pip e pre-carrega as sub-bibliotecas do cuDNN (que o preload_dlls do onnxruntime nao carrega) e PROVA a GPU com uma inferencia real - a lista de provedores mente, porque sem isto tudo cai para CPU em silencio. Chamado no arranque por app.py e pelo motor do OCR.",
       "localizacao": {
         "arquivo": "src/backend/services/aceleracao.py",
-        "linha": 98,
+        "linha": 117,
         "conferido": [
-          1790723044.22,
-          7125
+          1790793032.969,
+          7962
         ]
       }
     },
@@ -4670,10 +4670,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 375,
+        "linha": 384,
         "conferido": [
-          1790629800.234,
-          54190
+          1790797566.45,
+          55071
         ]
       }
     },
@@ -4900,10 +4900,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 636,
+        "linha": 638,
         "conferido": [
-          1790393700.881,
-          32641
+          1790795032.063,
+          32761
         ]
       }
     },
@@ -4955,10 +4955,10 @@
       "descricao": "REGRA (2026-10, ampliada): o card mostra o AVIAO sempre que o commit esta fora do por_subir (cards.js:enviadaParaOServidor) OU foi registado num envio manual (marcas_envio.js porCommit) - deixou de ser so o ultimo ponto enviado. Todos os restantes (so no PC) mostram o bookmark com o popup \"Salvo localmente\", sem parenteses: o hash e o \"por enviar\" sairam do popup. E assim que as anteriores ja enviadas continuam com o aviao e as novas nascem com o bookmark.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 231,
+        "linha": 233,
         "conferido": [
-          1790393700.881,
-          32641
+          1790795032.063,
+          32761
         ]
       }
     },
@@ -5097,10 +5097,10 @@
       "descricao": "A linha \"Stack:\" do bloco ESTRUTURA DO PROJETO e do painel de informacoes. Passou a ler o que o PROJETO aberto declara (CMakeLists/package.json/Cargo.toml/go.mod/.sln) com detalhe nativo (Qt, C++ standard, Node); o interpretador do Axio so entra se o projeto for mesmo Python. Sem marcador, decide a extensao dominante dos ficheiros.",
       "localizacao": {
         "arquivo": "src/backend/tools/projeto_info.py",
-        "linha": 128,
+        "linha": 129,
         "conferido": [
-          1790394643.804,
-          19744
+          1790795031.631,
+          20001
         ]
       }
     },
@@ -5337,10 +5337,10 @@
       "descricao": "Calcula o \"Tarefa N - \" que aparece antes da mensagem no Por subir e no historico mais antigo: casa o hash com o log da sessao e le o numero do dia (nomeDoTurno), e corta o prefixo do resumo quando o commit ja o traz escrito a mao. Nada disto esta gravado no git - a mensagem do commit so tem o texto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 442,
+        "linha": 444,
         "conferido": [
-          1790393700.881,
-          32641
+          1790795032.063,
+          32761
         ]
       }
     },
@@ -5697,6 +5697,30 @@
         "conferido": [
           1790630299.709,
           13101
+        ]
+      }
+    },
+    {
+      "termo": "inicializacao do axio",
+      "aliases": [
+        "inicializacao lenta",
+        "arranque lento",
+        "demora pra abrir",
+        "demora a carregar a janela",
+        "abre devagar",
+        "servidor pronto em",
+        "backend ainda a arrancar",
+        "tempo de arranque",
+        "janela demora a aparecer"
+      ],
+      "identificador": "PORTA_DO_SERVIDOR / carregar_ferramentas_em_segundo_plano / depois_do_arranque",
+      "descricao": "O tempo de arranque e importacao + abrir a porta: a janela (main.js:waitForFlask) espera pela porta 5000 e so entao carrega a pagina. O motor da IA (ai/loop, com o registo inteiro de ferramentas) e o cuDNN passam a carregar DEPOIS de a porta responder, em src/backend/services/aquecimento.py:depois_do_arranque, chamado por registry.carregar_ferramentas_em_segundo_plano e aceleracao.aquecer_em_segundo_plano.",
+      "localizacao": {
+        "arquivo": "app.py",
+        "linha": 5,
+        "conferido": [
+          1790791246.55,
+          2674
         ]
       }
     }
