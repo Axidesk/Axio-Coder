@@ -202,6 +202,16 @@ def _sem_caminho(deteccao):
     if deteccao["tipo"] == "desconhecido":
         return ("A pasta nao tem nenhum ficheiro de projeto conhecido (CMakeLists.txt, .sln, .pro, "
                 "pyproject.toml...) - nao ha o que construir.")
+    if deteccao["tipo"] == "tauri":
+        return ("Projeto Tauri (Rust + webview): quem o constroi e o cargo, pela CLI do Tauri "
+                "('tauri dev' / 'tauri build'), nao o motor CMake/MSBuild. Iterar no visual faz-se "
+                "em modo dev - o frontend e lido do disco e recarrega sem recompilar, e o Rust so "
+                "recompila quando ele proprio muda. O build release, com LTO, e so para o "
+                "artefacto final.")
+    if deteccao["tipo"] == "cargo":
+        return ("Projeto Rust (Cargo): quem o constroi e o cargo ('cargo build'), nao o motor "
+                "CMake/MSBuild. Para iterar use 'cargo run' - o perfil de debug nao tem LTO e so "
+                "recompila o que mudou; o 'cargo build --release' e para o artefacto final.")
     return (f"Projeto {deteccao['rotulo']} (identificado por {', '.join(deteccao['ficheiros'])}): "
             "nesta primeira versao o Axio configura e compila projetos CMake e do Visual Studio. "
             "Os outros ficam a seguir.")

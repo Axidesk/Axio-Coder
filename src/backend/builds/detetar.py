@@ -45,6 +45,12 @@ def detetar(pasta):
         for tipo, rotulo, fixos, extensoes in _TIPOS
     ]
     achados = [a for a in achados if a["ficheiros"]]
+    if os.path.isfile(os.path.join(caminho, "src-tauri", "tauri.conf.json")):
+        achados.insert(0, {
+            "tipo": "tauri",
+            "rotulo": "Tauri (Rust + webview)",
+            "ficheiros": ["src-tauri/tauri.conf.json"],
+        })
     if not achados:
         return {
             "pasta": caminho,
