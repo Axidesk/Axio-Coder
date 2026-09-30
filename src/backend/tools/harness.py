@@ -47,11 +47,16 @@ for _fluxo in (sys.stdout, sys.stderr):
     if hasattr(_fluxo, "reconfigure"):
         _fluxo.reconfigure(encoding="utf-8", errors="replace")
 
-# O estado do Axio nasce VAZIO neste processo: 'pasta_raiz' nao esta definido, e
-# uma rota que passe por raiz_abs() (services/file_service.py) responde 400
-# ("nenhuma pasta aberta") sem dizer por que. Para exercitar uma rota que le
-# ficheiros do projeto, defina-o ANTES de a chamar:
-#   from src.backend.state import estado; estado['pasta_raiz'] = os.getcwd()
+# A pasta do projeto ja fica fixada, tal como esta na app: um trecho que chame
+# uma funcao real encontra o MESMO estado que o servidor tem, sem ter de o armar
+# a mao. Sem isto, raiz_abs() (services/file_service.py) responde 400 e
+# pasta_session_logs() devolve vazio - e o teste mede um estado que nao existe.
+# Para exercitar o caso "sem pasta aberta", limpe-a dentro do proprio trecho.
+try:
+    from src.backend.state import estado as _estado
+    _estado["pasta_raiz"] = {raiz_projeto!r} or os.getcwd()
+except Exception:
+    pass
 #
 # Para PROVAR UMA ROTA com a app a serio, sem subir servidor, importe o modulo do
 # app.py e NAO o extensions: quem regista os blueprints e o app.py, logo

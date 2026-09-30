@@ -28,6 +28,7 @@ from src.backend.tools.projeto_comum import (
     gravar_cache_projeto,
     ler_cache_projeto,
 )
+from src.backend.services.file_watcher import e_pasta_de_outro_projeto
 
 MAX_PROF_ARVORE = 4
 MAX_NO_ARVORE = 1500
@@ -315,8 +316,11 @@ def _assinatura_projeto(raiz):
     entre aceitar um retrato velho e pagar a medicao outra vez.
     """
     partes = []
+    raiz_abs = os.path.abspath(raiz)
     for base, pastas, arquivos in os.walk(raiz):
         pastas[:] = [p for p in pastas if p not in PASTAS_IGNORADAS and not p.startswith(".")]
+        if os.path.abspath(base) != raiz_abs:
+            pastas[:] = [p for p in pastas if not e_pasta_de_outro_projeto(os.path.join(base, p))]
         for nome in arquivos:
             if not eh_arquivo_de_codigo(nome):
                 continue

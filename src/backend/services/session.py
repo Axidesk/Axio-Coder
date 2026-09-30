@@ -394,6 +394,66 @@ def ler_snapshot_de_log(caminho):
     except Exception:
         return {}
 
+_MARCA_SNAPSHOT = b'"snapshot":'
+_BLOCO_RODADA = 1 << 23
+_TETO_UTIL_RODADA = 1 << 26
+
+def ler_rodada_de_log(caminho, turn_id, teto_util=_TETO_UTIL_RODADA):
+    """Le UMA rodada do log sem carregar o ficheiro inteiro.
+
+    O snapshot que a rodada traz no fim e a chave final dela e vale 99% do que a
+    rodada ocupa (medido num log real: 167,92 MB de 169,01 MB). Quem abre uma
+    tarefa na pilha nao o quer: fica com os ~200 KB de ficheiros, ferramentas,
+    pensamentos, perguntas e resposta. O valor e cortado no instante em que
+    comeca e a rodada e fechada com um snapshot vazio - 5,81s para 0,21s no mesmo
+    log, com ficheiros, tools, thoughts, questions e aiResponse identicos.
+
+    Le por blocos e so acumula do inicio da rodada ate a chave do snapshot, para
+    nao trazer os 2,2 GB do log maior para dentro da memoria. Devolve None quando
+    o corte nao fecha um objecto valido: quem chama decide o que fazer, e a
+    leitura completa do log continua a existir como recurso.
+    """
+    alvo = ('"' + str(turn_id) + '"').encode('utf-8')
+    util = bytearray()
+    resto = b''
+    aberta = False
+    try:
+        with open(caminho, "rb") as f:
+            while True:
+                bloco = f.read(_BLOCO_RODADA)
+                if not bloco:
+                    return None
+                texto = bloco if aberta else resto + bloco
+                if not aberta:
+                    pos = texto.find(alvo)
+                    if pos == -1:
+                        resto = texto[-len(alvo):]
+                        continue
+                    inicio = texto.rfind(b"{", 0, pos)
+                    if inicio == -1:
+                        resto = texto[-len(alvo):]
+                        continue
+                    texto = texto[inicio:]
+                    aberta = True
+                pos_chave = texto.find(_MARCA_SNAPSHOT)
+                if pos_chave != -1:
+                    pos_valor = texto.find(b"{", pos_chave + len(_MARCA_SNAPSHOT))
+                    if pos_valor != -1:
+                        util += texto[:pos_valor]
+                        return _rodada_cortada(bytes(util))
+                util += texto
+                if len(util) > teto_util:
+                    return None
+    except OSError:
+        return None
+
+def _rodada_cortada(recorte):
+    """Fecha no inicio do snapshot a rodada que ficou a meio e interpreta-a."""
+    try:
+        return json.loads((recorte + b"{}}").decode("utf-8", "replace"))
+    except ValueError:
+        return None
+
 CABECALHO_LOG_BYTES = 8192
 
 def ler_cabecalho_log_sessao(caminho):

@@ -3,7 +3,7 @@ import os
 import threading
 import time
 
-from src.backend.services.session import ler_log_sessao, pasta_session_logs, ts_de_arquivo_log
+from src.backend.services.session import ler_log_sessao, ler_rodada_de_log, pasta_session_logs, ts_de_arquivo_log
 
 CAMPOS_LEVES = ("id", "name", "title", "timestamp", "duration", "salvo", "commit", "commit_nome", "commits", "questions", "aiResponse")
 VERSAO_INDICE = 4
@@ -99,22 +99,38 @@ def atualizar_indice_de_payload(caminho_log, dados):
 
 
 def rodada_completa_de_log(pasta_logs, nome_log, turn_id):
+    """Traz UMA rodada do log, com o snapshot que ela guarda cortado fora.
+
+    O snapshot de uma rodada vale 99% do que ela ocupa (167,92 MB de 169,01 MB,
+    medido) e nao serve a pilha nem a busca: e a previa do restauro que o quer, e
+    essa tem rota propria (`carregar_snapshot_restauracao`). O corte e feito por
+    leitura direccionada e so se cai na leitura completa do log quando esse corte
+    nao devolve a rodada certa.
+    """
     caminho_log = os.path.join(pasta_logs, os.path.basename(nome_log))
+    grupo = ler_rodada_de_log(caminho_log, str(turn_id))
+    if not isinstance(grupo, dict) or str(grupo.get("id")) != str(turn_id):
+        grupo = _rodada_por_leitura_completa(caminho_log, str(turn_id))
+    if grupo is None:
+        return None
+    return {
+        "id": grupo.get("id"),
+        "files": grupo.get("files") or [],
+        "snapshot": grupo.get("snapshot") or {},
+        "tools": grupo.get("tools") or [],
+        "thoughts": grupo.get("thoughts") or [],
+        "questions": grupo.get("questions") or [],
+        "aiResponse": grupo.get("aiResponse") or "",
+        "commit": grupo.get("commit") or "",
+    }
+
+
+def _rodada_por_leitura_completa(caminho_log, turn_id):
+    """Recurso: le o log inteiro quando o corte nao devolveu a rodada pedida."""
     dados = ler_log_sessao(caminho_log)
-    snapshot_raiz = dados.get("snapshot") or {}
     for grupo in (dados.get("logs") or []):
-        if str(grupo.get("id")) != str(turn_id):
-            continue
-        return {
-            "id": grupo.get("id"),
-            "files": grupo.get("files") or [],
-            "snapshot": grupo.get("snapshot") or snapshot_raiz,
-            "tools": grupo.get("tools") or [],
-            "thoughts": grupo.get("thoughts") or [],
-            "questions": grupo.get("questions") or [],
-            "aiResponse": grupo.get("aiResponse") or "",
-            "commit": grupo.get("commit") or "",
-        }
+        if str(grupo.get("id")) == turn_id:
+            return grupo
     return None
 
 

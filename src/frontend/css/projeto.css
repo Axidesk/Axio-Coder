@@ -133,6 +133,11 @@
     color: var(--text-mutado);
     line-height: 1.6;
 }
+.projeto-a-carregar {
+    padding: 8px 2px 2px;
+    font-size: 0.78rem;
+    color: var(--text-mutado);
+}
 
 .projeto-cabecalho {
     display: flex;

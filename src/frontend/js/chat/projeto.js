@@ -239,6 +239,28 @@ function _render(corpo, dados) {
     corpo.replaceChildren(frag);
 }
 
+const TITULOS_DAS_SECOES = ['Stack', 'Linguagens', 'Dependencias', 'Estrutura'];
+
+function _temSecoes(dados) {
+    return !!(dados && (dados.stack || (dados.linguagens || []).length
+        || (dados.manifests || []).length || dados.arvore));
+}
+
+function _secaoCarregando(titulo) {
+    const secao = _el('div');
+    secao.appendChild(_cabecalho(titulo, ''));
+    secao.appendChild(_el('div', 'projeto-a-carregar', 'A carregar...'));
+    return secao;
+}
+
+function _esqueleto() {
+    const frag = document.createDocumentFragment();
+    TITULOS_DAS_SECOES.forEach(function (titulo) {
+        frag.appendChild(_secaoCarregando(titulo));
+    });
+    return frag;
+}
+
 export function projetoInfoAberto() {
     return !!(dom.projectPanelContainer
         && !dom.projectPanelContainer.classList.contains('project-closed'));
@@ -347,16 +369,18 @@ export async function carregarProjetoInfo() {
     carregando = true;
     try {
 
-        let esqueleto = false;
+        if (!corpo.childElementCount) corpo.replaceChildren(_esqueleto());
 
         const rota = '/api/projeto/info' + (mostrandoOcultos() ? '?ocultos=1' : '');
         const [dados, etiquetas] = await Promise.all([
             _insistir(rota,
                 function (d) { return d.estado !== 'a_medir' || !!d.erro; },
                 function (d) {
-                    if (esqueleto || d.estado !== 'a_medir' || d.erro) return;
-                    esqueleto = true;
-                    corpo.replaceChildren(_el('div', 'projeto-vazio', 'A medir o projeto...'));
+                    if (!_temSecoes(d) || d.erro) return;
+                    const parcial = JSON.stringify(d);
+                    if (parcial === retratoDesenhado) return;
+                    _render(corpo, d);
+                    retratoDesenhado = parcial;
                 },
                 40, 500),
             _pedir('/api/projeto/etiquetas')
@@ -373,7 +397,7 @@ export async function carregarProjetoInfo() {
         }
         const retrato = JSON.stringify(dados);
 
-        if (esqueleto || retrato !== retratoDesenhado) {
+        if (retrato !== retratoDesenhado) {
             _render(corpo, dados);
             retratoDesenhado = retrato;
         }

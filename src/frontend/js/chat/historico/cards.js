@@ -130,7 +130,9 @@ let cacheDoUltimoEnviadoValida = false;
             const isSelected = state.currentSelectedHistoryGroup === group;
             if (!isSelected) {
                 selectHistoryTask(group, sub);
-                openFilesPanel(await hidratarGroup(group), vista);
+                const hidratado = await hidratarGroup(group);
+                if (state.currentSelectedHistoryGroup !== group) return;
+                openFilesPanel(hidratado, vista);
                 return;
             }
             if (vista.col3Aberta()) {
