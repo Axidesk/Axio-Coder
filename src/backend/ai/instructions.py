@@ -452,14 +452,19 @@ def _bloco_sessao():
         )
     elif tipo == "brusco":
         linhas.append(
-            f"REINICIO: o arranque anterior foi a {veredicto.get('iniciado_em')} e desapareceu sem despedida "
-            "(Ctrl+C, kill ou o PC a desligar) - nao deixou marca de fecho."
+            f"REINICIO: o arranque anterior foi a {veredicto.get('iniciado_em')} e nao deixou marca de fecho - e o "
+            "normal daqui: reiniciar (Ctrl+Shift+B) ou fechar a janela mata o backend a forca, e so nesse mesmo "
+            "saco caem um kill, um Ctrl+C ou o PC a desligar. Nada disto prova que algo rebentou."
         )
     elif tipo == "limpo":
         linhas.append(
             f"REINICIO: a sessao anterior correu de {veredicto.get('iniciado_em')} a {veredicto.get('encerrado_em')} "
             f"e fechou a bem ({veredicto.get('motivo') or 'normal'})."
         )
+    if veredicto.get("mesmo_pai") is True:
+        linhas.append("O processo pai e o MESMO de antes: so o backend reiniciou, a janela do Axio continuou aberta.")
+    elif veredicto.get("mesmo_pai") is False:
+        linhas.append("O processo pai e OUTRO: a janela do Axio foi fechada e reaberta.")
     linhas.append(
         "Consequencia para mim: o codigo ja lido no arranque esta EM VIGOR e o que eu editar agora so entra no "
         "proximo reinicio do backend (a interface, essa, e servida do disco a cada pedido). Se a conversa comecar "

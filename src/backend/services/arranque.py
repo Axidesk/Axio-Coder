@@ -97,6 +97,14 @@ def _vigiar_o_fecho():
     return True
 
 
+def _mesmo_pai(anterior):
+    """A janela e a mesma? Separa o reinicio so do backend (Ctrl+Shift+B) de o Axio ter sido reaberto."""
+    pai = int(anterior.get("pai") or 0)
+    if not pai:
+        return None
+    return pai == os.getppid()
+
+
 def _veredicto(anterior):
     if not anterior:
         return {"tipo": "primeiro"}
@@ -110,11 +118,13 @@ def _veredicto(anterior):
             "iniciado_em": anterior.get("iniciado_em") or "?",
             "encerrado_em": anterior.get("encerrado_em"),
             "motivo": anterior.get("motivo_do_fecho") or "",
+            "mesmo_pai": _mesmo_pai(anterior),
         }
     return {
         "tipo": "brusco",
         "iniciado_em": anterior.get("iniciado_em") or "?",
         "pid": pid,
+        "mesmo_pai": _mesmo_pai(anterior),
     }
 
 
@@ -140,6 +150,7 @@ def registar_arranque():
     }
     _gravar({
         "pid": _registo["pid"],
+        "pai": os.getppid(),
         "iniciado_epoch": ARRANQUE,
         "iniciado_em": _registo["iniciado_em"],
         "encerrado_em": "",

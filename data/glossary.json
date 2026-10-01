@@ -5762,7 +5762,11 @@
       "descricao": "Marca no disco cada arranque do Axio (.axio/arranque.json, fora do git) e compara com a marca anterior, para o agente saber sozinho que o programa reiniciou, quando, e se o anterior fechou a bem ou morreu a forca. Chamado no arranque real (app.py, __main__) e garantido por _bloco_sessao em src/backend/ai/instructions.py, que injeta o resultado no contexto a cada rodada.",
       "localizacao": {
         "arquivo": "src/backend/services/arranque.py",
-        "linha": 121
+        "linha": 131,
+        "conferido": [
+          1790896063.504,
+          5186
+        ]
       }
     }
   ]
