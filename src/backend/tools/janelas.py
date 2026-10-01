@@ -1188,7 +1188,10 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
     if acao == "elemento":
         return _acao_elemento(janela_escolhida, alvo, elementos)
 
-    elemento, erro, nota = _resolver(janela_escolhida, alvo, elementos)
+    if acao == "teclas" and not str(alvo or "").strip():
+        elemento, erro, nota = janela_escolhida, "", "a propria janela, sem alvo"
+    else:
+        elemento, erro, nota = _resolver(janela_escolhida, alvo, elementos)
     if erro:
         return "ERRO: " + erro
 
