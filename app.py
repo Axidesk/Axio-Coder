@@ -23,6 +23,7 @@ from flask import cli
 
 from src.backend.memory.vector import preaquecer_mempalace
 from src.backend.services.persistencia import limpar_temporarios_orfaos
+from src.backend.services.arranque import registar_arranque
 from src.backend.services.envio_automatico import iniciar_vigia_do_envio
 from src.backend.services.session import pasta_session_logs_em
 from src.backend.services.settings import migrar_automatico_padrao
@@ -65,6 +66,7 @@ log.setLevel(logging.ERROR)
 cli.show_server_banner = lambda *args: None
 
 if __name__ == '__main__':
+    registar_arranque()
     recolhidos = limpar_temporarios_orfaos([DATA_DIR, pasta_session_logs_em(APP_ROOT)])
     if recolhidos:
         print(f"[limpeza] {recolhidos} temporario(s) orfao(s) de escrita recolhido(s)")

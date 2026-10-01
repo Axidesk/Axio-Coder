@@ -1,4 +1,5 @@
 import sys
+import time
 
 from src.backend.ai.atrito import bloco_atrito
 from src.backend.memory.glossary import load_glossary
@@ -426,6 +427,47 @@ def _bloco_maquina():
         return f"=== MAQUINA ===\nNao foi possivel medir o hardware ({type(erro).__name__}).\n"
 
 
+def _bloco_sessao():
+    """Quando este processo arrancou e como terminou o anterior - para eu saber de um reinicio sem me contarem."""
+    try:
+        from src.backend.services.arranque import registar_arranque
+        registo = registar_arranque()
+    except Exception:
+        return ""
+    inicio = registo.get("iniciado_epoch") or time.time()
+    minutos = max(0, int((time.time() - inicio) / 60))
+    idade = f"{minutos} min" if minutos < 90 else f"{minutos // 60}h{minutos % 60:02d}"
+    veredicto = registo.get("veredicto") or {}
+    tipo = veredicto.get("tipo")
+    linhas = [
+        "=== SESSAO DO PROGRAMA (arranque) ===",
+        f"Este backend arrancou a {registo.get('iniciado_em')} (ha {idade}), no processo {registo.get('pid')}.",
+    ]
+    if tipo == "primeiro":
+        linhas.append("Nao havia marca de arranque anterior: este e o primeiro registo.")
+    elif tipo == "paralelo":
+        linhas.append(
+            f"Ja havia um Axio a correr (processo {veredicto.get('pid')}) quando este arrancou: nao e um reinicio, "
+            "sao duas instancias ao mesmo tempo."
+        )
+    elif tipo == "brusco":
+        linhas.append(
+            f"REINICIO: o arranque anterior foi a {veredicto.get('iniciado_em')} e desapareceu sem despedida "
+            "(Ctrl+C, kill ou o PC a desligar) - nao deixou marca de fecho."
+        )
+    elif tipo == "limpo":
+        linhas.append(
+            f"REINICIO: a sessao anterior correu de {veredicto.get('iniciado_em')} a {veredicto.get('encerrado_em')} "
+            f"e fechou a bem ({veredicto.get('motivo') or 'normal'})."
+        )
+    linhas.append(
+        "Consequencia para mim: o codigo ja lido no arranque esta EM VIGOR e o que eu editar agora so entra no "
+        "proximo reinicio do backend (a interface, essa, e servida do disco a cada pedido). Se a conversa comecar "
+        "com ele a dizer que reiniciou, isto e a prova - nao pergunte se reiniciou nem peca confirmacao."
+    )
+    return "\n".join(linhas) + "\n"
+
+
 def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_continuidade, contexto_projeto="", contexto_codigo="", contexto_edicoes="", tem_web_search=True, use_deepseek=False, mensagem_usuario="", ai_model="gemini"):
     bloco_projeto = f"=== ESTRUTURA DO PROJETO ===\n{contexto_projeto}\n" if contexto_projeto else ""
     bloco_codigo = f"=== CÓDIGO RELEVANTE ===\n{contexto_codigo}\n" if contexto_codigo else ""
@@ -514,6 +556,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
     bloco_venv = _bloco_venv()
     bloco_maquina = _bloco_maquina()
     bloco_modo = _bloco_modo_projeto()
+    bloco_sessao = _bloco_sessao()
     nome_agente = "Axio Coder"
     if use_deepseek:
         identidade_modelo = "DeepSeek (deepseek-flash)"
@@ -568,6 +611,7 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         f"{bloco_venv}"
         f"{bloco_maquina}"
         f"{bloco_modo}"
+        f"{bloco_sessao}"
         f"{bloco_projeto}"
         f"{bloco_codigo}"
         f"{bloco_edicoes}"

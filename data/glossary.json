@@ -2029,8 +2029,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 360,
         "conferido": [
-          1790544451.571,
-          27301
+          1790895290.354,
+          27369
         ]
       }
     },
@@ -2070,8 +2070,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 71,
         "conferido": [
-          1790544451.571,
-          27301
+          1790895290.354,
+          27369
         ]
       }
     },
@@ -2092,8 +2092,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 751,
         "conferido": [
-          1790544451.571,
-          27301
+          1790895290.354,
+          27369
         ]
       }
     },
@@ -2109,10 +2109,10 @@
       "descricao": "Descobre os comandos de arranque plausiveis de uma pasta (a que o explorer mostra), expostos em GET /api/terminal/sugestoes?path=<rel> e consumidos pelos cards de sugestoes. Regras: package.json com scripts start/dev/serve; ficheiros .py com ponto de entrada (o ponto de entrada e decidido por AST - guarda `if __name__ == '__main__'` ou chamada app/uvicorn/socketio.run -, nunca por procura de texto); Docker Compose, Makefile, Cargo.toml, go.mod e ficheiros .bat. Limite de 6, sem repetidos. Le so o primeiro nivel da pasta. O resultado passa por _sem_recusados: quando a pasta E a raiz do Axio (APP_ROOT), saem as sugestoes que a rota /api/terminal/exec recusaria (npm start, python app.py, flask run) - um card que nunca arranca e ruido; fora da raiz nada e filtrado.",
       "localizacao": {
         "arquivo": "src/backend/services/sugestoes.py",
-        "linha": 28,
+        "linha": 29,
         "conferido": [
-          1790369088.857,
-          6837
+          1790895290.322,
+          7471
         ]
       }
     },
@@ -2265,8 +2265,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 290,
         "conferido": [
-          1790544451.571,
-          27301
+          1790895290.354,
+          27369
         ]
       }
     },
@@ -2286,8 +2286,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 539,
         "conferido": [
-          1790544451.571,
-          27301
+          1790895290.354,
+          27369
         ]
       }
     },
@@ -2540,8 +2540,8 @@
         "arquivo": "src/frontend/js/editor/terminal_cards.js",
         "linha": 606,
         "conferido": [
-          1790544451.571,
-          27301
+          1790895290.354,
+          27369
         ]
       }
     },
@@ -5719,8 +5719,8 @@
         "arquivo": "app.py",
         "linha": 5,
         "conferido": [
-          1790791246.55,
-          2674
+          1790895923.049,
+          2760
         ]
       }
     },
@@ -5743,6 +5743,26 @@
           1790879852.511,
           5992
         ]
+      }
+    },
+    {
+      "termo": "aviso de reinicio",
+      "aliases": [
+        "reiniciar a sessao",
+        "saber que reiniciei",
+        "saber quando reiniciei",
+        "aviso que reiniciou",
+        "programa reiniciou",
+        "backend reiniciou",
+        "sinal de arranque",
+        "sessao do programa",
+        "ficar ciente do reinicio"
+      ],
+      "identificador": "registar_arranque",
+      "descricao": "Marca no disco cada arranque do Axio (.axio/arranque.json, fora do git) e compara com a marca anterior, para o agente saber sozinho que o programa reiniciou, quando, e se o anterior fechou a bem ou morreu a forca. Chamado no arranque real (app.py, __main__) e garantido por _bloco_sessao em src/backend/ai/instructions.py, que injeta o resultado no contexto a cada rodada.",
+      "localizacao": {
+        "arquivo": "src/backend/services/arranque.py",
+        "linha": 121
       }
     }
   ]
