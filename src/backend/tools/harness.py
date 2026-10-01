@@ -12,6 +12,7 @@ relativo a partir da pasta do ficheiro temporario) e o DOM falso, que e o maior
 deles e o unico que se le como JavaScript.
 """
 
+import glob
 import json
 import os
 import re
@@ -1584,8 +1585,37 @@ def _interpretador_python():
 def _interpretador_node():
     return shutil.which("node")
 
+_LOCAIS_DE_INTERPRETADORES = {
+    "php": ("php/php.exe", "*/php/php.exe", "*/*/php/php.exe",
+            "*/bin/php/*/php.exe", "*/bin/php/*/*/php.exe"),
+}
+
+_interpretadores_encontrados = {}
+
+def _procurar_interpretador(nome):
+    """Procura o executavel onde os instaladores costumam po-lo (xampp, wamp, laragon, php solto),
+    do padrao mais raso para o mais fundo, nas unidades fixas - e guarda o resultado."""
+    if nome in _interpretadores_encontrados:
+        return _interpretadores_encontrados[nome]
+    achado = ""
+    for padrao in _LOCAIS_DE_INTERPRETADORES.get(nome, ()):
+        for letra in "CDEF":
+            base = letra + ":\\"
+            if not os.path.isdir(base):
+                continue
+            for alvo in sorted(glob.glob(os.path.join(base, *padrao.split("/")))):
+                if os.path.isfile(alvo):
+                    achado = alvo
+                    break
+            if achado:
+                break
+        if achado:
+            break
+    _interpretadores_encontrados[nome] = achado
+    return achado
+
 def _interpretador_php():
-    return os.environ.get("PHP_EXE") or shutil.which("php")
+    return os.environ.get("PHP_EXE") or shutil.which("php") or _procurar_interpretador("php")
 
 _TRECHOS = {
     "python": {
@@ -1624,8 +1654,13 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
     cfg = _TRECHOS[chave]
     interpretador = (interpretador or "").strip() or cfg["interpretador"]()
     if not interpretador:
-        return (f"ERRO: o '{cfg['executavel']}' nao esta no PATH desta maquina e nao foi indicado "
-                "nenhum interpretador, logo nao ha como correr um trecho desta linguagem.")
+        aviso = (f"ERRO: o '{cfg['executavel']}' nao esta no PATH desta maquina e nao foi indicado "
+                 "nenhum interpretador, logo nao ha como correr um trecho desta linguagem.")
+        procurados = _LOCAIS_DE_INTERPRETADORES.get(chave)
+        if procurados:
+            aviso += (" Ja procurei em " + ", ".join(procurados)
+                      + " nas unidades fixas do disco, sem encontrar.")
+        return aviso
     try:
         limite = max(1, min(int(timeout or 60), _TIMEOUT_TRECHO_MAX))
     except (TypeError, ValueError):
@@ -1749,13 +1784,15 @@ def tool_executar_js(codigo, timeout=60, rotulo=""):
     "configuracao, uma funcao lida do disco - em vez de criar ficheiros de sonda. Escreva o codigo SEM "
     "a tag '<?php' (ela e posta pelo cabecalho); com ela tambem serve. O cwd e a raiz do projeto "
     "aberto, logo um caminho relativo do trecho resolve-se a partir dela. O 'php' costuma NAO estar no "
-    "PATH quando esta instalado como modulo do servidor web: nesse caso indique o caminho do php.exe "
-    "em 'interpretador' ou na variavel de ambiente PHP_EXE - a ferramenta nao traz caminhos dentro dela.",
+    "PATH quando esta instalado como modulo do servidor web: a ferramenta procura-o nos locais onde os "
+    "instaladores costumam po-lo (xampp, wamp, laragon, php solto) nas unidades fixas do disco e, se "
+    "ainda nao o encontrar, aceita o caminho do php.exe em 'interpretador' ou na variavel de ambiente "
+    "PHP_EXE.",
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo PHP a executar (a tag <?php e opcional)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal", "padrao": ""},
-        "interpretador": {"tipo": "STRING", "desc": "Caminho do php.exe quando o PHP nao esta no PATH. Sem isto, procura no PHP_EXE e no PATH.", "padrao": ""},
+        "interpretador": {"tipo": "STRING", "desc": "Caminho do php.exe. Sem isto, procura no PHP_EXE, no PATH e nos locais habituais de instalacao.", "padrao": ""},
     },
 )
 def tool_executar_php(codigo, timeout=60, rotulo="", interpretador=""):
