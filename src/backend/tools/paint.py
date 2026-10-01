@@ -56,7 +56,27 @@ def _css_do_frontend():
     return [f for f in ficheiros if os.path.exists(f)]
 
 
+def _html_do_ficheiro(bruto, pasta):
+    """O corpo de um HTML sem os scripts, mais os CSS que ele liga (caminhos do disco)."""
+    corpo = _CORPO.search(bruto)
+    sem_scripts = _SCRIPT.sub("", corpo.group(1) if corpo else bruto)
+    if corpo:
+        sem_scripts += "".join(_ESTILO_INTERNO.findall(bruto))
+    ligados = []
+    for href in _LINK_CSS.findall(bruto):
+        if href.startswith(("http:", "https:", "//", "data:")):
+            continue
+        caminho = os.path.normpath(os.path.join(pasta, href.split("?")[0]))
+        if os.path.exists(caminho):
+            ligados.append(caminho)
+    return sem_scripts, ligados
+
+
 _ATRIBUTO_CLASS = re.compile(r'class\s*=\s*"([^"]*)"')
+_LINK_CSS = re.compile(r"""<link[^>]+href\s*=\s*["']([^"']+\.css)["']""", re.I)
+_SCRIPT = re.compile(r"<script\b[^>]*>.*?</script>", re.I | re.S)
+_CORPO = re.compile(r"<body[^>]*>(.*)</body>", re.I | re.S)
+_ESTILO_INTERNO = re.compile(r"<style[^>]*>.*?</style>", re.I | re.S)
 
 
 def _classes_fora_do_css(html, estilo, ficheiros_css):
@@ -117,10 +137,12 @@ def _url(caminho):
     return "file:///" + os.path.abspath(caminho).replace("\\", "/")
 
 
-def _pagina(html, estilo, ficheiros_css):
+def _pagina(html, estilo, ficheiros_css, base=""):
     """Monta a pagina de teste. Concatenacao (e nao %-format) para o CSS do pedido
     poder trazer % e chaves sem quebrar nada."""
     partes = ["<!doctype html><html lang='pt'><head><meta charset='utf-8'>"]
+    if base:
+        partes.append("<base href='" + base + "'>")
     partes.append("<script src='" + TAILWIND_CDN + "'></script>")
     for caminho in ficheiros_css:
         partes.append("<link rel='stylesheet' href='" + _url(caminho) + "'>")
@@ -307,9 +329,10 @@ def _desenho(px, W, H, alvo):
 
 @register(
     "tool_medir_pintura",
-    "Renderiza HTML com o CSS real do frontend do Axio num Electron fora do ecra e le os PIXEIS do que foi pintado: desenho traco a traco de uma cor (colunas e linhas, com lacunas), paleta de cores com a caixa de cada uma, e a geometria real dos elementos (clienteRect + ::before/::after computados). Usa quando a duvida e o que o browser PINTA (linha de 1px cortada, tom diferente, elemento deslocado), e nao o que o CSS diz. TEXTO NA PALETA VEM COM FRANJAS DE SUBPIXEL (duas cores lado a lado nas mesmas coordenadas, tipicamente um par azul/vermelho) porque o Chromium desenha glifos com antialiasing subpixel: nao leia a cor do glifo como se fosse a cor do elemento. Para medir a OPACIDADE de um texto, compare a cor pintada com a MISTURA esperada - opacidade*cor_do_texto + (1-opacidade)*fundo; ex: --text-suave #9ca3af a 40% sobre #1e1e1e da #505358 (0.4*156+0.6*30=80=0x50). A paleta serve para FORMAS (fundos, bordas, linhas); o mapa de uma cor (parametro 'cor') tambem.",
+    "Renderiza HTML num Electron fora do ecra e le os PIXEIS do que foi pintado: desenho traco a traco de uma cor (colunas e linhas, com lacunas), paleta de cores com a caixa de cada uma, e a geometria real dos elementos (clienteRect + ::before/::after computados). Com 'ficheiro' mede um ficheiro HTML do PROJETO aberto (o markup sai do disco com os CSS que ele liga e sem os scripts dele) - e o caminho para medir uma pagina real sem a copiar para o pedido; sem 'ficheiro' carrega o CSS do frontend do Axio. Usa quando a duvida e o que o browser PINTA (linha de 1px cortada, tom diferente, elemento deslocado), e nao o que o CSS diz. TEXTO NA PALETA VEM COM FRANJAS DE SUBPIXEL (duas cores lado a lado nas mesmas coordenadas, tipicamente um par azul/vermelho) porque o Chromium desenha glifos com antialiasing subpixel: nao leia a cor do glifo como se fosse a cor do elemento. Para medir a OPACIDADE de um texto, compare a cor pintada com a MISTURA esperada - opacidade*cor_do_texto + (1-opacidade)*fundo; ex: --text-suave #9ca3af a 40% sobre #1e1e1e da #505358 (0.4*156+0.6*30=80=0x50). A paleta serve para FORMAS (fundos, bordas, linhas); o mapa de uma cor (parametro 'cor') tambem.",
     {
-        "html": {"tipo": "STRING", "desc": "Markup a medir (o corpo da pagina de teste).", "obrig": True, "padrao": ""},
+        "html": {"tipo": "STRING", "desc": "Markup a medir (o corpo da pagina de teste). Alternativa a 'ficheiro'.", "obrig": False, "padrao": ""},
+        "ficheiro": {"tipo": "STRING", "desc": "Ficheiro HTML do projeto a medir: o markup sai do disco, com os CSS que ele liga e sem os scripts dele. Dispensa copiar a pagina para o pedido.", "obrig": False, "padrao": ""},
         "estilo": {"tipo": "STRING", "desc": "Texto de CSS extra, injetado depois dos ficheiros (ex: ':root{--border-suave:#ff0000}').", "obrig": False, "padrao": ""},
         "css": {"tipo": "STRING", "desc": "CAMINHOS de ficheiros CSS do projeto, separados por virgula (ex: 'src/frontend/css/dock.css') e nao o texto das regras - o texto vai no 'estilo'; vazio = style.css + css/*.css do frontend.", "obrig": False, "padrao": ""},
         "cor": {"tipo": "STRING", "desc": "Cor alvo do mapa de desenho, em hex sem # (ex: 'ff0000'). Aceita VARIAS separadas por ';' (ex: 'ff0000;00ff00') - cada uma sai com o seu mapa e entra SEMPRE na paleta, mesmo com poucos pixels. Vazio = so paleta e geometria.", "obrig": False, "padrao": ""},
@@ -321,8 +344,8 @@ def _desenho(px, W, H, alvo):
     },
     disponivel="edicao",
 )
-def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
-                       seletores="", largura=460, altura=900, manter_png=False):
+def tool_medir_pintura(html="", estilo="", css="", cor="", fundo="1e1e1e",
+                       seletores="", largura=460, altura=900, manter_png=False, ficheiro=""):
     emit_event("executing", function="Medindo o desenho")
     if not os.path.exists(_ELECTRON):
         return f"ERRO: Electron nao encontrado em {_ELECTRON}."
@@ -330,7 +353,20 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
         from PIL import Image  # import-local: Pillow so serve esta medicao (carga tardia)
     except ImportError:
         return "ERRO: Pillow nao instalado no ambiente do Axio (pip install pillow)."
-    ficheiros = [f.strip() for f in (css or "").split(",") if f.strip()] or _css_do_frontend()
+    base = ""
+    ligados = []
+    if ficheiro:
+        if not os.path.exists(ficheiro):
+            return f"ERRO: ficheiro nao encontrado: {ficheiro}"
+        with open(ficheiro, encoding="utf-8", errors="replace") as f:
+            bruto = f.read()
+        pasta = os.path.dirname(os.path.abspath(ficheiro))
+        html, ligados = _html_do_ficheiro(bruto, pasta)
+        base = _url(pasta) + "/"
+    if not (html or "").strip():
+        return "ERRO: sem markup para medir - passe 'html' ou 'ficheiro'."
+    pedidos = [f.strip() for f in (css or "").split(",") if f.strip()]
+    ficheiros = pedidos or (ligados if ficheiro else _css_do_frontend())
     em_falta = [f for f in ficheiros if not os.path.exists(f)]
     if em_falta:
         if any("{" in f or "\n" in f for f in em_falta):
@@ -341,7 +377,7 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
     tmp = tempfile.mkdtemp(prefix="axio_pintura_")
     try:
         with open(os.path.join(tmp, "index.html"), "w", encoding="utf-8") as f:
-            f.write(_pagina(html, estilo or "", ficheiros))
+            f.write(_pagina(html, estilo or "", ficheiros, base))
         with open(os.path.join(tmp, "main.js"), "w", encoding="utf-8") as f:
             f.write(_main_js(_sonda_js(seletores)).replace("__W__", str(int(largura))).replace("__H__", str(int(altura))))
         proc = subprocess.run([_ELECTRON, os.path.join(tmp, "main.js")],
@@ -358,7 +394,9 @@ def tool_medir_pintura(html, estilo="", css="", cor="", fundo="1e1e1e",
         alvos = _cores(cor)
         fundo_rgb = _cor_hex(fundo, (30, 30, 30))
 
-        linhas = ["PINTURA MEDIDA: imagem %dx%d | CSS: %s" % (W, H, ", ".join(os.path.basename(f) for f in ficheiros))]
+        linhas = ["PINTURA MEDIDA: imagem %dx%d | CSS: %s" % (W, H, ", ".join(os.path.basename(f) for f in ficheiros) or "nenhum")]
+        if ficheiro:
+            linhas.append("MARKUP lido de %s (scripts da pagina removidos)" % ficheiro)
         tw = os.path.join(tmp, "tw.txt")
         if os.path.exists(tw):
             with open(tw, encoding="utf-8") as f:
