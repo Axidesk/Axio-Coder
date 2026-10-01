@@ -140,7 +140,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
         } catch (e) {
             if (abortController.signal.aborted) {
                 state.pendingRestore = null;
-                closeRestoreConfirmPopup();
+                showRestoreResult('<div style="text-align:center;font-weight:700;color:var(--text-inline);">Tempo esgotado ao preparar a restauração.</div><div style="height:8px;"></div><div style="text-align:center;color:var(--text-claro);">Esta tarefa pode não ter checkpoint de código para restaurar.</div>');
                 return;
             }
             console.error('Erro ao carregar prévia da restauração:', e);
