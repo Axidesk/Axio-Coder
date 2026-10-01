@@ -58,6 +58,7 @@ let raciocinioQuerido = false;
 let raciocinioEmTurno = false;
 let raciocinioRevelado = false;
 const ALTURA_DA_BARRA_DE_TITULO = 32;
+const FADE_DA_TELA_DE_ESPERA = 320;
 const CAMINHO_SETTINGS = path.join(__dirname, '..', 'data', 'settings.json');
 const ZOOM_MINIMO = 0.5;
 const ZOOM_MAXIMO = 2;
@@ -202,8 +203,15 @@ function esperarServidorECarregar() {
   if (esperaEmCurso) return;
   esperaEmCurso = true;
   waitForFlask(ENDERECO_DA_APP, () => {
-    esperaEmCurso = false;
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(ENDERECO_DA_APP);
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      esperaEmCurso = false;
+      return;
+    }
+    mainWindow.webContents.executeJavaScript("document.documentElement.classList.add('saindo')").catch(() => {});
+    setTimeout(() => {
+      esperaEmCurso = false;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(ENDERECO_DA_APP);
+    }, FADE_DA_TELA_DE_ESPERA);
   });
 }
 
@@ -213,25 +221,22 @@ function paginaDeEspera() {
 <head>
 <meta charset="utf-8">
 <style>
-  html, body { margin: 0; height: 100%; background: #1e1e1e; overflow: hidden; }
-  body { display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
-  .caixa { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-  .anel { width: 34px; height: 34px; border-radius: 50%; background: #3f8cff; opacity: .35; animation: pulso 1.4s ease-in-out infinite; }
-  @keyframes pulso { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+  html { margin: 0; height: 100%; background: #1e1e1e; overflow: hidden; }
+  body { margin: 0; height: 100%; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; opacity: 1; transition: opacity ${FADE_DA_TELA_DE_ESPERA}ms ease; }
+  html.saindo body { opacity: 0; }
+  .caixa { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+  .bolha { position: relative; width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle at 50% 42%, #d3e8ff 0%, #74b3ff 38%, #3f8cff 72%, #2a6fe0 100%); box-shadow: 0 0 14px 2px rgba(90, 160, 255, .80), 0 0 38px 10px rgba(63, 140, 255, .48), 0 0 86px 30px rgba(63, 140, 255, .22); animation: bolha-pulso 1.5s ease-in-out infinite; }
+  .bolha::after { content: ''; position: absolute; inset: -16px; border-radius: 50%; background: radial-gradient(circle, rgba(63, 140, 255, 0) 50%, rgba(63, 140, 255, .42) 72%, rgba(63, 140, 255, 0) 82%); animation: bolha-halo 1.5s ease-in-out infinite; }
+  @keyframes bolha-pulso { 0%, 100% { transform: scale(.90); filter: brightness(.92) saturate(1); } 50% { transform: scale(1.08); filter: brightness(1.40) saturate(1.30); } }
+  @keyframes bolha-halo { 0%, 100% { opacity: .35; transform: scale(.86); } 50% { opacity: .95; transform: scale(1.20); } }
   .texto { color: #9ca3af; font-size: 13px; letter-spacing: .3px; }
-  .contador { color: #5b6169; font-size: 11px; }
 </style>
 </head>
 <body>
   <div class="caixa">
-    <div class="anel"></div>
+    <div class="bolha"></div>
     <div class="texto">A preparar o Axio...</div>
-    <div class="contador" id="contador"></div>
   </div>
-  <script>
-    let s = 0;
-    setInterval(() => { s += 1; document.getElementById('contador').textContent = s + 's'; }, 1000);
-  </script>
 </body>
 </html>`;
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
