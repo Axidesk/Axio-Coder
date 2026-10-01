@@ -224,12 +224,13 @@ function paginaDeEspera() {
   html { margin: 0; height: 100%; background: #1e1e1e; overflow: hidden; }
   body { margin: 0; height: 100%; background: #1e1e1e; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; opacity: 1; transition: opacity ${FADE_DA_TELA_DE_ESPERA}ms ease; }
   html.saindo body { opacity: 0; }
-  .caixa { display: flex; flex-direction: column; align-items: center; gap: 26px; }
-  .bolha { position: relative; width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle at 50% 42%, #d3e8ff 0%, #74b3ff 38%, #3f8cff 72%, #2a6fe0 100%); box-shadow: 0 0 14px 2px rgba(90, 160, 255, .80), 0 0 38px 10px rgba(63, 140, 255, .48), 0 0 86px 30px rgba(63, 140, 255, .22); animation: bolha-pulso 1.5s ease-in-out infinite; }
-  .bolha::after { content: ''; position: absolute; inset: -16px; border-radius: 50%; background: radial-gradient(circle, rgba(63, 140, 255, 0) 50%, rgba(63, 140, 255, .42) 72%, rgba(63, 140, 255, 0) 82%); animation: bolha-halo 1.5s ease-in-out infinite; }
-  @keyframes bolha-pulso { 0%, 100% { transform: scale(.90); filter: brightness(.92) saturate(1); } 50% { transform: scale(1.08); filter: brightness(1.40) saturate(1.30); } }
-  @keyframes bolha-halo { 0%, 100% { opacity: .35; transform: scale(.86); } 50% { opacity: .95; transform: scale(1.20); } }
-  .texto { color: #9ca3af; font-size: 13px; letter-spacing: .3px; }
+  .caixa { display: flex; flex-direction: column; align-items: center; gap: 58px; }
+  .bolha { position: relative; width: 58px; height: 58px; border-radius: 50%; }
+  .bolha::before { content: ''; position: absolute; inset: -34px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(202, 255, 82, .46) 0%, rgba(152, 212, 32, .28) 30%, rgba(120, 172, 18, .14) 52%, rgba(104, 148, 16, .05) 70%, rgba(104, 148, 16, 0) 84%); filter: blur(16px); animation: bolha-aura 3.4s ease-in-out infinite; }
+  .bolha::after { content: ''; position: absolute; inset: -1px; border-radius: 50%; background: radial-gradient(circle at 50% 46%, rgba(226, 255, 158, .96) 0%, rgba(198, 250, 76, .93) 18%, rgba(166, 226, 38, .86) 34%, rgba(128, 184, 22, .70) 50%, rgba(106, 152, 16, .40) 68%, rgba(96, 138, 14, .13) 84%, rgba(96, 138, 14, 0) 100%); filter: blur(6px); animation: bolha-nucleo 3.4s ease-in-out infinite; }
+  @keyframes bolha-nucleo { 0%, 100% { transform: scale(.97); } 50% { transform: scale(1.03); } }
+  @keyframes bolha-aura { 0%, 100% { opacity: .60; transform: scale(.90); } 50% { opacity: 1; transform: scale(1.10); } }
+  .texto { color: #e3e7de; font-size: 18px; font-weight: 700; letter-spacing: .5px; }
 </style>
 </head>
 <body>
