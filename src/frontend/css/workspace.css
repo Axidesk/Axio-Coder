@@ -382,7 +382,8 @@
 .explorer-row.explorer-oculto:hover {
     opacity: 0.9;
 }
-#explorer-tree:not(.mostra-ocultos) .explorer-oculto {
+#explorer-tree:not(.mostra-ocultos) .explorer-oculto,
+#explorer-tree:not(.mostra-ocultos) .explorer-item:has(> .explorer-oculto) {
     display: none;
 }
 .explorer-row.explorer-error { color: var(--vermelho-vivo); }
