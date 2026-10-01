@@ -815,6 +815,8 @@ def _acao_print(janela, regiao):
             " ATENCAO: numa janela TRANSPARENTE (Electron/app com o fundo ainda por pintar, canvas a carregar) "
             "a composicao do sistema mostra o que esta ATRAS dela - se a imagem nao bater com o que se esperava "
             "dessa janela, e disso: traga-a para a frente, de tempo ao desenho e repita."
+            " Para agir sobre o que a imagem mostra, de as coordenadas como 'janela:x,y' (contadas do canto"
+            " superior esquerdo dela): o clique e o arrasto aceitam essa conta, sem somar deslocamentos a mao."
         ),
         "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Janela nativa: hwnd {janela.handle}]"},
     }
@@ -968,6 +970,41 @@ def _pontos(pedido, minimo=4):
     return list(zip(numeros[::2], numeros[1::2]))
 
 
+def _pedido_relativo(pedido):
+    """O pedido sem o prefixo 'janela:', quando ele o traz; None quando as coordenadas ja sao do ecra."""
+    texto = str(pedido or "").strip()
+    for prefixo in ("janela:", "window:"):
+        if texto.lower().startswith(prefixo):
+            return texto[len(prefixo):].strip()
+    return None
+
+
+def _canto_da_janela(janela):
+    """(x, y) do canto que o 'print' mostra como 0,0 - o canto superior esquerdo da janela, no ecra."""
+    try:
+        caixa = janela.rectangle()
+    except Exception:
+        return None
+    return int(caixa.left), int(caixa.top)
+
+
+def _pontos_do_pedido(janela, pedido, minimo=2):
+    """(pontos, erro): pontos em coordenadas do ecra. Com 'janela:x,y' a conta parte do canto do 'print'."""
+    relativo = _pedido_relativo(pedido)
+    pontos = _pontos(relativo if relativo is not None else pedido, minimo=minimo)
+    if not pontos:
+        return [], (
+            "escreva 'x,y' em coordenadas do ecra ou 'janela:x,y' contadas a partir do canto"
+            " superior esquerdo que o 'print' dessa janela mostra"
+        )
+    if relativo is None:
+        return pontos, ""
+    canto = _canto_da_janela(janela)
+    if canto is None:
+        return [], "nao consegui medir o canto da janela para contar as coordenadas a partir dele"
+    return [(canto[0] + x, canto[1] + y) for x, y in pontos], ""
+
+
 def _interpolar(origem, destino, passos=8):
     return [
         (
@@ -999,9 +1036,9 @@ def _arrastar(pontos):
 
 
 def _acao_clique_ponto(janela, pedido):
-    pontos = _pontos(pedido, minimo=2)
-    if not pontos:
-        return "ERRO: em acao='clicar' com 'ponto', escreva 'x,y' em coordenadas do ecra."
+    pontos, erro = _pontos_do_pedido(janela, pedido, minimo=2)
+    if erro:
+        return "ERRO: em acao='clicar' com 'ponto', " + erro + "."
     erro = _focar(janela)
     if erro:
         return "ERRO: " + erro
@@ -1016,12 +1053,9 @@ def _acao_clique_ponto(janela, pedido):
 
 
 def _acao_arrastar(janela, pedido):
-    pontos = _pontos(pedido)
-    if not pontos:
-        return (
-            "ERRO: acao='arrastar' precisa de 'ponto' com pelo menos dois pares de coordenadas"
-            " do ecra, ex: 'x1,y1 x2,y2'."
-        )
+    pontos, erro = _pontos_do_pedido(janela, pedido, minimo=4)
+    if erro:
+        return "ERRO: acao='arrastar' precisa de 'ponto' com pelo menos dois pares de coordenadas; " + erro + "."
     if len(pontos) > LIMITE_TRACO:
         return f"ERRO: o traco tem {len(pontos)} pontos e o limite e {LIMITE_TRACO}."
     erro = _focar(janela)
