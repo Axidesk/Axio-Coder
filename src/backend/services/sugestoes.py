@@ -11,6 +11,7 @@ LIMITE_SUGESTOES = 6
 LIMITE_CANDIDATOS_PY = 12
 
 _NOMES_PY_PRIORITARIOS = ("main.py", "app.py", "run.py", "server.py", "manage.py")
+_NOMES_JS_PRIORITARIOS = ("build.mjs", "build.js", "dev.mjs", "dev.js", "serve.mjs", "serve.js", "start.mjs", "start.js", "watch.mjs", "watch.js")
 _SERVIDORES = ("app", "uvicorn", "socketio")
 _SCRIPTS_NPM = (("start", "npm start"), ("dev", "npm run dev"), ("serve", "npm run serve"))
 _URL_LOCAL = re.compile(
@@ -33,7 +34,7 @@ def detectar_sugestoes(pasta):
         ficheiros = sorted(n for n in os.listdir(pasta) if os.path.isfile(os.path.join(pasta, n)))
     except OSError:
         return []
-    sugestoes = (_sugestoes_npm(pasta) + _sugestoes_python(pasta, ficheiros)
+    sugestoes = (_sugestoes_npm(pasta) + _sugestoes_node(ficheiros) + _sugestoes_python(pasta, ficheiros)
                  + _sugestoes_cmake(pasta, ficheiros) + _sugestoes_projeto(ficheiros))
     return _sem_repetidos(_sem_recusados(sugestoes, pasta))
 
@@ -76,6 +77,17 @@ def _sugestoes_python(pasta, ficheiros):
         {"comando": "python " + nome, "origem": nome, "dica": "ponto de entrada"}
         for nome in prioritarios + restantes
         if _tem_ponto_de_entrada(os.path.join(pasta, nome))
+    ]
+
+
+def _sugestoes_node(ficheiros):
+    """Scripts de arranque JS/MJS na raiz, para projetos sem npm start/dev (um build.mjs do Tauri)."""
+    return [
+        {"comando": f"node {nome} dev", "origem": nome, "dica": "script de build (modo dev)"}
+        if nome.startswith("build.") else
+        {"comando": f"node {nome}", "origem": nome, "dica": "script de arranque"}
+        for nome in _NOMES_JS_PRIORITARIOS
+        if nome in ficheiros
     ]
 
 

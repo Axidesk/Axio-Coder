@@ -262,7 +262,7 @@ async function _lancar(comando, card) {
         const resp = await fetch(state.API + '/api/terminal/exec', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cmd: comando, cwd: state.currentCwd || '' })
+            body: JSON.stringify({ cmd: comando, cwd: (card && card.cwd) || state.currentCwd || '' })
         });
         dados = await resp.json();
         if (!resp.ok) {
@@ -761,10 +761,11 @@ export async function atualizarSugestoes(pastaRel) {
     if (_mesmasSugestoes(sugestoesAtuais, chaves)) return;
     sugestoesAtuais = chaves;
     _removerSugestoes();
+    const cwd = state.currentCwd || '';
     for (let i = sugestoes.length - 1; i >= 0; i--) {
         const comando = sugestoes[i].comando;
         if (!comando) continue;
-        _criarCard('sug:' + comando, comando, true, sugestoes[i].dica);
+        _criarCard('sug:' + comando, comando, true, sugestoes[i].dica, cwd);
     }
 }
 
