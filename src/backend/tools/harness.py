@@ -86,8 +86,8 @@ def _texto_do_subprocesso(bruto):
 
 def correr(comando, cwd=None, timeout=120, shell=False):
     """Roda um comando do sistema e devolve (saida, codigo de saida); nunca rebenta."""
-    if isinstance(comando, str) and not shell:
-        comando = [comando]
+    if isinstance(comando, str):
+        shell = True
     try:
         proc = _subprocess.run(comando, cwd=cwd, shell=shell, capture_output=True, timeout=timeout)
     except (OSError, _subprocess.SubprocessError) as _erro:
@@ -1678,7 +1678,10 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
     "prova na raiz. Nao substitui as ferramentas nativas: ler/editar/buscar/validar sintaxe tem "
     "ferramenta propria e a app Flask a responder tem tool_auditar_rotas. O cabecalho traz correr() e "
     "processos() para correr um comando do sistema ou saber se um build esta a correr, sem escrever "
-    "subprocess.run a mao - que perde a saida INTEIRA quando ela nao e UTF-8.",
+    "subprocess.run a mao - que perde a saida INTEIRA quando ela nao e UTF-8. correr() aceita a linha "
+    "como texto ('git status') ou como lista de argumentos, e devolve (saida, codigo de saida): "
+    "codigo -1 quer dizer que o comando nem chegou a arrancar e nesse caso a 'saida' traz o motivo - "
+    "confira-o antes de ler o texto como resultado.",
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo Python a executar (varios imports e asserts sao bem-vindos)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
