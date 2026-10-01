@@ -116,6 +116,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
         const abortController = new AbortController();
         state.restoreAbortController = abortController;
         showRestorePreviewLoading();
+        const cronometro = setTimeout(() => abortController.abort(), 30000);
         let restored = [];
         let kept = [];
         let orphans = [];
@@ -179,6 +180,7 @@ const { btnCancelRestore, btnConfirmRestoreYes, lblRestoreMessage, restoreConfir
         if (quebras.length) {
             msg += `<div style="color:var(--perigo);font-size:0.78rem;line-height:1.5;"><b>Restauração recusada: ${quebras.length} import(s) sem destino.</b><br>${_quebrasRestauroHtml(quebras, 6)}</div><br>`;
         }
+        clearTimeout(cronometro);
         state.restoreAbortController = null;
         if (lblRestoreMessage) lblRestoreMessage.innerHTML = msg;
         resetRestoreConfirmButtons();
