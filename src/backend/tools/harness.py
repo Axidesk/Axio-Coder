@@ -31,6 +31,7 @@ _LIMITE_SAIDA_PARCIAL = 4000
 _ARRANQUE = time.time()
 _PREFIXO_TEMP_PYTHON = "axio_python_"
 _PREFIXO_TEMP_JS = "axio_js_"
+_PREFIXO_TEMP_PHP = "axio_php_"
 
 _CABECALHO_PYTHON = '''# -*- coding: utf-8 -*-
 """Gerado por tool_executar_python num ficheiro temporario; apagado no fim."""
@@ -1526,6 +1527,12 @@ def _snippet_js(codigo, raiz_projeto):
     cabecalho = _CABECALHO_JS.replace("{RAIZ_JS}", json.dumps(raiz_projeto or ""))
     return cabecalho + _DOM_FALSO_JS + _sem_imports_repetidos(codigo) + "\n"
 
+def _snippet_php(codigo, raiz_projeto):
+    """O PHP exige a tag de abertura: o trecho pode vir com ela ou sem."""
+    if codigo.lstrip().startswith("<?php"):
+        return codigo + "\n"
+    return "<?php\n" + codigo + "\n"
+
 def _aviso_harness_velho():
     """O processo importou este modulo no arranque: se o ficheiro no disco for mais novo, o cabecalho
     injetado e o antigo e o trecho mente sobre o codigo de agora - o sintoma tipico e um auxiliar que
@@ -1577,6 +1584,9 @@ def _interpretador_python():
 def _interpretador_node():
     return shutil.which("node")
 
+def _interpretador_php():
+    return os.environ.get("PHP_EXE") or shutil.which("php")
+
 _TRECHOS = {
     "python": {
         "rotulo": "trecho Python",
@@ -1597,16 +1607,25 @@ _TRECHOS = {
         "snippet": _snippet_js,
         "interpretador": _interpretador_node,
     },
+    "php": {
+        "rotulo": "trecho PHP",
+        "linguagem": "PHP",
+        "executavel": "php",
+        "prefixo": _PREFIXO_TEMP_PHP,
+        "sufixo": ".php",
+        "snippet": _snippet_php,
+        "interpretador": _interpretador_php,
+    },
 }
 
-def _correr_trecho(chave, trecho, timeout, rotulo=""):
+def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
     """Escreve o trecho num ficheiro temporario do sistema, corre-o num processo novo
     com timeout que mata a arvore, apaga o ficheiro e devolve o relatorio."""
     cfg = _TRECHOS[chave]
-    interpretador = cfg["interpretador"]()
+    interpretador = (interpretador or "").strip() or cfg["interpretador"]()
     if not interpretador:
-        return (f"ERRO: o '{cfg['executavel']}' nao esta no PATH desta maquina, logo nao ha como "
-                "correr um trecho desta linguagem.")
+        return (f"ERRO: o '{cfg['executavel']}' nao esta no PATH desta maquina e nao foi indicado "
+                "nenhum interpretador, logo nao ha como correr um trecho desta linguagem.")
     try:
         limite = max(1, min(int(timeout or 60), _TIMEOUT_TRECHO_MAX))
     except (TypeError, ValueError):
@@ -1721,3 +1740,26 @@ def tool_executar_js(codigo, timeout=60, rotulo=""):
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho JavaScript a executar."
     return _correr_trecho("javascript", trecho, timeout, rotulo)
+
+@register(
+    "tool_executar_php",
+    "Corre um trecho de codigo PHP NUM PROCESSO NOVO e devolve stdout, stderr e o codigo de saida. "
+    "O trecho vai para um ficheiro temporario do sistema (.php) e e apagado no fim, por isso nada fica "
+    "na pasta do projeto. E o caminho para PROVAR comportamento em PHP - um site, um script de "
+    "configuracao, uma funcao lida do disco - em vez de criar ficheiros de sonda. Escreva o codigo SEM "
+    "a tag '<?php' (ela e posta pelo cabecalho); com ela tambem serve. O cwd e a raiz do projeto "
+    "aberto, logo um caminho relativo do trecho resolve-se a partir dela. O 'php' costuma NAO estar no "
+    "PATH quando esta instalado como modulo do servidor web: nesse caso indique o caminho do php.exe "
+    "em 'interpretador' ou na variavel de ambiente PHP_EXE - a ferramenta nao traz caminhos dentro dela.",
+    {
+        "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo PHP a executar (a tag <?php e opcional)"},
+        "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
+        "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal", "padrao": ""},
+        "interpretador": {"tipo": "STRING", "desc": "Caminho do php.exe quando o PHP nao esta no PATH. Sem isto, procura no PHP_EXE e no PATH.", "padrao": ""},
+    },
+)
+def tool_executar_php(codigo, timeout=60, rotulo="", interpretador=""):
+    trecho = (codigo or "").strip()
+    if not trecho:
+        return "ERRO: 'codigo' vazio. Informe o trecho PHP a executar."
+    return _correr_trecho("php", trecho, timeout, rotulo, interpretador)
