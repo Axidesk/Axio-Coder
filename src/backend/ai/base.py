@@ -92,7 +92,55 @@ def _modelo_gemini(ai_model):
     }.get(ai_model, "gemini-3.1-pro-preview-customtools")
 
 
+def _modelo_deepseek(ai_model):
+    """Nome do modelo DeepSeek para o identificador escolhido no frontend."""
+    return {
+        "deepseek-v4-pro": "deepseek-v4-pro",
+    }.get(ai_model, "deepseek-flash")
+
+
+def _modelos_deepseek_em_ordem(ai_model):
+    """O modelo pedido primeiro; se ele cair, a outra versao DeepSeek assume."""
+    pedido = _modelo_deepseek(ai_model)
+    alternativas = ["deepseek-flash", "deepseek-v4-pro"]
+    if pedido not in alternativas:
+        return [pedido]
+    return [pedido] + [m for m in alternativas if m != pedido]
+
+
+def _avisar_troca_de_modelo(de, para):
+    """Aviso na barra de status quando uma rota de IA cai e outra assume."""
+    try:
+        from src.backend.state import emit_event
+        emit_event("status", message=f"{de} caiu ou ficou indisponivel; mudei para {para} e continuo daqui.")
+    except Exception:
+        print(f"[API] {de} caiu; mudando para {para}.")
+
+
 def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False, ai_model="gemini"):
+    """Resposta do modelo, com retry e - no DeepSeek - troca automatica de versao.
+
+    Se a versao pedida cair (modelo inexistente ou esgotamento das tentativas), a
+    outra versao DeepSeek assume e o aviso sai na barra de status, para a rodada
+    nao morrer calada nem ficar presa a espera de um servico caido.
+    """
+    modelos = _modelos_deepseek_em_ordem(ai_model) if use_deepseek else [ai_model]
+    ultimo_erro = None
+    for idx, modelo_atual in enumerate(modelos):
+        try:
+            return _chamar_com_retry_interno(historico, config, max_tentativas, use_deepseek, modelo_atual)
+        except ErroContextoExcedido:
+            raise
+        except Exception as e:
+            ultimo_erro = e
+            if idx + 1 < len(modelos):
+                _avisar_troca_de_modelo(modelo_atual, modelos[idx + 1])
+                continue
+            raise
+    raise ultimo_erro
+
+
+def _chamar_com_retry_interno(historico, config, max_tentativas=5, use_deepseek=False, ai_model="gemini"):
     for tentativa in range(max_tentativas):
         try:
             if use_deepseek:
@@ -188,7 +236,7 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                             })
 
                 response = get_deepseek_client().chat.completions.create(
-                    model="deepseek-flash",
+                    model=_modelo_deepseek(ai_model),
                     messages=mensagens_ds,
                     tools=ds_tools if ds_tools else None
                 )
@@ -264,7 +312,8 @@ def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False
                 
             raise e
 
+    provedor = "DeepSeek" if use_deepseek else "Gemini"
     if "429" in str(ultimo_erro) or "RESOURCE_EXHAUSTED" in str(ultimo_erro):
         raise RuntimeError("Atingiu o limite de cota RPD/RPM. Tente mais tarde.") from ultimo_erro
 
-    raise RuntimeError(f"Falha ao conectar com o Gemini após {max_tentativas} tentativas. Erro: {ultimo_erro}") from ultimo_erro
+    raise RuntimeError(f"Falha ao conectar com o {provedor} após {max_tentativas} tentativas. Erro: {ultimo_erro}") from ultimo_erro

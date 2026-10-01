@@ -12,7 +12,7 @@ def get_deepseek_client():
 
         s = load_settings()
         api_key = (s.get("deepseek") or {}).get("api_key", "") or os.getenv("DEEPSEEK_API_KEY", "")
-        _deepseek_client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        _deepseek_client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com", timeout=300.0, max_retries=0)
     return _deepseek_client
 
 def reset_deepseek_client():

@@ -484,7 +484,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                 f"[SISTEMA-RELÓGIO] Chamada de API nº {contador_chamadas_api} desta rodada | "
                 f"Hora atual: {time.strftime('%H:%M:%S')} | Tempo decorrido desde o início da tarefa: "
                 f"{decorrido_s // 60}min {decorrido_s % 60}s. "
-                "Se já tentou a MESMA estAguardando resposta...ratégia 2+ vezes sem progresso, PARE de insistir: "
+                "Se já tentou a MESMA estratégia 2+ vezes sem progresso, PARE de insistir: "
                 "troque de abordagem, use tool_buscar_web ou seja honesto com o usuário. "
                 "15 minutos é tempo mais que suficiente para resolver algo simples."
             )
