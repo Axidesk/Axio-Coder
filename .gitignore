@@ -25,6 +25,7 @@ pgdata/
 
 # Logs
 *.log
+chats/
 
 # Node (frontend)
 node_modules/
