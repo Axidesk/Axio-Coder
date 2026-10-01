@@ -784,7 +784,40 @@ def _motivo_de_vazio(janela):
     return "a janela nao tem area visivel (minimizada, escondida ou a fechar): restaure-a e traga-a para a frente"
 
 
-def _acao_print(janela, regiao):
+def _regiao_do_alvo(janela, alvo):
+    """(regiao, nota, erro): a caixa do elemento em coordenadas da janela - as mesmas que o 'print' mostra."""
+    try:
+        elementos = _arvore(janela, time.monotonic() + ORCAMENTO_MAPA)
+    except Exception as exc:
+        return "", "", f"nao consegui ler a arvore da janela para achar '{alvo}' ({type(exc).__name__}: {exc})"
+    elemento, erro, nota = _resolver(janela, alvo, elementos)
+    if erro:
+        return "", "", erro
+    canto = _canto_da_janela(janela)
+    if canto is None:
+        return "", "", "nao consegui medir o canto da janela"
+    try:
+        caixa = elemento.rectangle()
+    except Exception as exc:
+        return "", "", f"nao consegui medir a caixa de '{alvo}' ({type(exc).__name__}: {exc})"
+    margem = 4
+    esquerda = max(0, int(caixa.left) - canto[0] - margem)
+    topo = max(0, int(caixa.top) - canto[1] - margem)
+    largura = int(caixa.width()) + margem * 2
+    altura = int(caixa.height()) + margem * 2
+    return (
+        f"{esquerda},{topo},{largura},{altura}",
+        f" Recortei a caixa do alvo ({nota}), {largura}x{altura} px contados do canto da janela.",
+        "",
+    )
+
+
+def _acao_print(janela, regiao, alvo=""):
+    recado_do_alvo = ""
+    if not retangulo_da_regiao(regiao) and str(alvo or "").strip():
+        regiao, recado_do_alvo, erro = _regiao_do_alvo(janela, alvo)
+        if erro:
+            return "ERRO: " + erro
     imagem, metodo, erro = _capturar_janela(janela)
     if imagem is None:
         return f"ERRO: nao consegui capturar a janela ({erro})."
@@ -810,7 +843,7 @@ def _acao_print(janela, regiao):
     largura, altura = imagem.size
     return {
         "texto": (
-            f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.'
+            f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.{recado_do_alvo}'
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
             " ATENCAO: numa janela TRANSPARENTE (Electron/app com o fundo ainda por pintar, canvas a carregar) "
             "a composicao do sistema mostra o que esta ATRAS dela - se a imagem nao bater com o que se esperava "
@@ -1123,7 +1156,7 @@ def _acao_arrastar(janela, pedido):
         },
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "So em acao='print': 'x,y,largura,altura' para recortar. Vazio captura a janela inteira. Quanto menor a regiao, mais nitida chega ao modelo.",
+            "desc": "So em acao='print': 'x,y,largura,altura' para recortar (contadas do canto superior esquerdo que a propria imagem mostra). Vazio captura a janela inteira; com 'alvo' indicado e sem 'regiao', recorta so a caixa desse elemento - e o caminho para ler um campo, um painel ou um trecho de ecra sem andar a adivinhar coordenadas. Quanto menor a regiao, mais nitida chega ao modelo.",
         },
         "ponto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -1172,7 +1205,7 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
     if acao == "fechar":
         return _acao_fechar(janela_escolhida)
     if acao == "print":
-        return _acao_print(janela_escolhida, regiao)
+        return _acao_print(janela_escolhida, regiao, alvo)
 
     prazo = time.monotonic() + ORCAMENTO_MAPA
     try:
