@@ -4,15 +4,13 @@ import ctypes
 import io
 import os
 import re
-import shutil
 import subprocess
 import time
-import winreg
 
 from ctypes import wintypes
 from PIL import ImageGrab
 
-from src.backend.services import cofre
+from src.backend.services import cofre, executaveis
 from src.backend.services.imagem import codificar_para_envio, retangulo_da_regiao
 from src.backend.services.process_manager import tokenizar_linha
 from src.backend.state import emit_event
@@ -28,7 +26,6 @@ LIMITE_MAPA = 300
 LIMITE_VARREDURA = 6000
 LIMITE_TRACO = 64
 PAUSA_TRACO = 0.02
-CHAVE_APP_PATHS = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\"
 SEM_PROGRAMA = (
     "nao encontrei '{0}'. Use o nome do executavel (ex: 'notepad', 'mspaint') ou o caminho"
     " completo entre aspas (ex: \"C:\\Program Files\\App\\app.exe\")."
@@ -42,15 +39,6 @@ SEM_JANELA = (
     " o numero do hwnd, 'pid:<numero>' (para escolher pelo processo) ou um trecho do titulo"
     " (ex: 'Bloco de notas')"
 )
-CHAVE_UNINSTALL = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-CHAVE_UNINSTALL_WOW = "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-PASTAS_IGNORADAS = frozenset({
-    "$recycle.bin", "$windows.~bt", "$windows.~ws", ".git", ".venv", "__pycache__",
-    "appdata", "cache", "config.msi", "installer", "logs", "node_modules",
-    "system volume information", "temp", "tmp", "windows", "winsxs",
-})
-PROFUNDIDADE_BUSCA = 3
-ORCAMENTO_BUSCA = 8.0
 ORCAMENTO_MAPA = 10.0
 PAUSA_ESTAVEL = 1.5
 ESPERA_JANELA = 30.0
@@ -180,135 +168,14 @@ def _janela(identificador):
 
 
 def _caminho_do_programa(nome):
-    """(caminho, erro): resolve pelo PATH, pelos App Paths do registo ou pelo caminho escrito."""
+    """(caminho, erro): resolve pelo caminho escrito, pelo PATH, pelos locais conhecidos ou pelo registo."""
     pedido = str(nome or "").strip().strip('"')
     if not pedido:
         return "", "diga o programa em 'alvo', ex: 'notepad' ou o caminho completo."
-    if os.path.isfile(pedido):
-        return pedido, ""
-    encontrado = shutil.which(pedido)
-    if encontrado:
-        return encontrado, ""
-    if os.name != "nt":
-        return "", SEM_PROGRAMA.format(pedido)
-    exe = pedido if pedido.lower().endswith(".exe") else pedido + ".exe"
-    for raiz in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
-        try:
-            with winreg.OpenKey(raiz, CHAVE_APP_PATHS + exe) as chave:
-                valor, _ = winreg.QueryValueEx(chave, "")
-        except OSError:
-            continue
-        caminho = str(valor or "").strip().strip('"')
-        if caminho and os.path.isfile(caminho):
-            return caminho, ""
-    do_registo = _caminho_no_registo(pedido)
-    if do_registo:
-        if do_registo.lower().endswith(".exe"):
-            return do_registo, ""
-        achado = _procurar_executavel(exe, [do_registo], orcamento=3.0)
-        if achado:
-            return achado, ""
-    achado = _procurar_executavel(exe, _raizes_de_programas())
+    achado = executaveis.achar(pedido)
     if achado:
         return achado, ""
     return "", SEM_PROGRAMA.format(pedido)
-
-
-def _raizes_de_programas():
-    """Pastas de programas a varrer, da mais provavel para a menos (o PATH e os App Paths ja falharam)."""
-    raizes = []
-    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)"),
-                 os.path.join(os.environ.get("LOCALAPPDATA") or "", "Programs"),
-                 os.environ.get("ProgramData")):
-        if base and os.path.isdir(base):
-            raizes.append(os.path.abspath(base))
-    vistos = {raiz.lower() for raiz in raizes}
-    for letra in "CDEFGHIJK":
-        raiz = letra + ":\\"
-        if os.path.isdir(raiz) and os.path.abspath(raiz).lower() not in vistos:
-            raizes.append(raiz)
-    return raizes
-
-
-def _procurar_executavel(nome, raizes, orcamento=ORCAMENTO_BUSCA):
-    """Caminho de um executavel cujo nome-base comece pelo pedido, varrendo as pastas dadas.
-
-    Existe porque um programa pode nao estar no PATH nem nos App Paths, e o registo pode estar
-    orfao (medido com o GIMP: o Uninstall apontava para uma pasta que o utilizador ja tinha movido).
-    O teto de tempo evita que uma pasta gigante prenda a chamada; entre dois candidatos da mesma
-    pasta fica o de nome mais curto, o que prefere 'gimp-2.10.exe' a 'gimp-console-2.10.exe'.
-    """
-    alvo = os.path.splitext(str(nome).strip().lower())[0]
-    if not alvo:
-        return ""
-    limite = time.time() + orcamento
-    for raiz in raizes:
-        melhor = ""
-        pilha = [(raiz, 0)]
-        while pilha:
-            if time.time() > limite:
-                return melhor
-            atual, nivel = pilha.pop()
-            try:
-                entradas = list(os.scandir(atual))
-            except OSError:
-                continue
-            for entrada in entradas:
-                try:
-                    if entrada.is_dir(follow_symlinks=False):
-                        if nivel < PROFUNDIDADE_BUSCA and entrada.name.lower() not in PASTAS_IGNORADAS:
-                            pilha.append((entrada.path, nivel + 1))
-                        continue
-                    if not entrada.name.lower().endswith(".exe"):
-                        continue
-                except OSError:
-                    continue
-                base = os.path.splitext(entrada.name.lower())[0]
-                if base == alvo:
-                    return entrada.path
-                if base.startswith(alvo) and (not melhor or len(entrada.name) < len(os.path.basename(melhor))):
-                    melhor = entrada.path
-        if melhor:
-            return melhor
-    return ""
-
-
-def _caminho_no_registo(pedido):
-    """Exe ou pasta do registo Uninstall cujo DisplayName contenha o pedido, confirmado no disco.
-
-    O registo fica ORFAO quando a pasta muda de sitio, por isso o que sai daqui so vale depois de
-    confirmado - o que devolve existe agora, ou nao devolve nada.
-    """
-    alvo = os.path.splitext(str(pedido).strip().lower())[0]
-    if not alvo:
-        return ""
-    for raiz, sub in ((winreg.HKEY_LOCAL_MACHINE, CHAVE_UNINSTALL),
-                      (winreg.HKEY_LOCAL_MACHINE, CHAVE_UNINSTALL_WOW),
-                      (winreg.HKEY_CURRENT_USER, CHAVE_UNINSTALL)):
-        try:
-            with winreg.OpenKey(raiz, sub) as lista:
-                total = winreg.QueryInfoKey(lista)[0]
-                for indice in range(total):
-                    try:
-                        with winreg.OpenKey(lista, winreg.EnumKey(lista, indice)) as app:
-                            nome = str(winreg.QueryValueEx(app, "DisplayName")[0] or "").lower()
-                            if alvo not in nome:
-                                continue
-                            for campo in ("InstallLocation", "DisplayIcon"):
-                                try:
-                                    bruto = str(winreg.QueryValueEx(app, campo)[0] or "")
-                                except OSError:
-                                    continue
-                                limpo = bruto.strip().strip('"').split('"')[0].strip()
-                                if limpo.lower().endswith(".exe") and os.path.isfile(limpo):
-                                    return limpo
-                                if os.path.isdir(limpo):
-                                    return limpo
-                    except OSError:
-                        continue
-        except OSError:
-            continue
-    return ""
 
 
 def _area(janela):

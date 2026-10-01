@@ -12,7 +12,6 @@ relativo a partir da pasta do ficheiro temporario) e o DOM falso, que e o maior
 deles e o unico que se le como JavaScript.
 """
 
-import glob
 import json
 import os
 import re
@@ -22,6 +21,7 @@ import tempfile
 import time
 
 from src.backend.config import APP_ROOT
+from src.backend.services import executaveis
 from src.backend.services.saida import recortar_texto
 from src.backend.state import emit_event, estado
 from src.backend.tools.process import correr_como_card
@@ -1528,11 +1528,20 @@ def _snippet_js(codigo, raiz_projeto):
     cabecalho = _CABECALHO_JS.replace("{RAIZ_JS}", json.dumps(raiz_projeto or ""))
     return cabecalho + _DOM_FALSO_JS + _sem_imports_repetidos(codigo) + "\n"
 
+_CABECALHO_PHP = '''<?php
+# Gerado por tool_executar_php num ficheiro temporario; apagado no fim.
+# A raiz do projeto aberto esta em AXIO_RAIZ (o processo corre com o cwd nela).
+define('AXIO_RAIZ', {RAIZ_PHP});
+'''
+
 def _snippet_php(codigo, raiz_projeto):
-    """O PHP exige a tag de abertura: o trecho pode vir com ela ou sem."""
-    if codigo.lstrip().startswith("<?php"):
-        return codigo + "\n"
-    return "<?php\n" + codigo + "\n"
+    """O PHP exige a tag de abertura, e a raiz do projeto vai numa constante (o `__DIR__` do trecho
+    e a pasta temporaria, nao a do projeto: quem precisa de um ficheiro do projeto use AXIO_RAIZ)."""
+    cabecalho = _CABECALHO_PHP.replace("{RAIZ_PHP}", json.dumps(raiz_projeto or ""))
+    corpo = codigo.lstrip()
+    if corpo.startswith("<?php"):
+        corpo = corpo[5:]
+    return cabecalho + corpo + "\n"
 
 def _aviso_harness_velho():
     """O processo importou este modulo no arranque: se o ficheiro no disco for mais novo, o cabecalho
@@ -1585,37 +1594,8 @@ def _interpretador_python():
 def _interpretador_node():
     return shutil.which("node")
 
-_LOCAIS_DE_INTERPRETADORES = {
-    "php": ("php/php.exe", "*/php/php.exe", "*/*/php/php.exe",
-            "*/bin/php/*/php.exe", "*/bin/php/*/*/php.exe"),
-}
-
-_interpretadores_encontrados = {}
-
-def _procurar_interpretador(nome):
-    """Procura o executavel onde os instaladores costumam po-lo (xampp, wamp, laragon, php solto),
-    do padrao mais raso para o mais fundo, nas unidades fixas - e guarda o resultado."""
-    if nome in _interpretadores_encontrados:
-        return _interpretadores_encontrados[nome]
-    achado = ""
-    for padrao in _LOCAIS_DE_INTERPRETADORES.get(nome, ()):
-        for letra in "CDEF":
-            base = letra + ":\\"
-            if not os.path.isdir(base):
-                continue
-            for alvo in sorted(glob.glob(os.path.join(base, *padrao.split("/")))):
-                if os.path.isfile(alvo):
-                    achado = alvo
-                    break
-            if achado:
-                break
-        if achado:
-            break
-    _interpretadores_encontrados[nome] = achado
-    return achado
-
 def _interpretador_php():
-    return os.environ.get("PHP_EXE") or shutil.which("php") or _procurar_interpretador("php")
+    return os.environ.get("PHP_EXE") or executaveis.achar("php")
 
 _TRECHOS = {
     "python": {
@@ -1656,10 +1636,10 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
     if not interpretador:
         aviso = (f"ERRO: o '{cfg['executavel']}' nao esta no PATH desta maquina e nao foi indicado "
                  "nenhum interpretador, logo nao ha como correr um trecho desta linguagem.")
-        procurados = _LOCAIS_DE_INTERPRETADORES.get(chave)
+        procurados = executaveis.LOCAIS_CONHECIDOS.get(chave)
         if procurados:
             aviso += (" Ja procurei em " + ", ".join(procurados)
-                      + " nas unidades fixas do disco, sem encontrar.")
+                      + " nas unidades fixas e nas pastas de programas, sem encontrar.")
         return aviso
     try:
         limite = max(1, min(int(timeout or 60), _TIMEOUT_TRECHO_MAX))
