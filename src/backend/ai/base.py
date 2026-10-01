@@ -117,6 +117,24 @@ def _avisar_troca_de_modelo(de, para):
         print(f"[API] {de} caiu; mudando para {para}.")
 
 
+def mensagem_amigavel_de_erro(exc):
+    """Frase curta para erros conhecidos da API; None quando nao ha traducao.
+
+    O erro cru da OpenAI ('Error code: 402 - {...}') nao diz nada a quem le: a
+    funcao troca-o por uma frase clara na barra de status. O que nao for
+    reconhecido volta como None e o chamador usa o erro original.
+    """
+    texto = str(exc)
+    status = getattr(exc, "status_code", None)
+    if status == 402 or "insufficient balance" in texto.lower():
+        return "Saldo insuficiente na conta da API. Recarregue o credito para eu continuar."
+    if status == 401 or "invalid api key" in texto.lower():
+        return "Chave da API invalida ou expirada. Verifique-a na configuracao."
+    if status == 429 or "rate limit" in texto.lower():
+        return "Limite de requisicoes atingido. Tente de novo em instantes."
+    return None
+
+
 def chamar_api_com_retry(historico, config, max_tentativas=5, use_deepseek=False, ai_model="gemini"):
     """Resposta do modelo, com retry e - no DeepSeek - troca automatica de versao.
 

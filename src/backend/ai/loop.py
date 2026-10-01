@@ -15,7 +15,7 @@ from src.backend.services.session import carregar_checkpoint, formatar_checkpoin
 from src.backend.ai.context import ErroContextoExcedido, compactar_historico, contar_tokens, texto_de_ferramentas, medir_contexto, podar_historico_global, truncar_mensagem_historico
 from src.backend.ai.coleta import coletar_contexto
 from src.backend.ai.atrito import registrar_uso_ferramenta, fechar_rodada
-from src.backend.ai.base import chamar_api_com_retry
+from src.backend.ai.base import chamar_api_com_retry, mensagem_amigavel_de_erro
 from src.backend.services.imagem import partes_da_imagem
 from src.backend.ai.instructions import build_system_instructions
 from src.backend.tools.bootstrap import tool_gerenciar_bootstrap
@@ -654,7 +654,8 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
             break
         except Exception as e:
             salvar_checkpoint(prompt_usuario, use_deepseek, e, ferramentas_usadas_rodada, historico_sessao)
-            emit_event("status", message=f"Erro: {str(e)}")
+            amigavel = mensagem_amigavel_de_erro(e)
+            emit_event("status", message=f"Erro: {amigavel or str(e)}")
             emit_event("done")
             break
 
