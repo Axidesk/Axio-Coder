@@ -757,30 +757,55 @@ def _capturar_janela(janela):
         imagem = janela.capture_as_image()
     except Exception:
         imagem = None
-    if imagem is not None:
+    if _tem_area(imagem):
         return imagem, "composicao do sistema (le a janela mesmo tapada)", ""
     retangulo = janela.rectangle()
+    if retangulo.right <= retangulo.left or retangulo.bottom <= retangulo.top:
+        return None, "", _motivo_de_vazio(janela)
     try:
         imagem = ImageGrab.grab(bbox=(retangulo.left, retangulo.top, retangulo.right, retangulo.bottom))
     except Exception as exc:
         return None, "", f"{type(exc).__name__}: {exc}"
+    if not _tem_area(imagem):
+        return None, "", _motivo_de_vazio(janela)
     return imagem, "ecra (a janela tem de estar a vista e nao pode estar tapada)", ""
+
+
+def _tem_area(imagem):
+    return imagem is not None and min(imagem.size) > 0
+
+
+def _motivo_de_vazio(janela):
+    try:
+        if janela.is_minimized():
+            return "a janela esta MINIMIZADA: restaure-a e traga-a para a frente"
+    except Exception:
+        pass
+    return "a janela nao tem area visivel (minimizada, escondida ou a fechar): restaure-a e traga-a para a frente"
 
 
 def _acao_print(janela, regiao):
     imagem, metodo, erro = _capturar_janela(janela)
     if imagem is None:
-        return (
-            f"ERRO: nao consegui capturar a janela ({erro}). Restaure-a e traga-a para a frente."
-        )
+        return f"ERRO: nao consegui capturar a janela ({erro})."
     recorte = retangulo_da_regiao(regiao)
     if recorte:
         try:
-            imagem = imagem.crop(recorte)
+            cortada = imagem.crop(recorte)
         except Exception:
-            pass
+            cortada = None
+        if not _tem_area(cortada):
+            return (
+                f"ERRO: a regiao {regiao!r} cai toda fora da janela, que tem"
+                f" {imagem.size[0]}x{imagem.size[1]} px: confira as coordenadas"
+                " (x,y,largura,altura, a partir do canto superior esquerdo dela) ou capture sem 'regiao'."
+            )
+        imagem = cortada
     buffer = io.BytesIO()
-    imagem.save(buffer, format="PNG")
+    try:
+        imagem.save(buffer, format="PNG")
+    except (ValueError, OSError) as exc:
+        return f"ERRO: a imagem da janela saiu com {imagem.size[0]}x{imagem.size[1]} px e nao a consegui codificar ({exc})."
     base64_img, mime, _ = codificar_para_envio(buffer.getvalue())
     largura, altura = imagem.size
     return {

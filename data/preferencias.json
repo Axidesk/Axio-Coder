@@ -144,6 +144,26 @@
       "area": "organizacao-de-janelas",
       "texto": "Num programa com varias janelas ou abas, cada opcao vive na janela a que pertence pela LOGICA - nunca misturada com outra (pedido a 2026-10-11, a proposito do Painel de Controlo do Tibia74). Configuracao do servidor na janela do servidor; conteudo do jogo (Lua/XML) na janela do conteudo; comandos (incluindo a mensagem global) na janela dos comandos; site (postagem, email, nome do mundo) na janela do site; base de dados na dela. Quando ele pedir para meter uma opcao numa janela que nao e a dela, eu digo em uma linha onde ela encaixa melhor e por que, e so a ponho no sitio errado se ele insistir depois de avisado.",
       "atualizado": "2026-09-30 20:35:26"
+    },
+    {
+      "area": "abas",
+      "texto": "Barra de separadores/abas: SEM cantos arredondados - cada aba e um retangulo que preenche TODA a altura da barra (nunca uma pill solta ao meio). Barra BAIXA: so o nome das abas, sem subtitulo, sem caminho, sem badge de versao/estado ao lado - informacao que nao se usa a cada segundo nao ocupa a barra. A aba ativa separa-se por TEXTO BRANCO + um traco de 2px na base; o hover e um FUNDO suave atras (rgba(255,255,255,0.05)). NUNCA cor de destaque (azul ou outra) no item selecionado, NUNCA uma borda/contorno a volta do item, e NUNCA o contorno de foco do browser: o foco tambem se marca por fundo (--bg-selecao), nunca por outline. Vale para qualquer app com abas.",
+      "atualizado": "2026-10-01 00:03:40"
+    },
+    {
+      "area": "vistas",
+      "texto": "Aplicacao com varias abas onde algumas precisam de VER algo (uma consola de processo, um site, o phpMyAdmin): o lado DIREITO da janela e um UNICO painel de vista, partilhado - cada aba que precise manda para la o seu conteudo. As abas que nao tem nada para ver NAO abrem o painel: a coluna da esquerda ocupa a janela toda. Ou seja, a esquerda sao sempre os dados e os botoes (transparentes, sem caixa) e a direita e a janela de visualizacao, sem bordas, sem cantos, sem padding - encostada as margens. Ao trocar de aba o painel abre/recolhe com transicao suave (largura + opacity, 240ms). Redimensionar a janela reposiciona o painel (nunca fica desalinhado). A LARGURA da vista e ajustavel por um puxador fino (9px, um tracinho de 1px que acende no hover) entre as duas metades: arrastar muda a largura ao vivo, a esquerda nunca desce abaixo de ~260px nem a direita abaixo de ~340px, o valor fica guardado e volta na proxima abertura, e um duplo clique no puxador repoe os 70/30 de partida. O puxador SO existe nas abas que tem vista - nas outras a esquerda ocupa tudo e ele desaparece. Para mostrar uma pagina web aqui dentro, usar uma webview NATIVA/JANELA FILHA (Tauri: WebviewWindowBuilder com parent) e NAO um iframe: o iframe e bloqueado pelo X-Frame-Options de sites como o phpMyAdmin e perde os cookies de sessao.",
+      "atualizado": "2026-10-01 01:40:56"
+    },
+    {
+      "area": "busca",
+      "texto": "Campo de pesquisa com lupa (pedido a 2026-10-11, no painel do Tibia74, apontando a busca do chat do Axio #chat-search-box como referencia): SO o icone da lupa fica a vista, encostado ao titulo/contador da linha; ao clicar, o campo abre DESLIZANDO a largura (0 -> largura final) e recebe o foco. Escape ou clique fora fecham; sem texto o campo volta a fechar. O campo tem a altura da LINHA onde vive (nao a do campo grande do modal de configuracoes) e a pill e a mesma do resto: fundo --bg-input, radius 9999px, sem borda.",
+      "atualizado": "2026-10-01 01:40:49"
+    },
+    {
+      "area": "campos-compactos",
+      "texto": "Numa barra de titulo/seccao ou numa linha com varios controlos, o campo e a pill alinham na MESMA altura da linha (~32-34px): campo com padding 6px 14px e radius 9999px. NUNCA os 41px do campo do modal de configuracoes (padding 10px 14px) aplicados a um painel compacto - o utilizador chamou-lhe 'muito alto' (2026-10-11). Todos os controlos da mesma linha tem a mesma altura: nenhum sobressai.",
+      "atualizado": "2026-10-01 01:40:49"
     }
   ]
 }
