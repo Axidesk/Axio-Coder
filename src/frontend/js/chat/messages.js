@@ -123,7 +123,7 @@ async function sendMessage() {
         }
 
         state.currentTurnId = Date.now() + '-' + Math.random().toString(36).slice(2);
-        const payload = { message: text, mode: state.currentMode, use_deepseek: state.selectedModel === 'deepseek', ai_model: state.selectedModel, turn_id: state.currentTurnId };
+        const payload = { message: text, mode: state.currentMode, use_deepseek: state.selectedModel === 'deepseek' || state.selectedModel === 'deepseek-v4-pro', ai_model: state.selectedModel, turn_id: state.currentTurnId };
         if (state.attachedImages.length > 0) {
             payload.images = state.attachedImages.map(img => ({ base64: img.base64, name: img.name, mime: img.mime }));
         }
