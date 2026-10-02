@@ -59,6 +59,15 @@ def _onde_estou(pagina):
     return f"{titulo} - {pagina.get('url') or ''}"
 
 
+def _aviso_das_outras_paginas(paginas):
+    if len(paginas) < 2:
+        return ""
+    return (
+        f" Este porto tem {len(paginas)} paginas: se o alvo era outro, passe 'alvo'"
+        " (veja-os com listar=true)."
+    )
+
+
 def _porto_em_falta():
     portos = ", ".join(str(item) for item in cdp.PORTAS_CANDIDATAS)
     return (
@@ -161,11 +170,15 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
             except cdp.SemResposta:
                 return (
                     f"ERRO: a expressao a correr antes de medir nao devolveu nada em "
-                    f"{sessao.espera:.0f} s - se ela espera por uma promessa (um fetch, um convite "
-                    "a app) que demora mais do que isso, parta-a em passos."
+                    f"{sessao.espera:.0f} s, em {_onde_estou(pagina)} - se ela espera por uma "
+                    "promessa (um fetch, um convite a app) que demora mais do que isso, parta-a "
+                    "em passos."
                 )
             except RuntimeError as falha:
-                return f"ERRO: a expressao '{js[:120]}' rebentou dentro da app ({falha})."
+                return (
+                    f"ERRO: a expressao '{js[:120]}' rebentou dentro da app ({falha}) - correu em"
+                    f" {_onde_estou(pagina)}.{_aviso_das_outras_paginas(paginas)}"
+                )
             if resultado is not None:
                 ecos.append(json.dumps(resultado, ensure_ascii=False, default=str))
             time.sleep(PAUSA_ANTES_DE_MEDIR)
