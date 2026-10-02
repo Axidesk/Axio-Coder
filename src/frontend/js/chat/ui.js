@@ -304,7 +304,7 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
             btnWorkspace.classList.toggle('sidebar-active', state.isWorkspaceActive);
         }
     }
-    function showWorkspaceView(open) {
+    function showWorkspaceView(open, opcoes) {
         if (!chatMode || !terminalMode) return;
         const incoming = open ? terminalMode : chatMode;
         const outgoing = open ? chatMode : terminalMode;
@@ -360,14 +360,14 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         }
         if (open) {
             if (window.WorkspaceView && typeof window.WorkspaceView.activate === 'function') {
-                window.WorkspaceView.activate();
+                window.WorkspaceView.activate(!!(opcoes && opcoes.focar));
             }
         }
     }
     function toggleWorkspaceView() {
         if (!terminalMode) return;
         const isOpen = !terminalMode.classList.contains('hidden');
-        showWorkspaceView(!isOpen);
+        showWorkspaceView(!isOpen, { focar: true });
     }
 
     function escrevendoNoChat() {

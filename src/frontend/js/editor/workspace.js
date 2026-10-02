@@ -97,13 +97,22 @@ export function ensureWorkspaceReady() {
     loadExplorerOnce();
 }
 
-export function activate() {
+export function activate(focar) {
     ensureWorkspaceReady();
     setActive(true);
     connectTermSocket();
     ensureTerminal();
     termFit();
-    state.termInput.focus();
+    if (focar || !superficieDeEdicao(document.activeElement)) state.termInput.focus();
+}
+
+function superficieDeEdicao(el) {
+    if (!el || el === document.body) return false;
+    if (el.isContentEditable || el.editContext) return true;
+    const tag = String(el.tagName || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'textarea') return false;
+    const tipo = String(el.type || 'text').toLowerCase();
+    return tipo !== 'checkbox' && tipo !== 'radio' && tipo !== 'button' && tipo !== 'submit' && tipo !== 'reset' && tipo !== 'range' && tipo !== 'color' && tipo !== 'file';
 }
 
 export function showEditor() {
