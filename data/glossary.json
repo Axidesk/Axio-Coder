@@ -1170,10 +1170,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1691,
+        "linha": 1733,
         "conferido": [
-          1790899097.829,
-          84481
+          1790905052.627,
+          86343
         ]
       }
     },
@@ -2243,10 +2243,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1246,
+        "linha": 1283,
         "conferido": [
-          1790899097.829,
-          84481
+          1790905052.627,
+          86343
         ]
       }
     },
@@ -2714,8 +2714,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 451,
         "conferido": [
-          1790433569.386,
-          60189
+          1790904787.303,
+          60187
         ]
       }
     },
@@ -2735,8 +2735,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 229,
         "conferido": [
-          1790433569.386,
-          60189
+          1790904787.303,
+          60187
         ]
       }
     },
@@ -5418,8 +5418,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 848,
         "conferido": [
-          1790433569.386,
-          60189
+          1790904787.303,
+          60187
         ]
       }
     },
@@ -5803,10 +5803,10 @@
       "descricao": "Barra flutuante no rodape do painel do Tibia74: sobe quando o servidor esta a correr com opcoes do config.lua diferentes das que carregou ao arrancar, desce quando o valor e reposto. Chaves marcadas com 'servidor: false' no ESQUEMA (HouseLevel, UHTrap) nao a levantam, porque o servidor nao as le.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 668,
+        "linha": 671,
         "conferido": [
-          1790902932.759,
-          27947
+          1790904751.024,
+          28080
         ]
       }
     },
@@ -5824,10 +5824,10 @@
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 290,
+        "linha": 292,
         "conferido": [
-          1790902932.759,
-          27947
+          1790904751.024,
+          28080
         ]
       }
     },
@@ -5843,10 +5843,10 @@
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 475,
+        "linha": 477,
         "conferido": [
-          1790902932.759,
-          27947
+          1790904751.024,
+          28080
         ]
       }
     },
@@ -5863,10 +5863,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 88,
+        "linha": 90,
         "conferido": [
-          1790904078.001,
-          24661
+          1790904751.133,
+          24702
         ]
       }
     },
@@ -5885,10 +5885,10 @@
       "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
-        "linha": 114,
+        "linha": 138,
         "conferido": [
-          1790904081.79,
-          4808
+          1790904745.697,
+          5492
         ]
       }
     },
@@ -5909,10 +5909,10 @@
       "descricao": "Label cinzenta por baixo do titulo de cada aba do painel (config.lua, commands.xml, config.inc.php e o .sql da base). CLICAR abre a PASTA-mae no Explorador atraves do comando `abrir_pasta` do motor (explorer <pasta>; o `/select,` foi medido e nao abre janela nenhuma). Ja nao se escolhe ficheiro nenhum: o painel descobre os caminhos sozinho. Se o motor nao tiver o binario novo, o erro aparece na propria label (.caminho-erro).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
-        "linha": 49,
+        "linha": 51,
         "conferido": [
-          1790904081.79,
-          4808
+          1790904745.697,
+          5492
         ]
       }
     },
@@ -5952,8 +5952,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1790904066.337,
-          20792
+          1790904745.664,
+          20896
         ]
       }
     },
@@ -5985,10 +5985,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 171,
+        "linha": 173,
         "conferido": [
-          1790904078.001,
-          24661
+          1790904751.133,
+          24702
         ]
       }
     },
@@ -6008,7 +6008,28 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 111
+        "linha": 111,
+        "conferido": [
+          1790905166.508,
+          7728
+        ]
+      }
+    },
+    {
+      "termo": "janela do site nao aparece",
+      "aliases": [
+        "janela do site e do phpadmin n aparecem",
+        "a vista nao carrega",
+        "o site nao abre no painel",
+        "phpmyadmin nao aparece no painel",
+        "janela da direita em branco",
+        "a vista nao nasce"
+      ],
+      "identificador": "abrir_vista / args_do_motor",
+      "descricao": "A janela nativa (webview filha) que mostra o site e o phpMyAdmin dentro do painel. Se nao aparecer, ver primeiro o erro no motor: abrir_vista devolve o motivo (o app.js mostra-o agora na propria janela por .catch(falharVista)). Causa ja vista: 0x8007139F do WebView2 quando os additionalBrowserArgs da vista diferem dos da janela principal - os da vista saem do tauri.conf.json por args_do_motor.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
+        "linha": 1425
       }
     }
   ]

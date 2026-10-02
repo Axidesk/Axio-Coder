@@ -164,6 +164,11 @@
       "area": "campos-compactos",
       "texto": "Numa barra de titulo/seccao ou numa linha com varios controlos, o campo e a pill alinham na MESMA altura da linha (~32-34px): campo com padding 6px 14px e radius 9999px. NUNCA os 41px do campo do modal de configuracoes (padding 10px 14px) aplicados a um painel compacto - o utilizador chamou-lhe 'muito alto' (2026-10-11). Todos os controlos da mesma linha tem a mesma altura: nenhum sobressai.",
       "atualizado": "2026-10-01 01:40:49"
+    },
+    {
+      "area": "performance",
+      "texto": "RECOLHIVEIS/ACORDEAO - o que faz um painel com centenas de itens abrir e fechar a 60fps (medido 2026-10-15/16 no painel do Tibia74, 962 ficheiros na arvore + 75 campos de config): (1) ANIMAR OS DOIS SENTIDOS com grid-template-rows 0fr->1fr (~240ms); (2) o corpo PESADO fechado fica FORA do desenho (content-visibility: hidden) MAS a classe so entra DEPOIS de a animacao de recolha acabar (~260ms) - no instante do fecho a recolha fica abrupta; ao abrir tira-se a classe ANTES de por .aberta; nascido fechado ja nasce com a classe; reabrir a meio cancela o relogio do fecho; (3) contain: layout paint em toda a zona que rola ou muda de altura (lista, consola, arvore) - sem isso o browser mede a pagina toda a cada quadro; (4) NAO usar backdrop-filter, position:sticky, transition:all nem repintar a lista por polling (a assinatura do ficheiro e um HASH do conteudo, nunca a data); (5) abrir/fechar e UM de cada vez (acordeao): o que abre fecha o anterior. NAO confiar no olho: medir o fps DENTRO da janela (tool_medir_fluidez pela porta de depuracao, ou um contador que escreve na consola quando desce de 50fps). Painel Tauri: as flags de GPU vivem em tauri.conf.json additionalBrowserArgs e TODAS as webviews tem de as receber iguais (ver regra propria memorizada).",
+      "atualizado": "2026-10-02 02:48:26"
     }
   ]
 }

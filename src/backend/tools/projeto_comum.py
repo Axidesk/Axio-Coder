@@ -24,7 +24,7 @@ PALAVRAS_SENSIVEIS = (
 )
 PASTAS_IGNORADAS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv", "env",
-    "dist", "build", "vendor", ".axio", ".mempalace", "target", ".next",
+    "dist", "build", "vendor", ".axio", ".mempalace", "target", ".next", "gen",
     ".idea", ".vscode", "coverage", ".tox", ".nox", ".pytest_cache",
     "Release", "Debug", "x64", "x86", "obj", "ipch", "CMakeFiles", "out",
 }

@@ -141,7 +141,7 @@ def versao_pacote(nome):
         return "desconhecida"
 
 PASTAS_FORA_DA_BUSCA = PASTAS_IGNORADAS
-EXT_FORA_DA_BUSCA = tuple(sorted(EXTS_BINARIAS))
+EXT_FORA_DA_BUSCA = tuple(sorted(EXTS_BINARIAS)) + (".lock", ".min.js", ".min.css")
 
 def raiz_repositorio(caminho):
     """Sobe a partir de `caminho` ate encontrar a pasta .git. Devolve "" se nao houver repo."""
