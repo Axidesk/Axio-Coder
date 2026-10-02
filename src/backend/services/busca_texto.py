@@ -6,6 +6,7 @@ PASTAS_IGNORADAS = {
     '.git', 'node_modules', 'build', '__pycache__', '.vs', 'Intermediate',
     'Binaries', 'Saved', 'dist', '.next', 'venv', '.venv', '.axio', '.idea',
     'Release', 'Debug', 'x64', 'x86', 'obj', 'ipch', 'CMakeFiles', 'out',
+    'target', 'coverage', '.turbo', '.parcel-cache',
 }
 
 EXTS_BINARIAS = {
