@@ -4,16 +4,21 @@ import re
 
 
 def limpar(texto):
+    out = []
+    _varrer(texto, 0, out, False)
+    return ''.join(out)
+
+
+def _varrer(texto, i, out, parar_em_chave):
     PALAVRAS_REGEX = {
         'return', 'case', 'throw', 'typeof', 'instanceof', 'new',
         'void', 'delete', 'yield', 'await', 'in', 'of', 'else', 'do',
     }
-    out = []
-    i = 0
     n = len(texto)
     prev = ''
     cur_word = ''
     last_word = ''
+    profundidade = 0
     while i < n:
         ch = texto[i]
         if ch == '/' and i + 1 < n and texto[i + 1] == '/':
@@ -48,27 +53,9 @@ def limpar(texto):
                     i += 2
                     continue
                 if texto[i] == '$' and i + 1 < n and texto[i + 1] == '{':
-                    j = i + 2
-                    depth = 1
-                    while j < n and depth > 0:
-                        c = texto[j]
-                        if c == '\\':
-                            j += 2
-                            continue
-                        if c in ('"', "'", '`'):
-                            q = c
-                            j += 1
-                            while j < n and texto[j] != q:
-                                j += 2 if texto[j] == '\\' else 1
-                            j += 1
-                            continue
-                        if c == '{':
-                            depth += 1
-                        elif c == '}':
-                            depth -= 1
-                        j += 1
-                    out.append(' ' + limpar(texto[i + 2:j - 1]) + ' ')
-                    i = j
+                    out.append(' ')
+                    i = _varrer(texto, i + 2, out, True)
+                    out.append(' ')
                     continue
                 i += 1
             out.append(' ')
@@ -124,6 +111,13 @@ def limpar(texto):
             last_word = ''
             prev = ' '
             continue
+        if parar_em_chave:
+            if ch == '{':
+                profundidade += 1
+            elif ch == '}':
+                if profundidade == 0:
+                    return i + 1
+                profundidade -= 1
         out.append(ch)
         if ch.isalnum() or ch in '_$':
             cur_word += ch
@@ -138,7 +132,7 @@ def limpar(texto):
                 last_word = cur_word
                 cur_word = ''
         i += 1
-    return ''.join(out)
+    return n
 
 
 def _padrao_simbolo(nome):
