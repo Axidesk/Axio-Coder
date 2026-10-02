@@ -203,7 +203,26 @@ def _pasta_de_trabalho(cwd):
     return alvo, ""
 
 
-def _validar_comando_processo(comando):
+def _exe_do_projeto(caminho, cwd=""):
+    """Caminho do executavel .exe quando ele vive dentro da pasta do projeto aberto."""
+    token = (caminho or "").strip().strip('"')
+    if not re.search(r"\.exe$", token, re.IGNORECASE):
+        return ""
+    raiz = estado.get("pasta_raiz") or ""
+    if not raiz:
+        return ""
+    raiz = os.path.abspath(raiz)
+    alvo = os.path.abspath(os.path.join(cwd or raiz, token))
+    if not os.path.isfile(alvo):
+        return ""
+    dentro = os.path.normcase(alvo)
+    limite = os.path.normcase(raiz)
+    if dentro != limite and not dentro.startswith(limite + os.sep):
+        return ""
+    return alvo
+
+
+def _validar_comando_processo(comando, cwd=""):
     cmd = (comando or "").strip()
     if not cmd:
         return False, "Comando vazio."
@@ -278,6 +297,9 @@ def _validar_comando_processo(comando):
             f"'{exe}' so e permitido com os subcomandos de consulta e instalacao "
             f"({', '.join(SUBCOMANDOS_DE_INSTALADOR)})."
         )
+
+    if _exe_do_projeto(partes[0], cwd):
+        return True, ""
 
     if not re.search(r"\.(?:exe|cmd|bat)$", partes[0], re.IGNORECASE) and re.search(r"\.(?:exe|cmd|bat)\b", cmd, re.IGNORECASE):
         return False, (
@@ -713,7 +735,7 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
     if timeout < 5:
         timeout = 5
 
-    ok, motivo = _validar_comando_processo(comando)
+    ok, motivo = _validar_comando_processo(comando, pasta_de_trabalho)
     if not ok:
         return f"ERRO: {motivo}"
 
