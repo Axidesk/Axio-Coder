@@ -180,12 +180,15 @@ def exports_do_texto(c):
     ex = set()
     ex.update(re.findall(r'export\s+async\s+function\s+([A-Za-z_$][\w$]*)', c))
     ex.update(re.findall(r'export\s+function\s+([A-Za-z_$][\w$]*)', c))
-    ex.update(re.findall(r'export\s+const\s+([A-Za-z_$][\w$]*)', c))
-    ex.update(re.findall(r'export\s+let\s+([A-Za-z_$][\w$]*)', c))
-    ex.update(re.findall(r'export\s+var\s+([A-Za-z_$][\w$]*)', c))
+    ex.update(re.findall(r'export\s+class\s+([A-Za-z_$][\w$]*)', c))
+    for declaracao in re.findall(r'export\s+(?:const|let|var)\s+([^;\n]+)', c):
+        for parte in declaracao.split(','):
+            nome = re.match(r'\s*\{?\s*([A-Za-z_$][\w$]*)', parte)
+            if nome:
+                ex.add(nome.group(1))
     for bloco in re.findall(r'export\s*\{([^}]+)\}', c):
         for item in bloco.split(','):
-            item = item.strip().split(' as ')[0].strip()
-            if item:
-                ex.add(item)
+            partes = [p.strip() for p in item.split(' as ') if p.strip()]
+            if partes:
+                ex.add(partes[-1])
     return ex

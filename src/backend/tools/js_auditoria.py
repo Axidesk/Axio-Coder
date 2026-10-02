@@ -64,6 +64,7 @@ def _indexar(files):
             continue
         with open(p, "r", encoding="utf-8") as f:
             c = f.read()
+        contents[fname] = c
         limpos[fname] = limpar(c)
         limpos_sem_export[fname] = remover_exports(limpos[fname])
         exports_by_file[fname] = exports_do_texto(c)
@@ -188,6 +189,26 @@ def _faltantes(limpo, exporters, imp, fname):
     return faltantes
 
 
+def _imports_quebrados(fname, contents, exports_by_file):
+    quebrados = []
+    for m in re.finditer(r'import\s*\{([^}]*)\}\s*from\s*[\'"]([^\'"]+)[\'"]', contents[fname]):
+        modulo = m.group(2)
+        if not modulo.startswith("."):
+            continue
+        alvo = os.path.basename(modulo)
+        exportados = exports_by_file.get(alvo)
+        if exportados is None or re.search(r'export\s*\*', contents.get(alvo, "")):
+            continue
+        for item in m.group(1).split(','):
+            pedido = item.strip().split(' as ')[0].strip()
+            if pedido and pedido not in exportados:
+                quebrados.append(
+                    f"    - '{pedido}' (import de '{modulo}') -> '{alvo}' nao exporta esse nome "
+                    f"[IMPORT QUEBRADO: o browser recusa carregar o modulo inteiro e a pagina fica morta sem dizer nada]"
+                )
+    return quebrados
+
+
 def _dead_code_global(fname, exports_by_file, sem_exp, limpos, namespace_by_file):
     deads = []
     for simb in sorted(exports_by_file[fname]):
@@ -259,6 +280,8 @@ def tool_auditar_imports_js(caminho_relativo):
             (_locais(limpo, exports_by_file, fname), "  [DECLARACOES LOCAIS NAO USADAS]"),
             (_funcoes(limpo, exports_by_file, fname), "  [FUNCOES LOCAIS NAO USADAS]"),
             (_faltantes(limpo, exporters, imp, fname), "  [FALTANTES (usado mas nao importado)]"),
+            (_imports_quebrados(fname, contents, exports_by_file),
+             "  [IMPORTS QUEBRADOS (nome que o ficheiro de origem nao exporta)]"),
             (_dead_code_global(fname, exports_by_file, limpos_sem_export[fname], limpos, namespace_by_file),
              "  [DEAD CODE GLOBAL (candidatos a apagar)]"),
         ):
@@ -272,7 +295,7 @@ def tool_auditar_imports_js(caminho_relativo):
             linhas.append("")
 
     if total == 0:
-        linhas.append("Nenhum achado nos modulos varridos: sem ORFAO LOCAL, sem FALTANTE e sem DEAD CODE GLOBAL.")
+        linhas.append("Nenhum achado nos modulos varridos: sem ORFAO LOCAL, sem FALTANTE, sem IMPORT QUEBRADO e sem DEAD CODE GLOBAL.")
         linhas.append("Isto NAO quer dizer que os ficheiros varridos nao tenham imports nem declaracoes - quer")
         linhas.append("dizer que nao ha nada a remover/mover. Um ficheiro pode muito bem ter imports e um bloco")
         linhas.append("'export { ... }' a meio do texto e nao gerar achado nenhum.")
@@ -280,6 +303,9 @@ def tool_auditar_imports_js(caminho_relativo):
         linhas.append(f"Total de itens sinalizados: {total}")
         linhas.append("IMPORTANTE: relatorio apenas informativo. Nada foi editado. Revise antes de remover/mover.")
     linhas.append("")
+    linhas.append("CATEGORIAS: ORFAO LOCAL (import nao usado), DESTRUCTURING NAO USADO, DECLARACOES LOCAIS NAO USADAS,")
+    linhas.append("FALTANTE (usado sem import), IMPORT QUEBRADO (o import pede um nome que o ficheiro de origem nao")
+    linhas.append("exporta: o browser recusa carregar o modulo inteiro e a pagina fica morta sem erro visivel) e DEAD CODE GLOBAL.")
     linhas.append("NOTA: analise heuristica (regex, sem AST). Pode dar falso positivo/negativo em nomes")
     linhas.append("redeclarados em escopos diferentes (sombra), reexports dinamicos ou metodos de objeto.")
     linhas.append("Itens marcados [AMBIGUO] NAO devem ser removidos sem verificacao manual.")
