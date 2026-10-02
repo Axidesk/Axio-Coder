@@ -24,6 +24,7 @@ TIPOS_SEM_NOME = frozenset({"Edit", "Document"})
 PADROES = ("invoke", "toggle", "selection_item", "expand_collapse", "value", "scroll", "text", "range_value")
 LIMITE_MAPA = 300
 LIMITE_VARREDURA = 6000
+ARVORE_POBRE = 40
 LIMITE_TRACO = 64
 PAUSA_TRACO = 0.02
 SEM_PROGRAMA = (
@@ -368,15 +369,28 @@ def _arvore(janela, prazo=None):
     """Descendentes da janela, com a segunda leitura que o Chromium exige.
 
     Uma janela Electron devolve primeiro uma arvore truncada: o Chromium so a constroi
-    quando percebe que ha um cliente de acessibilidade a ler.
+    quando percebe que ha um cliente de acessibilidade a ler. Nao e so a contagem baixa
+    que o diz: uma janela grande com 20 a 40 elementos em que o conteudo chega como uma
+    area de trabalho sem alvos la dentro (medido numa Tauri: 22 elementos e 93% da janela
+    num Pane opaco, e 259 elementos na leitura seguinte) e a mesma arvore por construir.
     """
     elementos = janela.descendants()[:LIMITE_VARREDURA]
-    if len(elementos) < 20 and not _prazo_esgotado(prazo):
-        time.sleep(0.6)
-        outra = janela.descendants()[:LIMITE_VARREDURA]
-        if len(outra) > len(elementos):
-            return outra
+    if _prazo_esgotado(prazo):
+        return elementos
+    if len(elementos) >= 20 and not _arvore_por_construir(elementos, janela):
+        return elementos
+    time.sleep(0.6)
+    outra = janela.descendants()[:LIMITE_VARREDURA]
+    if len(outra) > len(elementos):
+        return outra
     return elementos
+
+
+def _arvore_por_construir(elementos, janela):
+    """Janela grande cujo conteudo chegou como UMA area de trabalho: arvore por construir."""
+    if len(elementos) >= ARVORE_POBRE:
+        return False
+    return bool(_superficies(elementos, janela))
 
 
 def _alvos(elementos, prazo=None):
