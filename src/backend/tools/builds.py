@@ -173,7 +173,8 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
     inicio = time.time()
     emit_event("executing", function=f"Compilando {plano['deteccao'].get('projeto') or os.path.basename(pasta)}")
     resultado = correr_como_card(comando, cwd=pasta, timeout=construir.TIMEOUT_CONSTRUIR,
-                                 caminhos_extra=plano["escolha"].get("caminhos"))
+                                 caminhos_extra=plano["escolha"].get("caminhos"),
+                                 rotulo=_rotulo_do_build(plano, configuracao))
     crua = _texto_do_processo(resultado)
     saida = recortar_texto(crua)
     produzidos = construir.exe_produzido(plano["pasta_build"], desde=inicio, nome=nome)
@@ -559,6 +560,36 @@ def _texto_plano(plano):
         linhas.append(f"  pasta de build: {escrita['pasta_build']}")
     linhas += [f"  nota: {nota}" for nota in escolha.get("notas", [])]
     return "\n".join(linhas)
+
+def _configuracao_do_build(configuracao, escolha):
+    nomes = {"debug": "Debug", "release": "Release", "asan": "AddressSanitizer"}
+    partes = [nomes.get(configuracao, str(configuracao or "").capitalize()),
+              (escolha.get("arquitetura") or "").strip()]
+    return " ".join(p for p in partes if p)
+
+def _rotulo_do_build(plano, configuracao):
+    """O nome do card de um build: que ferramenta compila e com que configuracao - nunca o comando.
+
+    O comando do MSBuild traz o caminho do proprio compilador, o alvo e as duas propriedades
+    numa linha so, e no card isso le-se como ruido. O que o utilizador quer saber dali e o
+    compilador (a versao do Visual Studio, por exemplo) e o par configuracao/plataforma.
+    O comando continua no title do card, para quem o quiser ver.
+    """
+    escolha = plano.get("escolha") or {}
+    ferramenta = ""
+    if escolha.get("cmake"):
+        ferramenta = ((escolha.get("gerador") or "").strip()
+                      or f"CMake {escolha['cmake'].get('versao') or ''}".strip())
+    elif escolha.get("msbuild"):
+        ferramenta = escolha["msbuild"].get("produto") or ""
+    elif escolha.get("qt"):
+        qt = escolha["qt"]
+        ferramenta = f"Qt {qt.get('versao') or ''} {qt.get('kit') or ''}".strip()
+    elif escolha.get("cmake"):
+        ferramenta = f"CMake {escolha['cmake'].get('versao') or escolha['cmake'].get('caminho') or ''}".strip()
+    partes = [ferramenta, _configuracao_do_build(configuracao, escolha)]
+    juntas = " - ".join(p for p in partes if p)
+    return f"Compiler: {juntas}" if juntas else ""
 
 def _texto_deteccao(dados):
     if dados.get("erro"):
