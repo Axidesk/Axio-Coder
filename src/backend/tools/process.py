@@ -22,10 +22,11 @@ from src.backend.tools.registry import register
     {
         'comando': {"tipo": "STRING", "obrig": True, "padrao": ""},
         'cwd': {"tipo": "STRING", "desc": "Pasta onde o comando corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
+        'caminhos_extra': {"tipo": "STRING", "desc": "Pastas a por A FRENTE do PATH, separadas por ';'. Para o compilador de um toolchain que nao esta no PATH desta maquina (ex: o cargo do rustup, em %USERPROFILE%\\.rustup\\toolchains\\<toolchain>\\bin).", "padrao": ""},
         'tempo': {"tipo": "INTEGER", "desc": "Segundos antes de abortar (padrao 30). Compilar um projeto inteiro pede varios minutos.", "padrao": None},
     },
 )
-def tool_executar_comando(comando: str, cwd: str = "", tempo=None):
+def tool_executar_comando(comando: str, cwd: str = "", tempo=None, caminhos_extra: str = ""):
     emit_event("executing", function=f"Executando: {comando}")
     partes = (comando or "").strip().split()
     if not partes:
@@ -34,7 +35,8 @@ def tool_executar_comando(comando: str, cwd: str = "", tempo=None):
     if cmd_base in COMANDOS_PROIBIDOS:
         sugestao = FERRAMENTA_NATIVA.get(cmd_base, "as ferramentas nativas correspondentes")
         return f"ERRO: O comando '{cmd_base}' é proibido. Motivo: existe ferramenta nativa mais segura e rastreável para isso. Use: {sugestao}."
-    return tool_executar_processo(comando, modo="aguardar", timeout=tempo or 30, cwd=cwd)
+    return tool_executar_processo(comando, modo="aguardar", timeout=tempo or 30, cwd=cwd,
+                                  caminhos_extra=caminhos_extra)
 
 def id_processo():
     n = estado.setdefault("_contador_processo", 0) + 1
