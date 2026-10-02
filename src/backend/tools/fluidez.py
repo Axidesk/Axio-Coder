@@ -89,6 +89,23 @@ def _responde_a_cdp(pagina, espera=5.0):
         teste.fechar()
 
 
+def _aviso_de_navegacao(falha):
+    texto = str(falha or "").lower()
+    sinais = (
+        "execution context was destroyed",
+        "cannot find context",
+        "navigated or closed",
+        "target closed",
+    )
+    if not any(sinal in texto for sinal in sinais):
+        return ""
+    return (
+        " A pagina navegou ou recarregou a meio: a ligacao antiga morreu com ela e o resultado "
+        "perdeu-se. Nao e defeito da expressao - repita a medicao agora, que a pagina nova ja "
+        "esta no ar."
+    )
+
+
 def _porto_em_falta():
     portos = ", ".join(str(item) for item in cdp.PORTAS_CANDIDATAS)
     return (
@@ -205,7 +222,8 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
             except RuntimeError as falha:
                 return (
                     f"ERRO: a expressao '{js[:120]}' rebentou dentro da app ({falha}) - correu em"
-                    f" {_onde_estou(pagina)}.{_aviso_das_outras_paginas(paginas, pagina)}"
+                    f" {_onde_estou(pagina)}.{_aviso_de_navegacao(falha)}"
+                    f"{_aviso_das_outras_paginas(paginas, pagina)}"
                 )
             if resultado is not None:
                 ecos.append(json.dumps(resultado, ensure_ascii=False, default=str))
@@ -230,7 +248,7 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
             "a janela esta tapada, minimizada ou em segundo plano: traz a janela para a frente e repete."
         )
     except RuntimeError as falha:
-        return f"ERRO: {falha}."
+        return f"ERRO: {str(falha).strip().rstrip('.')}.{_aviso_de_navegacao(falha)}"
     finally:
         sessao.fechar()
 
