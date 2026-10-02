@@ -2,6 +2,7 @@ import os
 import json
 import re
 import time
+import traceback
 
 from src.backend.services.file_watcher import PASTAS_IGNORADAS, TAMANHO_MAX, e_pasta_de_outro_projeto
 from src.backend.services.persistencia import gravar_json_atomico
@@ -63,12 +64,25 @@ def salvar_checkpoint(prompt, use_deepseek, erro, ferramentas_usadas, historico_
             "ferramentas_usadas": ferramentas_usadas,
             "ultimo_historico": ultimo_historico,
             "pasta_raiz": estado["pasta_raiz"],
-            "timestamp": str(int(time.time()))
+            "timestamp": str(int(time.time())),
+            "pilha": _pilha_do_erro()
         }
         with open(caminho, "w", encoding="utf-8") as f:
             json.dump(dados, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"Erro ao salvar checkpoint: {e}")
+
+LIMITE_DA_PILHA = 40
+
+def _pilha_do_erro():
+    """A pilha do erro que interrompeu a rodada, em texto.
+
+    Sem ela a barra de status fica so com a frase do erro ('unsupported format string
+    passed to NoneType.__format__') e nao ha maneira de saber onde rebentou: quem le o
+    checkpoint apaga-o, logo a frase nunca fica em sitio nenhum onde se possa procura-la.
+    """
+    linhas = traceback.format_exc().strip().splitlines()
+    return "\n".join(linhas[-LIMITE_DA_PILHA:])
 
 def formatar_checkpoint(dados):
     """Transforma o checkpoint em um bloco de texto para injetar no contexto."""
@@ -85,6 +99,10 @@ def formatar_checkpoint(dados):
         for fer in ferramentas:
             linhas.append(f"    * {fer}")
     linhas.append(f"- Erro que interrompeu: {dados.get('erro', '?')}")
+    pilha = (dados.get("pilha") or "").strip()
+    if pilha and pilha != "NoneType: None":
+        linhas.append("- Pilha do erro (onde rebentou de facto):")
+        linhas.append(pilha)
     historico = dados.get("ultimo_historico", [])
     if historico:
         linhas.append("- Últimas mensagens da sessão:")
