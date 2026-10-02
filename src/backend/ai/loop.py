@@ -38,6 +38,7 @@ from src.backend.tools import (
     git,
     graph,
     harness,
+    html_ligacoes,
     janelas,
     js_auditoria,
     js_esm,

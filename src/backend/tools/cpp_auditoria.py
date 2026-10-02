@@ -9,11 +9,11 @@ julga o PROJETO inteiro - e o relatorio so existe com o cruzamento dos dois lado
 import os
 import re
 
-from src.backend.services.file_service import resolver_caminho
-from src.backend.state import emit_event, estado
+from src.backend.state import emit_event
 from src.backend.tools import cpp
 from src.backend.tools.projeto_comum import (
     PASTAS_IGNORADAS,
+    raiz_da_varredura,
     relativo_a,
     varrer_por_extensao,
 )
@@ -178,7 +178,7 @@ def _relato(raiz, ficheiros, cabecalhos, classes, problemas):
 )
 def tool_auditar_cpp(caminho_relativo=""):
     emit_event("executing", function="Auditando projeto C/C++")
-    raiz, erro = _raiz_da_varredura(caminho_relativo)
+    raiz, erro = raiz_da_varredura(caminho_relativo)
     if erro:
         return erro
     ficheiros = varrer_por_extensao(raiz, cpp.EXTENSOES, _MAX_FICHEIROS)
@@ -238,15 +238,3 @@ def _classes_do_projeto(por_ficheiro):
             if nome in classes:
                 classes[nome]["mencoes"] |= nomes
     return classes
-def _raiz_da_varredura(caminho_relativo):
-    if not caminho_relativo:
-        raiz = estado.get("pasta_raiz", "")
-        if not raiz or not os.path.isdir(raiz):
-            return None, "ERRO: nao ha pasta de projeto aberta. Indique 'caminho_relativo'."
-        return raiz, None
-    absoluto, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
-    if erro:
-        return None, erro
-    if not os.path.exists(absoluto):
-        return None, f"ERRO: '{caminho_relativo}' nao existe."
-    return (absoluto if os.path.isdir(absoluto) else os.path.dirname(absoluto)), None

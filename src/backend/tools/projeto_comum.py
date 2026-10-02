@@ -10,6 +10,7 @@ import os
 import json
 import time
 
+from src.backend.services.file_service import resolver_caminho
 from src.backend.state import estado, caminho_estado_projeto
 
 EXTENSOES_CODIGO = (
@@ -97,15 +98,17 @@ def eh_arquivo_texto(nome):
         return ext in EXTENSOES_TEXTO
     return nome.lower() in NOMES_TEXTO_SEM_EXTENSAO
 
-def varrer_por_extensao(raiz, extensoes, maximo=MAX_ARQUIVOS_INDEX):
+def varrer_por_extensao(raiz, extensoes, maximo=MAX_ARQUIVOS_INDEX, ignoradas=PASTAS_IGNORADAS):
     """Ficheiros de uma pasta (recursivo) cuja extensao esta na lista, ordenados.
 
     Mesma politica de pastas ignoradas da varredura do projeto: o que nao entra no indice
     de codigo tambem nao entra aqui (build, .git, node_modules, pastas escondidas).
+    `ignoradas` serve a varredura que so quer saber o que DECLARA algo (ex: a auditoria
+    de ligacoes precisa dos ficheiros dentro de `vendor`, que sao codigo do projeto).
     """
     achados = []
     for pasta, dirs, ficheiros in os.walk(raiz):
-        dirs[:] = [d for d in dirs if d not in PASTAS_IGNORADAS and not d.startswith(".")]
+        dirs[:] = [d for d in dirs if d not in ignoradas and not d.startswith(".")]
         for nome in ficheiros:
             if os.path.splitext(nome)[1].lower() in extensoes:
                 achados.append(os.path.join(pasta, nome))
@@ -121,6 +124,20 @@ def relativo_a(caminho, raiz):
     except ValueError:
         return caminho
 
+
+def raiz_da_varredura(caminho_relativo):
+    """Pasta a varrer: a indicada (um ficheiro vale a pasta dele) ou a raiz do projeto aberto."""
+    if not caminho_relativo:
+        raiz = estado.get("pasta_raiz", "")
+        if not raiz or not os.path.isdir(raiz):
+            return None, "ERRO: nao ha pasta de projeto aberta. Indique 'caminho_relativo'."
+        return raiz, None
+    absoluto, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
+    if erro:
+        return None, erro
+    if not os.path.exists(absoluto):
+        return None, f"ERRO: '{caminho_relativo}' nao existe."
+    return (absoluto if os.path.isdir(absoluto) else os.path.dirname(absoluto)), None
 
 def contar_linhas(caminho):
     """Linhas de um ficheiro de texto (0 quando nao for legivel)."""
