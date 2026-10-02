@@ -141,6 +141,10 @@ import assert from "node:assert";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL as __paraUrl } from "node:url";
 import { join as __juntar } from "node:path";
+import { createRequire as __criarRequire } from "node:module";
+
+// o corpo extraido do disco pode chamar require(...): sem isto o new Function rebenta com ReferenceError
+globalThis.require = __criarRequire(import.meta.url);
 
 try {
     process.chdir({RAIZ_JS});
@@ -1743,7 +1747,8 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "por isso nada fica na pasta do projeto. E o espelho do tool_executar_python para o frontend: use "
     "para PROVAR comportamento em JS - um assert sobre uma funcao real lida do disco, um stub de DOM/"
     "globais, a comparacao de duas versoes do mesmo codigo na mesma cena. Tem 'import' de node:fs, "
-    "node:path, node:assert e node:child_process, e top-level await; os caminhos relativos sao a raiz "
+    "node:path, node:assert e node:child_process, um 'require' global (o corpo extraido do disco pode "
+    "chama-lo, ex: src/main.js) e top-level await; os caminhos relativos sao a raiz "
     "do projeto aberto. Para ler o repositorio git do projeto use gitDoDisco(['log', ...]) - corre o git "
     "SEM shell, por isso o '%' de um --pretty=format:%cI chega intacto (num execSync do Windows o cmd.exe "
     "come-o e o erro nao aponta para o formato). Para comparar o MESMO codigo antes e depois de uma "
