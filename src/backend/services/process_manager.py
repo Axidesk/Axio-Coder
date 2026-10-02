@@ -294,8 +294,34 @@ def montar_env_processo(comando, porta_env=None, caminhos_extra=None):
     caminhos = [c for c in (caminhos_extra or []) if c and os.path.isdir(c)]
     if venv:
         caminhos.append(venv["scripts"])
+    caminhos.extend(_pastas_de_toolchain())
     if caminhos:
         atual = env.get("PATH", "")
         novo = os.pathsep.join(caminhos)
         env["PATH"] = novo + os.pathsep + atual if atual else novo
     return env
+
+def _pastas_de_toolchain():
+    """Toolchains instalados numa pasta conhecida mas FORA do PATH desta maquina.
+
+    O rustup desta maquina deixou o cargo e o rustc em ~/.rustup/toolchains/<nome>/bin sem
+    os ligar ao PATH (medido a 2026-10-02): o comando existe, a allowlist aceita-o e o
+    cmd.exe responde "'cargo' nao e reconhecido". Procurar aqui poupa a volta de descobrir
+    o caminho a mao - e serve qualquer projeto Rust/Tauri, nao so o de hoje.
+    """
+    casa = os.path.expanduser("~")
+    pastas = []
+    do_cargo = os.path.join(casa, ".cargo", "bin")
+    if os.path.isdir(do_cargo):
+        pastas.append(do_cargo)
+    raiz = os.path.join(casa, ".rustup", "toolchains")
+    if os.path.isdir(raiz):
+        try:
+            nomes = sorted(os.listdir(raiz))
+        except OSError:
+            nomes = []
+        for nome in nomes:
+            binario = os.path.join(raiz, nome, "bin")
+            if os.path.isdir(binario):
+                pastas.append(binario)
+    return pastas

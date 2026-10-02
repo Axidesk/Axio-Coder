@@ -806,8 +806,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 225,
         "conferido": [
-          1790918483.831,
-          56767
+          1790954638.785,
+          58711
         ]
       }
     },
@@ -2329,8 +2329,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 384,
         "conferido": [
-          1790918483.831,
-          56767
+          1790954638.785,
+          58711
         ]
       }
     },
@@ -4673,8 +4673,8 @@
         "arquivo": "src/backend/tools/process.py",
         "linha": 412,
         "conferido": [
-          1790918483.831,
-          56767
+          1790954638.785,
+          58711
         ]
       }
     },
@@ -5866,8 +5866,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
         "linha": 110,
         "conferido": [
-          1790953119.804,
-          30150
+          1790954499.887,
+          30293
         ]
       }
     },
@@ -5932,8 +5932,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
         "linha": 86,
         "conferido": [
-          1790950809.187,
-          16155
+          1790954492.987,
+          16610
         ]
       }
     },
@@ -5986,10 +5986,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 213,
+        "linha": 218,
         "conferido": [
-          1790953119.804,
-          30150
+          1790954499.887,
+          30293
         ]
       }
     },
@@ -6032,8 +6032,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
         "linha": 1531,
         "conferido": [
-          1790950602.924,
-          53705
+          1790954808.51,
+          55224
         ]
       }
     },
@@ -6052,10 +6052,10 @@
       "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 353,
+        "linha": 358,
         "conferido": [
-          1790953119.804,
-          30150
+          1790954499.887,
+          30293
         ]
       }
     },
@@ -6108,10 +6108,10 @@
       "descricao": "A janela de manutencao da base na aba Banco de dados do painel: procurar personagem, editar a ficha, mexer no premium e esvaziar uma tabela mantendo as colunas (com o GM/God guardado).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
-        "linha": 443,
+        "linha": 466,
         "conferido": [
-          1790953723.114,
-          38870
+          1790954382.248,
+          41275
         ]
       }
     },
@@ -6128,10 +6128,10 @@
       "descricao": "Gera uma copia .sql da base com o mysqldump do xampp, roda as antigas e corre antes de esvaziar uma tabela. As opcoes vivem no grupo Banco de dados das Configuracoes.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
-        "linha": 1039,
+        "linha": 1114,
         "conferido": [
-          1790953723.114,
-          38870
+          1790954382.248,
+          41275
         ]
       }
     },
@@ -6147,10 +6147,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 315,
+        "linha": 320,
         "conferido": [
-          1790953119.804,
-          30150
+          1790954499.887,
+          30293
         ]
       }
     },
@@ -6167,7 +6167,11 @@
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
-        "linha": 225
+        "linha": 225,
+        "conferido": [
+          1790954492.987,
+          16610
+        ]
       }
     },
     {
@@ -6183,7 +6187,11 @@
       "descricao": "A lista de personagens que aparece dentro do bloco Conta quando se escolhe uma conta: cada um recolhido, so o nome e o +, e ao abrir mostra a ficha editavel.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
-        "linha": 666
+        "linha": 666,
+        "conferido": [
+          1790954808.529,
+          34343
+        ]
       }
     }
   ]
