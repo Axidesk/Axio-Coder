@@ -13,6 +13,7 @@ DURACAO_MINIMA = 400
 DURACAO_MAXIMA = 12000
 ESPERA_EXTRA = 8.0
 PAUSA_ANTES_DE_MEDIR = 0.15
+ESPERA_DA_EXPRESSAO = 45.0
 
 _MEDICAO = """
 new Promise((pronto) => {
@@ -134,8 +135,11 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
         )
 
     total = min(max(int(durante or DURACAO_PADRAO), DURACAO_MINIMA), DURACAO_MAXIMA)
+    espera = (total / 1000.0) + ESPERA_EXTRA
+    if js.strip():
+        espera = max(espera, ESPERA_DA_EXPRESSAO)
     emit_event("executing", function=f"A medir o ritmo de desenho por {total} ms")
-    sessao = cdp.Sessao(pagina["webSocketDebuggerUrl"], espera=(total / 1000.0) + ESPERA_EXTRA)
+    sessao = cdp.Sessao(pagina["webSocketDebuggerUrl"], espera=espera)
     try:
         sessao.abrir()
     except Exception as falha:
@@ -158,7 +162,7 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
                 return (
                     f"ERRO: a expressao a correr antes de medir nao devolveu nada em "
                     f"{sessao.espera:.0f} s - se ela espera por uma promessa (um fetch, um convite "
-                    "a app), suba 'durante' para alargar a espera."
+                    "a app) que demora mais do que isso, parta-a em passos."
                 )
             except RuntimeError as falha:
                 return f"ERRO: a expressao '{js[:120]}' rebentou dentro da app ({falha})."
