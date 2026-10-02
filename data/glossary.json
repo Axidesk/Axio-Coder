@@ -5740,8 +5740,8 @@
         "arquivo": "docs/projetos/Tibia74/Server/config.lua",
         "linha": 42,
         "conferido": [
-          1790898965.684,
-          5356
+          1790901157.0,
+          5411
         ]
       }
     },
@@ -5803,10 +5803,10 @@
       "descricao": "Barra flutuante no rodape do painel do Tibia74: sobe quando o servidor esta a correr com opcoes do config.lua diferentes das que carregou ao arrancar, desce quando o valor e reposto. Chaves marcadas com 'servidor: false' no ESQUEMA (HouseLevel, UHTrap) nao a levantam, porque o servidor nao as le.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 604,
+        "linha": 671,
         "conferido": [
-          1790898487.237,
-          24972
+          1790901334.359,
+          28034
         ]
       }
     },
@@ -5824,10 +5824,10 @@
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 283,
+        "linha": 293,
         "conferido": [
-          1790898487.237,
-          24972
+          1790901334.359,
+          28034
         ]
       }
     },
@@ -5843,10 +5843,10 @@
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 468,
+        "linha": 478,
         "conferido": [
-          1790898487.237,
-          24972
+          1790901334.359,
+          28034
         ]
       }
     },
@@ -5863,10 +5863,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 67,
+        "linha": 81,
         "conferido": [
-          1790898516.986,
-          23077
+          1790901334.88,
+          24186
         ]
       }
     },
@@ -5885,7 +5885,11 @@
       "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
-        "linha": 128
+        "linha": 128,
+        "conferido": [
+          1790899933.745,
+          5416
+        ]
       }
     },
     {
@@ -5895,16 +5899,17 @@
         "caminho cinzento",
         "caminho do lua",
         "clicar no caminho",
-        "caminho do ficheiro",
-        "voltar ao de origem",
+        "abrir a pasta",
+        "abrir no explorador",
+        "pasta do ficheiro",
         "caminho do commands.xml",
         "caminho do config.inc.php"
       ],
       "identificador": "pintarCaminho",
-      "descricao": "A label cinzenta por baixo do titulo que mostra o ficheiro de que a aba fala. Clicar abre o dialogo do Windows para escolher outro; quando o caminho foi escolhido pelo utilizador aparece um botao que repoe o que o painel descobriu sozinho.",
+      "descricao": "Label cinzenta por baixo do titulo de cada aba do painel (config.lua, commands.xml, config.inc.php e o .sql da base). CLICAR abre a PASTA-mae no Explorador atraves do comando `abrir_pasta` do motor (explorer <pasta>; o `/select,` foi medido e nao abre janela nenhuma). Ja nao se escolhe ficheiro nenhum: o painel descobre os caminhos sozinho. Se o motor nao tiver o binario novo, o erro aparece na propria label (.caminho-erro).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
-        "linha": 63
+        "linha": 42
       }
     },
     {
@@ -5920,7 +5925,11 @@
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
-        "linha": 63
+        "linha": 63,
+        "conferido": [
+          1790899942.214,
+          11087
+        ]
       }
     },
     {
@@ -5937,7 +5946,42 @@
       "descricao": "O botao de informacao dos titulos do painel: um circulo vazio com 1px de borda (--border-suave) e o mesmo i italico dentro. Abre a explicacao da seccao por baixo do titulo.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
-        "linha": 5
+        "linha": 5,
+        "conferido": [
+          1790899980.166,
+          20242
+        ]
+      }
+    },
+    {
+      "termo": "uh trap",
+      "aliases": [
+        "uhtrap",
+        "uh trap",
+        "curar com uh na pilha",
+        "usar uh com alguem em cima"
+      ],
+      "identificador": "ConfigManager::UH_TRAP",
+      "descricao": "Chave do config.lua que decide quem a runa de cura atinge quando ha mais de uma criatura no mesmo tile: ligada, o alvo e quem esta em cima (quem esta por baixo nao se cura); desligada, cada um cura-se sempre a si proprio. Lida em Solution/src/configmanager.cpp e usada no ramo targetCasterOrTopMost de Solution/src/combat.cpp.</descricao>\n<｜｜DSML｜｜ parameter name=\"localizacao_arquivo\" string=\"true\">docs/projetos/Tibia74/Solution/src/configmanager.h",
+      "localizacao": {
+        "arquivo": "",
+        "linha": 149
+      }
+    },
+    {
+      "termo": "janela do lado direito do painel",
+      "aliases": [
+        "janela do lado direito do painel",
+        "janela do codigo do painel",
+        "janela que exibe o codigo",
+        "painel da direita do painel",
+        "coluna da direita do painel"
+      ],
+      "identificador": "aplicarVista",
+      "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
+        "linha": 170
       }
     }
   ]
