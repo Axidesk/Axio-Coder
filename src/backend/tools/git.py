@@ -281,6 +281,30 @@ def _lista_de_ficheiros(raiz, ficheiros):
     return pedacos
 
 
+def _dentro_de(caminho, raiz):
+    try:
+        return os.path.commonpath([os.path.abspath(caminho), os.path.abspath(raiz)]) == os.path.abspath(raiz)
+    except ValueError:
+        return False
+
+
+def _caminhos_no_repositorio(raiz, lista):
+    limpos = []
+    for bruto in lista:
+        escrito = bruto.replace("\\", "/").removeprefix("./")
+        alvo = os.path.normpath(os.path.join(raiz, escrito))
+        if not os.path.exists(alvo):
+            direto = os.path.normpath(escrito)
+            if os.path.exists(direto) and _dentro_de(direto, raiz):
+                alvo = direto
+        relativo = os.path.relpath(alvo, raiz)
+        if relativo == os.pardir or relativo.startswith(os.pardir + os.sep):
+            limpos.append(escrito)
+            continue
+        limpos.append(relativo.replace(os.sep, "/"))
+    return limpos
+
+
 def _ficheiro_da_mensagem(mensagem):
     caminho = os.path.join(tempfile.gettempdir(), f"axio_git_msg_{os.getpid()}.txt")
     with open(caminho, "w", encoding="utf-8") as f:
@@ -340,6 +364,14 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
     todas_antes = _ficheiros_em_stage(raiz)
     linhas = []
     if lista:
+        traduzidos = _caminhos_no_repositorio(raiz, lista)
+        trocados = [f"{a} -> {b}" for a, b in zip(lista, traduzidos)
+                    if a.replace("\\", "/").removeprefix("./") != b]
+        lista = traduzidos
+        if trocados:
+            linhas.append("CAMINHO LIDO DENTRO DO REPOSITORIO: " + "; ".join(trocados[:4]) +
+                          (" (o caminho vem da raiz do projeto aberto, nao da raiz do repositorio)."
+                           if len(trocados) <= 4 else f" (e mais {len(trocados) - 4})."))
         pedidos = [p.replace("\\", "/").removeprefix("./") for p in lista]
         sobra = [n for n in todas_antes if n.replace("\\", "/").removeprefix("./") not in pedidos]
         if sobra:
