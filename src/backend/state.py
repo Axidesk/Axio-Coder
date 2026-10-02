@@ -71,6 +71,10 @@ def limpar_eventos():
 def set_turn_id(turn_id):
     _turn_local.turn_id = turn_id
 
+def turn_id_atual():
+    """O turno desta thread - o vigia das ferramentas corre noutra e precisa dele."""
+    return getattr(_turn_local, "turn_id", None)
+
 def silenciar_eventos_desta_thread(ativo=True):
     """Suspende os eventos emitidos por ESTA thread.
 

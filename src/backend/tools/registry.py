@@ -33,10 +33,18 @@ Adicionar uma ferramenta passou a ser: 1 funcao no modulo dela + este decorador
 acima dela.
 """
 import importlib
+import threading
+import time
+
+from src.backend.services.transferencia import duracao_texto
+from src.backend.state import emit_event, set_turn_id, turn_id_atual
 
 TOOL_REGISTRY = {}
 
 _DISPONIBILIDADES = ("sempre", "edicao", "semi", "web", "computer")
+
+_VIGIA_SEGUNDOS = 15
+_VIGIA_AVISO = 120
 
 _COLISOES = []
 
@@ -161,7 +169,36 @@ def dispatch(nome, args):
     entry = TOOL_REGISTRY.get(nome)
     if entry is None:
         return None, False
-    return entry["handler"](**resolver_kwargs(entry["params"], args or {})), True
+    return _com_vigia(nome, entry["handler"], resolver_kwargs(entry["params"], args or {})), True
+
+
+def _com_vigia(nome, handler, kwargs):
+    """Corre a ferramenta com um vigia que republica o tempo decorrido na barra.
+
+    Uma ferramenta pesada corre na linha do turno e nao devolve nada enquanto trabalha:
+    sem isto a barra fica presa na frase do inicio e o turno parece congelado. O vigia
+    nao interrompe a ferramenta - diz quanto tempo ela ja leva e, passado o aviso, que o
+    turno pode ser parado.
+    """
+    parar = threading.Event()
+    turno = turn_id_atual()
+    inicio = time.monotonic()
+
+    def bater():
+        set_turn_id(turno)
+        while not parar.wait(_VIGIA_SEGUNDOS):
+            segundos = time.monotonic() - inicio
+            recado = f"{nome}: ainda a trabalhar ({duracao_texto(segundos)})"
+            if segundos >= _VIGIA_AVISO:
+                recado += " - se nao valer a pena esperar, pare o turno"
+            emit_event("executing", function=recado)
+
+    vigia = threading.Thread(target=bater, daemon=True, name=f"vigia-{nome}")
+    vigia.start()
+    try:
+        return handler(**kwargs)
+    finally:
+        parar.set()
 
 
 def carregar_ferramentas_em_segundo_plano(porta=5000):
