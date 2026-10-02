@@ -184,24 +184,25 @@ def _dividir_lote(texto):
         marca = linha.strip()
         if marca == _MARCA_ANTIGO:
             if antigo is not None:
-                return None, "ERRO: o bloco anterior nao foi fechado com '>>>>>>> NOVO'."
+                return None, f"ERRO: o bloco {len(itens) + 1} nao foi fechado com '>>>>>>> NOVO'."
             antigo = []
         elif antigo is None:
             if marca:
                 return None, f"ERRO: texto fora de um bloco: '{marca[:60]}'. Cada alteracao comeca com uma linha '{_MARCA_ANTIGO}'."
         elif marca == _MARCA_SEPARADOR:
             if novo is not None:
-                return None, "ERRO: dois separadores '=======' no mesmo bloco."
+                return None, f"ERRO: o bloco {len(itens) + 1} tem dois separadores '======='."
             novo = []
         elif marca == _MARCA_NOVO:
             if novo is None:
-                return None, "ERRO: o bloco fechou sem o separador '======='."
+                return None, (f"ERRO: o bloco {len(itens) + 1} fechou sem o separador '======='. "
+                              "Para APAGAR o trecho antigo, escreva na mesma a linha '=======' e deixe o lado novo vazio.")
             itens.append(("\n".join(antigo), "\n".join(novo)))
             antigo = novo = None
         else:
             (antigo if novo is None else novo).append(linha)
     if antigo is not None:
-        return None, "ERRO: o ultimo bloco nao foi fechado com '>>>>>>> NOVO'."
+        return None, f"ERRO: o ultimo bloco ({len(itens) + 1}) nao foi fechado com '>>>>>>> NOVO'."
     if not itens:
         return None, "ERRO: nenhum bloco encontrado."
     return itens, None
