@@ -74,6 +74,21 @@ def _aviso_das_outras_paginas(paginas, escolhida=None):
     )
 
 
+def _responde_a_cdp(pagina, espera=5.0):
+    try:
+        teste = cdp.Sessao(pagina["webSocketDebuggerUrl"], espera=espera)
+        teste.abrir()
+    except Exception:
+        return False
+    try:
+        teste.avaliar("1")
+        return True
+    except Exception:
+        return False
+    finally:
+        teste.fechar()
+
+
 def _porto_em_falta():
     portos = ", ".join(str(item) for item in cdp.PORTAS_CANDIDATAS)
     return (
@@ -174,6 +189,13 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
             try:
                 resultado = sessao.avaliar(js)
             except cdp.SemResposta:
+                if not _responde_a_cdp(pagina):
+                    return (
+                        f"ERRO: {_onde_estou(pagina)} aceitou a ligacao mas nao responde a nada, "
+                        "nem a uma expressao trivial: o motor da pagina esta suspenso ou morreu "
+                        "(uma recarga a meio deixa-o assim). Recarregue a janela da app e repete"
+                        f".{_aviso_das_outras_paginas(paginas, pagina)}"
+                    )
                 return (
                     f"ERRO: a expressao a correr antes de medir nao devolveu nada em "
                     f"{sessao.espera:.0f} s, em {_onde_estou(pagina)} - se ela espera por uma "
