@@ -3858,10 +3858,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 553,
+        "linha": 585,
         "conferido": [
-          1790715625.363,
-          37928
+          1790965358.091,
+          39326
         ]
       }
     },
@@ -3878,10 +3878,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 510,
+        "linha": 542,
         "conferido": [
-          1790715625.363,
-          37928
+          1790965358.091,
+          39326
         ]
       }
     },
@@ -3958,10 +3958,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 822,
+        "linha": 854,
         "conferido": [
-          1790715625.363,
-          37928
+          1790965358.091,
+          39326
         ]
       }
     },
@@ -3978,10 +3978,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 673,
+        "linha": 705,
         "conferido": [
-          1790715625.363,
-          37928
+          1790965358.091,
+          39326
         ]
       }
     },
@@ -3998,10 +3998,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 586,
+        "linha": 618,
         "conferido": [
-          1790715625.363,
-          37928
+          1790965358.091,
+          39326
         ]
       }
     },
@@ -5469,10 +5469,10 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 683,
+        "linha": 714,
         "conferido": [
-          1790919296.608,
-          42163
+          1790967072.051,
+          43855
         ]
       }
     },
@@ -5671,10 +5671,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 482,
+        "linha": 483,
         "conferido": [
-          1790919296.608,
-          42163
+          1790967072.051,
+          43855
         ]
       }
     },
@@ -5866,8 +5866,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
         "linha": 113,
         "conferido": [
-          1790960650.258,
-          30547
+          1790963425.076,
+          30406
         ]
       }
     },
@@ -5953,8 +5953,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1790953119.923,
-          20099
+          1790965836.507,
+          20211
         ]
       }
     },
@@ -5986,10 +5986,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 221,
+        "linha": 217,
         "conferido": [
-          1790960650.258,
-          30547
+          1790963425.076,
+          30406
         ]
       }
     },
@@ -6009,10 +6009,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 128,
+        "linha": 149,
         "conferido": [
-          1790954000.493,
-          9963
+          1790966166.073,
+          11147
         ]
       }
     },
@@ -6030,10 +6030,10 @@
       "descricao": "A janela nativa (webview filha) que mostra o site e o phpMyAdmin dentro do painel. Se nao aparecer, ver primeiro o erro no motor: abrir_vista devolve o motivo (o app.js mostra-o agora na propria janela por .catch(falharVista)). Causa ja vista: 0x8007139F do WebView2 quando os additionalBrowserArgs da vista diferem dos da janela principal - os da vista saem do tauri.conf.json por args_do_motor.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
-        "linha": 1547,
+        "linha": 1549,
         "conferido": [
-          1790960633.107,
-          57347
+          1790966875.65,
+          57419
         ]
       }
     },
@@ -6052,10 +6052,10 @@
       "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 361,
+        "linha": 357,
         "conferido": [
-          1790960650.258,
-          30547
+          1790963425.076,
+          30406
         ]
       }
     },
@@ -6108,10 +6108,10 @@
       "descricao": "A janela de manutencao da base na aba Banco de dados do painel: procurar personagem, editar a ficha, mexer no premium e esvaziar uma tabela mantendo as colunas (com o GM/God guardado).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
-        "linha": 473,
+        "linha": 503,
         "conferido": [
-          1790960629.636,
-          45710
+          1790966875.64,
+          47075
         ]
       }
     },
@@ -6128,10 +6128,10 @@
       "descricao": "Gera uma copia .sql da base com o mysqldump do xampp, roda as antigas e corre antes de esvaziar uma tabela. As opcoes vivem no grupo Banco de dados das Configuracoes.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
-        "linha": 1121,
+        "linha": 1151,
         "conferido": [
-          1790960629.636,
-          45710
+          1790966875.64,
+          47075
         ]
       }
     },
@@ -6147,10 +6147,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 323,
+        "linha": 319,
         "conferido": [
-          1790960650.258,
-          30547
+          1790963425.076,
+          30406
         ]
       }
     },
@@ -6187,10 +6187,10 @@
       "descricao": "A combobox que substituiu a lista de personagens recolhidos: fechada diz \"selecionar personagem (N)\", cada opcao e \"nome . lvl N\" e o primeiro item e \"criar personagem\". Ao lado da combobox das contas, que mostra o email (ou \"conta id . senha\" quando nao ha email).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
-        "linha": 684,
+        "linha": 713,
         "conferido": [
-          1790960744.124,
-          36519
+          1790965836.337,
+          39299
         ]
       }
     },
@@ -6207,10 +6207,10 @@
       "descricao": "A lixeira que vive ao lado do contador de cada tabela no bloco Manutencao: o 1o clique mostra no recado o que sai e o 2o esvazia (DELETE com a guarda do God). Antes de apagar, grava sempre uma copia so daquela tabela.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
-        "linha": 852,
+        "linha": 917,
         "conferido": [
-          1790960744.124,
-          36519
+          1790965836.337,
+          39299
         ]
       }
     },
@@ -6226,10 +6226,10 @@
       "descricao": "O icone que substitui a lixeira depois de esvaziar uma tabela, enquanto ela estiver vazia e a copia existir: repoe a copia guardada em backups/limpezas. Editar a tabela devolve a lixeira e o ponto perde-se.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
-        "linha": 1153,
+        "linha": 1183,
         "conferido": [
-          1790960629.636,
-          45710
+          1790966875.64,
+          47075
         ]
       }
     },
@@ -6246,10 +6246,10 @@
       "descricao": "Cadeado que aparece encostado a combobox da conta quando a conta esta bloqueada, com o nome da conta em vermelho na lista. Substituiu o bloco \"Bloqueada\" escrito no corpo.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
-        "linha": 706,
+        "linha": 739,
         "conferido": [
-          1790960744.124,
-          36519
+          1790965836.337,
+          39299
         ]
       }
     },
@@ -6266,11 +6266,105 @@
       "descricao": "Comando que manda um endereco http/https para o navegador do sistema. Ligado pelos icones #abrir-site e #abrir-base (ligarAbrirExterno, interface.js) no cabecalho das paginas do site e do banco de dados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
-        "linha": 712,
+        "linha": 714,
         "conferido": [
-          1790960633.107,
-          57347
+          1790966875.65,
+          57419
         ]
+      }
+    },
+    {
+      "termo": "olho da senha do painel",
+      "aliases": [
+        "olhinho da senha",
+        "mostrar a senha",
+        "esconder a senha",
+        "olho riscado",
+        "senha em bolinhas",
+        "ver a senha do painel",
+        "olho da senha da conta"
+      ],
+      "identificador": "olhoDaSenha",
+      "descricao": "Botao do olho ao lado de um campo de senha do painel do banco: o campo nasce VISIVEL (type=text) e o clique oculta (type=password) trocando o desenho para OLHO_RISCADO e acendendo o botao (aria-pressed). Usado no campo da senha da conta escolhida e no da conta nova.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
+        "linha": 796,
+        "conferido": [
+          1790965836.337,
+          39299
+        ]
+      }
+    },
+    {
+      "termo": "card de compilacao",
+      "aliases": [
+        "card de compilacao",
+        "card do build",
+        "nome do card do build",
+        "compilar no terminal",
+        "release x86 no card"
+      ],
+      "identificador": "_rotulo_do_build",
+      "descricao": "O nome que o card do terminal mostra num build: \"Compiler: <ferramenta> - <Configuracao> <plataforma>\". CMake nomeia o gerador, MSBuild o produto, Qt o kit; o comando cru fica no title do card.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/builds.py",
+        "linha": 570,
+        "conferido": [
+          1790967072.051,
+          43855
+        ]
+      }
+    },
+    {
+      "termo": "contador do mundo",
+      "aliases": [
+        "contador do mundo",
+        "players online do site",
+        "quem esta online no site",
+        "status online do personagem"
+      ],
+      "identificador": "axio_contar_online",
+      "descricao": "A unica contagem de jogadores online do site (exclui staff e contas para remocao); usada pelo sidebar, sidebar_expanded, whoisonline e pelo cron do server_load. Fonte de verdade do status: a coluna players.online, agora limpa no arranque do servidor e ao parar pelo painel.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/xampp/htdocs/data_dir.php",
+        "linha": 76,
+        "conferido": [
+          1790966861.348,
+          2845
+        ]
+      }
+    },
+    {
+      "termo": "notícias do site",
+      "aliases": [
+        "publicar no news",
+        "postagem do site",
+        "pagina de noticias do site",
+        "editor de noticias",
+        "news",
+        "noticia do site"
+      ],
+      "identificador": "carregarSite / publicar (site.js) e site_publicar (site.rs)",
+      "descricao": "A seccao Noticias da pagina do site do painel: escreve a postagem (titulo, data, cor do cabecalho e texto com bolinhas, negrito e links) e publica em news.json, que o news.php do site le e mostra. O codigo da barra colorida, da letra capitular e do corpo fica gravado no proprio json.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
+        "linha": 39
+      }
+    },
+    {
+      "termo": "letra capitular do news",
+      "aliases": [
+        "letra martel",
+        "primeira letra grande",
+        "capitular",
+        "letra grande vermelha",
+        "letra do news"
+      ],
+      "identificador": "blocoDeTexto (letter_martel_&lt;LETRA&gt;.gif) / barraDaNoticia (maureske_&lt;cor&gt;)",
+      "descricao": "A letra grande que abre a noticia: o gerador troca a primeira letra pela imagem letter_martel_<LETRA>.gif da pasta images do site. A lista de letras que existem e lida da pasta (hoje faltam V, X e Y), e sem imagem a letra fica texto normal. As cores da barra saem do mesmo desenho: maureske_<cor>_left/body/right.gif.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
+        "linha": 352
       }
     }
   ]
