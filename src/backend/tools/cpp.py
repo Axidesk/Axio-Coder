@@ -129,19 +129,25 @@ def header_da_classe(nome, pastas):
     return ""
 
 
-def erros_de_sintaxe(caminho_abs):
-    """Mensagem com os erros que a arvore acusa (ou None, que e tambem 'nao validavel')."""
+def problemas_do_arquivo(caminho_abs):
+    """(lista dos erros da arvore, falha de leitura) do ficheiro - lista vazia = ok."""
     try:
         with open(caminho_abs, "rb") as f:
             texto = f.read()
     except OSError as e:
-        return f"ERRO ao ler o ficheiro: {e}"
-    return _erros_do_texto(texto, caminho_abs)
+        return [], f"ERRO ao ler o ficheiro: {e}"
+    return _problemas_do_texto(texto, caminho_abs), ""
 
 
 def erros_de_texto(texto, rotulo):
     """Mesma validacao sobre conteudo EM MEMORIA (validar_texto/comments). None = ok."""
-    return _erros_do_texto(str(texto or "").encode("utf-8", "replace"), rotulo)
+    problemas = problemas_do_texto(texto, rotulo)
+    return "\n    ".join(problemas) if problemas else None
+
+
+def problemas_do_texto(texto, rotulo):
+    """Lista dos erros da arvore num conteudo EM MEMORIA (vazia = ok ou sem parser)."""
+    return _problemas_do_texto(str(texto or "").encode("utf-8", "replace"), rotulo)
 
 
 def mapa(caminho_abs):
@@ -443,14 +449,14 @@ def mencoes_por_classe(src, arvore):
     return saida
 
 
-def _erros_do_texto(src_bytes, rotulo):
+def _problemas_do_texto(src_bytes, rotulo):
     parser = _parser(rotulo)
     if parser is None:
-        return None
+        return []
     try:
         arvore = parser.parse(src_bytes)
     except Exception:
-        return None
+        return []
     problemas = []
 
     def anda(no):
@@ -466,7 +472,7 @@ def _erros_do_texto(src_bytes, rotulo):
             anda(filho)
 
     anda(arvore.root_node)
-    return "\n    ".join(problemas) if problemas else None
+    return problemas
 
 
 def _descreve_o_erro(no, src_bytes, trecho):

@@ -299,7 +299,9 @@ Em `src/backend/tools/cpp.py` (leitor, sem `@register` — é módulo de apoio):
 - `encontrar` / `localizar` / `escopo_de` — localizar a definição; recusa declarações sem corpo
   e nomes ambíguos (diz quais são)
 - `header_da_classe` — que cabeçalho declara a classe (para o include do destino)
-- `erros_de_sintaxe` / `erros_de_texto` — validação pela árvore
+- `problemas_do_arquivo` / `problemas_do_texto` — validação pela árvore, em lista (é o que
+  permite comparar o antes e o depois e separar o que é novo do que já existia)
+- `erros_de_texto` — a mesma validação, em texto, para quem só precisa de sim/não
 - `partir` / `colher` / `mencoes_por_classe` — a árvore e as entidades, para quem precisa de
   ler o ficheiro uma só vez (a auditoria lê os 77 ficheiros e cruza-os)
 

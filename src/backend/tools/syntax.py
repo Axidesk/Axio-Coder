@@ -7,7 +7,7 @@ import subprocess
 
 from html.parser import HTMLParser
 
-from src.backend.state import emit_event
+from src.backend.state import emit_event, estado
 from src.backend.tools import cpp
 from src.backend.tools.js_lexico import contar_simbolo, limpar
 from src.backend.tools.registry import register
@@ -100,10 +100,6 @@ def _validar_typescript(conteudo, abs_path):
     if erro:
         return erro
     return _validar_com_tree_sitter(conteudo, parser)
-
-def _validar_cpp(caminho_abs):
-    return cpp.erros_de_sintaxe(caminho_abs)
-
 
 def _validar_json(conteudo):
     try:
@@ -202,6 +198,100 @@ def _validar_css(conteudo):
     if erro:
         return erro
     return _validar_com_tree_sitter(conteudo, parser)
+
+_RE_PREFIXO_DE_ERRO = re.compile(r"^linha (\d+), coluna \d+: ")
+
+
+def _chave_do_erro(relato):
+    relato = relato.strip()
+    prefixo = _RE_PREFIXO_DE_ERRO.match(relato)
+    if prefixo:
+        return relato[prefixo.end():]
+    return re.sub(r"\d+", "#", relato)
+
+
+def _linha_do_erro(relato):
+    achado = _RE_PREFIXO_DE_ERRO.match(relato.strip())
+    return int(achado.group(1)) if achado else None
+
+
+def _mais_perto(linhas, alvo):
+    """Indice da linha mais proxima de 'alvo' (0 quando nao ha numeros que se comparem)."""
+    if alvo is None or any(linha is None for linha in linhas):
+        return 0
+    return min(range(len(linhas)), key=lambda i: abs(linhas[i] - alvo))
+
+
+def _erros_novos(agora, antes):
+    """Separa dois relatos da arvore em (novos, ja existiam), comparando pelo TEXTO e nao pela linha."""
+    fila = {}
+    for relato in antes:
+        fila.setdefault(_chave_do_erro(relato), []).append(_linha_do_erro(relato))
+    novos, antigos = [], []
+    for relato in agora:
+        candidatas = fila.get(_chave_do_erro(relato))
+        if not candidatas:
+            novos.append(relato)
+            continue
+        candidatas.pop(_mais_perto(candidatas, _linha_do_erro(relato)))
+        antigos.append(relato)
+    return novos, antigos
+
+
+def _problemas_de_antes(caminho_absoluto):
+    """Problemas da versao do ficheiro ANTERIOR a ultima edicao gravada (None quando nao ha registo)."""
+    hist = estado.get("file_history", {}).get(caminho_absoluto) or {}
+    if not hist.get("undo"):
+        return None
+    antes = hist["undo"][-1].get("antes")
+    if not isinstance(antes, str):
+        return None
+    return cpp.problemas_do_texto(antes, caminho_absoluto)
+
+
+def _aviso_cpp(caminho_absoluto, antes=None):
+    """Aviso pos-edicao de C++: a arvore nao e' o compilador, por isso so o NOVO interessa aqui."""
+    problemas, erro = cpp.problemas_do_arquivo(caminho_absoluto)
+    if erro or not problemas:
+        return ""
+    if antes is None:
+        anteriores = _problemas_de_antes(caminho_absoluto)
+    else:
+        anteriores = cpp.problemas_do_texto(antes, caminho_absoluto)
+    if anteriores is None:
+        return (" | AVISO: a arvore de C++ nao leu o ficheiro (nao e' o compilador): "
+                + "\n    ".join(problemas))
+    novos, antigos = _erros_novos(problemas, anteriores)
+    if not novos:
+        return (f" | AVISO C++: nada de novo nesta edicao - a arvore ja acusava os mesmos "
+                f"{len(antigos)} problema(s) antes da gravacao.")
+    resto = f"\n    (e mais {len(antigos)} que ja existiam antes, fora desta lista)" if antigos else ""
+    return " | AVISO C++ NOVO nesta edicao:\n    " + "\n    ".join(novos) + resto
+
+
+def _veredicto_cpp(caminho_relativo, caminho_absoluto):
+    """Veredicto do validador de C++: o que apareceu agora fica separado do que ja la estava."""
+    problemas, erro = cpp.problemas_do_arquivo(caminho_absoluto)
+    if erro:
+        return (f"NAO FOI POSSIVEL LER '{caminho_relativo}' (cpp, a arvore nao substitui o "
+                f"compilador):\n    {erro}")
+    if not problemas:
+        return f"SINTAXE OK: '{caminho_relativo}' (cpp)"
+    cabeca = (f"NAO FOI POSSIVEL LER '{caminho_relativo}' (cpp, a arvore nao substitui o "
+              f"compilador):")
+    anteriores = _problemas_de_antes(caminho_absoluto)
+    if anteriores is None:
+        return cabeca + "\n    " + "\n    ".join(problemas)
+    novos, antigos = _erros_novos(problemas, anteriores)
+    blocos = [cabeca]
+    if novos:
+        blocos.append("NOVO nesta edicao:\n    " + "\n    ".join(novos))
+    if antigos:
+        blocos.append(f"JA existia antes desta edicao ({len(antigos)}):\n    " + "\n    ".join(antigos))
+    if not novos:
+        blocos.append("Nenhum problema novo: esta lista ja estava toda no ficheiro antes da sua edicao.")
+    return "\n".join(blocos)
+
 
 TAGS_VAZIAS_HTML = {
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
@@ -331,13 +421,10 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
             return f"ERRO ao ler o arquivo: {e}"
         erro_msg = _validar_typescript(conteudo, abs_path)
     elif lang == "cpp":
-        erro_msg = _validar_cpp(abs_path)
+        return _veredicto_cpp(caminho_relativo, abs_path)
     else:
         return f"ERRO: linguagem '{lang}' não suportada para validação."
     if erro_msg:
-        if lang == "cpp":
-            return (f"NAO FOI POSSIVEL LER '{caminho_relativo}' (cpp, a arvore nao substitui o "
-                    f"compilador):\n{erro_msg}")
         return f"ERRO DE SINTAXE em '{caminho_relativo}' ({lang}):\n{erro_msg}"
     return f"SINTAXE OK: '{caminho_relativo}' ({lang})"
 
@@ -366,7 +453,8 @@ def validar_texto(caminho_relativo, conteudo):
         return f"falha ao validar: {e}"
     return None
 
-def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
+def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None, antes=None):
+    """Em C++ vale por 'antes' o TEXTO anterior completo (None = ir busca-lo ao historico de edicoes)."""
     lang = _detectar_linguagem(caminho_relativo, "")
     if lang not in ("python", "javascript", "json", "css", "html", "cpp"):
         return ""
@@ -374,6 +462,8 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
         caminho_absoluto, erro = resolver_caminho(caminho_relativo)
         if erro:
             return ""
+    if lang == "cpp":
+        return _aviso_cpp(caminho_absoluto, antes)
     try:
         if lang == "json":
             erro = _validar_json(_ler_texto(caminho_absoluto))
@@ -383,15 +473,11 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None):
             erro = _validar_css(_ler_texto(caminho_absoluto))
         elif lang == "html":
             erro = _validar_html(_ler_texto(caminho_absoluto))
-        elif lang == "cpp":
-            erro = _validar_cpp(caminho_absoluto)
         else:
             erro = _validar_javascript(caminho_absoluto)
     except OSError:
         return ""
     if erro:
-        if lang == "cpp":
-            return f" | AVISO: a arvore de C++ nao leu o ficheiro (nao e' o compilador): {erro}"
         return f" | AVISO SINTAXE {lang}: {erro}"
     return ""
 

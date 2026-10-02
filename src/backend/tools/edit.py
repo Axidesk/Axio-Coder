@@ -138,7 +138,7 @@ def gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_co
     diff = gerar_diff(conteudo, novo_conteudo)
     emit_event("action_diff", actionName=action_name, diff=diff)
     notificar_mudanca_arquivos()
-    return (validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto)
+    return (validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto, conteudo)
             + aviso_estrutural_pos_edicao(caminho_relativo, conteudo, novo_conteudo)
             + aviso_import_local(caminho_relativo, conteudo, novo_conteudo))
 
@@ -343,7 +343,7 @@ def tool_salvar_arquivo(caminho_relativo: str, conteudo: str):
             emit_event("action_diff", actionName=f"Criado: {caminho_relativo}", actionType="created", diff=diff)
         notificar_mudanca_arquivos()
         
-        aviso = validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto) + aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, conteudo) + aviso_import_local(caminho_relativo, texto_antigo or "", conteudo)
+        aviso = validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto, texto_antigo) + aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, conteudo) + aviso_import_local(caminho_relativo, texto_antigo or "", conteudo)
         return f"SUCESSO: Arquivo '{caminho_relativo}' salvo.{aviso}"
     except Exception as e: return f"ERRO: {str(e)}"
 
