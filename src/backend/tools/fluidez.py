@@ -77,6 +77,8 @@ def _porto_em_falta():
     "'porta' e onde a app escuta (0 procura nos portos habituais 9222, 9223, 9229 e 9333); 'alvo' "
     "escolhe a pagina quando a app expoe varias; 'js' corre uma expressao ANTES de medir - e assim "
     "que se mede um efeito a acontecer (ex: js=\"document.querySelector('#x').click()\"); "
+    "'depois' corre uma expressao no fim da medicao e devolve o estado que ficou; uma promessa "
+    "devolvida em 'js' ou em 'depois' e ESPERADA e o que sai e o valor resolvido. "
     "'listar' mostra so o que a app expoe no porto, sem medir. A JANELA TEM DE ESTAR A VISTA: em "
     "segundo plano o Chromium para o requestAnimationFrame e a medicao nao arranca - nesse caso a "
     "ferramenta di-lo em vez de inventar um numero.",
@@ -98,12 +100,12 @@ def _porto_em_falta():
         },
         "js": {
             "tipo": "STRING",
-            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede.",
+            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido.",
             "padrao": "",
         },
         "depois": {
             "tipo": "STRING",
-            "desc": "Expressao a correr DEPOIS de medir, para ler o estado que o efeito deixou (ex: a largura da caixa, o texto do aviso, a classe do body). E o que evita uma segunda chamada so para ver o resultado.",
+            "desc": "Expressao a correr DEPOIS de medir, para ler o estado que o efeito deixou (ex: a largura da caixa, o texto do aviso, a classe do body). E o que evita uma segunda chamada so para ver o resultado. Uma promessa devolvida e esperada: da para perguntar a propria app (uma rota dela, o IPC dela) e sair a resposta ja resolvida.",
             "padrao": "",
         },
         "listar": {
@@ -151,7 +153,13 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
     try:
         if js.strip():
             try:
-                resultado = sessao.avaliar(js, esperar=False)
+                resultado = sessao.avaliar(js)
+            except cdp.SemResposta:
+                return (
+                    f"ERRO: a expressao a correr antes de medir nao devolveu nada em "
+                    f"{sessao.espera:.0f} s - se ela espera por uma promessa (um fetch, um convite "
+                    "a app), suba 'durante' para alargar a espera."
+                )
             except RuntimeError as falha:
                 return f"ERRO: a expressao '{js[:120]}' rebentou dentro da app ({falha})."
             if resultado is not None:
@@ -160,7 +168,11 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
         bruto = sessao.avaliar(_MEDICAO % total)
         if depois.strip():
             try:
-                resposta = sessao.avaliar(depois, esperar=False)
+                resposta = sessao.avaliar(depois)
+            except cdp.SemResposta:
+                finais.append(
+                    f"(nao devolveu nada em {sessao.espera:.0f} s - promessa por resolver?)"
+                )
             except RuntimeError as falha:
                 finais.append(f"(rebentou: {falha})")
             else:
