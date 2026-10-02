@@ -260,10 +260,10 @@
       "descricao": "Item do menu nativo \"Ferramentas\" (barra superior do Electron) que liga/desliga o modo inspecionar. O botao da sidebar (#btn-inspect) foi REMOVIDO: o unico acesso e este menu. NAO e um item type:'checkbox': o estado aparece no proprio rotulo ('Modo Inspecionar' / 'Modo Inspecionar  ✓', montado em montarMenu, src/main.js:254). MOTIVO (nao reverter para checkbox): no Windows o popup que contem QUALQUER item marcavel reserva uma coluna a esquerda para o visto, e isso empurra os rotulos de TODOS os itens desse menu para a direita - era o que desalinhava 'Dev Tools' e 'Modo Inspecionar' em relacao ao menu 'Exibir' (que nao tem itens marcaveis no seu nivel). Manter o menu Ferramentas sem items checkbox/radio e o que garante o alinhamento. Estado sincronizado: pedirInspect guarda em main.js e avisa o renderer por 'menu:set-inspect'; o renderer (src/frontend/js/chat/inspect.js:definirInspect) e a unica autoridade e devolve por 'inspect:set' (o Esc tambem desmarca). Em modo inspecionar o clique colhe o elemento (conta-gotas); com SHIFT pressionado o clique INTERAGE normalmente (abre paineis, escolhe tarefas) e o painel do inspetor esconde-se - regra no handler de click/mousemove de src/frontend/js/chat/renderer.js.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1277,
+        "linha": 1283,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -444,10 +444,10 @@
       "descricao": "Funcao que mata e resobe o processo Python/Flask sem fechar o Electron (atalho Ctrl+Shift+B no menu Exibir). Necessaria porque o Flask roda com debug=False. No FIM do reinicio, quando o waitForFlask confirma que o servidor respondeu, faz mainWindow.webContents.reloadIgnoringCache() - ou seja, um Ctrl+Shift+B tambem recarrega a JANELA (JS/CSS novos entram). Para recarregar SO a janela (sem tocar no Python) o menu Exibir tem 'Recarregar' (Ctrl+R) e 'Recarregar ignorando cache' (Ctrl+Shift+R).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 346,
+        "linha": 352,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -1170,10 +1170,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1688,
+        "linha": 1691,
         "conferido": [
-          1790882008.132,
-          84220
+          1790899097.829,
+          84481
         ]
       }
     },
@@ -1539,10 +1539,10 @@
       "descricao": "Menu nativo da janela do Electron, montado por montarMenu em src/main.js - reconstruido sempre que o tema, o modo inspecionar ou o ASan mudam. Tem dois menus: \"Exibir\" (Tema do Dock, Recarregar, Recarregar ignorando cache, Reiniciar Backend) e \"Ferramentas\" (Dev Tools, Modo Inspecionar e o submenu \"C++\" com Compilar Debug/Release/ASan). A barra visual foi escondida - o menu nativo existe pelos aceleradores; o que se VE e o dropdown HTML #titulo-menu, montado por titulo.js:itensExibir/itensFerramentas.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1245,
+        "linha": 1251,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -2245,8 +2245,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1246,
         "conferido": [
-          1790882008.132,
-          84220
+          1790899097.829,
+          84481
         ]
       }
     },
@@ -2458,10 +2458,10 @@
       "descricao": "Vista do doc (a terceira, ao lado de #chat-view e #editor-view) que mostra uma pagina web a serio dentro do Axio. Nao e um iframe: sao DUAS WebContentsView nativas persistentes do Electron, uma por familia de alvo - 'node' (ficheiros do projeto, nodeIntegration ligado) e 'web' (internet, sandbox) - criadas em src/main.js:criarViewDoTipo e guardadas em previewViews; trocar de aba so chama mostrarSoAVista (setVisible), nunca destroi nem recria. POSICIONADAS POR CIMA DO DOM (coordenadas em DIP, as mesmas de getBoundingClientRect). Quem manda nos limites e src/frontend/js/editor/preview.js:limitesDoHost, que le o rect do #preview-host (nao o da vista inteira - a barra de endereco fica de fora) e o recorta pela borda direita do #sliding-panel-container quando o historico esta aberto. Como a view nativa tapa o DOM, a regra de visibilidade e dupla: so aparece com state.currentView === 'preview' E state.previewTemPagina E sem nada por cima (preview.js:estaTapado). Abre pelo icone #btn-preview, por duplo clique num .html da arvore (evento 'axio-preview-open') e pelo play de um card que anuncia um endereco local. Com a vista ativa a barra de abas do doc (#ws-top-bar) RECOLHE e a #preview-view sobe a top:0, ficando a barra do Chromium (#preview-bar) no topo da janela - e o icone #btn-preview e movido para essa barra, encostado ao X (preview.js:posicionarIconeNaBarra). A view nativa so aparece 250ms depois (ESPERA_ENTRADA_MS em preview.js:sincronizar), para nao cair a meio do fade-in do DOM.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 467,
+        "linha": 473,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -2499,10 +2499,10 @@
       "descricao": "Sao DUAS WebContentsView nativas persistentes, uma por familia de alvo: a 'node' (nodeIntegration ligado - a pagina do viewer e os ficheiros do projeto, que passam por loopback) e a 'web' (sandbox - paginas da internet). Trocar de aba NUNCA destroi nem recria: mostrarSoAVista so troca a visibilidade (setVisible) e tipoDoAlvo decide a familia pelo alvo. Antes desta mudanca a permissao Node decidia se a view era descartada, e ir do IFC para o Google fechava a view do viewer (matando a conversao em curso); agora isso nao acontece. O que continua a fechar a view e a sonda de pagina presa (carregarRespeitandoPaginaPresa, so quando o endereco MUDA) e o fecho da janela. previewVivo() devolve a view ATIVA - e o que a ponte CDP usa.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 467,
+        "linha": 473,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -3309,8 +3309,8 @@
         "arquivo": "src/main.js",
         "linha": 47,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -3388,10 +3388,10 @@
       "descricao": "Antes de uma navegacao que so muda o fragmento (mesma pagina), o main sonda a pagina com executeJavaScript('1') e um prazo de 1500ms. Sem resposta, a linha principal esta bloqueada: a vista e DESCARTADA e recriada, porque uma navegacao same-document ficaria em fila atras do bloqueio. Foi o que se MEDIU: a conversao de arvore_v4.ifc bloqueia a linha principal ~23s.",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 1021,
+        "linha": 1027,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -3548,10 +3548,10 @@
       "descricao": "Guarda que compara o endereco pedido com o que a view ja tem carregado: se for o mesmo, nao ha loadURL nenhum (devolve reutilizado:true) e a pagina - e o seu worker de conversao - fica como esta. E isto que faz voltar a aba do IFC nao reconverter. Ficheiros vivem no hash do endereco do viewer (enderecoDoViewer), por isso trocar de ficheiro mantem o documento e so muda o fragmento (o viewer escuta hashchange e reaproveita o leitor ja aberto).",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 977,
+        "linha": 983,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -4136,10 +4136,10 @@
       "descricao": "View filha do contentView da janela principal (nao uma janela separada)",
       "localizacao": {
         "arquivo": "src/main.js",
-        "linha": 745,
+        "linha": 751,
         "conferido": [
-          1790725167.518,
-          52831
+          1790897686.877,
+          53913
         ]
       }
     },
@@ -5740,8 +5740,8 @@
         "arquivo": "docs/projetos/Tibia74/Server/config.lua",
         "linha": 42,
         "conferido": [
-          1790879852.511,
-          5992
+          1790898965.684,
+          5356
         ]
       }
     },
@@ -5767,6 +5767,177 @@
           1790896063.504,
           5186
         ]
+      }
+    },
+    {
+      "termo": "tela de carregamento do Axio",
+      "aliases": [
+        "bolinha pulsante",
+        "bolinha de carregamento",
+        "bolinha verde",
+        "esfera do carregamento",
+        "tela de espera",
+        "a preparar o axio"
+      ],
+      "identificador": "paginaDeEspera",
+      "descricao": "Pagina HTML de data: URL que a janela mostra enquanto o Flask arranca. Vista a 2026-10-02: esfera ESFUMACADA de 58px (verde, do oliva na borda ao neon no centro) com uma aura de 126px desfocada que respira, e o texto 'A preparar o Axio...' em 18px a negrito, 58px abaixo da esfera. Sem contador de segundos. A esfera tem duas camadas: ::after (nucleo, blur 6px, escala .97->1.03) e ::before (aura, blur 16px, opacidade .60->1 e escala .90->1.10), ambas em 3.4s ease-in-out - as CORES nunca sao animadas, so o tamanho e o brilho, e e isso que impede a transicao de cor ser perceptivel. A saida e um fade-out: esperarServidorECarregar poe a classe 'saindo' no documento e so depois carrega o app, com o tempo em FADE_DA_TELA_DE_ESPERA (320ms).",
+      "localizacao": {
+        "arquivo": "src/main.js",
+        "linha": 218,
+        "conferido": [
+          1790897686.877,
+          53913
+        ]
+      }
+    },
+    {
+      "termo": "barra que pede reiniciar o servidor",
+      "aliases": [
+        "barra de aplicar",
+        "barra flutuante do painel",
+        "aviso de reiniciar",
+        "barra que sobe quando mudo o config",
+        "botao de reiniciar do painel"
+      ],
+      "identificador": "#barra-aplicar / pintarBarra / servidor: false no ESQUEMA",
+      "descricao": "Barra flutuante no rodape do painel do Tibia74: sobe quando o servidor esta a correr com opcoes do config.lua diferentes das que carregou ao arrancar, desce quando o valor e reposto. Chaves marcadas com 'servidor: false' no ESQUEMA (HouseLevel, UHTrap) nao a levantam, porque o servidor nao as le.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
+        "linha": 604,
+        "conferido": [
+          1790898487.237,
+          24972
+        ]
+      }
+    },
+    {
+      "termo": "ligar uma opcao do config",
+      "aliases": [
+        "botao ligar",
+        "ligar a chave comentada",
+        "opcao desligada no ficheiro",
+        "ativar a opcao no config.lua",
+        "botao verde ligar",
+        "ligar a duracao do ban"
+      ],
+      "identificador": "botaoLigar",
+      "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
+        "linha": 283,
+        "conferido": [
+          1790898487.237,
+          24972
+        ]
+      }
+    },
+    {
+      "termo": "aviso de opcao repetida",
+      "aliases": [
+        "esta escrita duas vezes no ficheiro",
+        "chave duplicada no config",
+        "vale a ultima",
+        "aviso de duplicado"
+      ],
+      "identificador": "chavesRepetidas",
+      "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
+        "linha": 468,
+        "conferido": [
+          1790898487.237,
+          24972
+        ]
+      }
+    },
+    {
+      "termo": "divisao da tela do painel",
+      "aliases": [
+        "largura da vista",
+        "puxador da tela dividida",
+        "45/55",
+        "tela dividida do painel",
+        "quanto fica pra esquerda e pra direita"
+      ],
+      "identificador": "LARGURA_DE_PARTIDA",
+      "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
+        "linha": 67,
+        "conferido": [
+          1790898516.986,
+          23077
+        ]
+      }
+    },
+    {
+      "termo": "grupos recolhiveis",
+      "aliases": [
+        "recolhivel",
+        "acordeao",
+        "grupos que abrem e fecham",
+        "o + que expande",
+        "grupos do painel",
+        "bans e avisos recolhivel",
+        "um expande o outro recolhe"
+      ],
+      "identificador": "montarAcordeao",
+      "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
+        "linha": 128
+      }
+    },
+    {
+      "termo": "caminho do ficheiro",
+      "aliases": [
+        "label do caminho",
+        "caminho cinzento",
+        "caminho do lua",
+        "clicar no caminho",
+        "caminho do ficheiro",
+        "voltar ao de origem",
+        "caminho do commands.xml",
+        "caminho do config.inc.php"
+      ],
+      "identificador": "pintarCaminho",
+      "descricao": "A label cinzenta por baixo do titulo que mostra o ficheiro de que a aba fala. Clicar abre o dialogo do Windows para escolher outro; quando o caminho foi escolhido pelo utilizador aparece um botao que repoe o que o painel descobriu sozinho.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
+        "linha": 63
+      }
+    },
+    {
+      "termo": "lupa das configuracoes",
+      "aliases": [
+        "lupa das configuracoes",
+        "busca das opcoes",
+        "filtro das configuracoes",
+        "lupa ao lado do contador",
+        "procurar uma opcao do config"
+      ],
+      "identificador": "#btn-busca-config",
+      "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
+        "linha": 63
+      }
+    },
+    {
+      "termo": "circulo do i",
+      "aliases": [
+        "i das informacoes",
+        "circulo do i",
+        "botao de informacao",
+        "i redondo",
+        "bolinha do i",
+        "circulo vazio com o i"
+      ],
+      "identificador": ".i",
+      "descricao": "O botao de informacao dos titulos do painel: um circulo vazio com 1px de borda (--border-suave) e o mesmo i italico dentro. Abre a explicacao da seccao por baixo do titulo.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
+        "linha": 5
       }
     }
   ]
