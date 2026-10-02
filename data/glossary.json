@@ -5080,8 +5080,8 @@
         "arquivo": "src/backend/tools/cpp_auditoria.py",
         "linha": 179,
         "conferido": [
-          1790370418.384,
-          11267
+          1790920797.167,
+          10622
         ]
       }
     },
@@ -5741,7 +5741,7 @@
         "arquivo": "docs/projetos/Tibia74/Server/config.lua",
         "linha": 17,
         "conferido": [
-          1790919036.568,
+          1790952236.319,
           5537
         ]
       }
@@ -5804,10 +5804,10 @@
       "descricao": "Barra flutuante no rodape do painel do Tibia74: sobe quando o servidor esta a correr com opcoes do config.lua diferentes das que carregou ao arrancar, desce quando o valor e reposto. Chaves marcadas com 'servidor: false' no ESQUEMA (HouseLevel, UHTrap) nao a levantam, porque o servidor nao as le.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 696,
+        "linha": 698,
         "conferido": [
-          1790919036.575,
-          29148
+          1790950817.099,
+          29610
         ]
       }
     },
@@ -5825,10 +5825,10 @@
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 322,
+        "linha": 323,
         "conferido": [
-          1790919036.575,
-          29148
+          1790950817.099,
+          29610
         ]
       }
     },
@@ -5844,10 +5844,10 @@
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 508,
+        "linha": 509,
         "conferido": [
-          1790919036.575,
-          29148
+          1790950817.099,
+          29610
         ]
       }
     },
@@ -5864,10 +5864,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 103,
+        "linha": 112,
         "conferido": [
-          1790918070.69,
-          28371
+          1790952187.936,
+          30358
         ]
       }
     },
@@ -5930,10 +5930,10 @@
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
-        "linha": 85,
+        "linha": 86,
         "conferido": [
-          1790918042.192,
-          15753
+          1790950809.187,
+          16155
         ]
       }
     },
@@ -5953,7 +5953,7 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1790919036.682,
+          1790921286.545,
           20189
         ]
       }
@@ -5986,10 +5986,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 202,
+        "linha": 215,
         "conferido": [
-          1790918070.69,
-          28371
+          1790952187.936,
+          30358
         ]
       }
     },
@@ -6009,10 +6009,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 118,
+        "linha": 119,
         "conferido": [
-          1790911255.995,
-          9411
+          1790952503.291,
+          9540
         ]
       }
     },
@@ -6030,10 +6030,10 @@
       "descricao": "A janela nativa (webview filha) que mostra o site e o phpMyAdmin dentro do painel. Se nao aparecer, ver primeiro o erro no motor: abrir_vista devolve o motivo (o app.js mostra-o agora na propria janela por .catch(falharVista)). Causa ja vista: 0x8007139F do WebView2 quando os additionalBrowserArgs da vista diferem dos da janela principal - os da vista saem do tauri.conf.json por args_do_motor.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
-        "linha": 1529,
+        "linha": 1531,
         "conferido": [
-          1790913158.93,
-          53029
+          1790950602.924,
+          53705
         ]
       }
     },
@@ -6052,10 +6052,10 @@
       "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 311,
+        "linha": 357,
         "conferido": [
-          1790918070.69,
-          28371
+          1790952187.936,
+          30358
         ]
       }
     },
@@ -6087,7 +6087,71 @@
       "descricao": "Cruza o que o HTML declara (#id e .classe) com o que o JS procura e o CSS usa, e denuncia os orfaos dos dois sentidos. O leitor das marcas vive em src/backend/tools/html_lexico.py.",
       "localizacao": {
         "arquivo": "src/backend/tools/html_ligacoes.py",
-        "linha": 159
+        "linha": 159,
+        "conferido": [
+          1790920969.433,
+          12997
+        ]
+      }
+    },
+    {
+      "termo": "comandos rapidos da base",
+      "aliases": [
+        "manutencao da base",
+        "esvaziar uma tabela",
+        "limpar tabela",
+        "resetar a tabela",
+        "procurar personagem",
+        "ficha do personagem no painel"
+      ],
+      "identificador": "base_retrato / base_listar / base_ficha / base_guardar / base_limpar",
+      "descricao": "A janela de manutencao da base na aba Banco de dados do painel: procurar personagem, editar a ficha, mexer no premium e esvaziar uma tabela mantendo as colunas (com o GM/God guardado).",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
+        "linha": 443,
+        "conferido": [
+          1790951451.662,
+          38805
+        ]
+      }
+    },
+    {
+      "termo": "backup da base",
+      "aliases": [
+        "copia de seguranca",
+        "guardar a base",
+        "copia do banco de dados",
+        "mysqldump",
+        "quantas copias manter"
+      ],
+      "identificador": "correr_dump / base_backup / pasta_dos_backups",
+      "descricao": "Gera uma copia .sql da base com o mysqldump do xampp, roda as antigas e corre antes de esvaziar uma tabela. As opcoes vivem no grupo Banco de dados das Configuracoes.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
+        "linha": 1039,
+        "conferido": [
+          1790951451.662,
+          38805
+        ]
+      }
+    },
+    {
+      "termo": "reiniciar o servidor sozinho",
+      "aliases": [
+        "auto restart",
+        "reiniciar depois do server save",
+        "start serv",
+        "reinicio automatico do servidor"
+      ],
+      "identificador": "agendarReinicio",
+      "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
+        "linha": 319,
+        "conferido": [
+          1790952187.936,
+          30358
+        ]
       }
     }
   ]
