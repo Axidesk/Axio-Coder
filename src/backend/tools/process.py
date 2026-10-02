@@ -479,10 +479,24 @@ def ler_saida_stream(pid, popen):
         pass
 
 def _monitorar_processo_segundo_plano(pid, popen):
-    try:
-        codigo = popen.wait()
-    except Exception:
-        return
+    """Espera pelo fim publicando o progresso que o proprio log do processo ja diz.
+
+    Um processo em segundo plano corria ate ao fim em silencio: um build de minutos ficava com
+    o cartao a mostrar so a ultima linha e o tempo, sem barra nenhuma. A cada passo curto le-se
+    o log com o mesmo leitor dos cartoes e publica-se SO quando ha valor novo - um servidor que
+    nao imprime progresso nenhum continua calado em vez de encher o ecra a cada 2 segundos.
+    """
+    inicio = time.time()
+    visto = _visto_vazio()
+    while True:
+        try:
+            codigo = popen.wait(timeout=PASSO_VIGIA_PROGRESSO)
+        except subprocess.TimeoutExpired:
+            _avisar_so_com_progresso(pid, time.time() - inicio, visto)
+            continue
+        except Exception:
+            return
+        break
     reg = estado.get("processos", {}).get(pid)
     if reg is None or reg.get("status") != "rodando":
         return
@@ -1114,9 +1128,27 @@ _RE_LINHA_FONTE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.\-]*\.(?:c|cc|cpp|cxx)\Z"
 
 _RE_GERACAO_FIM = re.compile(r"finished\s+generating\s+code", re.IGNORECASE)
 _RE_GERACAO = re.compile(r"\bgenerating\s+code\b", re.IGNORECASE)
-_RE_ALVO_DO_BUILD = re.compile(r"\s*(?:\d+>\s*)?(clcompile|link)\s*:", re.IGNORECASE)
+_RE_ALVO_DO_BUILD = re.compile(
+    r"\s*(?:\d+>\s*)?(clcompile|compiling|checking|linking|link|building|bundling)\b",
+    re.IGNORECASE,
+)
+_RE_BUILD_FIM = re.compile(
+    r"finished\s+[`'\"]?[\w\-.]+[`'\"]?\s+profile"
+    r"|build\s+succeeded"
+    r"|\bbuilt\s+in\b"
+    r"|pronto\s*:",
+    re.IGNORECASE,
+)
 
-_ALVO_PARA_FASE = {"clcompile": 0.05, "link": 0.60}
+_ALVO_PARA_FASE = {
+    "clcompile": 0.05,
+    "compiling": 0.05,
+    "checking": 0.05,
+    "building": 0.05,
+    "bundling": 0.05,
+    "linking": 0.62,
+    "link": 0.62,
+}
 _FIM_DA_GERACAO = 0.90
 _TOPO_DA_GERACAO = 0.98
 
@@ -1190,11 +1222,15 @@ def _fase_da_instalacao(texto):
 def _fase_anunciada(texto, fase, geracao):
     """A fase que a linha anuncia, quando nao ha numero nenhum para contar. (fase, geracao).
 
-    Um build do MSVC diz onde esta pelos proprios alvos: 'ClCompile:' (a compilar), 'Link:'
-    (a ligar) e 'Generating code'/'Finished generating code' (o LTCG). Uma instalacao diz-se
-    pelo pip. E o degrau que resta quando o programa nao da percentagem - um build com tudo
-    ja compilado nao tem ficheiro nenhum para contar e ficava sem barra nenhuma.
+    Cada ferramenta diz onde esta a sua maneira: o MSVC pelos alvos ('ClCompile:' a compilar,
+    'Link:' a ligar) e pelo LTCG ('Generating code'/'Finished generating code'); o cargo pelo
+    'Compiling <crate>' de cada unidade e pelo 'Finished `release` profile' do fim; o ninja e
+    o make pelos '[feitos/total]', que sao contados noutro sitio. Uma instalacao diz-se pelo
+    pip. E o degrau que resta quando o programa nao da percentagem - um build com tudo ja
+    compilado nao tem ficheiro nenhum para contar e ficava sem barra nenhuma.
     """
+    if _RE_BUILD_FIM.search(texto):
+        return (max(fase, _TOPO_DA_GERACAO) if fase is not None else _TOPO_DA_GERACAO), True
     if _RE_GERACAO_FIM.search(texto):
         return (max(fase, _TOPO_DA_GERACAO) if fase is not None else _TOPO_DA_GERACAO), True
     if geracao or _RE_GERACAO.search(texto):
@@ -1309,6 +1345,20 @@ def _avisar_progresso_se_mudou(pid, decorrido, visto):
     if agora - visto["avisado_em"] >= FATIA_PROGRESSO_PROCESSO:
         visto["avisado_em"] = agora
         _avisar_progresso(pid, decorrido)
+
+
+def _avisar_so_com_progresso(pid, decorrido, visto):
+    """Publica o progresso apenas quando ele muda mesmo - nada de avisos sem valor novo."""
+    log = (estado.get("processos", {}).get(pid) or {}).get("log") or []
+    if len(log) == visto["linhas"]:
+        return
+    visto["linhas"] = len(log)
+    valor = _progresso_do_log(log)
+    if valor is None or valor == visto["valor"]:
+        return
+    visto["valor"] = valor
+    visto["avisado_em"] = time.time()
+    _avisar_progresso(pid, decorrido)
 
 
 def _esperar_com_progresso(popen, pid, timeout):

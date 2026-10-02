@@ -197,8 +197,8 @@
     },
     {
       "area": "acentuacao",
-      "texto": "TODO texto de interface (titulos, rotulos, descricoes, baloes, avisos, mensagens de log) e escrito com ACENTUACAO CORRETA - a, a, c, e, i, o, u com til/cedilha/acento como a lingua pede (nao, esta, opcao, usuario, configuracao, saída). Nada de texto \"sem acentos\" para fugir a encoding: os ficheiros sao UTF-8 e acentos entram normalmente. Nos textos do painel do Tibia74 o portugues e do BRASIL (arquivo, tela, banco de dados, usuario, salvar) - nao de Portugal (ficheiro, ecra, base de dados). Pedido explicitamente a 2026-10-17.",
-      "atualizado": "2026-10-02 04:54:54"
+      "texto": "TODO texto de interface (titulos, rotulos, descricoes, baloes, avisos, mensagens de log) e escrito com ACENTUACAO CORRETA - a, a, c, e, i, o, u com til/cedilha/acento como a lingua pede (nao, esta, opcao, usuario, configuracao, saida). Nada de texto 'sem acentos' para fugir a encoding: os ficheiros sao UTF-8 e acentos entram normalmente.\n\nO portugues do utilizador e do BRASIL, sempre, em QUALQUER projeto - ele mora em Lisboa mas e brasileiro, e ja corrigiu isto mais de uma vez. Vocabulario: arquivo (nao ficheiro), tela (nao ecra), banco de dados (nao base de dados), usuario, salvar, time, celular, gerenciar, remover. Pedido explicitamente a 2026-10-17 e reforcado depois.",
+      "atualizado": "2026-10-02 16:24:59"
     },
     {
       "area": "descricoes",

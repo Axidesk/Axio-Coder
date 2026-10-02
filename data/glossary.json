@@ -2799,10 +2799,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1048,
+        "linha": 1064,
         "conferido": [
-          1790909355.038,
-          50716
+          1790953579.952,
+          51350
         ]
       }
     },
@@ -2820,10 +2820,10 @@
       "descricao": "Lanca um programa nativo pelo nome (ex: 'notepad', 'mspaint') ou pelo caminho completo, e devolve a janela dele ja com as contagens. Resolve pelo PATH e pelos App Paths do registo; NAO passa pela allowlist de _validar_comando_processo, que governa compilacao e nao abrir apps GUI.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 739,
+        "linha": 755,
         "conferido": [
-          1790909355.038,
-          50716
+          1790953579.952,
+          51350
         ]
       }
     },
@@ -2842,10 +2842,10 @@
       "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 969,
+        "linha": 985,
         "conferido": [
-          1790909355.038,
-          50716
+          1790953579.952,
+          51350
         ]
       }
     },
@@ -3609,10 +3609,10 @@
       "descricao": "tool_operar_janela com acao='print' e 'janela' = trecho do titulo (ex: 'Axio Coder'): a resolucao da janela e pelo _janela() (hwnd ou texto do titulo) e a captura e pelo _acao_print -> _capturar_janela, que usa janela.capture_as_image() (composicao do sistema, do pywinauto) e o ImageGrab so como ultimo recurso - ou seja, funciona mesmo com a janela TAPADA, ao contrario do tool_capturar_print, que fotografa o ecra e so ve o que esta a vista. O 'regiao' deste print e RELATIVO a janela (crop no bitmap dela), nao coordenadas do ecra. NAO reimplementar resolucao de janelas por win32gui.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 696,
+        "linha": 711,
         "conferido": [
-          1790909355.038,
-          50716
+          1790953579.952,
+          51350
         ]
       }
     },
@@ -5864,10 +5864,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 112,
+        "linha": 110,
         "conferido": [
-          1790952187.936,
-          30358
+          1790953119.804,
+          30150
         ]
       }
     },
@@ -5953,8 +5953,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1790921286.545,
-          20189
+          1790953119.923,
+          20099
         ]
       }
     },
@@ -5986,10 +5986,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 215,
+        "linha": 213,
         "conferido": [
-          1790952187.936,
-          30358
+          1790953119.804,
+          30150
         ]
       }
     },
@@ -6009,10 +6009,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 119,
+        "linha": 128,
         "conferido": [
-          1790952503.291,
-          9540
+          1790954000.493,
+          9963
         ]
       }
     },
@@ -6052,10 +6052,10 @@
       "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 357,
+        "linha": 353,
         "conferido": [
-          1790952187.936,
-          30358
+          1790953119.804,
+          30150
         ]
       }
     },
@@ -6110,8 +6110,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
         "linha": 443,
         "conferido": [
-          1790951451.662,
-          38805
+          1790953723.114,
+          38870
         ]
       }
     },
@@ -6130,8 +6130,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
         "linha": 1039,
         "conferido": [
-          1790951451.662,
-          38805
+          1790953723.114,
+          38870
         ]
       }
     },
@@ -6147,11 +6147,43 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 319,
+        "linha": 315,
         "conferido": [
-          1790952187.936,
-          30358
+          1790953119.804,
+          30150
         ]
+      }
+    },
+    {
+      "termo": "lupa da base",
+      "aliases": [
+        "lupinha da base",
+        "busca da base",
+        "busca global do banco",
+        "pesquisar conta email personagem",
+        "lupa ao lado da pastinha"
+      ],
+      "identificador": "#busca-base (botao #btn-busca-base + campo #base-filtro, montados por montarBuscaGlobal)",
+      "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
+        "linha": 225
+      }
+    },
+    {
+      "termo": "personagens da conta",
+      "aliases": [
+        "lista de personagens da conta",
+        "char da conta",
+        "personagens recolhidos",
+        "combobox de contas",
+        "lista de contas"
+      ],
+      "identificador": "#base-personagens (itemDoPersonagem / alternarPersonagem)",
+      "descricao": "A lista de personagens que aparece dentro do bloco Conta quando se escolhe uma conta: cada um recolhido, so o nome e o +, e ao abrir mostra a ficha editavel.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
+        "linha": 666
       }
     }
   ]
