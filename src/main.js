@@ -297,6 +297,44 @@ function killProcessOnPort(port) {
   } catch (e) {}
 }
 
+function pidsMencionados(texto) {
+  const pids = new Set();
+  for (const achado of String(texto).matchAll(/PID\s+(\d+)/gi)) {
+    const numero = parseInt(achado[1], 10);
+    if (Number.isInteger(numero) && numero > 4) pids.add(numero);
+  }
+  return [...pids];
+}
+
+function fecharProcessoForcado(pid) {
+  const { execSync } = require('child_process');
+  try {
+    execSync(`taskkill /F /PID ${pid}`, { stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch (e) {}
+  return !pidVivo(pid);
+}
+
+function encerrarArvore(pid) {
+  const { execSync } = require('child_process');
+  console.log(`[main] quit: finalizando o PID ${pid} com a arvore (/T /F)...`);
+  let recado = '';
+  try {
+    execSync(`taskkill /pid ${pid} /T /F`, { stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (e) {
+    recado = `${e.stdout || ''}${e.stderr || ''}`;
+  }
+  if (pidVivo(pid)) {
+    console.log(`[main] quit: o PID ${pid} nao se deixou fechar - um processo dele pode estar a segurar a porta 5000.`);
+    return;
+  }
+  const resistentes = pidsMencionados(recado).filter(alvo => pidVivo(alvo)).filter(alvo => !fecharProcessoForcado(alvo));
+  if (resistentes.length) {
+    console.log(`[main] quit: o(s) PID ${resistentes.join(', ')} nao se deixaram fechar - um deles pode estar a segurar a porta 5000.`);
+    return;
+  }
+  console.log('[main] quit: arvore finalizada.');
+}
+
 function startFlask() {
   const flaskEnv = Object.assign({}, process.env, {
     KMP_DUPLICATE_LIB_OK: 'TRUE',
@@ -1438,16 +1476,10 @@ app.on('quit', () => {
   quitting = true;
   pararPonte();
   if (flaskProcess) {
-    console.log(`[main] quit: finalizando Flask PID=${flaskProcess.pid} (arvore /T /F)...`);
     if (process.platform === 'win32') {
-      try {
-        require('child_process').execSync(`taskkill /pid ${flaskProcess.pid} /T /F`);
-        console.log('[main] quit: arvore do Flask finalizada.');
-      } catch (e) {
-        console.log(`[main] quit: taskkill falhou (${e.message}); tentando kill simples...`);
-        try { flaskProcess.kill(); } catch (e2) { console.log(`[main] quit: kill simples falhou (${e2.message})`); }
-      }
+      encerrarArvore(flaskProcess.pid);
     } else {
+      console.log(`[main] quit: finalizando Flask PID=${flaskProcess.pid}...`);
       try { flaskProcess.kill(); } catch (e) { console.log(`[main] quit: kill falhou (${e.message})`); }
     }
   } else {
