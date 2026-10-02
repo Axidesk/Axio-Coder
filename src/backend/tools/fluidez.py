@@ -101,6 +101,11 @@ def _porto_em_falta():
             "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede.",
             "padrao": "",
         },
+        "depois": {
+            "tipo": "STRING",
+            "desc": "Expressao a correr DEPOIS de medir, para ler o estado que o efeito deixou (ex: a largura da caixa, o texto do aviso, a classe do body). E o que evita uma segunda chamada so para ver o resultado.",
+            "padrao": "",
+        },
         "listar": {
             "tipo": "BOOLEAN",
             "desc": "True mostra o que a app expoe no porto (paginas, titulos, enderecos) e nao mede nada.",
@@ -108,7 +113,7 @@ def _porto_em_falta():
         },
     },
 )
-def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False):
+def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois=""):
     escolhido = int(porta or 0)
     if not escolhido:
         escolhido = cdp.descobrir_porta()
@@ -142,6 +147,7 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
         return f"ERRO: nao consegui abrir a ligacao com a pagina ({texto}).{dica}"
 
     ecos = []
+    finais = []
     try:
         if js.strip():
             try:
@@ -152,6 +158,14 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
                 ecos.append(json.dumps(resultado, ensure_ascii=False, default=str))
             time.sleep(PAUSA_ANTES_DE_MEDIR)
         bruto = sessao.avaliar(_MEDICAO % total)
+        if depois.strip():
+            try:
+                resposta = sessao.avaliar(depois, esperar=False)
+            except RuntimeError as falha:
+                finais.append(f"(rebentou: {falha})")
+            else:
+                if resposta is not None:
+                    finais.append(json.dumps(resposta, ensure_ascii=False, default=str))
     except cdp.SemResposta:
         return (
             f"ERRO: {_onde_estou(pagina)} aceitou a ligacao mas nao desenhou nada em "
@@ -175,5 +189,7 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
     linhas = [f"No porto {escolhido}, {_onde_estou(pagina)}:"]
     if ecos:
         linhas.append(f"O que a expressao devolveu: {'; '.join(ecos)}")
+    if finais:
+        linhas.append(f"O estado no fim da medicao: {'; '.join(finais)}")
     linhas.append(texto_dos_quadros(dados))
     return "\n".join(linhas)
