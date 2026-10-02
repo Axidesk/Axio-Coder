@@ -59,12 +59,18 @@ def _onde_estou(pagina):
     return f"{titulo} - {pagina.get('url') or ''}"
 
 
-def _aviso_das_outras_paginas(paginas):
+def _aviso_das_outras_paginas(paginas, escolhida=None):
     if len(paginas) < 2:
         return ""
+    onde_escolhi = _onde_estou(escolhida) if escolhida else ""
+    outras = [texto for texto in (_onde_estou(pagina) for pagina in paginas) if texto != onde_escolhi]
+    if not outras:
+        return ""
+    nomes = "; ".join(outras[:4])
+    resto = f" (+{len(outras) - 4})" if len(outras) > 4 else ""
     return (
-        f" Este porto tem {len(paginas)} paginas: se o alvo era outro, passe 'alvo'"
-        " (veja-os com listar=true)."
+        f" Este porto tem {len(paginas)} paginas. As outras ao alcance: {nomes}{resto}"
+        " - para medir uma delas, passe 'alvo' com um trecho do titulo."
     )
 
 
@@ -177,7 +183,7 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
             except RuntimeError as falha:
                 return (
                     f"ERRO: a expressao '{js[:120]}' rebentou dentro da app ({falha}) - correu em"
-                    f" {_onde_estou(pagina)}.{_aviso_das_outras_paginas(paginas)}"
+                    f" {_onde_estou(pagina)}.{_aviso_das_outras_paginas(paginas, pagina)}"
                 )
             if resultado is not None:
                 ecos.append(json.dumps(resultado, ensure_ascii=False, default=str))

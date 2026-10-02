@@ -940,10 +940,10 @@
       "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. ATENCAO, isto MUDOU a 2026-09-19: o radar de atrito ja NAO ignora a rodada fora do Axio - continua a medir e grava o que apanhou no caderno de melhorias adiadas (APP_ROOT/.axio/melhorias_pendentes.json, via _acumular_pendentes em ai/atrito.py), que volta a ser injetado UMA vez por arranque quando a pasta aberta e outra vez a do Axio (_bloco_pendentes). O projeto do utilizador nao recebe ficheiro nenhum.",
       "localizacao": {
         "arquivo": "src/backend/state.py",
-        "linha": 124,
+        "linha": 128,
         "conferido": [
-          1790444392.549,
-          4343
+          1790962841.419,
+          4504
         ]
       }
     },
