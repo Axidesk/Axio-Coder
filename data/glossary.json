@@ -262,7 +262,7 @@
         "arquivo": "src/main.js",
         "linha": 1321,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -446,7 +446,7 @@
         "arquivo": "src/main.js",
         "linha": 390,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -464,10 +464,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 586,
+        "linha": 672,
         "conferido": [
-          1790558455.398,
-          31996
+          1790917666.993,
+          35680
         ]
       }
     },
@@ -795,18 +795,19 @@
         "lista branca de comandos",
         "quais comandos posso rodar",
         "lista de permitidos",
-        "permitir electron",
-        "permitir pytest",
-        "comandos que a ia pode correr"
+        "comandos que a ia pode correr",
+        "rodar o exe do projeto",
+        "executar o programa compilado",
+        "permitir o executavel do servidor"
       ],
-      "identificador": "_validar_comando_processo / COMANDOS_PROIBIDOS / FERRAMENTA_NATIVA / COMANDOS_DESTRUTIVOS",
-      "descricao": "Decide que executaveis tool_executar_processo pode correr. Um conjunto de constantes de familia perto do topo do ficheiro (linha ~120): linguagens, gestores de pacotes (npm/yarn/pnpm/bun/deno/npx, pip/uv/poetry/pipx), compiladores, linters/testes (pytest/ruff/mypy/eslint/vite/tsc/electron...), git/nuvem/contentores, midia, rede (curl/netstat), tasklist/taskkill, sqlite3, tar/zip. FICAM DE FORA: shells (powershell/pwsh/cmd/bash/wsl), administracao do sistema (reg/winget/choco/schtasks) e o que apaga sem undo (del/rm). A familia npm e restrita por subcomando - `publish` nunca. NAO e fronteira de seguranca: tool_executar_python/executar_js correm codigo arbitrario sem passar por aqui; e um travao ergonomico. E so trava as MINHAS chamadas - routes/terminal.py:163 (iniciar_processo) nao passa por aqui, logo nunca bloqueia o utilizador. Desde 2026-09-19 tem tres pecas novas: FERRAMENTA_NATIVA (comando -> ferramenta nativa, fonte unica tambem usada por tool_executar_comando), ferramenta_nativa_do_comando (anexa \"Use: <ferramenta>.\" as recusas; python -c -> tool_executar_python, node -e -> tool_executar_js) e comando_destrutivo + COMANDOS_DESTRUTIVOS, que recusa 13 padroes irreversiveis (git reset --hard, git clean -f/-d/-x, git checkout/restore ., git push --force, git branch -D, rm -rf, del /s, rmdir /s, format X:, shutdown, docker prune, taskkill /F /IM). NAO confundir com comando_inicia_axio (src/backend/services/process_manager.py:15), que e outra lista, so para recusar arrancar um segundo Axio na raiz.",
+      "identificador": "_validar_comando_processo / _exe_do_projeto / COMANDOS_PROIBIDOS / FERRAMENTA_NATIVA / COMANDOS_DESTRUTIVOS",
+      "descricao": "Contrato duro: comando irreversivel (git reset --hard, del /s, drop table) e recusado antes de tudo, e cada ferramenta com equivalente nativo e recusada com a dica da ferramenta. Fora isso vale uma lista fixa de executaveis (compiladores, gestores de pacotes, linters, git, midia, rede/sistema) MAIS qualquer .exe que viva DENTRO da pasta do projeto aberto - e o programa que o proprio projeto compilou, e poder arranca-lo e o que permite ler o arranque dele. Um caminho absoluto com espacos continua a ter de vir entre aspas, senao o tokenizador parte-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 206,
+        "linha": 225,
         "conferido": [
-          1790903307.251,
-          56009
+          1790916719.279,
+          56767
         ]
       }
     },
@@ -823,10 +824,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 720,
+        "linha": 806,
         "conferido": [
-          1790558455.398,
-          31996
+          1790917666.993,
+          35680
         ]
       }
     },
@@ -1541,7 +1542,7 @@
         "arquivo": "src/main.js",
         "linha": 1289,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -2326,10 +2327,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 362,
+        "linha": 384,
         "conferido": [
-          1790903307.251,
-          56009
+          1790916719.279,
+          56767
         ]
       }
     },
@@ -2460,7 +2461,7 @@
         "arquivo": "src/main.js",
         "linha": 511,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -2501,7 +2502,7 @@
         "arquivo": "src/main.js",
         "linha": 511,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -3309,7 +3310,7 @@
         "arquivo": "src/main.js",
         "linha": 47,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -3390,7 +3391,7 @@
         "arquivo": "src/main.js",
         "linha": 1065,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -3550,7 +3551,7 @@
         "arquivo": "src/main.js",
         "linha": 1021,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -4138,7 +4139,7 @@
         "arquivo": "src/main.js",
         "linha": 789,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -4670,10 +4671,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 390,
+        "linha": 412,
         "conferido": [
-          1790903307.251,
-          56009
+          1790916719.279,
+          56767
         ]
       }
     },
@@ -4977,8 +4978,8 @@
         "arquivo": "src/frontend/js/chat/ui.js",
         "linha": 467,
         "conferido": [
-          1790291727.522,
-          22560
+          1790915612.916,
+          22611
         ]
       }
     },
@@ -5172,10 +5173,10 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 307,
+        "linha": 316,
         "conferido": [
-          1790478361.954,
-          38856
+          1790915612.79,
+          39425
         ]
       }
     },
@@ -5508,10 +5509,10 @@
       "descricao": "Aviso que aparece no retorno de qualquer edicao de um .py (CHECKLIST ESTRUTURAL) quando uma chamada a funcao do proprio modulo usa uma palavra-chave que a assinatura dela nao tem. A sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta - foi o caso do _texto_depuracao(registo_id=) contra def _texto_depuracao(registro_id,...). Nao bloqueia a escrita; confirma no codigo real e acerta a chamada ou a assinatura.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 660,
+        "linha": 746,
         "conferido": [
-          1790558455.398,
-          31996
+          1790917666.993,
+          35680
         ]
       }
     },
@@ -5719,7 +5720,7 @@
         "arquivo": "app.py",
         "linha": 5,
         "conferido": [
-          1790895923.049,
+          1790916282.799,
           2760
         ]
       }
@@ -5738,10 +5739,10 @@
       "descricao": "O ficheiro .sql da raiz do projeto (hoje database.sql, nome livre) e a base dentro do MySQL sao coisas diferentes: o nome da base vive num sitio so, o SQL_DB do config.lua do servidor. O site le-o por axio_db_nome() (xampp/htdocs/data_dir.php) e o Server/backup.bat le-o por findstr ao config.lua ao lado dele. Renomear o ficheiro nao toca em nada; renomear a BASE e editar essa unica linha.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Server/config.lua",
-        "linha": 42,
+        "linha": 17,
         "conferido": [
-          1790902932.747,
-          5410
+          1790916205.78,
+          5536
         ]
       }
     },
@@ -5785,7 +5786,7 @@
         "arquivo": "src/main.js",
         "linha": 218,
         "conferido": [
-          1790908718.236,
+          1790915532.036,
           54910
         ]
       }
@@ -5803,10 +5804,10 @@
       "descricao": "Barra flutuante no rodape do painel do Tibia74: sobe quando o servidor esta a correr com opcoes do config.lua diferentes das que carregou ao arrancar, desce quando o valor e reposto. Chaves marcadas com 'servidor: false' no ESQUEMA (HouseLevel, UHTrap) nao a levantam, porque o servidor nao as le.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 676,
+        "linha": 696,
         "conferido": [
-          1790907920.494,
-          28418
+          1790916027.309,
+          29148
         ]
       }
     },
@@ -5824,10 +5825,10 @@
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 297,
+        "linha": 322,
         "conferido": [
-          1790907920.494,
-          28418
+          1790916027.309,
+          29148
         ]
       }
     },
@@ -5843,10 +5844,10 @@
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
-        "linha": 482,
+        "linha": 508,
         "conferido": [
-          1790907920.494,
-          28418
+          1790916027.309,
+          29148
         ]
       }
     },
@@ -5863,10 +5864,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 97,
+        "linha": 103,
         "conferido": [
-          1790909176.748,
-          27179
+          1790913932.247,
+          27102
         ]
       }
     },
@@ -5885,10 +5886,10 @@
       "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
-        "linha": 218,
+        "linha": 214,
         "conferido": [
-          1790909193.861,
-          8378
+          1790910615.967,
+          8189
         ]
       }
     },
@@ -5908,11 +5909,11 @@
       "identificador": "pintarCaminho",
       "descricao": "Label cinzenta por baixo do titulo de cada aba do painel (config.lua, commands.xml, config.inc.php e o .sql da base). CLICAR abre a PASTA-mae no Explorador atraves do comando `abrir_pasta` do motor (explorer <pasta>; o `/select,` foi medido e nao abre janela nenhuma). Ja nao se escolhe ficheiro nenhum: o painel descobre os caminhos sozinho. Se o motor nao tiver o binario novo, o erro aparece na propria label (.caminho-erro).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
-        "linha": 122,
+        "arquivo": "src/frontend/js/editor/terminal.js",
+        "linha": 231,
         "conferido": [
-          1790909193.861,
-          8378
+          1790441170.576,
+          17986
         ]
       }
     },
@@ -5929,10 +5930,10 @@
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
-        "linha": 73,
+        "linha": 86,
         "conferido": [
-          1790909146.124,
-          14001
+          1790913125.897,
+          15785
         ]
       }
     },
@@ -5952,8 +5953,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1790909163.773,
-          22294
+          1790913171.606,
+          20027
         ]
       }
     },
@@ -5985,10 +5986,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 192,
+        "linha": 199,
         "conferido": [
-          1790909176.748,
-          27179
+          1790913932.247,
+          27102
         ]
       }
     },
@@ -6008,10 +6009,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 116,
+        "linha": 118,
         "conferido": [
-          1790908036.749,
-          8518
+          1790911255.995,
+          9411
         ]
       }
     },
@@ -6029,11 +6030,44 @@
       "descricao": "A janela nativa (webview filha) que mostra o site e o phpMyAdmin dentro do painel. Se nao aparecer, ver primeiro o erro no motor: abrir_vista devolve o motivo (o app.js mostra-o agora na propria janela por .catch(falharVista)). Causa ja vista: 0x8007139F do WebView2 quando os additionalBrowserArgs da vista diferem dos da janela principal - os da vista saem do tauri.conf.json por args_do_motor.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
-        "linha": 1518,
+        "linha": 1529,
         "conferido": [
-          1790909200.677,
-          52798
+          1790913158.93,
+          53029
         ]
+      }
+    },
+    {
+      "termo": "bolinha do status do servidor",
+      "aliases": [
+        "bolinha do servidor",
+        "luz do status",
+        "bolinha verde do painel",
+        "bolinha do painel do servidor",
+        "bolinha pulsando",
+        "bolinha vermelha do servidor",
+        "bolinha cinza do servidor"
+      ],
+      "identificador": "#luz (classes .verde / .pulsando / .vermelha, decididas em pintarEstado)",
+      "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
+        "linha": 311
+      }
+    },
+    {
+      "termo": "contador da pasta na arvore",
+      "aliases": [
+        "contador da arvore",
+        "numero de ficheiros da pasta",
+        "contagem da pasta data",
+        "contador entre parenteses"
+      ],
+      "identificador": "criarContador",
+      "descricao": "O numero entre parenteses ao lado do nome da pasta na arvore de ficheiros do painel do Tibia74 - so na pasta de topo (a pasta data), nunca nas subpastas. Sem filtro mostra o total; com filtro mostra quantos de quantos.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/conteudo.js",
+        "linha": 82
       }
     }
   ]
