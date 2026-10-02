@@ -12,13 +12,13 @@
     },
     {
       "area": "recolher",
-      "texto": "Painel que abre e fecha usa grid-template-rows 0fr->1fr com overflow hidden no filho; o sinal e um + que vira - (duas barras, a vertical some), nunca uma seta.",
-      "atualizado": "2026-09-19 16:48:10"
+      "texto": "Painel que abre e fecha usa grid-template-rows 0fr->1fr com overflow hidden no filho; o sinal e um + que vira - (duas barras, a vertical some), nunca uma seta. Grupo fechado que PESA (arvore, lista longa) tem o corpo FORA do desenho com content-visibility: hidden - sem isso o browser mede e pinta o conteudo fechado a cada mudanca de layout (foi o travamento medido a 2026-10-15, com 962 ficheiros e dezenas de campos). MAS a classe do content-visibility so entra DEPOIS de a animacao de recolha acabar (~260ms): aplicada no instante do fecho, apaga o corpo logo e a recolha fica abrupta (so a abertura parece suave). Ao abrir, tira-se a classe ANTES de por .aberta. Nascido fechado, o corpo ja nasce com a classe. Ao reabrir a meio, o relogio do fecho cancela-se.",
+      "atualizado": "2026-10-02 02:38:57"
     },
     {
       "area": "scrollbar",
-      "texto": "Barra de rolagem fininha (8px), fundo transparente, polegar arredondado (#333, hover #555). NUNCA usar scrollbar-width: thin - ele desliga o ::-webkit-scrollbar.",
-      "atualizado": "2026-09-19 16:48:10"
+      "texto": "Barra de rolagem fininha (8px), fundo transparente, polegar arredondado (#333, hover #555). NUNCA usar scrollbar-width: thin - ele desliga o ::-webkit-scrollbar. O ESPACO DA BARRA FICA SEMPRE RESERVADO (scrollbar-gutter: stable) em TODO o contentor que rola - paineis, consolas, listas, campos de codigo: sem isso o texto desloca-se para o lado no instante em que a barra vertical aparece e le-se como um piscar do conteudo. Ao reservar, tire 8px ao padding desse lado (ex: 24px->16px) para a largura do texto ficar igual a de antes. Num par de camadas sobrepostas (codigo + realce), aplicar o gutter nas DUAS, senao desalinham.",
+      "atualizado": "2026-10-02 02:38:57"
     },
     {
       "area": "cards",

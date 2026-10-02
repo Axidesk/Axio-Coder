@@ -675,7 +675,7 @@ def _texto_das_amostras(js, total, amostras):
     return "\n".join(linhas)
 
 
-def _texto_dos_quadros(dados):
+def texto_dos_quadros(dados):
     """O ritmo de desenho em numeros: media, mediana, p95 e quadros acima de 32 ms."""
     linhas = [
         f"Quadros desenhados: {dados.get('quadros')} em {dados.get('ms')} ms"
@@ -948,7 +948,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'a pagina nao desenhou nada'}."
-        return _com_alvo(_texto_dos_quadros(dados), dados)
+        return _com_alvo(texto_dos_quadros(dados), dados)
 
     return _print_do_preview(seletor, regiao, tela)
 

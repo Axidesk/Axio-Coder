@@ -34,6 +34,7 @@ from src.backend.tools import (
     environment,
     espera,
     execucao,
+    fluidez,
     git,
     graph,
     harness,

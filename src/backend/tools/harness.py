@@ -604,15 +604,25 @@ const __domEstilo = (dono) => {
 const __domDataset = (dono) => new Proxy({}, {
     get(_t, prop) {
         if (typeof prop !== "string") return undefined;
-        return dono._dados[prop];
+        if (prop in dono._dados) return dono._dados[prop];
+        const bruto = dono.getAttribute("data-" + __domKebab(prop));
+        return bruto === null ? undefined : bruto;
     },
     set(_t, prop, valor) {
         if (typeof prop !== "string") return true;
         dono._dados[prop] = String(valor);
+        dono.setAttribute("data-" + __domKebab(prop), String(valor));
         return true;
     },
-    deleteProperty(_t, prop) { delete dono._dados[String(prop)]; return true; },
-    has(_t, prop) { return typeof prop === "string" && prop in dono._dados; },
+    deleteProperty(_t, prop) {
+        delete dono._dados[String(prop)];
+        dono.removeAttribute("data-" + __domKebab(prop));
+        return true;
+    },
+    has(_t, prop) {
+        if (typeof prop !== "string") return false;
+        return prop in dono._dados || dono.getAttribute("data-" + __domKebab(prop)) !== null;
+    },
     ownKeys() { return Object.keys(dono._dados); },
     getOwnPropertyDescriptor() { return { enumerable: true, configurable: true }; },
 });
@@ -862,6 +872,9 @@ const __domSerializar = (no) => {
     const atributos = [];
     if (no._id) atributos.push('id="' + no._id + '"');
     if (no.classList.length) atributos.push('class="' + no.classList.value + '"');
+    for (const [nome, valor] of Object.entries(no._dados || {})) {
+        atributos.push("data-" + __domKebab(nome) + '="' + String(valor).replace(/"/g, "&quot;") + '"');
+    }
     for (const [nome, valor] of no._atributos) atributos.push(nome + '="' + String(valor).replace(/"/g, "&quot;") + '"');
     const estilos = Object.entries(no._estilo);
     if (estilos.length) atributos.push('style="' + estilos.map(([k, v]) => k + ": " + v).join("; ") + '"');
@@ -892,11 +905,35 @@ const __domComposto = (texto) => {
         else if (casado[4] !== undefined) {
             const partes = casado[4].split("=");
             const nome = partes[0].trim().toLowerCase();
-            const valor = partes.length > 1 ? partes.slice(1).join("=").trim().replace(/^["']|["']$/g, "") : null;
+            const semAspas = partes.length > 1 ? partes.slice(1).join("=").trim().replace(/^["']|["']$/g, "") : null;
+            const valor = semAspas === null ? null : __domDesescapar(semAspas);
             atributos.push([nome, valor]);
         }
     }
     return { tag, classes, atributos, negativo, posicoes };
+};
+
+const __domDesescapar = (texto) => String(texto).replace(/\\([0-9a-fA-F]{1,6})[ ]?|\\(.)/g, (_t, hexa, simples) => (hexa ? String.fromCodePoint(parseInt(hexa, 16)) : simples));
+
+const __domEscaparIdentificador = (texto) => {
+    const bruto = String(texto);
+    let saida = "";
+    for (let i = 0; i < bruto.length; i += 1) {
+        const codigo = bruto.codePointAt(i);
+        const caractere = bruto[i];
+        const digito = codigo >= 48 && codigo <= 57;
+        if (codigo === 0) { saida += "\�"; continue; }
+        if ((codigo >= 1 && codigo <= 31) || codigo === 127 || (i === 0 && digito) || (i === 1 && digito && bruto[0] === "-")) {
+            saida += "\\" + codigo.toString(16) + " ";
+            continue;
+        }
+        if (codigo >= 128 || codigo === 45 || codigo === 95 || digito || (codigo >= 65 && codigo <= 90) || (codigo >= 97 && codigo <= 122)) {
+            saida += caractere;
+            continue;
+        }
+        saida += "\\" + caractere;
+    }
+    return saida;
 };
 
 const __domDividir = (texto, separadores) => {
@@ -935,7 +972,7 @@ const __domAnalisar = (seletor) => __domDividir(String(seletor), ",").map((grupo
     if (!bruto) return null;
     const partes = [];
     let combinador = null;
-    for (const pedaco of bruto.split(" ")) {
+    for (const pedaco of __domDividir(bruto, " ")) {
         if (!pedaco) continue;
         if (pedaco === ">") { combinador = ">"; continue; }
         if (pedaco === ":scope") {
@@ -1302,6 +1339,10 @@ const criarDomFalso = (opcoes) => {
         sessionStorage: criarArmazem(),
         location: { href: "http://localhost/", origin: "http://localhost", pathname: "/", search: "", hash: "", reload() {} },
         navigator: { userAgent: "axio-dom-falso", platform: "Win32", language: "pt-PT" },
+        CSS: {
+            escape: (valor) => __domEscaparIdentificador(valor),
+            supports: () => false,
+        },
         requestAnimationFrame: (fn) => {
             proximoQuadro += 1;
             quadros.set(proximoQuadro, fn);
@@ -1444,6 +1485,7 @@ const criarDomFalso = (opcoes) => {
         definir("requestAnimationFrame", janela.requestAnimationFrame);
         definir("cancelAnimationFrame", janela.cancelAnimationFrame);
         definir("matchMedia", janela.matchMedia);
+        definir("CSS", janela.CSS);
         definir("localStorage", janela.localStorage);
         definir("location", janela.location);
         return retorno;
