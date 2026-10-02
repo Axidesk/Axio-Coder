@@ -5864,10 +5864,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 113,
+        "linha": 114,
         "conferido": [
-          1790963425.076,
-          30406
+          1790968411.627,
+          30525
         ]
       }
     },
@@ -5932,8 +5932,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
         "linha": 86,
         "conferido": [
-          1790960638.0,
-          17197
+          1790968330.45,
+          16796
         ]
       }
     },
@@ -5953,8 +5953,8 @@
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1790965836.507,
-          20211
+          1790968583.188,
+          24562
         ]
       }
     },
@@ -5986,10 +5986,10 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 217,
+        "linha": 218,
         "conferido": [
-          1790963425.076,
-          30406
+          1790968411.627,
+          30525
         ]
       }
     },
@@ -6030,10 +6030,10 @@
       "descricao": "A janela nativa (webview filha) que mostra o site e o phpMyAdmin dentro do painel. Se nao aparecer, ver primeiro o erro no motor: abrir_vista devolve o motivo (o app.js mostra-o agora na propria janela por .catch(falharVista)). Causa ja vista: 0x8007139F do WebView2 quando os additionalBrowserArgs da vista diferem dos da janela principal - os da vista saem do tauri.conf.json por args_do_motor.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
-        "linha": 1549,
+        "linha": 1558,
         "conferido": [
-          1790966875.65,
-          57419
+          1790968273.517,
+          57820
         ]
       }
     },
@@ -6052,10 +6052,10 @@
       "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 357,
+        "linha": 358,
         "conferido": [
-          1790963425.076,
-          30406
+          1790968411.627,
+          30525
         ]
       }
     },
@@ -6147,10 +6147,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 319,
+        "linha": 320,
         "conferido": [
-          1790963425.076,
-          30406
+          1790968411.627,
+          30525
         ]
       }
     },
@@ -6167,10 +6167,10 @@
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
-        "linha": 228,
+        "linha": 218,
         "conferido": [
-          1790960638.0,
-          17197
+          1790968330.45,
+          16796
         ]
       }
     },
@@ -6266,10 +6266,10 @@
       "descricao": "Comando que manda um endereco http/https para o navegador do sistema. Ligado pelos icones #abrir-site e #abrir-base (ligarAbrirExterno, interface.js) no cabecalho das paginas do site e do banco de dados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
-        "linha": 714,
+        "linha": 723,
         "conferido": [
-          1790966875.65,
-          57419
+          1790968273.517,
+          57820
         ]
       }
     },
@@ -6342,13 +6342,14 @@
         "pagina de noticias do site",
         "editor de noticias",
         "news",
-        "noticia do site"
+        "noticia do site",
+        "campo de escrever a noticia"
       ],
-      "identificador": "carregarSite / publicar (site.js) e site_publicar (site.rs)",
-      "descricao": "A seccao Noticias da pagina do site do painel: escreve a postagem (titulo, data, cor do cabecalho e texto com bolinhas, negrito e links) e publica em news.json, que o news.php do site le e mostra. O codigo da barra colorida, da letra capitular e do corpo fica gravado no proprio json.",
+      "identificador": "montar / publicar (site.js) e site_publicar (site.rs)",
+      "descricao": "Editor das notícias do site, dentro da aba Site. O campo de texto é um div contenteditable (negrito e link aparecem formatados); o news.json guarda o texto e o HTML pronto e o news.php só faz echo dele. Depois de publicar ou apagar, o painel recarrega a vista do preview.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
-        "linha": 39
+        "linha": 98
       }
     },
     {
@@ -6364,7 +6365,27 @@
       "descricao": "A letra grande que abre a noticia: o gerador troca a primeira letra pela imagem letter_martel_<LETRA>.gif da pasta images do site. A lista de letras que existem e lida da pasta (hoje faltam V, X e Y), e sem imagem a letra fica texto normal. As cores da barra saem do mesmo desenho: maureske_<cor>_left/body/right.gif.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
-        "linha": 352
+        "linha": 352,
+        "conferido": [
+          1790968556.564,
+          22070
+        ]
+      }
+    },
+    {
+      "termo": "lápis da notícia",
+      "aliases": [
+        "lapis",
+        "lapis de editar",
+        "editar a noticia",
+        "editar o new",
+        "botao de editar a noticia"
+      ],
+      "identificador": "abrirNaEdicao",
+      "descricao": "Ícone ao lado da lixeira em cada notícia publicada: põe aquela notícia no editor (título, data, cor e texto), o Publicar passa a \"Salvar\" e o site_publicar substitui a notícia no lugar em vez de criar outra.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
+        "linha": 826
       }
     }
   ]

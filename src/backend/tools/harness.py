@@ -565,6 +565,7 @@ class __DomTexto extends __DomNo {
     constructor(texto) {
         super();
         this.nodeType = 3;
+        this.nodeName = "#text";
         this.data = String(texto == null ? "" : texto);
     }
     get nodeValue() { return this.data; }
@@ -575,6 +576,7 @@ class __DomFragmento extends __DomNo {
     constructor() {
         super();
         this.nodeType = 11;
+        this.nodeName = "#document-fragment";
     }
 }
 
@@ -637,6 +639,7 @@ class __DomElemento extends __DomNo {
         this.nodeType = 1;
         this.localName = String(tag || "").toLowerCase();
         this.tagName = this.localName.toUpperCase();
+        this.nodeName = this.tagName;
         this.namespaceURI = ns || "http://www.w3.org/1999/xhtml";
         this._id = "";
         this._classeDefinida = false;
