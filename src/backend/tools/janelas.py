@@ -665,6 +665,21 @@ def _motivo_de_vazio(janela):
     return "a janela nao tem area visivel (minimizada, escondida ou a fechar): restaure-a e traga-a para a frente"
 
 
+def _aviso_de_nao_estar_a_frente(janela):
+    try:
+        user32 = ctypes.windll.user32
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        if int(janela.handle) == int(user32.GetForegroundWindow()):
+            return ""
+    except Exception:
+        return ""
+    return (
+        " ATENCAO: esta janela NAO estava a frente - o print por composicao de uma janela WebView2"
+        " ja entregou o que estava POR CIMA dela. Se a imagem nao bater com esta janela,"
+        " traga-a para a frente (clique nela) e repita antes de concluir."
+    )
+
+
 def _regiao_do_alvo(janela, alvo):
     """(regiao, nota, erro): a caixa do elemento em coordenadas da janela - as mesmas que o 'print' mostra."""
     try:
@@ -725,6 +740,7 @@ def _acao_print(janela, regiao, alvo=""):
     return {
         "texto": (
             f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.{recado_do_alvo}'
+            f"{_aviso_de_nao_estar_a_frente(janela)}"
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
             " ATENCAO: numa janela TRANSPARENTE (Electron/app com o fundo ainda por pintar, canvas a carregar) "
             "a composicao do sistema mostra o que esta ATRAS dela - se a imagem nao bater com o que se esperava "
