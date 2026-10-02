@@ -3,6 +3,7 @@ import time
 
 from src.backend.builds import avisos, construir, depurar, detetar, diagnosticos, instalar, kits
 from src.backend.config import APP_ROOT
+from src.backend.services import sugestoes
 from src.backend.services.saida import recortar_texto
 from src.backend.services.settings import asan_ligado
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
@@ -568,6 +569,9 @@ def _texto_deteccao(dados):
     ]
     if dados["tambem"]:
         linhas.append(f"TAMBEM E: {', '.join(dados['tambem'])}")
+    arranque = _arranque_da_pasta(dados["pasta"])
+    if arranque:
+        linhas.append(arranque)
     if dados["vertentes"]:
         linhas.append(f"VERTENTES: {', '.join(dados['vertentes'])}")
     if dados.get("projeto"):
@@ -587,6 +591,13 @@ def _texto_deteccao(dados):
     if dados["pastas_de_build"]:
         linhas.append("PASTAS DE BUILD QUE JA EXISTEM: " + ", ".join(dados["pastas_de_build"]))
     return "\n".join(linhas)
+
+def _arranque_da_pasta(pasta):
+    """Pontos de entrada que a propria pasta declara (npm, cargo, make, build.mjs, .bat) - responde 'como se constroi e se arranca isto' sem andar a procurar."""
+    achados = sugestoes.detectar_sugestoes(pasta or "")
+    if not achados:
+        return ""
+    return "COMO ARRANCAR: " + " | ".join(f"{a['comando']} ({a['dica']})" for a in achados)
 
 def _compila_shaders(deteccao):
     """Diz se e o projeto que compila shaders: o glslc pode estar instalado e isto nao lhe dizer respeito."""
