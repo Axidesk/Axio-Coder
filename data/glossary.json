@@ -1171,10 +1171,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1740,
+        "linha": 1831,
         "conferido": [
-          1791040110.662,
-          86742
+          1791059431.285,
+          90079
         ]
       }
     },
@@ -2244,10 +2244,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1290,
+        "linha": 1381,
         "conferido": [
-          1791040110.662,
-          86742
+          1791059431.285,
+          90079
         ]
       }
     },
@@ -2799,10 +2799,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1890,
+        "linha": 1911,
         "conferido": [
-          1791049820.235,
-          92365
+          1791053770.904,
+          93365
         ]
       }
     },
@@ -2820,10 +2820,10 @@
       "descricao": "Lanca um programa nativo pelo nome (ex: 'notepad', 'mspaint') ou pelo caminho completo, e devolve a janela dele ja com as contagens. Resolve pelo PATH e pelos App Paths do registo; NAO passa pela allowlist de _validar_comando_processo, que governa compilacao e nao abrir apps GUI.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1034,
+        "linha": 1056,
         "conferido": [
-          1791049820.235,
-          92365
+          1791053770.904,
+          93365
         ]
       }
     },
@@ -2842,10 +2842,10 @@
       "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1635,
+        "linha": 1656,
         "conferido": [
-          1791049820.235,
-          92365
+          1791053770.904,
+          93365
         ]
       }
     },
@@ -3609,10 +3609,10 @@
       "descricao": "tool_operar_janela com acao='print' e 'janela' = trecho do titulo (ex: 'Axio Coder'): a resolucao da janela e pelo _janela() (hwnd ou texto do titulo) e a captura e pelo _acao_print -> _capturar_janela, que usa janela.capture_as_image() (composicao do sistema, do pywinauto) e o ImageGrab so como ultimo recurso - ou seja, funciona mesmo com a janela TAPADA, ao contrario do tool_capturar_print, que fotografa o ecra e so ve o que esta a vista. O 'regiao' deste print e RELATIVO a janela (crop no bitmap dela), nao coordenadas do ecra. NAO reimplementar resolucao de janelas por win32gui.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 960,
+        "linha": 982,
         "conferido": [
-          1791049820.235,
-          92365
+          1791053770.904,
+          93365
         ]
       }
     },
@@ -5805,10 +5805,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
         "linha": 698,
-        "conferido": [
-          1790950817.099,
-          29610
-        ]
+        "ausente": true
       }
     },
     {
@@ -5824,7 +5821,7 @@
       "identificador": "botaoLigar",
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
         "linha": 323,
         "conferido": [
           1790950817.099,
@@ -5843,7 +5840,7 @@
       "identificador": "chavesRepetidas",
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/config.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
         "linha": 509,
         "conferido": [
           1790950817.099,
@@ -5863,11 +5860,11 @@
       "identificador": "LARGURA_DE_PARTIDA",
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 117,
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "linha": 116,
         "conferido": [
-          1791050672.145,
-          30904
+          1791052289.898,
+          30817
         ]
       }
     },
@@ -5885,7 +5882,7 @@
       "identificador": "montarAcordeao",
       "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/interface.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/interface.js",
         "linha": 228,
         "conferido": [
           1790960641.284,
@@ -5929,11 +5926,11 @@
       "identificador": "#btn-busca-config",
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 90,
         "conferido": [
-          1791050672.62,
-          17005
+          1791052863.339,
+          16951
         ]
       }
     },
@@ -5952,10 +5949,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/style.css",
         "linha": 5,
-        "conferido": [
-          1791050657.022,
-          28456
-        ]
+        "ausente": true
       }
     },
     {
@@ -5986,11 +5980,8 @@
       "descricao": "A coluna da direita do painel do Tibia74 (#vista, com a consola do servidor ou o editor do ficheiro). Na aba Configuracoes so aparece quando se ABRE um ficheiro da arvore: `temVista(nome)` exige `#editor.armado` no modo editor e `aplicarVista()` liga/desliga o `tem-vista` do body e o puxador. Sem ficheiro aberto a esquerda ocupa a janela toda.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 221,
-        "conferido": [
-          1791050672.145,
-          30904
-        ]
+        "linha": 220,
+        "ausente": true
       }
     },
     {
@@ -6031,10 +6022,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
         "linha": 1561,
-        "conferido": [
-          1791050661.889,
-          58346
-        ]
+        "ausente": true
       }
     },
     {
@@ -6052,11 +6040,8 @@
       "descricao": "A bolinha ao lado do texto Parado/Iniciado, no painel do Tibia74. Cinza = parado, verde a pulsar = a carregar, verde estavel = ligado, vermelha = caiu, falhou ao subir ou a porta esta ocupada. NAO confundir com a 'bolinha do card' do terminal do Axio (o ligar/desligar do processo).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 361,
-        "conferido": [
-          1791050672.145,
-          30904
-        ]
+        "linha": 360,
+        "ausente": true
       }
     },
     {
@@ -6070,7 +6055,7 @@
       "identificador": "criarContador",
       "descricao": "O numero entre parenteses ao lado do nome da pasta na arvore de ficheiros do painel do Tibia74 - so na pasta de topo (a pasta data), nunca nas subpastas. Sem filtro mostra o total; com filtro mostra quantos de quantos.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/conteudo.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/conteudo.js",
         "linha": 82,
         "conferido": [
           1790918058.64,
@@ -6109,10 +6094,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
         "linha": 509,
-        "conferido": [
-          1791050657.044,
-          47300
-        ]
+        "ausente": true
       }
     },
     {
@@ -6129,10 +6111,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
         "linha": 1157,
-        "conferido": [
-          1791050657.044,
-          47300
-        ]
+        "ausente": true
       }
     },
     {
@@ -6146,11 +6125,11 @@
       "identificador": "agendarReinicio",
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/app.js",
-        "linha": 323,
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "linha": 322,
         "conferido": [
-          1791050672.145,
-          30904
+          1791052289.898,
+          30817
         ]
       }
     },
@@ -6166,11 +6145,11 @@
       "identificador": "#busca-base (botao #btn-busca-base + campo #base-filtro, montados por montarBuscaGlobal)",
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/index.html",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 222,
         "conferido": [
-          1791050672.62,
-          17005
+          1791052863.339,
+          16951
         ]
       }
     },
@@ -6186,7 +6165,7 @@
       "identificador": "escolhaDoPersonagem / nomeDaConta",
       "descricao": "A combobox que substituiu a lista de personagens recolhidos: fechada diz \"selecionar personagem (N)\", cada opcao e \"nome . lvl N\" e o primeiro item e \"criar personagem\". Ao lado da combobox das contas, que mostra o email (ou \"conta id . senha\" quando nao ha email).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
         "linha": 713,
         "conferido": [
           1790965836.337,
@@ -6206,7 +6185,7 @@
       "identificador": "botaoDaTabela / base_limpar",
       "descricao": "A lixeira que vive ao lado do contador de cada tabela no bloco Manutencao: o 1o clique mostra no recado o que sai e o 2o esvazia (DELETE com a guarda do God). Antes de apagar, grava sempre uma copia so daquela tabela.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
         "linha": 917,
         "conferido": [
           1790965836.337,
@@ -6227,10 +6206,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/base.rs",
         "linha": 1189,
-        "conferido": [
-          1791050657.044,
-          47300
-        ]
+        "ausente": true
       }
     },
     {
@@ -6245,7 +6221,7 @@
       "identificador": "marcaDeBloqueio",
       "descricao": "Cadeado que aparece encostado a combobox da conta quando a conta esta bloqueada, com o nome da conta em vermelho na lista. Substituiu o bloco \"Bloqueada\" escrito no corpo.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
         "linha": 739,
         "conferido": [
           1790965836.337,
@@ -6267,10 +6243,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/src-tauri/src/main.rs",
         "linha": 726,
-        "conferido": [
-          1791050661.889,
-          58346
-        ]
+        "ausente": true
       }
     },
     {
@@ -6287,7 +6260,7 @@
       "identificador": "olhoDaSenha",
       "descricao": "Botao do olho ao lado de um campo de senha do painel do banco: o campo nasce VISIVEL (type=text) e o clique oculta (type=password) trocando o desenho para OLHO_RISCADO e acendendo o botao (aria-pressed). Usado no campo da senha da conta escolhida e no da conta nova.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/base.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
         "linha": 796,
         "conferido": [
           1790965836.337,
@@ -6352,10 +6325,7 @@
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
         "linha": 102,
-        "conferido": [
-          1790971844.051,
-          39430
-        ]
+        "ausente": true
       }
     },
     {
@@ -6370,7 +6340,7 @@
       "identificador": "blocoDeTexto (letter_martel_&lt;LETRA&gt;.gif) / barraDaNoticia (maureske_&lt;cor&gt;)",
       "descricao": "A letra grande que abre a noticia: o gerador troca a primeira letra pela imagem letter_martel_<LETRA>.gif da pasta images do site. A lista de letras que existem e lida da pasta (hoje faltam V, X e Y), e sem imagem a letra fica texto normal. As cores da barra saem do mesmo desenho: maureske_<cor>_left/body/right.gif.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/site.js",
         "linha": 722,
         "conferido": [
           1790971844.051,
@@ -6390,7 +6360,7 @@
       "identificador": "abrirNaEdicao",
       "descricao": "Ícone ao lado da lixeira em cada notícia publicada: põe aquela notícia no editor (título, data, cor e texto), o Publicar passa a \"Salvar\" e o site_publicar substitui a notícia no lugar em vez de criar outra.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Panel/frontend/site.js",
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/site.js",
         "linha": 958,
         "conferido": [
           1790971844.051,
@@ -6434,10 +6404,10 @@
       "descricao": "Operar um programa nativo (jogo, cliente, app desenhada a mao) por gestos reais: abrir, arrumar as janelas lado a lado, correr um roteiro de cliques/teclas e olhar para o resultado. Os caracteres especiais do teclado vao escapados e as janelas com o mesmo titulo escolhem-se por '#N'.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1890,
+        "linha": 1911,
         "conferido": [
-          1791049820.235,
-          92365
+          1791053770.904,
+          93365
         ]
       }
     }

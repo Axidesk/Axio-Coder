@@ -1061,6 +1061,7 @@ def _acao_abrir(alvo):
         antes = {janela.handle for janela in _desktop().windows() if _texto(janela)}
     except Exception as exc:
         return f"ERRO: nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
+    antes_avisos = {aviso["hwnd"] for aviso in _dialogos_a_espera()}
     try:
         processo = subprocess.Popen(
             [caminho, *argumentos],
@@ -1087,11 +1088,23 @@ def _acao_abrir(alvo):
         + "; ".join(f'hwnd={j.handle} "{_texto(j)[:40]}" {_area(j)}px' for j in outras[:4])
         if outras else ""
     )
+    pedidos = [
+        aviso for aviso in _dialogos_a_espera() if aviso["hwnd"] not in antes_avisos
+    ]
+    nota_pedidos = (
+        " ATENCAO: apareceu uma janela a pedir resposta e ela NAO pertence a este programa"
+        " (tipicamente o pedido de autorizacao do Windows, que corre a parte): "
+        + "; ".join(f'"{a["titulo"]}" (hwnd {a["hwnd"]}, {a["de_quem"]})' for a in pedidos[:3])
+        + ". Responde-lhe ou fecha-a agora (acao='fechar' com esse hwnd): deixada aberta, fica a"
+        " espera do utilizador depois de a rodada acabar."
+        if pedidos else ""
+    )
     return (
         f'Abri "{os.path.basename(caminho)}" (pid {processo.pid}): janela "{_texto(janela)}"'
         f" hwnd {janela.handle}, encontrada {como}. {resumo}."
         " Use acao='mapa' com este hwnd para ver o indice dos alvos."
         + nota_irmas
+        + nota_pedidos
     )
 
 
