@@ -1102,7 +1102,11 @@ def _acao_abrir(alvo):
     nota_pedidos = (
         " ATENCAO: apareceu uma janela a pedir resposta e ela NAO pertence a este programa"
         " (tipicamente o pedido de autorizacao do Windows, que corre a parte): "
-        + "; ".join(f'"{a["titulo"]}" (hwnd {a["hwnd"]}, {a["de_quem"]})' for a in pedidos[:3])
+        + "; ".join(
+            f'"{a["titulo"]}" (hwnd {a["hwnd"]}, {a["de_quem"]})'
+            + (" [pedido do Windows: responde-se permitindo, nao se fecha]" if a["do_sistema"] else "")
+            for a in pedidos[:3]
+        )
         + ". Responde-lhe ou fecha-a agora (acao='fechar' com esse hwnd): deixada aberta, fica a"
         " espera do utilizador depois de a rodada acabar."
         if pedidos else ""
@@ -1175,6 +1179,27 @@ def _botao_do_aviso(janela, prazo=None):
     return candidatos[0][1]
 
 
+MARCAS_DE_PEDIDO_DO_SISTEMA = (
+    "seguran",
+    "security",
+    "firewall",
+    "controlo de conta",
+    "user account control",
+    "conta de utilizador",
+)
+
+
+def _pedido_do_sistema(titulo):
+    """True quando o aviso e um pedido do proprio Windows e nao de um programa.
+
+    O caso que isto apanha e' o dialogo do firewall ("Alerta de Seguranca do Windows"), que
+    pertence a um servico do sistema: a resposta segura de um aviso qualquer (nunca gravar)
+    nao serve ali, onde so ha permitir ou recusar.
+    """
+    texto = (titulo or "").lower()
+    return any(marca in texto for marca in MARCAS_DE_PEDIDO_DO_SISTEMA)
+
+
 def _dialogos_a_espera(pid=None):
     """Os avisos a vista que pedem resposta, do ecra todo ou so de um processo.
 
@@ -1196,6 +1221,7 @@ def _dialogos_a_espera(pid=None):
             "hwnd": registo["handle"],
             "titulo": registo["titulo"] or "(sem titulo)",
             "de_quem": de_quem,
+            "do_sistema": _pedido_do_sistema(registo["titulo"]),
         })
     return achados
 
