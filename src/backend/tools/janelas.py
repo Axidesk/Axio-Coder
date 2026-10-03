@@ -200,6 +200,10 @@ def _por_posicao(janelas):
     return sorted(janelas, key=chave)
 
 
+def _colado(texto):
+    return "".join(letra for letra in texto.lower() if letra.isalnum())
+
+
 def _janela(identificador, fresco=False):
     """(janela, erro): escolhida pelo hwnd, pelo processo ou por um trecho do titulo.
 
@@ -231,7 +235,11 @@ def _janela(identificador, fresco=False):
     titulo, indice = _separar_indice(pedido)
     procurado = titulo.lower()
     exatas = [w for w in abertas if _texto(w).lower() == procurado]
-    casadas = _por_posicao(exatas or [w for w in abertas if procurado in _texto(w).lower()])
+    contem = [w for w in abertas if procurado in _texto(w).lower()]
+    if not contem:
+        colado = _colado(procurado)
+        contem = [w for w in abertas if colado and colado in _colado(_texto(w))]
+    casadas = _por_posicao(exatas or contem)
     if not casadas:
         return _procurar_no_win32(pedido)
     if indice > len(casadas):
