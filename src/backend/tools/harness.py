@@ -1644,7 +1644,7 @@ def _interpretador_node():
     return shutil.which("node")
 
 def _interpretador_php():
-    return os.environ.get("PHP_EXE") or executaveis.achar("php")
+    return executaveis.php()
 
 _TRECHOS = {
     "python": {

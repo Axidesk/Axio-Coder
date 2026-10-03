@@ -8,6 +8,7 @@ import subprocess
 from html.parser import HTMLParser
 
 from src.backend.state import emit_event, estado
+from src.backend.services import executaveis
 from src.backend.tools import cpp
 from src.backend.tools.js_lexico import contar_simbolo, limpar
 from src.backend.tools.registry import register
@@ -23,6 +24,7 @@ EXTENSOES = {
     ".tsx": "typescript",
     ".json": "json",
     ".css": "css",
+    ".php": "php",
     ".html": "html",
     ".htm": "html",
     ".cpp": "cpp",
@@ -368,12 +370,39 @@ def _validar_html(conteudo):
         return "\n".join(erros[:8]) + f"\n... e mais {len(erros) - 8} erro(s) nao listado(s)."
     return "\n".join(erros)
 
+def _limpar_saida_php(texto):
+    limpo = texto.strip()
+    primeira = limpo.splitlines()[0] if limpo else ""
+    linha = re.search(r"on line (\d+)", texto)
+    corpo = re.sub(r"\s+in\s+.*$", "", re.sub(r"^.*?error:\s*", "", primeira)).strip()
+    if linha:
+        return f"linha {linha.group(1)}: {corpo}"
+    return corpo or primeira
+
+def _erros_php(abs_path):
+    """Erro de sintaxe do php, ou None (ficheiro bom OU php ausente - quem chama decide)."""
+    php = executaveis.php()
+    if not php:
+        return None
+    try:
+        saida = subprocess.run([php, "-l", abs_path], capture_output=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        return "o php nao respondeu em 30s"
+    except OSError:
+        return None
+    if saida.returncode == 0:
+        return None
+    texto = (saida.stdout or b"").decode("utf-8", "replace") + (saida.stderr or b"").decode("utf-8", "replace")
+    if not texto.strip():
+        return "o php recusou o ficheiro e nao disse por que"
+    return _limpar_saida_php(texto)
+
 @register(
     "tool_validar_sintaxe",
-    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, JSON, CSS ou HTML) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Retorna OK ou o erro com linha/coluna.',
+    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, JSON, CSS, HTML ou PHP) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Retorna OK ou o erro com linha/coluna.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'json', 'css', 'html'], "padrao": ""},
+        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'json', 'css', 'html', 'php'], "padrao": ""},
     },
 )
 def tool_validar_sintaxe(caminho_relativo, linguagem=""):
@@ -422,6 +451,11 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
         erro_msg = _validar_typescript(conteudo, abs_path)
     elif lang == "cpp":
         return _veredicto_cpp(caminho_relativo, abs_path)
+    elif lang == "php":
+        if not executaveis.php():
+            return ("ERRO: nao encontrei o php.exe para validar sintaxe php. "
+                    "Ponha o caminho dele em PHP_EXE ou instale o php.")
+        erro_msg = _erros_php(abs_path)
     else:
         return f"ERRO: linguagem '{lang}' não suportada para validação."
     if erro_msg:
@@ -456,7 +490,7 @@ def validar_texto(caminho_relativo, conteudo):
 def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None, antes=None):
     """Em C++ vale por 'antes' o TEXTO anterior completo (None = ir busca-lo ao historico de edicoes)."""
     lang = _detectar_linguagem(caminho_relativo, "")
-    if lang not in ("python", "javascript", "json", "css", "html", "cpp"):
+    if lang not in ("python", "javascript", "json", "css", "html", "cpp", "php"):
         return ""
     if caminho_absoluto is None:
         caminho_absoluto, erro = resolver_caminho(caminho_relativo)
@@ -473,6 +507,8 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None, antes=N
             erro = _validar_css(_ler_texto(caminho_absoluto))
         elif lang == "html":
             erro = _validar_html(_ler_texto(caminho_absoluto))
+        elif lang == "php":
+            erro = _erros_php(caminho_absoluto)
         else:
             erro = _validar_javascript(caminho_absoluto)
     except OSError:

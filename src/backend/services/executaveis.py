@@ -42,6 +42,10 @@ def achar(nome):
     return _encontrados.get(pedido, "")
 
 
+def php():
+    """Caminho do php.exe: a variavel PHP_EXE manda sobre a busca."""
+    return os.environ.get("PHP_EXE", "").strip() or achar("php")
+
 def _pela_escada(pedido):
     if os.path.isfile(pedido):
         return pedido
