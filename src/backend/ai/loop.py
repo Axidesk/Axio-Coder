@@ -22,6 +22,7 @@ from src.backend.tools.bootstrap import tool_gerenciar_bootstrap
 from src.backend.tools.web import tavily_configurada
 from src.backend.tools.code_index import disparar_indexacao_background
 from src.backend.tools import (
+    binarios,
     browse,
     builds,
     cofre,

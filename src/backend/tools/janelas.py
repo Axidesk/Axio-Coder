@@ -1253,6 +1253,33 @@ def _pendentes_de_um_processo(pid, excepto=()):
     return avisos, janelas
 
 
+def _responde(hwnd, prazo_ms=400):
+    """True se a janela ainda atende mensagens - o teste de "janela pendurada" do Windows.
+
+    Ler a arvore de uma janela que esta a morrer levanta uma excecao COM (0x80040155,
+    "interface nao registada") que o pywinauto apanha e o faulthandler despeja no terminal
+    com a lista de threads inteira - medido a 2026-10-03. Perguntar primeiro se ela responde
+    evita o despejo e nao muda o resultado: uma janela que nao responde nao mostra aviso
+    nenhum para responder.
+    """
+    if not hwnd:
+        return False
+    user32 = ctypes.windll.user32
+    resposta = ctypes.c_size_t()
+    try:
+        user32.SendMessageTimeoutW.restype = ctypes.c_size_t
+        user32.SendMessageTimeoutW.argtypes = [
+            ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t,
+            ctypes.c_uint, ctypes.c_uint, ctypes.POINTER(ctypes.c_size_t),
+        ]
+        atendida = user32.SendMessageTimeoutW(
+            ctypes.c_void_p(hwnd), 0, 0, 0, 0x0002, prazo_ms, ctypes.byref(resposta)
+        )
+    except Exception:
+        return False
+    return bool(atendida)
+
+
 def _acao_fechar(janela, segundos=0):
     """Fecha a janela E confirma o fecho, respondendo ao aviso que ela abrir pelo caminho.
 
@@ -1277,6 +1304,8 @@ def _acao_fechar(janela, segundos=0):
         if not _viva(hwnd):
             break
         tentativas += 1
+        if not _responde(hwnd):
+            continue
         botao = _botao_do_aviso(janela, time.monotonic() + ORCAMENTO_AVISO)
         if botao is None:
             continue
