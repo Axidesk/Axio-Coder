@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import time
+import unicodedata
 
 from ctypes import wintypes
 from PIL import ImageGrab
@@ -54,6 +55,17 @@ PAUSA_ESTAVEL = 1.5
 ESPERA_JANELA = 30.0
 ESPERA_DELEGADA = 6.0
 LIMITE_SUPERFICIES = 4
+ESPERA_FECHO = 6.0
+LIMITE_LEITURAS_DE_AVISO = 3
+ORCAMENTO_AVISO = 3.0
+PAUSA_ATE_O_AVISO = 0.7
+PAUSA_DEPOIS_DO_AVISO = 0.7
+RESPOSTAS_DE_AVISO = (
+    (("nao", "salvar"), ("dont", "save"), ("no", "save"), ("nicht", "speichern")),
+    (("nao",), ("no",), ("nein",)),
+    (("cancelar",), ("cancel",), ("abbrechen",), ("annuler",)),
+    (("ok",), ("aceitar",), ("sim",), ("yes",)),
+)
 
 
 _MODULO = None
@@ -315,9 +327,18 @@ def _janelas_abertas(fresco=False):
     ):
         return list(_CENSO["janelas"])
     abertas = []
-    for janela in _desktop().windows():
-        if _texto(janela) or (_visivel(janela) and _area(janela) >= AREA_MINIMA_DE_JANELA):
-            abertas.append(janela)
+    for tentativa in (1, 2):
+        try:
+            abertas = [
+                janela for janela in _desktop().windows()
+                if _texto(janela) or (_visivel(janela) and _area(janela) >= AREA_MINIMA_DE_JANELA)
+            ]
+            break
+        except Exception:
+            abertas = []
+            if tentativa == 2:
+                raise
+            time.sleep(0.5)
     vistas = {int(getattr(janela, "handle", 0) or 0) for janela in abertas}
     abertas.extend(_janelas_avulsas(vistas)[0])
     _CENSO["quando"] = time.monotonic()
@@ -901,17 +922,219 @@ def _acao_abrir(alvo):
     )
 
 
-def _acao_fechar(janela):
+def _palavras(texto):
+    """As palavras de um rotulo, sem acentos e sem maiusculas, para comparar palavra a palavra.
+
+    Comparar por pedaco de texto dava falsos positivos, e nao teoricos: "Adicionar Nova Guia"
+    contem "no" dentro de "nova" e "Pequeno Aumento Vertical" contem "no" dentro de "pequeno",
+    e os dois passavam por botoes de resposta a um aviso - o 'situacao' apontava duas respostas
+    que nao eram resposta nenhuma, com o Bloco de notas aberto. Palavra inteira resolve os dois.
+    """
+    simples = unicodedata.normalize("NFKD", (texto or "").lower())
+    simples = "".join(caractere for caractere in simples if not unicodedata.combining(caractere))
+    simples = simples.replace("'", "")
+    return {palavra for palavra in re.split(r"[^a-z0-9]+", simples) if palavra}
+
+
+def _familia_da_resposta(nome):
+    """A familia de resposta a que o rotulo do botao pertence, ou None se ele nao responde a nada.
+
+    A ordem E a da seguranca: fechar uma janela nunca justifica gravar em nome do utilizador, logo
+    "Nao salvar" vem primeiro, depois "Nao", e so depois "Cancelar" - um "Salvar" sozinho nao
+    pertence a familia nenhuma e nunca e carregado. Responder "Nao" a um aviso que nao era de
+    gravacao deixa a janela aberta, e isso e reportado como esta: nunca se escreve por engano.
+    """
+    palavras = _palavras(nome)
+    if not palavras:
+        return None
+    for posicao, familia in enumerate(RESPOSTAS_DE_AVISO):
+        for frase in familia:
+            if set(frase) <= palavras:
+                return posicao
+    return None
+
+
+def _botao_do_aviso(janela, prazo=None):
+    """O botao pelo qual se responde ao aviso a vista nesta superficie, ou None.
+
+    Devolve sempre o da familia mais segura que existir. Le a arvore com prazo: um aviso e pequeno,
+    mas uma janela que nem responde ao fecho nao pode custar uma varredura inteira a cada tentativa.
+    """
+    candidatos = []
+    for elemento in _arvore(janela, prazo):
+        if _prazo_esgotado(prazo):
+            break
+        if _tipo(elemento) != "Button" or not _visivel(elemento):
+            continue
+        familia = _familia_da_resposta(_texto(elemento))
+        if familia is None:
+            continue
+        try:
+            if not elemento.is_enabled():
+                continue
+        except Exception:
+            pass
+        candidatos.append((familia, elemento))
+    if not candidatos:
+        return None
+    candidatos.sort(key=lambda par: par[0])
+    return candidatos[0][1]
+
+
+def _dialogos_a_espera(pid=None):
+    """Os avisos a vista que pedem resposta, do ecra todo ou so de um processo.
+
+    Um aviso e uma janela de topo COM DONO (GW_OWNER) ou da classe #32770 - a classificacao do
+    proprio Windows, que serve tanto para um message box como para um "Salvar como" ou para o
+    dialogo de uma app desenhada a mao. Sem isto, um aviso deixado a espera e invisivel para a
+    ferramenta: ela via a janela principal e mais nada.
+    """
+    user32 = ctypes.windll.user32
+    achados = []
+    for registo in _janelas_do_win32():
+        if not registo["visivel"] or (pid is not None and registo["pid"] != pid):
+            continue
+        dono = int(user32.GetWindow(registo["handle"], 4) or 0)
+        if not dono and _classe_do_hwnd(registo["handle"]) != "#32770":
+            continue
+        de_quem = _titulo_do_hwnd(dono) if dono else f"pid {registo['pid']}"
+        achados.append({
+            "hwnd": registo["handle"],
+            "titulo": registo["titulo"] or "(sem titulo)",
+            "de_quem": de_quem,
+        })
+    return achados
+
+
+def _pendentes_de_um_processo(pid, excepto=()):
+    """(avisos, janelas) daquele programa, ja sem as que se fecharam.
+
+    Os dois casos ficam SEPARADOS de proposito: um aviso a espera de resposta e trabalho por
+    decidir; uma janela que continua aberta pode ser so o programa a correr - e um Bloco de
+    notas partilhado, por exemplo, mostra as janelas todas do mesmo processo. Misturados, o
+    segundo fazia parecer que tinha ficado lixo meu quando nao tinha.
+    """
+    if not pid:
+        return [], []
+    avisos = [
+        f'"{aviso["titulo"]}" (hwnd {aviso["hwnd"]})'
+        for aviso in _dialogos_a_espera(pid)
+        if aviso["hwnd"] not in excepto
+    ]
+    janelas = [
+        f'"{registo["titulo"]}" (hwnd {registo["handle"]})'
+        for registo in _janelas_do_win32()
+        if registo["pid"] == pid
+        and registo["visivel"]
+        and registo["handle"] not in excepto
+        and registo["titulo"]
+        and registo["area"] >= AREA_MINIMA_DE_JANELA
+    ]
+    return avisos, janelas
+
+
+def _acao_fechar(janela, segundos=0):
+    """Fecha a janela E confirma o fecho, respondendo ao aviso que ela abrir pelo caminho.
+
+    Pedir o fecho e sair era o defeito: a janela que abre um "guardar?" ficava a espera de resposta
+    depois de a rodada acabar, e o utilizador encontrava um dialogo pendente no ecra. Aqui o fecho e
+    CONFIRMADO (a janela tem de desaparecer) e o aviso e respondido pela opcao mais segura que
+    existir - nunca "Salvar". No fim, diz o que ficou de pe daquele programa.
+    """
     titulo = _texto(janela)
+    hwnd = int(getattr(janela, "handle", 0) or 0)
+    pid = int(getattr(janela.element_info, "process_id", 0) or 0)
     try:
         janela.close()
     except Exception as exc:
         return f'ERRO: nao consegui fechar "{titulo}" ({type(exc).__name__}: {exc}).'
     _esquecer_censo()
+    limite = time.monotonic() + (segundos or ESPERA_FECHO)
+    respondidos = []
+    tentativas = 0
+    while time.monotonic() < limite and tentativas < LIMITE_LEITURAS_DE_AVISO:
+        time.sleep(PAUSA_ATE_O_AVISO)
+        if not _viva(hwnd):
+            break
+        tentativas += 1
+        botao = _botao_do_aviso(janela, time.monotonic() + ORCAMENTO_AVISO)
+        if botao is None:
+            continue
+        nome = _texto(botao)
+        metodo, erro = _clicar(botao)
+        if erro:
+            return (
+                f'ERRO: a janela "{titulo}" abriu um aviso e nao consegui responder-lhe ({metodo}).'
+                " O aviso continua a espera: olhe para ele com acao='print' e responda com"
+                " acao='clicar' no alvo certo."
+            )
+        respondidos.append(f"{nome!r} ({metodo})")
+        time.sleep(PAUSA_DEPOIS_DO_AVISO)
+    fechou = not _viva(hwnd)
+    resposta = f" Ao aviso que ela abriu respondi {', '.join(respondidos)}." if respondidos else ""
+    if fechou:
+        avisos, janelas = _pendentes_de_um_processo(pid, excepto=(hwnd,))
+        sobra = ""
+        if avisos:
+            sobra = " ATENCAO: ficou um aviso a espera de resposta: " + "; ".join(avisos[:4]) + "."
+        if janelas:
+            sobra += " O mesmo programa tem outras janelas abertas: " + "; ".join(janelas[:4]) + "."
+        if not sobra:
+            sobra = " Nao ficou nada aberto desse programa."
+        return f'Fechei a janela "{titulo}" (hwnd {hwnd}) e confirmei que desapareceu.{resposta}{sobra}'
     return (
-        f'Pedi o fecho da janela "{titulo}" (hwnd {janela.handle}). Se ela abrir um dialogo a'
-        " pedir para guardar, esse dialogo fica a espera de resposta."
+        f'A janela "{titulo}" (hwnd {hwnd}) CONTINUA aberta.{resposta} Ela recusou o pedido de'
+        " fecho e nao deixou nenhum aviso por decidir: feche-a pelo caminho da propria app"
+        " (acao='teclas' com a tecla de fecho) ou pela API dela. Se for um programa que so sai"
+        " a forca, isso e decisao do utilizador - diga-lo, nao o matar por conta propria."
     )
+
+
+def _acao_situacao(identificador=""):
+    """O que ficou pendente: avisos a espera de resposta e janelas ainda abertas.
+
+    Sem 'janela', varre o ecra pelo Win32 a procura dos avisos a espera - a pergunta "sobrou
+    alguma coisa a pedir resposta?". Com 'janela' ou 'pid:<n>', olha so para esse programa E
+    tambem para DENTRO das janelas dele, onde vivem os avisos que muitas apps modernas desenham
+    sem abrir dialogo nenhum (o Bloco de notas novo pede para guardar dentro da propria janela).
+    """
+    pedido = str(identificador or "").strip()
+    pid = None
+    if pedido:
+        janela, erro = _janela(pedido, fresco=True)
+        if erro:
+            return "ERRO: " + erro
+        pid = int(getattr(janela.element_info, "process_id", 0) or 0)
+    linhas = []
+    for aviso in _dialogos_a_espera(pid):
+        wrapper = _janela_avulsa(aviso["hwnd"])
+        botao = _botao_do_aviso(wrapper, time.monotonic() + ORCAMENTO_AVISO) if wrapper else None
+        resposta = (
+            f" -> respondo com {_texto(botao)!r}" if botao is not None
+            else " -> sem botao de resposta reconhecido, sera preciso olhar para ele"
+        )
+        linhas.append(f'  AVISO "{aviso["titulo"]}" (hwnd {aviso["hwnd"]}), de {aviso["de_quem"]}{resposta}')
+    if pid:
+        for registo in _janelas_do_win32():
+            if registo["pid"] != pid or not registo["visivel"]:
+                continue
+            if not registo["titulo"] or registo["area"] < AREA_MINIMA_DE_JANELA:
+                continue
+            marca = " [minimizada]" if ctypes.windll.user32.IsIconic(registo["handle"]) else ""
+            linhas.append(f'  JANELA "{registo["titulo"]}" (hwnd {registo["handle"]}){marca}')
+            wrapper = _janela_avulsa(registo["handle"])
+            if wrapper is None:
+                continue
+            botao = _botao_do_aviso(wrapper, time.monotonic() + ORCAMENTO_AVISO)
+            if botao is not None:
+                linhas.append(
+                    f'      botao de resposta a vista dentro dela: {_texto(botao)!r}'
+                    " (acao='fechar' responde e fecha)"
+                )
+    alvo = f" no programa {pid}" if pid else " no ecra"
+    if not linhas:
+        return f"Nada pendente{alvo}: nenhum aviso a espera de resposta."
+    return f"Pendente{alvo}:\n" + "\n".join(linhas)
 
 
 def _caixa_do_hwnd(hwnd):
@@ -920,6 +1143,27 @@ def _caixa_do_hwnd(hwnd):
     if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(caixa)):
         return None
     return (caixa.left, caixa.top, caixa.right - caixa.left, caixa.bottom - caixa.top)
+
+
+def _viva(hwnd):
+    """A janela existe - o teste mais barato que ha, e o unico que nao depende da arvore do UIA."""
+    return bool(hwnd) and bool(ctypes.windll.user32.IsWindow(int(hwnd)))
+
+
+def _classe_do_hwnd(hwnd):
+    """A classe da janela, pelo Win32: '#32770' e o dialogo do Windows, seja de que app for."""
+    buffer = ctypes.create_unicode_buffer(256)
+    ctypes.windll.user32.GetClassNameW(int(hwnd), buffer, 256)
+    return buffer.value
+
+
+def _titulo_do_hwnd(hwnd):
+    comprimento = ctypes.windll.user32.GetWindowTextLengthW(int(hwnd))
+    if comprimento <= 0:
+        return ""
+    buffer = ctypes.create_unicode_buffer(comprimento + 1)
+    ctypes.windll.user32.GetWindowTextW(int(hwnd), buffer, comprimento + 1)
+    return buffer.value
 
 
 def _acao_mover(janela, pedido):
@@ -1319,6 +1563,13 @@ def _correr_roteiro(passos, janela=""):
         linhas = _passos_em_serie(passos, janela)
     finally:
         _travar_censo(False)
+    pendentes = _dialogos_a_espera()
+    if pendentes:
+        linhas.append(
+            f"Nota: ha {len(pendentes)} aviso(s) a espera de resposta no ecra: "
+            + "; ".join(f'"{a["titulo"]}" (de {a["de_quem"]})' for a in pendentes[:4])
+            + ". Confirme se algum e seu antes de responder."
+        )
     return "\n".join(linhas)
 
 
@@ -1362,7 +1613,9 @@ def _passos_em_serie(passos, janela):
     "'mapa' devolve o indice dos elementos que respondem a um gesto (COMECE POR AQUI, em vez de "
     "perguntar elemento a elemento); 'elemento' detalha um; 'clicar', 'escrever' e 'teclas' "
     "agem; 'abrir' lanca um programa e devolve a janela dele; 'arrastar' desenha um traco por "
-    "coordenadas do ecra e 'fechar' pede o fecho da janela; 'print' entrega uma imagem dela; "
+    "coordenadas do ecra; 'fechar' fecha a janela, responde ao aviso que ela abrir (nunca a "
+    "gravar nada) e confirma que desapareceu; 'situacao' diz o que ficou pendente; "
+    "'print' entrega uma imagem dela; "
     "'mover' poe a janela no sitio e no tamanho pedidos; 'esperar' aguarda que uma janela "
     "exista e devolve o hwnd; e 'roteiro' corre VARIOS gestos numa so chamada (um login "
     "inteiro, um formulario todo) pela mesma via de um gesto isolado. "
@@ -1386,8 +1639,8 @@ def _passos_em_serie(passos, janela):
     {
         "acao": {
             "tipo": "STRING", "obrig": True,
-            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "print", "mover", "esperar", "roteiro"],
-            "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' pede o fecho da janela; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra).",
+            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "situacao", "print", "mover", "esperar", "roteiro"],
+            "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' fecha a janela, responde ao aviso que ela abrir (nunca a gravar nada) e confirma que desapareceu; 'situacao' diz o que ficou pendente - os avisos a espera de resposta e as janelas ainda abertas, no ecra todo ou num programa; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra).",
         },
         "janela": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -1411,7 +1664,7 @@ def _passos_em_serie(passos, janela):
         },
         "segundos": {
             "tipo": "INTEGER", "obrig": False, "padrao": 0,
-            "desc": "So em acao='esperar': quantos segundos esperar que a janela apareca (0 usa o padrao de 15). Serve para o passo seguinte a lancar um programa - 'lancei, quando e que posso agir nele?' - sem dormir um tempo adivinhado.",
+            "desc": "So em acao='esperar': quantos segundos esperar que a janela apareca (0 usa o padrao de 15). Serve para o passo seguinte a lancar um programa - 'lancei, quando e que posso agir nele?' - sem dormir um tempo adivinhado. Em acao='fechar': quanto esperar pelo fecho e pela resposta ao aviso que a janela abrir (0 usa o padrao de 6).",
         },
         "passos": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -1441,6 +1694,9 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
 
     if acao == "esperar":
         return _acao_esperar(janela, segundos)
+
+    if acao == "situacao":
+        return _acao_situacao(janela)
 
     if acao == "janelas":
         try:
