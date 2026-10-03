@@ -10,7 +10,7 @@ import time
 import unicodedata
 
 from ctypes import wintypes
-from PIL import Image, ImageGrab
+from PIL import Image, ImageDraw, ImageGrab
 
 from src.backend.services import cofre, executaveis
 from src.backend.services.imagem import codificar_para_envio, retangulo_da_regiao
@@ -810,6 +810,37 @@ def _tem_area(imagem):
     return imagem is not None and min(imagem.size) > 0
 
 
+def _grelha_de_coordenadas(imagem, passo=0, origem=(0, 0)):
+    """A imagem com linhas de coordenadas e o valor de cada uma, na conta que o 'janela:x,y' usa.
+
+    Com um recorte, 'origem' e o canto do recorte na janela: os rotulos ficam nas coordenadas do
+    clique, nunca nas da imagem cortada - senao o numero que se le na imagem nao serve para clicar.
+    """
+    passo = int(passo or 0)
+    if passo <= 0 or not _tem_area(imagem):
+        return imagem
+    if imagem.mode not in ("RGB", "RGBA"):
+        imagem = imagem.convert("RGB")
+    desenho = ImageDraw.Draw(imagem)
+    cor = (255, 0, 128)
+    largura, altura = imagem.size
+    for x in range(0, largura, passo):
+        desenho.line([(x, 0), (x, altura - 1)], fill=cor, width=1)
+        desenho.text((x + 2, 1), str(origem[0] + x), fill=cor)
+    for y in range(0, altura, passo):
+        desenho.line([(0, y), (largura - 1, y)], fill=cor, width=1)
+        desenho.text((2, y + 1), str(origem[1] + y), fill=cor)
+    return imagem
+
+
+def _ampliada(imagem, fator=1):
+    """A imagem em ponto grande por pixels intactos: e o que deixa ler um slot ou uma cota pequena."""
+    fator = max(1, int(fator or 1))
+    if fator <= 1 or not _tem_area(imagem):
+        return imagem
+    return imagem.resize((imagem.width * fator, imagem.height * fator), Image.Resampling.NEAREST)
+
+
 class _CabecalhoDeBitmap(ctypes.Structure):
     _fields_ = [
         ("biSize", ctypes.c_uint32), ("biWidth", ctypes.c_int32), ("biHeight", ctypes.c_int32),
@@ -926,17 +957,25 @@ def _regiao_do_alvo(janela, alvo):
     )
 
 
-def _acao_print(janela, regiao, alvo=""):
+def _acao_print(janela, regiao, alvo="", grelha=0, ampliar=1):
     recado_do_alvo = ""
-    if not retangulo_da_regiao(regiao) and str(alvo or "").strip():
+    limpa = _pedido_relativo(regiao) or str(regiao or "").strip()
+    if limpa and not retangulo_da_regiao(limpa):
+        return (
+            f"ERRO: a regiao {regiao!r} nao e 'x,y,largura,altura' (numeros inteiros, contados do"
+            " canto superior esquerdo que a imagem mostra; o prefixo 'janela:' tambem serve)."
+            " Sem recorte valido a imagem sairia inteira e o pedido passava por engano."
+        )
+    if not retangulo_da_regiao(limpa) and str(alvo or "").strip():
         regiao, recado_do_alvo, erro = _regiao_do_alvo(janela, alvo)
         if erro:
             return "ERRO: " + erro
+        limpa = _pedido_relativo(regiao) or str(regiao or "").strip()
     _, recado_frente = _trazer_para_a_frente(janela)
     imagem, metodo, erro = _capturar_janela(janela)
     if imagem is None:
         return f"ERRO: nao consegui capturar a janela ({erro})."
-    recorte = retangulo_da_regiao(regiao)
+    recorte = retangulo_da_regiao(limpa)
     if recorte:
         try:
             cortada = imagem.crop(recorte)
@@ -949,6 +988,8 @@ def _acao_print(janela, regiao, alvo=""):
                 " (x,y,largura,altura, a partir do canto superior esquerdo dela) ou capture sem 'regiao'."
             )
         imagem = cortada
+    imagem = _grelha_de_coordenadas(imagem, grelha, recorte[:2] if recorte else (0, 0))
+    imagem = _ampliada(imagem, ampliar)
     buffer = io.BytesIO()
     try:
         imagem.save(buffer, format="PNG")
@@ -956,10 +997,16 @@ def _acao_print(janela, regiao, alvo=""):
         return f"ERRO: a imagem da janela saiu com {imagem.size[0]}x{imagem.size[1]} px e nao a consegui codificar ({exc})."
     base64_img, mime, _ = codificar_para_envio(buffer.getvalue())
     largura, altura = imagem.size
+    recado_grelha = (
+        f" A cada {int(grelha)} px vai uma linha com o valor da coordenada 'janela:x,y' daquele"
+        " ponto: leia a posicao na imagem e passe-a ao gesto tal e qual, sem somar deslocamentos."
+        if int(grelha or 0) > 0 else ""
+    )
+    recado_zoom = f" Ampliada {int(ampliar)}x, pixels intactos." if int(ampliar or 1) > 1 else ""
     return {
         "texto": (
             f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.{recado_do_alvo}{recado_frente}'
-            f"{_aviso_de_nao_estar_a_frente(janela)}"
+            f"{_aviso_de_nao_estar_a_frente(janela)}{recado_grelha}{recado_zoom}"
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
             " ATENCAO: numa janela TRANSPARENTE (Electron/app com o fundo ainda por pintar, canvas a carregar) "
             "a composicao do sistema mostra o que esta ATRAS dela - se a imagem nao bater com o que se esperava "
@@ -1735,6 +1782,12 @@ def _passos_em_serie(passos, janela):
             segundos=int(passo.get("segundos") or 0),
             botao=str(passo.get("botao") or ""),
         )
+        if isinstance(resultado, dict):
+            resultado = (
+                "capturou uma imagem, mas um roteiro NAO entrega imagens - a imagem nao cabe no"
+                " relato em serie e vinha despejada em base64. Chame acao='print' SOZINHO, fora de"
+                " 'passos', para a imagem chegar."
+            )
         marca = " ".join(parte for parte in (passo["acao"], _alvo_do_passo(passo)) if parte)
         linhas.append(f"[{indice}] {marca}\n    {resultado}")
         if str(resultado).startswith("ERRO:"):
@@ -1806,7 +1859,7 @@ def _passos_em_serie(passos, janela):
         },
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Em acao='print': 'x,y,largura,altura' para recortar (contadas do canto superior esquerdo que a propria imagem mostra). Vazio captura a janela inteira; com 'alvo' indicado e sem 'regiao', recorta so a caixa desse elemento - e o caminho para ler um campo, um painel ou um trecho de ecra sem andar a adivinhar coordenadas. Quanto menor a regiao, mais nitida chega ao modelo. Em acao='mover': o destino da janela na mesma forma 'x,y,largura,altura' - e assim que se poem varias janelas em fila, lado a lado.",
+            "desc": "Em acao='print': 'x,y,largura,altura' para recortar (contadas do canto superior esquerdo que a propria imagem mostra; o prefixo 'janela:' tambem serve, para a conta ficar igual a do 'ponto'). Um recorte que nao seja quatro numeros agora da ERRO em vez de devolver a janela inteira por engano. Vazio captura a janela inteira; com 'alvo' indicado e sem 'regiao', recorta so a caixa desse elemento - e o caminho para ler um campo, um painel ou um trecho de ecra sem andar a adivinhar coordenadas. Quanto menor a regiao, mais nitida chega ao modelo. Em acao='mover': o destino da janela na mesma forma 'x,y,largura,altura' - e assim que se poem varias janelas em fila, lado a lado.",
         },
         "segundos": {
             "tipo": "INTEGER", "obrig": False, "padrao": 0,
@@ -1823,6 +1876,14 @@ def _passos_em_serie(passos, janela):
         "botao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
             "desc": "Qual botao do rato em acao='clicar' com 'ponto': 'esquerdo' (omissao), 'direito' ou 'meio'. E o que faltava para o gesto de dois tempos de um jogo ou de uma app desenhada a mao: armar com o botao DIREITO num item (ex: uma runa) e completar com o ESQUERDO no alvo. Vale tambem dentro dos passos de 'roteiro', com a chave 'botao' no passo.",
+        },
+        "grelha": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "Em acao='print': desenha linhas de coordenadas a cada N px, cada uma rotulada com o valor daquele ponto na conta que o 'ponto' usa ('janela:x,y'). E o que deixa LER uma posicao na imagem e passa-la ao gesto tal e qual - escolha a medida que interessa (32 num jogo de tiles, 50 ou 100 num painel). 0 nao desenha nada.",
+        },
+        "ampliar": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 1,
+            "desc": "Em acao='print': amplia a imagem N vezes por pixels intactos (sem inventar detalhe), para ler de perto um recorte pequeno - um slot de inventario, uma cota, um icone. Rende com 'regiao' pequena; ampliar a janela toda gasta o mesmo e nao acrescenta nada.",
         },
     },
 )
@@ -1887,7 +1948,7 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
     if acao == "fechar":
         return _acao_fechar(janela_escolhida)
     if acao == "print":
-        return _acao_print(janela_escolhida, regiao, alvo)
+        return _acao_print(janela_escolhida, regiao, alvo, grelha, ampliar)
     if acao == "mover":
         return _acao_mover(janela_escolhida, regiao)
 
