@@ -2,6 +2,7 @@
 
 import ctypes
 import io
+import json
 import os
 import re
 import subprocess
@@ -27,6 +28,14 @@ LIMITE_VARREDURA = 6000
 ARVORE_POBRE = 40
 LIMITE_TRACO = 64
 PAUSA_TRACO = 0.02
+LIMITE_PASSOS_ROTEIRO = 40
+ESPERA_MAX_PASSO = 30000
+ESPERA_JANELA_PADRAO = 15.0
+CARACTERES_DE_TECLA = "+^%~(){}"
+ACOES_NO_ROTEIRO = frozenset({
+    "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "print", "mover", "esperar",
+})
+VALIDADE_DO_CENSO = 1.0
 SEM_PROGRAMA = (
     "nao encontrei '{0}'. Use o nome do executavel (ex: 'notepad', 'mspaint') ou o caminho"
     " completo entre aspas (ex: \"C:\\Program Files\\App\\app.exe\")."
@@ -147,10 +156,48 @@ def _valor(elemento):
         return ""
 
 
-def _janela(identificador):
-    """(janela, erro): escolhida pelo hwnd, pelo processo ou por um trecho do titulo."""
+SUFIXO_DE_INDICE = re.compile(r"#(\d+)\s*$")
+
+
+def _separar_indice(pedido):
+    """('titulo', n): 'jogo#2' pede a 2a janela que casa com esse titulo."""
+    achado = SUFIXO_DE_INDICE.search(pedido)
+    if not achado:
+        return pedido, 1
+    return pedido[:achado.start()].strip(), int(achado.group(1))
+
+
+def _por_posicao(janelas):
+    """Da esquerda para a direita - a ordem com que o olho as distingue, com as minimizadas no fim.
+
+    Uma janela minimizada vive em x=-32000: ordenada so pela posicao ela seria a '#1', e o gesto
+    cairia justamente na unica que nao da para operar. Medido a 2026-10-02, com quatro blocos de
+    notas abertos: das quatro, a '#1' era a minimizada.
+    """
+    def chave(janela):
+        try:
+            minimizada = bool(ctypes.windll.user32.IsIconic(int(getattr(janela, "handle", 0) or 0)))
+        except Exception:
+            minimizada = False
+        try:
+            caixa = janela.rectangle()
+            canto = (int(caixa.left), int(caixa.top))
+        except Exception:
+            canto = (1 << 30, 1 << 30)
+        return (1 if minimizada else 0, canto[0], canto[1])
+    return sorted(janelas, key=chave)
+
+
+def _janela(identificador, fresco=False):
+    """(janela, erro): escolhida pelo hwnd, pelo processo ou por um trecho do titulo.
+
+    Com varias janelas do MESMO titulo - tres clientes de um jogo, tres exploradores abertos -
+    agir na primeira seria um palpite, e o palpite errado custa caro (o gesto cai na janela que
+    nao era). O sufixo '#N' escolhe a N-esima contando da ESQUERDA para a direita, que e a ordem
+    que o olho usa; sem ele, a ambiguidade RECUSA e lista as candidatas com o hwnd.
+    """
     try:
-        abertas = _janelas_abertas()
+        abertas = _janelas_abertas(fresco)
     except Exception as exc:
         return None, f"nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
     pedido = str(identificador or "").strip()
@@ -165,17 +212,32 @@ def _janela(identificador):
         numero = pedido[4:].strip()
         if not numero.isdigit():
             return None, "o pid tem de ser um numero (ex: 'pid:12345')."
-        for janela in abertas:
-            if getattr(janela.element_info, "process_id", None) == int(numero):
-                return janela, ""
-        return _procurar_no_win32(pedido)
-    procurado = pedido.lower()
+        do_pid = _por_posicao(
+            [w for w in abertas if getattr(w.element_info, "process_id", None) == int(numero)]
+        )
+        return (do_pid[0], "") if do_pid else _procurar_no_win32(pedido)
+    titulo, indice = _separar_indice(pedido)
+    procurado = titulo.lower()
     exatas = [w for w in abertas if _texto(w).lower() == procurado]
-    parciais = [w for w in abertas if procurado in _texto(w).lower()]
-    escolhidas = exatas or parciais
-    if not escolhidas:
+    casadas = _por_posicao(exatas or [w for w in abertas if procurado in _texto(w).lower()])
+    if not casadas:
         return _procurar_no_win32(pedido)
-    return escolhidas[0], ""
+    if indice > len(casadas):
+        return None, (
+            f"pedi a janela #{indice} de \"{titulo}\" mas so {len(casadas)} casam"
+            f" ({', '.join(str(w.handle) for w in casadas[:4])})."
+        )
+    if len(casadas) > 1 and indice == 1 and not SUFIXO_DE_INDICE.search(pedido):
+        return None, (
+            f"{len(casadas)} janelas casam com \"{titulo}\" e nenhuma foi escolhida"
+            " (agir na errada e pior do que parar):\n"
+            + "\n".join(
+                f"    'janela': '{titulo}#{pos}' ou '{w.handle}' -> {_texto(w)[:60]}"
+                for pos, w in enumerate(casadas[:6], 1)
+            )
+            + f"\n  A ordem e da ESQUERDA para a direita no ecra."
+        )
+    return casadas[indice - 1], ""
 
 
 def _caminho_do_programa(nome):
@@ -213,19 +275,53 @@ AREA_MINIMA_DE_JANELA = 1600
 LIMITE_JANELAS_AVULSAS = 12
 
 
-def _janelas_abertas():
+_CENSO = {"quando": 0.0, "janelas": []}
+_TRAVA_DO_CENSO = {"activa": False}
+
+
+def _travar_censo(activa):
+    """Enquanto um roteiro corre, o censo nao expira.
+
+    As janelas nao mudam de um gesto para o outro, e reler o sistema a cada passo custa 2,4s -
+    medido: um roteiro de cinco gestos levava 14,6s, dos quais 12 eram so enumeracao de janelas.
+    """
+    _TRAVA_DO_CENSO["activa"] = bool(activa)
+
+
+def _esquecer_censo():
+    """O proximo censo volta a ler o sistema - chamado por tudo o que abre, move ou fecha janelas."""
+    _CENSO["quando"] = 0.0
+    _CENSO["janelas"] = []
+
+
+def _janelas_abertas(fresco=False):
     """Todas as janelas que valem um gesto: as que tem titulo e as sem titulo com area util.
 
     Enumerar so pelo titulo escondia janelas reais: uma janela de ferramenta (a do raciocinio,
     por exemplo) nao aparece na barra de tarefas e pode nao se declarar. O filtro que sobra e
     de TAMANHO, porque a arvore do Windows esta cheia de janelas de 0x0 que ninguem quer operar.
+
+    MEDIDO: esta leitura custa 2,4s, porque pergunta ao UIA por cada janela do sistema - contra
+    0,01s da varredura pelo Win32 puro. Num roteiro de oito gestos eram oito vezes 2,4s, e era
+    isso, e nao os cliques, que fazia uma tarefa de dois minutos arrastar-se por vinte. O censo
+    fica guardado por instantes: quem ABRE, MOVE ou FECHA uma janela esquece-o; quem PERGUNTA o
+    que esta aberto (acao='janelas' e 'esperar') pede-o fresco.
     """
+    agora = time.monotonic()
+    if (
+        not fresco
+        and _CENSO["janelas"]
+        and (_TRAVA_DO_CENSO["activa"] or agora - _CENSO["quando"] < VALIDADE_DO_CENSO)
+    ):
+        return list(_CENSO["janelas"])
     abertas = []
     for janela in _desktop().windows():
         if _texto(janela) or (_visivel(janela) and _area(janela) >= AREA_MINIMA_DE_JANELA):
             abertas.append(janela)
     vistas = {int(getattr(janela, "handle", 0) or 0) for janela in abertas}
     abertas.extend(_janelas_avulsas(vistas)[0])
+    _CENSO["quando"] = time.monotonic()
+    _CENSO["janelas"] = list(abertas)
     return abertas
 
 
@@ -781,6 +877,7 @@ def _acao_abrir(alvo):
     except Exception as exc:
         return f"ERRO: nao consegui lancar {caminho} ({type(exc).__name__}: {exc})"
     janela, como, erro = _esperar_janela(processo, antes)
+    _esquecer_censo()
     if erro:
         return f"ERRO: {os.path.basename(caminho)} foi lancado (pid {processo.pid}), mas {erro}."
     resumo = "nao consegui ler a arvore dela"
@@ -810,10 +907,80 @@ def _acao_fechar(janela):
         janela.close()
     except Exception as exc:
         return f'ERRO: nao consegui fechar "{titulo}" ({type(exc).__name__}: {exc}).'
+    _esquecer_censo()
     return (
         f'Pedi o fecho da janela "{titulo}" (hwnd {janela.handle}). Se ela abrir um dialogo a'
         " pedir para guardar, esse dialogo fica a espera de resposta."
     )
+
+
+def _caixa_do_hwnd(hwnd):
+    """(left, top, largura, altura) pelo Win32 - funciona com qualquer janela, mesmo a que o UIA mal ve."""
+    caixa = wintypes.RECT()
+    if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(caixa)):
+        return None
+    return (caixa.left, caixa.top, caixa.right - caixa.left, caixa.bottom - caixa.top)
+
+
+def _acao_mover(janela, pedido):
+    """Poe a janela em 'x,y,largura,altura' - o caminho para arrumar varias janelas lado a lado.
+
+    O movimento vai pelo Win32, e nao pelo wrapper: o UIAWrapper do pywinauto nao tem
+    move_window (so o do backend win32 tem), e o MoveWindow trabalha pelo hwnd, que existe
+    para qualquer janela. A posicao final e LIDA de volta, nunca dada como certa.
+    """
+    numeros = [int(n) for n in re.findall(r"-?\d+", str(pedido or ""))]
+    if len(numeros) != 4:
+        return "ERRO: acao='mover' precisa de 'regiao' com 'x,y,largura,altura'."
+    x, y, largura, altura = numeros
+    if largura <= 0 or altura <= 0:
+        return "ERRO: a largura e a altura tem de ser maiores que zero."
+    hwnd = int(getattr(janela, "handle", 0) or 0)
+    if not hwnd:
+        return "ERRO: nao consegui o hwnd da janela para a mover."
+    antes = _caixa_do_hwnd(hwnd)
+    if not ctypes.windll.user32.MoveWindow(hwnd, x, y, largura, altura, True):
+        return f"ERRO: o Windows recusou mover a janela {hwnd}."
+    time.sleep(0.3)
+    depois = _caixa_do_hwnd(hwnd)
+    _esquecer_censo()
+    de_onde = "%s,%s %sx%s" % antes if antes else "?"
+    para_onde = "%s,%s %sx%s" % depois if depois else "?"
+    aviso = ""
+    if depois and tuple(depois) != (x, y, largura, altura):
+        aviso = (
+            " ATENCAO: o Windows ajustou o pedido - a janela tem minimo proprio ou nao ha"
+            " esse espaco no ecra."
+        )
+    return (
+        f'Movi a janela "{_texto(janela)}" (hwnd {hwnd}) de {de_onde} para {para_onde}.'
+        " A posicao foi lida de volta do Windows, nao da conta pedida." + aviso
+    )
+
+
+def _acao_esperar(identificador, segundos):
+    """Espera a janela existir e devolve o hwnd - a resposta a 'lancei o programa, quando e que posso agir nele?'."""
+    pedido = str(identificador or "").strip()
+    if not pedido:
+        return "ERRO: acao='esperar' precisa de 'janela' (o hwnd, 'pid:<numero>' ou um trecho do titulo)."
+    limite = segundos or ESPERA_JANELA_PADRAO
+    fim = time.monotonic() + limite
+    ultimo = ""
+    while time.monotonic() < fim:
+        janela, erro = _janela(pedido, fresco=True)
+        if janela is not None:
+            try:
+                caixa = janela.rectangle()
+                onde = f"canto ({caixa.left},{caixa.top}), {caixa.width()}x{caixa.height()}"
+            except Exception:
+                onde = "caixa ilegivel"
+            return (
+                f'A janela "{_texto(janela)}" esta aberta: hwnd {janela.handle}, {onde}.'
+                " Use este hwnd em 'janela' nas proximas chamadas."
+            )
+        ultimo = erro
+        time.sleep(0.4)
+    return f'ERRO: "{pedido}" nao apareceu em {limite:.0f}s. {ultimo}'
 
 
 def _clicar(elemento):
@@ -840,6 +1007,16 @@ def _clicar(elemento):
         return "", f"nao consegui acionar o elemento ({type(exc).__name__}: {exc})"
 
 
+def _literal(texto):
+    """O texto pronto para o teclado: os caracteres que o pywinauto le como TECLA vao entre chaves.
+
+    Medido no Bloco de notas: sem isto, 'a^b(c)+d{2}~x' chega a janela feito lixo - o '^' pressiona
+    Ctrl, o '(' agrupa, o '{' abre uma tecla com nome - e uma senha com parenteses entra errada em
+    silencio. Os oito caracteres saem do parse_keys do proprio pywinauto, nao de suposicao.
+    """
+    return "".join("{" + c + "}" if c in CARACTERES_DE_TECLA else c for c in str(texto))
+
+
 def _escrever(elemento, texto):
     interface = _interface(elemento, "value")
     if interface is not None:
@@ -850,8 +1027,10 @@ def _escrever(elemento, texto):
             pass
     try:
         elemento.set_focus()
-        elemento.type_keys(texto, with_spaces=True)
-        return "gesto type_keys (injeta input)", ""
+        _teclado().send_keys(
+            _literal(texto), with_spaces=True, with_tabs=True, with_newlines=True
+        )
+        return "gesto de teclado, com os caracteres de tecla escapados (injeta input)", ""
     except Exception as exc:
         return "", f"nao consegui escrever no elemento ({type(exc).__name__}: {exc})"
 
@@ -1000,24 +1179,20 @@ def _acao_escrever_ponto(janela, pedido, texto):
     erro = _focar(janela)
     if erro:
         return "ERRO: " + erro
-    especiais = sorted({c for c in texto if c in "{}()+^%~"})
     try:
         _mouse().click(button="left", coords=pontos[0])
         time.sleep(PAUSA_TRACO * 8)
-        _teclado().send_keys(texto, with_spaces=True)
+        _teclado().send_keys(
+            _literal(texto), with_spaces=True, with_tabs=True, with_newlines=True
+        )
     except Exception as exc:
         return (
             f"ERRO: nao consegui escrever em {pontos[0]} ({type(exc).__name__}: {exc})."
             " O gesto exige o desktop desbloqueado e a janela em primeiro plano."
         )
-    aviso = (
-        " ATENCAO: o " + "".join(especiais) + " e lido como codigo de tecla pelo pywinauto -"
-        " um texto com esses caracteres tem de ir peca a peca em acao='teclas'."
-        if especiais else ""
-    )
     return (
         f"Escrevi {texto!r} em {pontos[0]} (coordenadas do ecra), na janela \"{_texto(janela)}\","
-        " por gesto: clique no ponto e o texto a seguir." + aviso
+        " por gesto: clique no ponto e o texto a seguir (os caracteres de tecla vao escapados)."
     )
 
 
@@ -1041,6 +1216,143 @@ def _acao_arrastar(janela, pedido):
     )
 
 
+def _teclas_a_janela(janela, tecla, alvo_teclas):
+    """Teclas para a JANELA (sem alvo): vao pelo teclado do sistema, com a janela trazida a frente.
+
+    A via do elemento - set_focus e type_keys no wrapper da janela - NAO serve: medida a
+    2026-10-02 num Bloco de notas, rebenta com ElementNotEnabled. E e justamente o caminho de que
+    um jogo ou uma app desenhada a mao precisa, onde nao ha controlo nenhum para focar.
+    """
+    hwnd = int(getattr(janela, "handle", 0) or 0)
+    if hwnd:
+        try:
+            user32 = ctypes.windll.user32
+            if user32.GetForegroundWindow() != hwnd:
+                user32.SetForegroundWindow(hwnd)
+                time.sleep(0.3)
+        except Exception:
+            pass
+    try:
+        _teclado().send_keys(alvo_teclas)
+    except Exception as exc:
+        return (
+            f"ERRO: nao consegui enviar as teclas ({type(exc).__name__}: {exc})."
+            " As teclas injectam input: o desktop tem de estar desbloqueado."
+        )
+    return (
+        f'Enviei {tecla!r} (injectado como {alvo_teclas!r}) para a janela "{_texto(janela)}"'
+        " (a propria janela, sem alvo), pelo teclado do sistema. ATENCAO: um atalho nao deixa"
+        " marca no texto, por isso isto NAO prova que o alvo reagiu - confirme o efeito"
+        " (acao='print' na janela, ou o estado que devia mudar) antes de concluir."
+    )
+
+
+def _passos_do_roteiro(passos):
+    """Lista de gestos validada - cada passo e o mesmo que uma chamada isolada.
+
+    Valida tudo ANTES de tocar em nada: um roteiro com o passo 4 mal escrito nao pode disparar os
+    tres primeiros e so depois descobrir o erro, com a janela ja a meio de um login.
+    """
+    if isinstance(passos, (list, tuple)):
+        bruto = list(passos)
+    else:
+        escrito = str(passos or "").strip()
+        if not escrito:
+            return None, (
+                "indique 'passos' com a lista JSON dos gestos, por exemplo: "
+                '[{"acao":"clicar","ponto":"janela:129,271"},'
+                '{"acao":"escrever","ponto":"janela:367,213","texto":"conta"},'
+                '{"acao":"teclas","tecla":"{TAB}"}]'
+            )
+        try:
+            bruto = json.loads(escrito)
+        except Exception as exc:
+            return None, f"'passos' nao e JSON valido ({exc})"
+    if not isinstance(bruto, list) or not bruto:
+        return None, "'passos' tem de ser uma lista com pelo menos um gesto"
+    if len(bruto) > LIMITE_PASSOS_ROTEIRO:
+        return None, (
+            f"'passos' tem {len(bruto)} gestos e o maximo por roteiro e {LIMITE_PASSOS_ROTEIRO};"
+            " divida em dois roteiros"
+        )
+    limpos = []
+    for indice, passo in enumerate(bruto, 1):
+        if not isinstance(passo, dict):
+            return None, f"o passo {indice} nao e um objeto com 'acao' e os seus argumentos"
+        acao = str(passo.get("acao") or "").strip().lower()
+        if acao not in ACOES_NO_ROTEIRO:
+            return None, (
+                f"o passo {indice} tem acao '{passo.get('acao')}'; use uma de: "
+                + ", ".join(sorted(ACOES_NO_ROTEIRO))
+            )
+        try:
+            espera = max(0, min(ESPERA_MAX_PASSO, int(passo.get("espera") or 0)))
+        except (TypeError, ValueError):
+            return None, (
+                f"o passo {indice} tem espera '{passo.get('espera')}'; use milissegundos inteiros"
+                f" (0 a {ESPERA_MAX_PASSO})"
+            )
+        limpos.append(dict(passo, acao=acao, espera=espera))
+    return limpos, ""
+
+
+def _alvo_do_passo(passo):
+    """O que identifica o passo no relatorio: o alvo, o ponto, a tecla ou o que foi escrito."""
+    for chave in ("alvo", "ponto", "tecla", "regiao"):
+        valor = str(passo.get(chave) or "").strip()
+        if valor:
+            return valor
+    escrito = str(passo.get("texto") or "").strip()
+    return f"texto {escrito!r}" if escrito else ""
+
+
+def _correr_roteiro(passos, janela=""):
+    """Corre os gestos em serie pela mesma ferramenta de um gesto isolado.
+
+    Nao ha caminho alternativo: cada passo entra por tool_operar_janela, logo leva o mesmo guard e
+    o mesmo relato de efeito. Parar no primeiro erro e o que impede a cascata - um passo falhado
+    deixaria os seguintes a agir sobre uma janela que ja nao esta no estado previsto.
+    """
+    linhas = []
+    _travar_censo(True)
+    try:
+        linhas = _passos_em_serie(passos, janela)
+    finally:
+        _travar_censo(False)
+    return "\n".join(linhas)
+
+
+def _passos_em_serie(passos, janela):
+    """Cada passo entra pela mesma ferramenta de um gesto isolado - o mesmo guard, o mesmo relato."""
+    linhas = []
+    for indice, passo in enumerate(passos, 1):
+        if passo.get("espera"):
+            time.sleep(passo["espera"] / 1000.0)
+        resultado = tool_operar_janela(
+            acao=passo["acao"],
+            janela=str(passo.get("janela") or janela or ""),
+            alvo=str(passo.get("alvo") or ""),
+            texto=str(passo.get("texto") or ""),
+            tecla=str(passo.get("tecla") or ""),
+            regiao=str(passo.get("regiao") or ""),
+            ponto=str(passo.get("ponto") or ""),
+            segundos=int(passo.get("segundos") or 0),
+        )
+        marca = " ".join(parte for parte in (passo["acao"], _alvo_do_passo(passo)) if parte)
+        linhas.append(f"[{indice}] {marca}\n    {resultado}")
+        if str(resultado).startswith("ERRO:"):
+            restantes = len(passos) - indice
+            if restantes:
+                linhas.append(
+                    f"PARADO no passo {indice} do roteiro: os {restantes} gesto(s) seguintes nao"
+                    " correram, para nao agirem no sitio errado."
+                )
+            else:
+                linhas.append(f"PARADO no passo {indice} do roteiro (era o ultimo).")
+            break
+    return linhas
+
+
 @register(
     "tool_operar_janela",
     "Ve e opera QUALQUER programa nativo do Windows pela interface (UI Automation) - o mesmo "
@@ -1050,7 +1362,10 @@ def _acao_arrastar(janela, pedido):
     "'mapa' devolve o indice dos elementos que respondem a um gesto (COMECE POR AQUI, em vez de "
     "perguntar elemento a elemento); 'elemento' detalha um; 'clicar', 'escrever' e 'teclas' "
     "agem; 'abrir' lanca um programa e devolve a janela dele; 'arrastar' desenha um traco por "
-    "coordenadas do ecra e 'fechar' pede o fecho da janela; 'print' entrega uma imagem dela. "
+    "coordenadas do ecra e 'fechar' pede o fecho da janela; 'print' entrega uma imagem dela; "
+    "'mover' poe a janela no sitio e no tamanho pedidos; 'esperar' aguarda que uma janela "
+    "exista e devolve o hwnd; e 'roteiro' corre VARIOS gestos numa so chamada (um login "
+    "inteiro, um formulario todo) pela mesma via de um gesto isolado. "
     "ALVO: '#AutomationId' (o mais estavel), "
     "'n:<indice>' (o numero do mapa, util quando os nomes se repetem), 'tipo:Button' (o primeiro "
     "de um tipo) ou um trecho do nome. PREFIRA SEMPRE OS PADROES: 'invoke', 'value' e 'toggle' "
@@ -1071,12 +1386,12 @@ def _acao_arrastar(janela, pedido):
     {
         "acao": {
             "tipo": "STRING", "obrig": True,
-            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "print"],
+            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "print", "mover", "esperar", "roteiro"],
             "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' pede o fecho da janela; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra).",
         },
         "janela": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Qual janela: o numero do hwnd (visto em acao='janelas'), 'pid:<numero>' (escolhe pelo processo - e o caminho para uma janela SEM titulo) ou um trecho do titulo, ex: 'Bloco de notas'. Obrigatorio em todas as acoes menos 'janelas'.",
+            "desc": "Qual janela: o numero do hwnd (visto em acao='janelas'), 'pid:<numero>' (escolhe pelo processo - e o caminho para uma janela SEM titulo) ou um trecho do titulo, ex: 'Bloco de notas'. Com VARIAS janelas do mesmo titulo (tres clientes de um jogo, tres exploradores) acrescente '#N' para escolher a N-esima contando da ESQUERDA para a direita do ecra - ex: 'Tibia - 127.0.0.1:7171#2'. Sem o '#N' e com mais que uma candidata, a ferramenta RECUSA e lista as opcoes com o hwnd, em vez de agir num palpite. Obrigatorio em todas as acoes menos 'janelas', 'abrir' e 'roteiro'.",
         },
         "alvo": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -1092,7 +1407,15 @@ def _acao_arrastar(janela, pedido):
         },
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "So em acao='print': 'x,y,largura,altura' para recortar (contadas do canto superior esquerdo que a propria imagem mostra). Vazio captura a janela inteira; com 'alvo' indicado e sem 'regiao', recorta so a caixa desse elemento - e o caminho para ler um campo, um painel ou um trecho de ecra sem andar a adivinhar coordenadas. Quanto menor a regiao, mais nitida chega ao modelo.",
+            "desc": "Em acao='print': 'x,y,largura,altura' para recortar (contadas do canto superior esquerdo que a propria imagem mostra). Vazio captura a janela inteira; com 'alvo' indicado e sem 'regiao', recorta so a caixa desse elemento - e o caminho para ler um campo, um painel ou um trecho de ecra sem andar a adivinhar coordenadas. Quanto menor a regiao, mais nitida chega ao modelo. Em acao='mover': o destino da janela na mesma forma 'x,y,largura,altura' - e assim que se poem varias janelas em fila, lado a lado.",
+        },
+        "segundos": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "So em acao='esperar': quantos segundos esperar que a janela apareca (0 usa o padrao de 15). Serve para o passo seguinte a lancar um programa - 'lancei, quando e que posso agir nele?' - sem dormir um tempo adivinhado.",
+        },
+        "passos": {
+            "tipo": "STRING", "obrig": False, "padrao": "",
+            "desc": "So em acao='roteiro': a lista JSON dos gestos, na ordem, cada um com 'acao' e os seus argumentos. Ex: [{\"acao\":\"clicar\",\"ponto\":\"janela:129,271\"},{\"acao\":\"escrever\",\"ponto\":\"janela:367,213\",\"texto\":\"conta\"},{\"acao\":\"teclas\",\"tecla\":\"{TAB}\"},{\"acao\":\"escrever\",\"texto\":\"senha\"},{\"acao\":\"teclas\",\"tecla\":\"{ENTER}\"}] - um login inteiro numa so chamada. Cada passo aceita ainda 'espera' (milissegundos a dormir ANTES de o executar, para dar tempo a janela de reagir) e 'janela' (para trocar de janela a meio - util para repetir a mesma sequencia em varios clientes, apontando cada passo ao seu '#N'). O roteiro para no PRIMEIRO erro e diz em que passo ficou. O 'janela' do topo serve de omissao para os passos que nao tragam o seu.",
         },
         "ponto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -1100,7 +1423,7 @@ def _acao_arrastar(janela, pedido):
         },
     },
 )
-def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto=""):
+def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0):
     emit_event("executing", function=f"Janelas nativas: {acao}")
     try:
         _desktop()
@@ -1110,9 +1433,18 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
     if acao == "abrir":
         return _acao_abrir(alvo)
 
+    if acao == "roteiro":
+        lista, falha = _passos_do_roteiro(passos)
+        if falha:
+            return "ERRO: " + falha
+        return _correr_roteiro(lista, str(janela or ""))
+
+    if acao == "esperar":
+        return _acao_esperar(janela, segundos)
+
     if acao == "janelas":
         try:
-            abertas = _janelas_abertas()
+            abertas = _janelas_abertas(fresco=True)
         except Exception as exc:
             return f"ERRO: nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
         vistas = {int(getattr(w, "handle", 0) or 0) for w in abertas}
@@ -1146,6 +1478,13 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
         return _acao_fechar(janela_escolhida)
     if acao == "print":
         return _acao_print(janela_escolhida, regiao, alvo)
+    if acao == "mover":
+        return _acao_mover(janela_escolhida, regiao)
+
+    if acao == "teclas" and not str(alvo or "").strip():
+        if not tecla:
+            return "ERRO: acao='teclas' precisa de 'tecla' (ex: 'ctrl+shift+r', 'enter' ou '{ENTER}')."
+        return _teclas_a_janela(janela_escolhida, tecla, _normalizar_teclas(tecla))
 
     prazo = time.monotonic() + ORCAMENTO_MAPA
     try:
@@ -1161,10 +1500,7 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
     if acao == "elemento":
         return _acao_elemento(janela_escolhida, alvo, elementos)
 
-    if acao == "teclas" and not str(alvo or "").strip():
-        elemento, erro, nota = janela_escolhida, "", "a propria janela, sem alvo"
-    else:
-        elemento, erro, nota = _resolver(janela_escolhida, alvo, elementos)
+    elemento, erro, nota = _resolver(janela_escolhida, alvo, elementos)
     if erro:
         return "ERRO: " + erro
 
