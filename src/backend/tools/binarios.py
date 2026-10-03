@@ -116,6 +116,18 @@ def _relato(caminho, bruto, bits, pedidas, achadas, faltam, conjuntos, com_funco
         " PATH. Uma biblioteca que exista numa pasta ao lado mas nao na do programa nao serve:"
         " o programa nao a encontra."
     )
+    trocadas = _de_outra_arquitetura(achadas, bits)
+    if trocadas:
+        linhas.append("")
+        linhas.append(
+            f"ATENCAO: {len(trocadas)} biblioteca(s) encontrada(s) sao de outra arquitetura que o"
+            " programa, e o Windows NAO as carrega:"
+        )
+        linhas.extend(f"  {nome} ({outra} bits) em {rotulo}" for nome, rotulo, outra in trocadas)
+        linhas.append(
+            "Uma biblioteca de 64 bits ao lado de um programa de 32 bits (ou ao contrario) conta"
+            " como EM FALTA - procure a versao da arquitetura certa."
+        )
     if com_funcoes:
         linhas.extend(_relato_das_funcoes(pedidas, achadas))
     return "\n".join(linhas)
@@ -127,6 +139,28 @@ def _exemplos(achadas):
     if len(nomes) <= 6:
         return ", ".join(nomes)
     return ", ".join(nomes[:6]) + f" (+{len(nomes) - 6})"
+
+
+def _bits_do_ficheiro(caminho):
+    """Os bits de uma biblioteca, lidos do proprio ficheiro."""
+    try:
+        with open(caminho, "rb") as ficheiro:
+            return _secoes_e_diretorios(ficheiro.read(4096))[0]
+    except (OSError, ValueError):
+        return 0
+
+
+def _de_outra_arquitetura(achadas, bits):
+    """As bibliotecas encontradas que o Windows nao consegue carregar neste programa."""
+    outras = []
+    for rotulo, lista in achadas.items():
+        for nome, caminho in lista:
+            if nome.lower().startswith(PREFIXOS_DE_CONJUNTO):
+                continue
+            outra = _bits_do_ficheiro(caminho)
+            if outra and outra != bits:
+                outras.append((nome, rotulo, outra))
+    return outras
 
 
 def _relato_das_funcoes(pedidas, achadas):
