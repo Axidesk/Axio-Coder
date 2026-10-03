@@ -10,7 +10,7 @@ import time
 import unicodedata
 
 from ctypes import wintypes
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
 
 from src.backend.services import cofre, executaveis
 from src.backend.services.imagem import codificar_para_envio, retangulo_da_regiao
@@ -484,13 +484,18 @@ def _janelas_avulsas(vistas):
 
 
 def _focar(janela):
-    """Traz a janela para a frente e CONFIRMA que ficou: o set_focus do pywinauto pode nao pegar (o Windows recusa o pedido de foco a quem nao o tem), e nesse caso o clique ia para a janela que esta em foco."""
-    hwnd = getattr(janela, "handle", None)
-    try:
-        janela.set_focus()
-        time.sleep(0.3)
-    except Exception:
-        pass
+    """Traz a janela para a frente e CONFIRMA que ficou: o set_focus do pywinauto pode nao pegar (o Windows recusa o pedido de foco a quem nao o tem), e nesse caso o clique ia para a janela que esta em foco.
+
+    Aceita o objeto da janela ou so o handle: quem chama com um numero (o print, que ja tem a janela resolvida) nao pode ficar sem foco em silencio.
+    """
+    so_handle = isinstance(janela, int)
+    hwnd = janela if so_handle else getattr(janela, "handle", None)
+    if not so_handle:
+        try:
+            janela.set_focus()
+            time.sleep(0.3)
+        except Exception:
+            pass
     if hwnd and _a_frente(hwnd):
         return ""
     if hwnd:
@@ -773,17 +778,22 @@ def _acao_elemento(janela, alvo, elementos):
 
 
 def _capturar_janela(janela):
-    """(imagem, metodo, erro): a composicao do sistema primeiro, o ecra como ultimo recurso.
+    """(imagem, metodo, erro): a janela a desenhar-se a si propria primeiro, o ecra como ultimo recurso.
 
     O print pela composicao do sistema nao serve todas as janelas: nas apps WinUI e nas
-    que desenham por DirectComposition o PrintWindow por baixo devolve nada, em silencio.
+    que desenham por DirectComposition o PrintWindow por baixo devolve nada, em silencio - e
+    numa janela tapada por outra (um cliente de jogo sob a janela do Axio) a composicao
+    entrega o que esta POR CIMA, ou seja a imagem de outra janela qualquer.
     """
+    imagem = _por_printwindow(janela)
+    if _tem_area(imagem):
+        return imagem, "a propria janela a desenhar-se (le-a mesmo tapada, e a conta e a da moldura)", ""
     try:
         imagem = janela.capture_as_image()
     except Exception:
         imagem = None
     if _tem_area(imagem):
-        return imagem, "composicao do sistema (le a janela mesmo tapada)", ""
+        return imagem, "composicao do sistema", ""
     retangulo = janela.rectangle()
     if retangulo.right <= retangulo.left or retangulo.bottom <= retangulo.top:
         return None, "", _motivo_de_vazio(janela)
@@ -798,6 +808,65 @@ def _capturar_janela(janela):
 
 def _tem_area(imagem):
     return imagem is not None and min(imagem.size) > 0
+
+
+class _CabecalhoDeBitmap(ctypes.Structure):
+    _fields_ = [
+        ("biSize", ctypes.c_uint32), ("biWidth", ctypes.c_int32), ("biHeight", ctypes.c_int32),
+        ("biPlanes", ctypes.c_uint16), ("biBitCount", ctypes.c_uint16), ("biCompression", ctypes.c_uint32),
+        ("biSizeImage", ctypes.c_uint32), ("biXPelsPerMeter", ctypes.c_int32),
+        ("biYPelsPerMeter", ctypes.c_int32), ("biClrUsed", ctypes.c_uint32),
+        ("biClrImportant", ctypes.c_uint32),
+    ]
+
+
+def _por_printwindow(janela):
+    """A janela desenha-se a si propria (PrintWindow): o unico caminho que devolve o conteudo REAL de uma janela tapada por outra.
+
+    Medido num cliente de jogo sob a janela do Axio: a composicao do sistema entregou o Axio (a janela
+    de cima) e a imagem so serviu para enganar; este caminho devolveu o jogo. Sai nas coordenadas da
+    moldura - as mesmas que 'janela:x,y' usa no clique - o que dispensa somar deslocamentos a mao.
+    Devolve None a qualquer tropeco: quem chama cai no caminho antigo.
+    """
+    hwnd = getattr(janela, "handle", None)
+    if not hwnd:
+        return None
+    try:
+        retangulo = janela.rectangle()
+    except Exception:
+        return None
+    largura, altura = retangulo.width(), retangulo.height()
+    if min(largura, altura) <= 1:
+        return None
+    user32 = ctypes.windll.user32
+    gdi32 = ctypes.windll.gdi32
+    hdc = memoria = bitmap = None
+    try:
+        hdc = user32.GetDC(hwnd)
+        memoria = gdi32.CreateCompatibleDC(hdc)
+        bitmap = gdi32.CreateCompatibleBitmap(hdc, largura, altura)
+        gdi32.SelectObject(memoria, bitmap)
+        if not user32.PrintWindow(hwnd, memoria, 2):
+            return None
+        cabecalho = _CabecalhoDeBitmap()
+        cabecalho.biSize = ctypes.sizeof(_CabecalhoDeBitmap)
+        cabecalho.biWidth = largura
+        cabecalho.biHeight = -altura
+        cabecalho.biPlanes = 1
+        cabecalho.biBitCount = 32
+        tampao = ctypes.create_string_buffer(largura * altura * 4)
+        if not gdi32.GetDIBits(memoria, bitmap, 0, altura, tampao, ctypes.byref(cabecalho), 0):
+            return None
+        return Image.frombuffer("RGBA", (largura, altura), tampao, "raw", "BGRA", 0, 1).convert("RGB")
+    except Exception:
+        return None
+    finally:
+        if bitmap:
+            gdi32.DeleteObject(bitmap)
+        if memoria:
+            gdi32.DeleteDC(memoria)
+        if hdc:
+            user32.ReleaseDC(hwnd, hdc)
 
 
 def _motivo_de_vazio(janela):
