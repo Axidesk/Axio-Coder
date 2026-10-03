@@ -49,6 +49,7 @@ LIMITE_SUPERFICIES = 4
 
 _MODULO = None
 _RATO = None
+_TECLADO = None
 
 
 def _desktop():
@@ -67,6 +68,15 @@ def _mouse():
         from pywinauto import mouse
         _RATO = mouse
     return _RATO
+
+
+def _teclado():
+    """Modulo de teclado do pywinauto, com o mesmo import adiado do _mouse."""
+    global _TECLADO
+    if _TECLADO is None:
+        from pywinauto import keyboard
+        _TECLADO = keyboard
+    return _TECLADO
 
 
 def _texto(elemento):
@@ -982,6 +992,35 @@ def _acao_clique_ponto(janela, pedido):
     return f'Cliquei em {pontos[0]} (coordenadas do ecra) na janela "{_texto(janela)}", por gesto.'
 
 
+def _acao_escrever_ponto(janela, pedido, texto):
+    """(texto, erro): clica no ponto e escreve a seguir - a via para as apps que nao declaram controlos nenhuns (jogo, ipchanger, app desenhada a mao), onde nao ha 'alvo' para apontar."""
+    pontos, erro = _pontos_do_pedido(janela, pedido, minimo=2)
+    if erro:
+        return "ERRO: em acao='escrever' com 'ponto', " + erro + "."
+    erro = _focar(janela)
+    if erro:
+        return "ERRO: " + erro
+    especiais = sorted({c for c in texto if c in "{}()+^%~"})
+    try:
+        _mouse().click(button="left", coords=pontos[0])
+        time.sleep(PAUSA_TRACO * 8)
+        _teclado().send_keys(texto, with_spaces=True)
+    except Exception as exc:
+        return (
+            f"ERRO: nao consegui escrever em {pontos[0]} ({type(exc).__name__}: {exc})."
+            " O gesto exige o desktop desbloqueado e a janela em primeiro plano."
+        )
+    aviso = (
+        " ATENCAO: o " + "".join(especiais) + " e lido como codigo de tecla pelo pywinauto -"
+        " um texto com esses caracteres tem de ir peca a peca em acao='teclas'."
+        if especiais else ""
+    )
+    return (
+        f"Escrevi {texto!r} em {pontos[0]} (coordenadas do ecra), na janela \"{_texto(janela)}\","
+        " por gesto: clique no ponto e o texto a seguir." + aviso
+    )
+
+
 def _acao_arrastar(janela, pedido):
     pontos, erro = _pontos_do_pedido(janela, pedido, minimo=4)
     if erro:
@@ -1057,7 +1096,7 @@ def _acao_arrastar(janela, pedido):
         },
         "ponto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Coordenadas do ecra (as mesmas que a coluna 'caixa' do mapa mostra). Em acao='arrastar' leva os pontos do traco: 'x1,y1 x2,y2 ...', do inicio ao fim, ate 64 pontos. Em acao='clicar' com 'alvo' vazio leva um ponto so ('x,y') e clica ali - e o caminho para dentro de um canvas que nao declara controlos. Injeta input: exige o desktop desbloqueado e a janela em primeiro plano.",
+            "desc": "Coordenadas do ecra (as mesmas que a coluna 'caixa' do mapa mostra); 'janela:x,y' conta do canto da janela. Em acao='arrastar' leva os pontos do traco: 'x1,y1 x2,y2 ...', do inicio ao fim, ate 64 pontos. Em acao='clicar' com 'alvo' vazio leva um ponto so ('x,y') e clica ali. Em acao='escrever' com 'alvo' vazio leva tambem um ponto so: clica ali e escreve 'texto' a seguir - e o caminho para uma janela que NAO declara controlos nenhuns (jogo, ipchanger, app desenhada a mao), onde nao ha alvo para apontar. Injeta input: exige o desktop desbloqueado e a janela em primeiro plano.",
         },
     },
 )
@@ -1097,6 +1136,10 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
 
     if acao == "arrastar":
         return _acao_arrastar(janela_escolhida, ponto)
+    if acao == "escrever" and ponto and not alvo:
+        if not texto:
+            return "ERRO: acao='escrever' precisa de 'texto'."
+        return _acao_escrever_ponto(janela_escolhida, ponto, texto)
     if acao == "clicar" and ponto and not alvo:
         return _acao_clique_ponto(janela_escolhida, ponto)
     if acao == "fechar":
