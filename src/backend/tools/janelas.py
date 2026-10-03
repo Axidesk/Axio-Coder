@@ -39,7 +39,7 @@ ACOES_NO_ROTEIRO = frozenset({
 VALIDADE_DO_CENSO = 1.0
 SEM_PROGRAMA = (
     "nao encontrei '{0}'. Use o nome do executavel (ex: 'notepad', 'mspaint') ou o caminho"
-    " completo entre aspas (ex: \"C:\\Program Files\\App\\app.exe\")."
+    " completo do ficheiro (ex: C:\\Program Files\\App\\app.exe) - com espacos, sem aspas."
 )
 SEM_BIBLIOTECA = (
     "o pywinauto nao esta instalado no ambiente que corre o Axio. Instale-o no venv do projeto"
@@ -261,6 +261,28 @@ def _caminho_do_programa(nome):
     if achado:
         return achado, ""
     return "", SEM_PROGRAMA.format(pedido)
+
+
+def _repartir_alvo(alvo):
+    """(caminho, argumentos, erro): aceita o caminho com espacos, com ou sem aspas.
+
+    MEDIDO (2026-10-18): escrito sem aspas, 'C:\\Program Files\\App\\app.exe' era partido em dois
+    tokens e a resolucao ia procurar 'C:\\Program' - a ferramenta exigia aspas e falhava a primeira
+    tentativa. Quem escreve o caminho num campo nao tem de saber dessa regra, por isso junta-se o
+    prefixo mais longo que existe mesmo no disco e o resto fica como argumentos.
+    """
+    pedido = str(alvo or "").strip()
+    if not pedido:
+        return "", [], "diga o programa em 'alvo', ex: 'notepad' ou o caminho completo."
+    inteiro, erro = _caminho_do_programa(pedido)
+    if inteiro:
+        return inteiro, [], ""
+    tokens = tokenizar_linha(pedido)
+    for corte in range(len(tokens) - 1, 0, -1):
+        candidato, _ = _caminho_do_programa(" ".join(tokens[:corte]))
+        if candidato:
+            return candidato, tokens[corte:], ""
+    return "", [], erro
 
 
 def _area(janela):
@@ -1032,8 +1054,7 @@ def _trazer_para_a_frente(janela):
 
 
 def _acao_abrir(alvo):
-    tokens = tokenizar_linha(alvo)
-    caminho, erro = _caminho_do_programa(tokens[0] if tokens else "")
+    caminho, argumentos, erro = _repartir_alvo(alvo)
     if erro:
         return "ERRO: " + erro
     try:
@@ -1042,7 +1063,7 @@ def _acao_abrir(alvo):
         return f"ERRO: nao consegui enumerar as janelas do Windows ({type(exc).__name__}: {exc})"
     try:
         processo = subprocess.Popen(
-            [caminho, *tokens[1:]],
+            [caminho, *argumentos],
             cwd=os.path.dirname(caminho) or None,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
