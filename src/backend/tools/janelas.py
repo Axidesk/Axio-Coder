@@ -1203,7 +1203,13 @@ def _acao_mover(janela, pedido):
 
 
 def _acao_esperar(identificador, segundos):
-    """Espera a janela existir e devolve o hwnd - a resposta a 'lancei o programa, quando e que posso agir nele?'."""
+    """Espera a janela existir e devolve o hwnd - a resposta a 'lancei o programa, quando e que posso agir nele?'.
+
+    A espera polla pelo Win32 (0,007s por leitura, sem excecao nenhuma) e nao pelo censo do UIA:
+    cada censo fresco custa 2,25s e levanta uma excecao COM que o pywinauto apanha e o faulthandler
+    do Python despeja no terminal com a lista de threads inteira. Medido a 2026-10-03: esperar 10s
+    por uma janela eram 25 varreduras completas do UIA, 56s de CPU e 25 despejos no terminal.
+    """
     pedido = str(identificador or "").strip()
     if not pedido:
         return "ERRO: acao='esperar' precisa de 'janela' (o hwnd, 'pid:<numero>' ou um trecho do titulo)."
@@ -1211,7 +1217,7 @@ def _acao_esperar(identificador, segundos):
     fim = time.monotonic() + limite
     ultimo = ""
     while time.monotonic() < fim:
-        janela, erro = _janela(pedido, fresco=True)
+        janela, erro = _procurar_no_win32(pedido)
         if janela is not None:
             try:
                 caixa = janela.rectangle()
