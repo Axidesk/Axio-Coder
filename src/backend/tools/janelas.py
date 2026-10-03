@@ -863,6 +863,7 @@ def _acao_print(janela, regiao, alvo=""):
         regiao, recado_do_alvo, erro = _regiao_do_alvo(janela, alvo)
         if erro:
             return "ERRO: " + erro
+    _, recado_frente = _trazer_para_a_frente(janela)
     imagem, metodo, erro = _capturar_janela(janela)
     if imagem is None:
         return f"ERRO: nao consegui capturar a janela ({erro})."
@@ -888,7 +889,7 @@ def _acao_print(janela, regiao, alvo=""):
     largura, altura = imagem.size
     return {
         "texto": (
-            f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.{recado_do_alvo}'
+            f'Print da janela "{_texto(janela)}": {largura}x{altura} px, por {metodo}.{recado_do_alvo}{recado_frente}'
             f"{_aviso_de_nao_estar_a_frente(janela)}"
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
             " ATENCAO: numa janela TRANSPARENTE (Electron/app com o fundo ainda por pintar, canvas a carregar) "
@@ -899,6 +900,19 @@ def _acao_print(janela, regiao, alvo=""):
         ),
         "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Janela nativa: hwnd {janela.handle}]"},
     }
+
+
+def _trazer_para_a_frente(janela):
+    """Uma janela tapada nao pinta: a composicao entrega o que esta por cima. Poe a alvo a frente antes de a fotografar."""
+    if _a_frente(janela.handle):
+        return True, ""
+    _focar(janela.handle)
+    if _a_frente(janela.handle):
+        return True, " (trouxe-a para a frente para a fotografar)"
+    return False, (
+        " ATENCAO: esta janela nao esta a frente e nao a consegui trazer - a imagem pode ser a da janela"
+        " que a tapa (tipicamente um fundo escuro). Traga-a a frente (clique nela) e repita."
+    )
 
 
 def _acao_abrir(alvo):
