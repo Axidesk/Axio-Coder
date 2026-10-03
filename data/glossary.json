@@ -2799,10 +2799,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1958,
+        "linha": 1987,
         "conferido": [
-          1791065930.192,
-          95172
+          1791066470.361,
+          96375
         ]
       }
     },
@@ -2822,8 +2822,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 1064,
         "conferido": [
-          1791065930.192,
-          95172
+          1791066470.361,
+          96375
         ]
       }
     },
@@ -2842,10 +2842,10 @@
       "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1703,
+        "linha": 1732,
         "conferido": [
-          1791065930.192,
-          95172
+          1791066470.361,
+          96375
         ]
       }
     },
@@ -3611,8 +3611,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 990,
         "conferido": [
-          1791065930.192,
-          95172
+          1791066470.361,
+          96375
         ]
       }
     },
@@ -5858,10 +5858,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 116,
+        "linha": 120,
         "conferido": [
-          1791062373.171,
-          37030
+          1791070908.399,
+          38800
         ]
       }
     },
@@ -5924,10 +5924,10 @@
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 100,
+        "linha": 99,
         "conferido": [
-          1791065679.319,
-          18194
+          1791070902.458,
+          18332
         ]
       }
     },
@@ -5940,8 +5940,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1791065690.35,
-          28836
+          1791070902.474,
+          30009
         ]
       }
     },
@@ -5967,10 +5967,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 221,
+        "linha": 271,
         "conferido": [
-          1791062373.171,
-          37030
+          1791070908.399,
+          38800
         ]
       }
     },
@@ -6004,10 +6004,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 1568,
+        "linha": 1594,
         "conferido": [
-          1791060015.905,
-          58837
+          1791070899.244,
+          59603
         ]
       }
     },
@@ -6018,10 +6018,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 351,
+        "linha": 420,
         "conferido": [
-          1791062373.171,
-          37030
+          1791070908.399,
+          38800
         ]
       }
     },
@@ -6069,8 +6069,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 600,
         "conferido": [
-          1791059976.821,
-          50312
+          1791069339.813,
+          50325
         ]
       }
     },
@@ -6083,8 +6083,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1248,
         "conferido": [
-          1791059976.821,
-          50312
+          1791069339.813,
+          50325
         ]
       }
     },
@@ -6100,10 +6100,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 308,
+        "linha": 377,
         "conferido": [
-          1791062373.171,
-          37030
+          1791070908.399,
+          38800
         ]
       }
     },
@@ -6120,10 +6120,10 @@
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 232,
+        "linha": 231,
         "conferido": [
-          1791065679.319,
-          18194
+          1791070902.458,
+          18332
         ]
       }
     },
@@ -6140,10 +6140,10 @@
       "descricao": "A combobox que substituiu a lista de personagens recolhidos: fechada diz \"selecionar personagem (N)\", cada opcao e \"nome . lvl N\" e o primeiro item e \"criar personagem\". Ao lado da combobox das contas, que mostra o email (ou \"conta id . senha\" quando nao ha email).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 713,
+        "linha": 723,
         "conferido": [
-          1790965836.337,
-          39299
+          1791069649.718,
+          39695
         ]
       }
     },
@@ -6160,10 +6160,10 @@
       "descricao": "A lixeira que vive ao lado do contador de cada tabela no bloco Manutencao: o 1o clique mostra no recado o que sai e o 2o esvazia (DELETE com a guarda do God). Antes de apagar, grava sempre uma copia so daquela tabela.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 917,
+        "linha": 927,
         "conferido": [
-          1790965836.337,
-          39299
+          1791069649.718,
+          39695
         ]
       }
     },
@@ -6176,8 +6176,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1280,
         "conferido": [
-          1791059976.821,
-          50312
+          1791069339.813,
+          50325
         ]
       }
     },
@@ -6194,10 +6194,10 @@
       "descricao": "Cadeado que aparece encostado a combobox da conta quando a conta esta bloqueada, com o nome da conta em vermelho na lista. Substituiu o bloco \"Bloqueada\" escrito no corpo.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 739,
+        "linha": 749,
         "conferido": [
-          1790965836.337,
-          39299
+          1791069649.718,
+          39695
         ]
       }
     },
@@ -6208,10 +6208,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 733,
+        "linha": 759,
         "conferido": [
-          1791060015.905,
-          58837
+          1791070899.244,
+          59603
         ]
       }
     },
@@ -6230,10 +6230,10 @@
       "descricao": "Botao do olho ao lado de um campo de senha do painel do banco: o campo nasce VISIVEL (type=text) e o clique oculta (type=password) trocando o desenho para OLHO_RISCADO e acendendo o botao (aria-pressed). Usado no campo da senha da conta escolhida e no da conta nova.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 796,
+        "linha": 806,
         "conferido": [
-          1790965836.337,
-          39299
+          1791069649.718,
+          39695
         ]
       }
     },
@@ -6268,14 +6268,10 @@
         "numero de online"
       ],
       "identificador": "axio_contar_online / axio_esta_online / axio_servidor_no_ar",
-      "descricao": "A unica contagem de jogadores online do site (exclui staff e contas para remocao), usada pelo sidebar, sidebar_expanded, whoisonline e pelo cron do server_load. Desde 2026-10-03 so conta com o servidor NO AR: axio_servidor_no_ar confere o socket TCP em $cfg['ServerCheck'] (127.0.0.1) na porta do config.lua, e com o servidor desligado o contador e o status de qualquer personagem saem 0/Offline. A coluna players.online e mantida pelo login e pelo fim da sessao (IOPlayer::setOnline), nunca pelo save.",
+      "descricao": "Quem conta e mostra quem esta online no site. Vive no htdocs da raiz do projeto (o site saiu de xampp/htdocs a 2026-10-02).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/xampp/htdocs/data_dir.php",
-        "linha": 110,
-        "conferido": [
-          1791039596.176,
-          3871
-        ]
+        "arquivo": "docs/projetos/Tibia74/htdocs/data_dir.php",
+        "linha": 110
       }
     },
     {
@@ -6368,29 +6364,10 @@
       "descricao": "Operar um programa nativo (jogo, cliente, app desenhada a mao) por gestos reais: abrir, arrumar as janelas lado a lado, correr um roteiro de cliques/teclas e olhar para o resultado. Os caracteres especiais do teclado vao escapados e as janelas com o mesmo titulo escolhem-se por '#N'.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1958,
+        "linha": 1987,
         "conferido": [
-          1791065930.192,
-          95172
-        ]
-      }
-    },
-    {
-      "termo": "linha do servidor",
-      "aliases": [
-        "bolinha do servidor",
-        "server na lista do ambiente",
-        "iniciar parar reiniciar com icones",
-        "play stop restart do servidor"
-      ],
-      "identificador": "#ambiente-servidor (vistaDe('servidor') no app.js)",
-      "descricao": "Linha do servidor do jogo, no mesmo desenho das linhas do ambiente: bolinha, nome, porta e online em cinzento e os icones de play, stop e restart a direita.",
-      "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 66,
-        "conferido": [
-          1791065679.319,
-          18194
+          1791066470.361,
+          96375
         ]
       }
     },
@@ -6407,10 +6384,10 @@
       "descricao": "Regra de entrada que o painel cria para o mysqld e o httpd antes de os ligar, para o Windows nao abrir o alerta de seguranca a pedir autorizacao.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/xampp.rs",
-        "linha": 476,
+        "linha": 501,
         "conferido": [
-          1791065921.519,
-          37024
+          1791070896.939,
+          39037
         ]
       }
     },
@@ -6428,7 +6405,30 @@
       "descricao": "Le a tabela de importacao do .exe/.dll e diz o que ele pede, onde cada biblioteca existe e quais faltam.",
       "localizacao": {
         "arquivo": "src/backend/tools/binarios.py",
-        "linha": 50
+        "linha": 50,
+        "conferido": [
+          1791066484.614,
+          14774
+        ]
+      }
+    },
+    {
+      "termo": "loading bar do painel",
+      "aliases": [
+        "barra de progresso do preparo",
+        "barra do preparo",
+        "loading bar",
+        "barra que enche durante o preparo"
+      ],
+      "identificador": "#barra-preparo",
+      "descricao": "Barra fininha na base da consola do painel, enquanto o Preparar instala o xampp e liga as pecas. Alimentada pelo evento `painel:progresso` (avisar_progresso em xampp.rs) e escondida no fim do comando.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "linha": 273,
+        "conferido": [
+          1791070902.458,
+          18332
+        ]
       }
     }
   ]
