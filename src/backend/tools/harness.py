@@ -118,6 +118,53 @@ def porta_aberta(porta):
     finally:
         _sonda.close()
 
+def dono_da_porta(porta):
+    """Pid de quem esta a ESCUTAR essa porta TCP, ou None: a porta_aberta diz se alguem
+    atende, este diz QUEM - e' o que separa um servico do Windows de um processo solto."""
+    texto, _ = correr(["netstat", "-ano", "-p", "tcp"])
+    alvo = ":" + str(porta)
+    for linha in (texto or "").splitlines():
+        campos = linha.split()
+        if len(campos) >= 5 and campos[1].endswith(alvo) and campos[3].upper() == "LISTENING":
+            try:
+                return int(campos[4])
+            except ValueError:
+                return None
+    return None
+
+def servico(nome):
+    """O que o Windows sabe deste servico: dict com existe, a_correr, pid e binario.
+
+    'existe' NAO quer dizer 'a_correr' - mandar parar a peca errada comeca aqui, por isso
+    quem decide e' o a_correr (e o pid a bater com o dono_da_porta). Nada se le pelo texto:
+    a saida do 'sc' e' traduzida ('ESTADO', 'NOME_DO_CAMINHO_BINARIO'), mas o codigo de saida
+    nao (0 = existe, 1060 = nao existe), e o binario vem do registro, que tambem nao tem idioma.
+    """
+    dados = dict(existe=False, a_correr=False, pid=None, binario="")
+    texto, codigo = correr(["sc", "queryex", nome])
+    dados["existe"] = codigo == 0
+    for linha in (texto or "").splitlines():
+        campos = linha.split(":", 1)
+        if len(campos) == 2 and campos[0].strip().upper() == "PID":
+            try:
+                dados["pid"] = int(campos[1].strip()) or None
+            except ValueError:
+                dados["pid"] = None
+    dados["a_correr"] = dados["pid"] is not None
+    separador = chr(92)
+    chave = separador.join(["HKLM", "SYSTEM", "CurrentControlSet", "Services", nome])
+    registro, _ = correr(["reg", "query", chave, "/v", "ImagePath"])
+    for linha in (registro or "").splitlines():
+        campos = linha.split()
+        if len(campos) >= 3 and campos[0] == "ImagePath":
+            valor = " ".join(campos[2:]).strip()
+            if valor.startswith('"'):
+                fim = valor.find('"', 1)
+                if fim > 0:
+                    valor = valor[: fim + 1]
+            dados["binario"] = valor
+    return dados
+
 class _Servico:
     """Programa local aberto por abrir_servico(): traz .pid, .pronto, .motivo, .cauda() e .parar()."""
 
