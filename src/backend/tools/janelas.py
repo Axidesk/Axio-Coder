@@ -1398,21 +1398,33 @@ def _arrastar(pontos):
     return f"gesto com {len(pontos) - 1} tracos (um press/move/release por segmento)", ""
 
 
-def _acao_clique_ponto(janela, pedido):
+def _acao_clique_ponto(janela, pedido, botao=""):
     pontos, erro = _pontos_do_pedido(janela, pedido, minimo=2)
     if erro:
         return "ERRO: em acao='clicar' com 'ponto', " + erro + "."
     erro = _focar(janela)
     if erro:
         return "ERRO: " + erro
+    nome = _botao_do_clique(botao)
     try:
-        _mouse().click(button="left", coords=pontos[0])
+        _mouse().click(button=nome, coords=pontos[0])
     except Exception as exc:
         return (
             f"ERRO: nao consegui clicar em {pontos[0]} ({type(exc).__name__}: {exc})."
             " O gesto exige o desktop desbloqueado e a janela em primeiro plano."
         )
-    return f'Cliquei em {pontos[0]} (coordenadas do ecra) na janela "{_texto(janela)}", por gesto.'
+    regresso = {"right": " (botao direito)", "middle": " (botao do meio)"}.get(nome, "")
+    return (
+        f'Cliquei em {pontos[0]}{regresso} (coordenadas do ecra) na janela'
+        f' "{_texto(janela)}", por gesto.'
+    )
+
+
+def _botao_do_clique(botao):
+    """O nome do botao do rato na lingua do pywinauto - o que o pedido nao disser e o esquerdo."""
+    return {"direito": "right", "meio": "middle", "esquerdo": "left"}.get(
+        str(botao or "").strip().lower(), "left"
+    )
 
 
 def _acao_escrever_ponto(janela, pedido, texto):
@@ -1438,6 +1450,28 @@ def _acao_escrever_ponto(janela, pedido, texto):
         f"Escrevi {texto!r} em {pontos[0]} (coordenadas do ecra), na janela \"{_texto(janela)}\","
         " por gesto: clique no ponto e o texto a seguir (os caracteres de tecla vao escapados)."
     )
+
+
+def _acao_escrever_em_foco(janela, texto):
+    """Escreve sem alvo nem ponto: as teclas vao para a janela que ja tem o foco."""
+    erro = _focar(janela)
+    if erro:
+        return "ERRO: " + erro
+    do_cofre = cofre.tem_placeholders(texto)
+    texto, erro_cofre = cofre.resolver_ou_erro(texto)
+    if erro_cofre:
+        return f"ERRO: {erro_cofre}."
+    try:
+        _teclado().send_keys(
+            _literal(texto), with_spaces=True, with_tabs=True, with_newlines=True
+        )
+    except Exception as exc:
+        return (
+            f"ERRO: nao consegui escrever na janela ({type(exc).__name__}: {exc})."
+            " Escrever injecta input: a janela tem de estar desbloqueada e em primeiro plano."
+        )
+    mostrado = "(valor do cofre, nao mostrado)" if do_cofre else repr(texto)
+    return f'Escrevi {mostrado} na janela "{_texto(janela)}", sem alvo (input de teclado).'
 
 
 def _acao_arrastar(janela, pedido):
@@ -1588,6 +1622,7 @@ def _passos_em_serie(passos, janela):
             regiao=str(passo.get("regiao") or ""),
             ponto=str(passo.get("ponto") or ""),
             segundos=int(passo.get("segundos") or 0),
+            botao=str(passo.get("botao") or ""),
         )
         marca = " ".join(parte for parte in (passo["acao"], _alvo_do_passo(passo)) if parte)
         linhas.append(f"[{indice}] {marca}\n    {resultado}")
@@ -1668,15 +1703,19 @@ def _passos_em_serie(passos, janela):
         },
         "passos": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "So em acao='roteiro': a lista JSON dos gestos, na ordem, cada um com 'acao' e os seus argumentos. Ex: [{\"acao\":\"clicar\",\"ponto\":\"janela:129,271\"},{\"acao\":\"escrever\",\"ponto\":\"janela:367,213\",\"texto\":\"conta\"},{\"acao\":\"teclas\",\"tecla\":\"{TAB}\"},{\"acao\":\"escrever\",\"texto\":\"senha\"},{\"acao\":\"teclas\",\"tecla\":\"{ENTER}\"}] - um login inteiro numa so chamada. Cada passo aceita ainda 'espera' (milissegundos a dormir ANTES de o executar, para dar tempo a janela de reagir) e 'janela' (para trocar de janela a meio - util para repetir a mesma sequencia em varios clientes, apontando cada passo ao seu '#N'). O roteiro para no PRIMEIRO erro e diz em que passo ficou. O 'janela' do topo serve de omissao para os passos que nao tragam o seu.",
+            "desc": "So em acao='roteiro': a lista JSON dos gestos, na ordem, cada um com 'acao' e os seus argumentos. Ex: [{\"acao\":\"clicar\",\"ponto\":\"janela:129,271\"},{\"acao\":\"escrever\",\"ponto\":\"janela:367,213\",\"texto\":\"conta\"},{\"acao\":\"teclas\",\"tecla\":\"{TAB}\"},{\"acao\":\"escrever\",\"texto\":\"senha\"},{\"acao\":\"teclas\",\"tecla\":\"{ENTER}\"}] - um login inteiro numa so chamada. Cada passo aceita ainda 'espera' (milissegundos a dormir ANTES de o executar, para dar tempo a janela de reagir), 'janela' (para trocar de janela a meio - util para repetir a mesma sequencia em varios clientes, apontando cada passo ao seu '#N') e 'botao' (em 'clicar': 'direito' ou 'meio'). O roteiro para no PRIMEIRO erro e diz em que passo ficou. O 'janela' do topo serve de omissao para os passos que nao tragam o seu.",
         },
         "ponto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Coordenadas do ecra (as mesmas que a coluna 'caixa' do mapa mostra); 'janela:x,y' conta do canto da janela. Em acao='arrastar' leva os pontos do traco: 'x1,y1 x2,y2 ...', do inicio ao fim, ate 64 pontos. Em acao='clicar' com 'alvo' vazio leva um ponto so ('x,y') e clica ali. Em acao='escrever' com 'alvo' vazio leva tambem um ponto so: clica ali e escreve 'texto' a seguir - e o caminho para uma janela que NAO declara controlos nenhuns (jogo, ipchanger, app desenhada a mao), onde nao ha alvo para apontar. Injeta input: exige o desktop desbloqueado e a janela em primeiro plano.",
+            "desc": "Coordenadas do ecra (as mesmas que a coluna 'caixa' do mapa mostra); 'janela:x,y' conta do canto da janela. Em acao='arrastar' leva os pontos do traco: 'x1,y1 x2,y2 ...', do inicio ao fim, ate 64 pontos. Em acao='clicar' com 'alvo' vazio leva um ponto so ('x,y') e clica ali. Em acao='escrever' com 'alvo' vazio leva tambem um ponto so: clica ali e escreve 'texto' a seguir - e o caminho para uma janela que NAO declara controlos nenhuns (jogo, ipchanger, app desenhada a mao), onde nao ha alvo para apontar. Com 'alvo' E 'ponto' vazios, acao='escrever' manda as teclas para a janela que ja tem o foco, sem clicar em nada. Injeta input: exige o desktop desbloqueado e a janela em primeiro plano.",
+        },
+        "botao": {
+            "tipo": "STRING", "obrig": False, "padrao": "",
+            "desc": "Qual botao do rato em acao='clicar' com 'ponto': 'esquerdo' (omissao), 'direito' ou 'meio'. E o que faltava para o gesto de dois tempos de um jogo ou de uma app desenhada a mao: armar com o botao DIREITO num item (ex: uma runa) e completar com o ESQUERDO no alvo. Vale tambem dentro dos passos de 'roteiro', com a chave 'botao' no passo.",
         },
     },
 )
-def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0):
+def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0, botao=""):
     emit_event("executing", function=f"Janelas nativas: {acao}")
     try:
         _desktop()
@@ -1724,12 +1763,16 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
 
     if acao == "arrastar":
         return _acao_arrastar(janela_escolhida, ponto)
+    if acao == "escrever" and not alvo and not ponto:
+        if not texto:
+            return "ERRO: acao='escrever' precisa de 'texto'."
+        return _acao_escrever_em_foco(janela_escolhida, texto)
     if acao == "escrever" and ponto and not alvo:
         if not texto:
             return "ERRO: acao='escrever' precisa de 'texto'."
         return _acao_escrever_ponto(janela_escolhida, ponto, texto)
     if acao == "clicar" and ponto and not alvo:
-        return _acao_clique_ponto(janela_escolhida, ponto)
+        return _acao_clique_ponto(janela_escolhida, ponto, botao)
     if acao == "fechar":
         return _acao_fechar(janela_escolhida)
     if acao == "print":
