@@ -39,6 +39,7 @@ _CABECALHO_PYTHON = '''# -*- coding: utf-8 -*-
 import os
 import subprocess as _subprocess
 import sys
+import time
 
 for _raiz in ({raiz_app!r}, {raiz_projeto!r}):
     if _raiz and _raiz not in sys.path:
@@ -106,6 +107,96 @@ def processos(nome):
             except ValueError:
                 pass
     return pids
+
+def porta_aberta(porta):
+    """Diz se algo responde nessa porta em localhost (nao prova que e o programa certo)."""
+    import socket as _socket
+    _sonda = _socket.socket()
+    _sonda.settimeout(0.4)
+    try:
+        return _sonda.connect_ex(("127.0.0.1", porta)) == 0
+    finally:
+        _sonda.close()
+
+class _Servico:
+    """Programa local aberto por abrir_servico(): traz .pid, .pronto, .motivo, .cauda() e .parar()."""
+
+    def __init__(self, processo, log, saida):
+        self._proc = processo
+        self._saida = saida
+        self.log = log
+        self.pid = processo.pid
+        self.pronto = False
+        self.motivo = ""
+
+    def vivo(self):
+        return self._proc.poll() is None
+
+    def cauda(self, linhas=25):
+        try:
+            with open(self.log, encoding="utf-8", errors="replace") as _f:
+                return "".join(_f.readlines()[-linhas:])
+        except OSError:
+            return ""
+
+    def parar(self):
+        if self.vivo():
+            correr(["taskkill", "/T", "/F", "/PID", str(self.pid)])
+        try:
+            self._saida.close()
+        except Exception:
+            pass
+        try:
+            if os.path.basename(self.log).startswith("axio_servico_"):
+                os.remove(self.log)
+        except OSError:
+            pass
+        return not self.vivo()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.parar()
+
+def abrir_servico(comando, portas=(), esperar_log=None, segundos=30, cwd=None, log=None):
+    """Abre um programa local SEM JANELA e espera que fique pronto; devolve um _Servico.
+
+    'portas' aceita uma porta ou uma lista delas. 'esperar_log' e um texto que tem de
+    aparecer no log, e esse e o sinal MAIS fiavel: o mysqld escreve 'ready for connections'
+    antes de aceitar ligacoes, e a porta sozinha pode demorar muito mais do que se espera.
+    O log vai sempre para ficheiro - sem ele, um programa que nao suba nao explica por que.
+    Use .parar() no fim (ou o 'with'), senao o programa fica a correr e segura a porta.
+    """
+    if isinstance(comando, str):
+        comando = [comando]
+    if isinstance(portas, int):
+        portas = (portas,)
+    if not log:
+        log = os.path.join(os.environ.get("TEMP") or ".", "axio_servico_%d.txt" % os.getpid())
+    _saida = open(log, "wb")
+    _proc = _subprocess.Popen(comando, cwd=cwd, stdout=_saida, stderr=_subprocess.STDOUT,
+                              creationflags=getattr(_subprocess, "CREATE_NO_WINDOW", 0x08000000))
+    _servico = _Servico(_proc, log, _saida)
+    _fim = time.time() + segundos
+    while time.time() < _fim:
+        if _proc.poll() is not None:
+            _servico.motivo = "saiu sozinho (codigo %s)" % _proc.returncode
+            return _servico
+        if esperar_log:
+            if esperar_log in _servico.cauda(500):
+                _servico.pronto = True
+                return _servico
+        elif portas:
+            if all(porta_aberta(_porta) for _porta in portas):
+                _servico.pronto = True
+                return _servico
+        else:
+            _servico.pronto = True
+            return _servico
+        time.sleep(0.4)
+    _servico.motivo = "nao ficou pronto em %ss" % segundos
+    return _servico
 
 '''
 
