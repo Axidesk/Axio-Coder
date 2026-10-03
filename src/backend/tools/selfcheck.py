@@ -340,19 +340,24 @@ def _contrato_da_ferramenta(nome):
     params = entry["params"] or {}
     if not params:
         linhas.append("  parametros: nenhum")
-        return linhas
-    linhas.append(f"  parametros ({len(params)}):")
-    for pnome, meta in params.items():
-        tipos = meta.get("tipo") or "STRING"
-        if meta.get("enum"):
-            tipos += " -> " + " | ".join(str(v) for v in meta["enum"])
-        padrao = meta.get("padrao")
-        if callable(padrao):
-            padrao = "(calculado)"
-        marca = "OBRIGATORIO" if meta.get("obrig") else f"opcional, padrao={padrao!r}"
-        linhas.append(f"    {pnome} [{tipos}] ({marca})")
-        if meta.get("desc"):
-            linhas.append(f"      {meta['desc']}")
+    else:
+        linhas.append(f"  parametros ({len(params)}):")
+        for pnome, meta in params.items():
+            tipos = meta.get("tipo") or "STRING"
+            if meta.get("enum"):
+                tipos += " -> " + " | ".join(str(v) for v in meta["enum"])
+            padrao = meta.get("padrao")
+            if callable(padrao):
+                padrao = "(calculado)"
+            marca = "OBRIGATORIO" if meta.get("obrig") else f"opcional, padrao={padrao!r}"
+            linhas.append(f"    {pnome} [{tipos}] ({marca})")
+            if meta.get("desc"):
+                linhas.append(f"      {meta['desc']}")
+    defeitos = _problemas_assinatura(chave, handler, params)
+    if defeitos:
+        linhas.append("")
+        linhas.append("  DEFEITO DE DESPACHO - o esquema promete o que o handler nao aceita:")
+        linhas.extend(f"    - {d}" for d in defeitos)
     return linhas
 
 

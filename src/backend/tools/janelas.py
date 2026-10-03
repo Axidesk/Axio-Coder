@@ -1887,7 +1887,7 @@ def _passos_em_serie(passos, janela):
         },
     },
 )
-def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0, botao=""):
+def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0, botao="", grelha=0, ampliar=1):
     emit_event("executing", function=f"Janelas nativas: {acao}")
     try:
         _desktop()

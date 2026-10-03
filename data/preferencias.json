@@ -224,6 +224,11 @@
       "area": "idioma",
       "texto": "O utilizador e BRASILEIRO (mora em Lisboa, mas escreve e le em portugues do BRASIL) - vale em QUALQUER projeto, e ja foi corrigido mais de uma vez. Escreva sempre em portugues do Brasil, COM acentuacao correta (nada de texto sem acentos):\n- arquivo (nao ficheiro), tela (nao ecra), banco de dados (nao base de dados), usuario, salvar, time, celular, gerenciar, remover, pasta (ok), computador.\n- Na conversa com ele tambem: \"voce\", \"a gente\", e o tom informal dele (vc, n, pra, q, eh) e bem-vindo.\n- Isto vale para o CODIGO tambem: nomes de funcao, rotulos, mensagens de erro, tooltips e textos de interface saem em portugues do Brasil (ex: \"Apagar conta\", \"Criar personagem\", \"Nivel\", \"Vocacao\").",
       "atualizado": "2026-10-02 17:30:08"
+    },
+    {
+      "area": "janelas-do-sistema",
+      "texto": "DEIXAR A MESA COMO ESTAVA (pedido a 2026-10-02, apos encontrar um dialogo de \"Salvar como\" pendente no ecra dele): o que eu ABRO, eu FECHO - e fechar nao e pedir o fecho e sair. Sempre que abrir um programa, uma janela, um dialogo de ficheiro ou uma consola, o fecho tem de ser CONFIRMADO: a janela desapareceu mesmo? Se ela abrir um aviso (guardar? erro? confirmacao?), RESPONDE-SE - nunca se deixa um aviso a espera de resposta no fim da rodada. Ao responder a um aviso de salvamento, a opcao e SEMPRE a que nao grava nada em nome do utilizador (\"Nao salvar\"/\"Nao\" antes de \"Cancelar\"/\"OK\"): escrever um ficheiro por engano e pior do que deixar a janela aberta, e uma janela que fica aberta e reportada como esta. Antes de dar a rodada por fechada, conferir o estado: `tool_operar_janela(acao='situacao')` diz o que ficou a pedir resposta (no ecra todo ou num programa) e `acao='fechar'` fecha, responde ao aviso e confirma. Um roteiro avisa sozinho no fim se ficou algum aviso pendente. Programas que eu lancei para testar fecham-se no fim, a nao ser que o trabalho seguinte dependa deles - e nesse caso digo-o numa linha, com o que ficou aberto e por que.",
+      "atualizado": "2026-10-03 16:56:42"
     }
   ]
 }
