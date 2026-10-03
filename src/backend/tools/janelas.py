@@ -484,12 +484,29 @@ def _janelas_avulsas(vistas):
 
 
 def _focar(janela):
+    """Traz a janela para a frente e CONFIRMA que ficou: o set_focus do pywinauto pode nao pegar (o Windows recusa o pedido de foco a quem nao o tem), e nesse caso o clique ia para a janela que esta em foco."""
+    hwnd = getattr(janela, "handle", None)
     try:
         janela.set_focus()
         time.sleep(0.3)
-    except Exception as exc:
-        return f"nao consegui trazer a janela para a frente ({type(exc).__name__}: {exc})"
-    return ""
+    except Exception:
+        pass
+    if hwnd and _a_frente(hwnd):
+        return ""
+    if hwnd:
+        try:
+            utilizador32 = ctypes.windll.user32
+            utilizador32.ShowWindow(hwnd, 9)
+            utilizador32.SetForegroundWindow(hwnd)
+            time.sleep(0.3)
+        except Exception as exc:
+            return f"nao consegui trazer a janela para a frente ({type(exc).__name__}: {exc})"
+        if _a_frente(hwnd):
+            return ""
+    return (
+        "a janela nao ficou em primeiro plano e o gesto ia para a janela que esta em foco"
+        " - traga-a para a frente e repita"
+    )
 
 
 def _arvore(janela, prazo=None):
@@ -792,13 +809,18 @@ def _motivo_de_vazio(janela):
     return "a janela nao tem area visivel (minimizada, escondida ou a fechar): restaure-a e traga-a para a frente"
 
 
-def _aviso_de_nao_estar_a_frente(janela):
+def _a_frente(hwnd):
+    """A janela e mesmo a que esta em primeiro plano? Sem confirmar, um gesto injectado vai para outra em silencio. O restype tem de sair largos: sem ele o ctypes trunca o handle a 32 bits e a comparacao mente."""
     try:
         user32 = ctypes.windll.user32
         user32.GetForegroundWindow.restype = wintypes.HWND
-        if int(janela.handle) == int(user32.GetForegroundWindow()):
-            return ""
+        return int(user32.GetForegroundWindow()) == int(hwnd)
     except Exception:
+        return False
+
+
+def _aviso_de_nao_estar_a_frente(janela):
+    if _a_frente(janela.handle):
         return ""
     return (
         " ATENCAO: esta janela NAO estava a frente - o print por composicao de uma janela WebView2"
