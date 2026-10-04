@@ -741,6 +741,12 @@ def _acao_mapa(janela, elementos=None, prazo=None):
     citados, linhas = _tabela_alvos(elementos, prazo)
     superficies = _tabela_superficies(elementos, janela, prazo)
     parte = f", {len(superficies)} superficie(s) de trabalho" if superficies else ""
+    dica = (
+        " Uma superficie de trabalho nao expoe controlos para ler: veja-a com 'print' (com"
+        " 'grelha' para acertar as coordenadas na imagem) e aja com 'ponto' em 'janela:x,y',"
+        " contado do canto dela."
+        if superficies else ""
+    )
     cortado = (
         " A janela tem mais elementos do que o orcamento de leitura permite varrer: a lista"
         f" abaixo parou aos {ORCAMENTO_MAPA:.0f}s de leitura e pode estar incompleta - va direto"
@@ -750,7 +756,7 @@ def _acao_mapa(janela, elementos=None, prazo=None):
     cabecalho = (
         f'Janela "{_texto(janela)}" (hwnd {janela.handle}, {_tipo(janela)}): '
         f"{len(elementos)} elementos na arvore, {len(citados)} respondem a um gesto"
-        f"{_excesso(citados)}{parte}.{cortado}"
+        f"{_excesso(citados)}{parte}.{dica}{cortado}"
     )
     if not linhas:
         return cabecalho + _aviso_sem_alvos(janela)
