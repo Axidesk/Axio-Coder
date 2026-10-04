@@ -771,7 +771,8 @@ def _acao_mapa(janela, elementos=None, prazo=None):
     cabecalho = (
         f'Janela "{_texto(janela)}" (hwnd {janela.handle}, {_tipo(janela)}): '
         f"{len(elementos)} elementos na arvore, {len(citados)} respondem a um gesto"
-        f"{_excesso(citados)}{parte}.{dica}{cortado}"
+        f"{_excesso(citados)}{parte}. O canto dela no ecra e {_caixa(janela)} - e desse canto que"
+        f" se contam os 'janela:x,y' do clique e a 'regiao' do print.{dica}{cortado}"
     )
     if not linhas:
         return cabecalho + _aviso_sem_alvos(janela)
