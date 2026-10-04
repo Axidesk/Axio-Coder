@@ -974,37 +974,72 @@ def _texto_da_paragem(pid, relato):
 
 @register(
     "tool_listar_processos",
-    'Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado). Use para saber o que esta a correr antes de parar ou reiniciar algo. Com saida>0 mostra tambem as ultimas linhas que cada processo escreveu - o caminho para ler a resposta de um processo que continua a correr (um depurador, um servidor) sem o parar.',
+    'Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado). Use para saber o que esta a correr antes de parar ou reiniciar algo. Com saida>0 mostra tambem as ultimas linhas que cada processo escreveu - o caminho para ler a resposta de um processo que continua a correr (um depurador, um servidor) sem o parar. Com pid= mostra so esse processo, em vez de despejar a lista toda; com esperar= aguarda que ele termine antes de responder - e assim que se acompanha um build ou uma instalacao longa numa chamada so, em vez de sondar a lista repetidas vezes.',
     {
+        "pid": {
+            "tipo": "STRING",
+            "desc": "Mostra so este processo (ex: proc_12). Vazio mostra todos.",
+            "padrao": "",
+        },
         "saida": {
             "tipo": "INTEGER",
             "desc": "Quantas linhas do fim da saida de cada processo mostrar (0 = so o estado).",
             "padrao": 0,
         },
+        "esperar": {
+            "tipo": "INTEGER",
+            "desc": "Segundos a aguardar que o processo de 'pid' termine antes de responder (0 = nao espera).",
+            "padrao": 0,
+        },
     },
     disponivel="edicao",
 )
-def tool_listar_processos(saida=0):
+def tool_listar_processos(pid="", saida=0, esperar=0):
     """Lista os processos em segundo plano iniciados pelo Axio (pid, comando, estado).
 
     Permite saber o que esta a correr (servidores, watchers) sem ter de decorar
     os pids nem consultar /api/processos manualmente. Com 'saida' traz tambem o fim
     do que cada um escreveu, que e a unica forma de ler um processo que nao terminou.
+    Com 'pid' aponta a um so e com 'esperar' aguarda que ele acabe, devolvendo o
+    estado final e a saida - o fim de um build numa chamada em vez de N sondagens.
     """
     emit_event("executing", function="Listando processos em segundo plano")
     registros = estado.get("processos", {})
     if not registros:
         return "Nenhum processo em segundo plano nesta sessao."
+    alvo = str(pid or "").strip()
+    if alvo:
+        registros = {alvo: registros[alvo]} if alvo in registros else {}
+        if not registros:
+            return f"Nao ha processo em segundo plano com o pid {alvo}."
+    nota = ""
+    if alvo and int(esperar or 0) > 0:
+        reg = registros[alvo]
+        inicio = time.time()
+        while _processo_vivo(reg) and time.time() - inicio < float(esperar):
+            time.sleep(0.5)
+        decorrido = time.time() - inicio
+        nota = (
+            f"{alvo} terminou ao fim de {_idade_texto(decorrido)}."
+            if not _processo_vivo(reg)
+            else f"{alvo} continua a correr depois de {_idade_texto(decorrido)} de espera."
+        )
     linhas = []
-    for pid, reg in registros.items():
-        estado_txt = "rodando" if _processo_vivo(reg) else reg.get("status", "parado")
-        bloco = f"{pid}: {reg.get('comando', '(desconhecido)')} [{estado_txt}]"
+    for chave, reg in registros.items():
+        if _processo_vivo(reg):
+            estado_txt = "rodando"
+        else:
+            estado_txt = reg.get("status", "parado")
+            if str(estado_txt).lower() == "rodando":
+                estado_txt = "terminado"
+        bloco = f"{chave}: {reg.get('comando', '(desconhecido)')} [{estado_txt}]"
         if saida and saida > 0:
             cauda = [str(linha) for linha in (reg.get("log") or [])[-int(saida):]]
             if cauda:
                 bloco += "\n" + "\n".join("    " + linha for linha in cauda)
         linhas.append(bloco)
-    return "Processos em segundo plano:\n" + "\n".join(linhas)
+    corpo = "Processos em segundo plano:\n" + "\n".join(linhas)
+    return f"{nota}\n{corpo}" if nota else corpo
 
 
 IDADE_PROCESSO_ANTIGO = 30 * 60
