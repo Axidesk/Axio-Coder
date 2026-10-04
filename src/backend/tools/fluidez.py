@@ -116,6 +116,24 @@ def _porto_em_falta():
     )
 
 
+def _inspecionar(sessao, onde, js, depois):
+    linhas = [f"Em {onde}:"]
+    for expressao, rotulo in ((js, "O que a expressao devolveu"), (depois, "O estado")):
+        if not expressao.strip():
+            continue
+        try:
+            resultado = sessao.avaliar(expressao)
+        except cdp.SemResposta:
+            linhas.append(f"{rotulo}: nao veio nada (promessa por resolver?)")
+        except RuntimeError as falha:
+            linhas.append(f"{rotulo}: rebentou ({falha})")
+        else:
+            linhas.append(f"{rotulo}: {json.dumps(resultado, ensure_ascii=False, default=str)}")
+    if len(linhas) == 1:
+        linhas.append("Nao pediu nada para ler: passe 'js' e/ou 'depois'.")
+    return "\n".join(linhas)
+
+
 @register(
     "tool_medir_fluidez",
     "Mede o RITMO DE DESENHO (fps, intervalo medio, mediana, p95 e quadros acima de 32 ms) de uma "
@@ -129,7 +147,9 @@ def _porto_em_falta():
     "devolvida em 'js' ou em 'depois' e ESPERADA e o que sai e o valor resolvido. "
     "'listar' mostra so o que a app expoe no porto, sem medir. A JANELA TEM DE ESTAR A VISTA: em "
     "segundo plano o Chromium para o requestAnimationFrame e a medicao nao arranca - nesse caso a "
-    "ferramenta di-lo em vez de inventar um numero.",
+    "ferramenta di-lo em vez de inventar um numero. Com 'medir'=False nao ha contagem nenhuma: "
+    "corre 'js' e 'depois' e devolve o que lerem, ate com a janela em segundo plano - e o caminho "
+    "para INSPECIONAR uma app de fora (um Tauri, um Electron, um Chrome) sem lhe roubar o foco.",
     {
         "porta": {
             "tipo": "INTEGER",
@@ -161,9 +181,16 @@ def _porto_em_falta():
             "desc": "True mostra o que a app expoe no porto (paginas, titulos, enderecos) e nao mede nada.",
             "padrao": False,
         },
+        "medir": {
+            "tipo": "BOOLEAN",
+            "desc": "True (padrao) mede o ritmo de desenho. False conta zero quadros: corre 'js' e 'depois' e devolve o que lerem - para LER o estado de uma janela de fora sem a incomodar.",
+            "padrao": True,
+        },
     },
 )
-def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois=""):
+def tool_medir_fluidez(
+    porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois="", medir=True
+):
     escolhido = int(porta or 0)
     if not escolhido:
         escolhido = cdp.descobrir_porta()
@@ -185,7 +212,10 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
     espera = (total / 1000.0) + ESPERA_EXTRA
     if js.strip():
         espera = max(espera, ESPERA_DA_EXPRESSAO)
-    emit_event("executing", function=f"A medir o ritmo de desenho por {total} ms")
+    if medir:
+        emit_event("executing", function=f"A medir o ritmo de desenho por {total} ms")
+    else:
+        emit_event("executing", function="A ler o estado da janela")
     sessao = cdp.Sessao(pagina["webSocketDebuggerUrl"], espera=espera)
     try:
         sessao.abrir()
@@ -202,6 +232,8 @@ def tool_medir_fluidez(porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=F
     ecos = []
     finais = []
     try:
+        if not medir:
+            return _inspecionar(sessao, _onde_estou(pagina), js, depois)
         if js.strip():
             try:
                 resultado = sessao.avaliar(js)
