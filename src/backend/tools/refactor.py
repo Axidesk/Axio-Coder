@@ -8,7 +8,7 @@ import uuid
 from src.backend.services.diff import gerar_diff
 from src.backend.services.file_service import registrar_edicao, resolver_caminho
 from src.backend.state import emit_event, estado, notificar_mudanca_arquivos
-from src.backend.tools import cpp
+from src.backend.tools import cpp, rust
 from src.backend.tools.registry import register
 
 def _localizar_funcao_py(linhas, nome_funcao):
@@ -195,7 +195,7 @@ def _corpo_com_chaves_balanceadas(corpo):
     return profundidade == 0
 
 def _localizar_funcao_em(caminho_absoluto, linhas, nome_funcao):
-    """Despacha o localizador pela extensao: Python pela AST, JS pelas chaves, C/C++ pela arvore.
+    """Despacha o localizador pela extensao: Python pela AST, JS pelas chaves, C/C++ e Rust pela arvore.
 
     Antes disto tudo o que nao era .py caia no localizador de JavaScript, e um .cpp a serio
     respondia "Funcao 'applyPan' nao encontrada no JavaScript" - um erro que nao dizia nada
@@ -206,10 +206,12 @@ def _localizar_funcao_em(caminho_absoluto, linhas, nome_funcao):
         return _range_com_decoradores_py(linhas, nome_funcao)
     if ext in (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"):
         return _localizar_funcao_js(linhas, nome_funcao)
+    if rust.eh_rust(caminho_absoluto):
+        return rust.localizar(caminho_absoluto, nome_funcao)
     if cpp.eh_cpp(caminho_absoluto):
         return cpp.localizar(caminho_absoluto, nome_funcao)
     return (f"ERRO: a extensao '{ext}' nao tem localizador de funcao. Sao cobertos Python, "
-            "JavaScript/TypeScript e C/C++.")
+            "JavaScript/TypeScript, C/C++ e Rust.")
 
 
 def _extrair_corpo_funcao(caminho_absoluto, nome_funcao):
@@ -313,7 +315,7 @@ def _emitir_diff_movido(arquivo_origem, arquivo_destino, conteudo_orig, novo_ori
 
 @register(
     "tool_mover_funcao_verbatim",
-    'Move uma função/classe inteira de um arquivo para outro copiando os bytes exatos do disco (verbatim, sem redigitar, sem simplificar). Detecta o range completo da função (início e fim) por AST no Python e por balanceamento de chaves no JavaScript. Recusa funções aninhadas, porque o destino recebe o corpo no topo do módulo e a indentação herdada o invalidaria. Opcionalmente remove a função do arquivo de origem. Use preview=true para dry-run (mostra linhas + SHA-256 sem escrever/remover nada). Retorna o SHA-256 do corpo movido para verificação.',
+    'Move uma função/classe inteira de um arquivo para outro copiando os bytes exatos do disco (verbatim, sem redigitar, sem simplificar). Detecta o range completo da função (início e fim) por AST no Python, por balanceamento de chaves no JavaScript e pela arvore (tree-sitter) no C/C++ e no Rust. Recusa funções aninhadas, porque o destino recebe o corpo no topo do módulo e a indentação herdada o invalidaria. Opcionalmente remove a função do arquivo de origem. Use preview=true para dry-run (mostra linhas + SHA-256 sem escrever/remover nada). Retorna o SHA-256 do corpo movido para verificação.',
     {
         'arquivo_origem': {"tipo": "STRING", "obrig": True, "padrao": ""},
         'nome_funcao': {"tipo": "STRING", "obrig": True, "padrao": ""},
@@ -357,7 +359,12 @@ def tool_mover_funcao_verbatim(arquivo_origem, nome_funcao, arquivo_destino, rem
             "por faixas de linha, dedentando com prova de ida-e-volta (repôr a indentacao removida tem de "
             "reproduzir os bytes originais) e ajuste a assinatura. Nada foi movido."
         )
-    if not _corpo_com_chaves_balanceadas(corpo):
+    if rust.eh_rust(origem_abs):
+        problema_do_corpo = rust.erros_de_texto(corpo)
+        if problema_do_corpo:
+            return (f"ERRO: O corpo extraido da funcao '{nome_funcao}' nao esta integro em Rust "
+                    f"({problema_do_corpo}). Nada foi movido - verifique o arquivo origem a mao.")
+    elif not _corpo_com_chaves_balanceadas(corpo):
         return f"ERRO: O corpo extraído da função '{nome_funcao}' está com chaves desbalanceadas (possível corte incorreto). Nada foi movido. Verifique o arquivo origem manualmente."
     hash_corpo = hashlib.sha256(corpo.encode("utf-8")).hexdigest()
     if preview:
@@ -484,7 +491,7 @@ def tool_verificar_integridade_refatoracao(arquivo_origem, nome_funcao, arquivo_
 
 @register(
     "tool_remover_funcao",
-    'Remove uma funcao, classe ou rota inteira de um ficheiro, por nome, sem redigitar nada: o range sai do AST no Python (ja com os decoradores @ incluidos, que de outro modo ficariam orfaos) ou do balanceamento de chaves no JavaScript. A gravacao entra na pilha de undo. RECUSA quando o nome ainda e usado noutro ponto do MESMO ficheiro e lista as linhas - o uso no projeto inteiro confirma-se com tool_pesquisar_no_projeto. Em Python volta a parsear o ficheiro depois de cortar e NAO apaga se o corte quebrar a sintaxe (ex: o corpo ficava so com a funcao removida). Use preview=true para ver as linhas e o SHA-256 sem tocar em nada. E o caminho para apagar codigo morto (regra 17) sem citar o corpo inteiro no tool_substituir_texto.',
+    'Remove uma funcao, classe ou rota inteira de um ficheiro, por nome, sem redigitar nada: o range sai do AST no Python (ja com os decoradores @ incluidos, que de outro modo ficariam orfaos) no JavaScript pelo balanceamento de chaves e no C/C++ e no Rust pela arvore (tree-sitter), ja com os atributos #[...] e a doc /// que ficam por cima do item. A gravacao entra na pilha de undo. RECUSA quando o nome ainda e usado noutro ponto do MESMO ficheiro e lista as linhas - o uso no projeto inteiro confirma-se com tool_pesquisar_no_projeto. Em Python, em C/C++ e em Rust volta a validar a sintaxe depois de cortar e NAO apaga se o corte a quebrar (ex: o corpo ficava so com a funcao removida). Use preview=true para ver as linhas e o SHA-256 sem tocar em nada. E o caminho para apagar codigo morto (regra 17) sem citar o corpo inteiro no tool_substituir_texto.',
     {
         'arquivo': {"tipo": "STRING", "obrig": True, "padrao": ""},
         'nome_funcao': {"tipo": "STRING", "obrig": True, "padrao": ""},
@@ -549,6 +556,14 @@ def tool_remover_funcao(arquivo, nome_funcao, preview=False):
     if cpp.eh_cpp(alvo_abs):
         problema = cpp.erros_de_texto(novo, alvo_abs)
         if problema and not cpp.erros_de_texto(conteudo_orig, alvo_abs):
+            return (
+                f"ERRO: apagar '{nome_funcao}' quebraria a sintaxe do ficheiro ({problema}). Nada foi "
+                "apagado - apague pelo bloco com tool_mover_bloco_verbatim (linhas exatas) ou "
+                "tool_substituir_texto."
+            )
+    if rust.eh_rust(alvo_abs):
+        problema = rust.erros_de_texto(novo)
+        if problema and not rust.erros_de_texto(conteudo_orig):
             return (
                 f"ERRO: apagar '{nome_funcao}' quebraria a sintaxe do ficheiro ({problema}). Nada foi "
                 "apagado - apague pelo bloco com tool_mover_bloco_verbatim (linhas exatas) ou "
