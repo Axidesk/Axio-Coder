@@ -661,7 +661,10 @@ def _resolver(janela, alvo, elementos):
     procurado = pedido.lower()
     candidatos = [e for e in elementos if procurado in _texto(e).lower()]
     if not candidatos:
-        return None, f"nenhum elemento cujo nome contenha '{pedido}'. Veja o mapa para os nomes exatos", ""
+        candidatos = [e for e in elementos if _auto_id(e).lower() == procurado]
+        if candidatos:
+            return candidatos[0], "", f"por AutomationId '{pedido}' (escrito sem o #)"
+        return None, f"nenhum elemento cujo nome contenha '{pedido}' nem AutomationId igual. Veja o mapa para os nomes exatos", ""
     ambiguidade = len(candidatos)
     com_padrao = [e for e in candidatos if _padroes(e)]
     if ambiguidade > 1 and com_padrao:
