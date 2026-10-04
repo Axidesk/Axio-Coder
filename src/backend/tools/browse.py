@@ -133,15 +133,16 @@ def tool_listar_arvore(caminho_relativo="", profundidade_max=4, max_entradas=400
 
 @register(
     "tool_pesquisar_no_projeto",
-    'Busca ocorrências de string no código (compara com normalização Unicode NFC — acentos compostos e decompostos casam automaticamente). PROIBIDO pesquisar termos de leigo passados pelo humano (Ex: porta, alisar, camera, parede etc). Se o usuário citar, primeiro mapeie o código ou leia as assinaturas para descobrir o nome correto e evitar perder tempo. Passa o parametro revisao (ex: HEAD) para procurar na versao do git em vez do disco. Ignora por predefinicao node_modules, .venv, .git e pastas afins: ligue incluir_ignoradas para procurar tambem la dentro (tipagens e codigo das dependencias instaladas). Aceita VARIOS termos de uma vez, um por linha no campo termo: o projeto e varrido UMA so vez e a resposta sai agrupada por termo - use-o para investigar varios nomes correlacionados sem repetir a varredura.',
+    'Busca ocorrências de string no código (compara com normalização Unicode NFC — acentos compostos e decompostos casam automaticamente). PROIBIDO pesquisar termos de leigo passados pelo humano (Ex: porta, alisar, camera, parede etc). Se o usuário citar, primeiro mapeie o código ou leia as assinaturas para descobrir o nome correto e evitar perder tempo. Passa o parametro revisao (ex: HEAD) para procurar na versao do git em vez do disco. Ignora por predefinicao node_modules, .venv, .git e pastas afins: ligue incluir_ignoradas para procurar tambem la dentro (tipagens e codigo das dependencias instaladas). Aceita VARIOS termos de uma vez, um por linha no campo termo: o projeto e varrido UMA so vez e a resposta sai agrupada por termo - use-o para investigar varios nomes correlacionados sem repetir a varredura. Com excluir (uma pasta por linha, ex: libs) a varredura ignora essas pastas PELO NOME em qualquer nivel - e o caminho para arvores de terceiros (boost, vendor) que fazem os 10s esgotarem antes de a busca chegar ao codigo do projeto.',
     {
         'termo': {"tipo": "STRING", "obrig": True, "padrao": "", "desc": "Um termo, ou varios separados por quebra de linha (ex: 'nome1\\nnome2'). Com varios, o projeto e varrido uma so vez e cada termo sai com o seu bloco."},
         'revisao': {"tipo": "STRING", "padrao": ""},
         'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist). Serve para ler tipagens e codigo das dependencias instaladas. Custa tempo - em pastas enormes o limite de 10s corta a busca."},
+        'excluir': {"tipo": "STRING", "obrig": False, "padrao": "", "desc": "Uma pasta por linha (ex: 'libs') para a varredura ignorar PELO NOME, em qualquer nivel da arvore. Serve para arvores de terceiros (boost, vendor, libs externas) que fazem a busca esgotar os 10s antes de chegar ao codigo do projeto."},
         'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a busca a uma pasta (ex: node_modules/dxf-viewer) OU a um ficheiro do projeto (procura so dentro dele). E o caminho para procurar dentro de uma dependencia SEM percorrer as outras todas: sem isto, incluir_ignoradas varre o node_modules inteiro e o limite de 10s devolve resultados parciais (os ficheiros ordenados depois do corte nunca sao vistos)."},
     },
 )
-def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: bool = False, pasta: str = ""):
+def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: bool = False, pasta: str = "", excluir: str = ""):
     termos = [t.strip() for t in str(termo).split("\n") if t.strip()]
     if not termos:
         return "ERRO: indique pelo menos um termo para procurar."
@@ -160,6 +161,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
     tempo_inicio = time.time()
     pastas_ignoradas = PASTAS_FORA_DA_BUSCA
     extensoes_ignoradas = EXT_FORA_DA_BUSCA
+    excluidas = {linha.strip().strip("/\\").lower() for linha in str(excluir).splitlines() if linha.strip()}
 
     raiz_projeto = estado["pasta_raiz"]
     raiz_busca = raiz_projeto
@@ -186,6 +188,8 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         dirs[:] = [d for d in dirs if d != '.axio']
         if not incluir_ignoradas:
             dirs[:] = [d for d in dirs if d not in pastas_ignoradas and not d.startswith('.')]
+        if excluidas:
+            dirs[:] = [d for d in dirs if d.lower() not in excluidas]
 
         
         for name in files:
@@ -219,6 +223,8 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
     if ignorados_por_tamanho:
         aviso = (f" [{ignorados_por_tamanho} ficheiro(s) com mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB"
                  f" nao foram lidos nesta busca; os bundles em dist/ ficam sempre de fora.]")
+    if excluidas:
+        aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
     if not any(resultados): return _formatar_busca(termos, resultados) + aviso
     saida = _formatar_busca(termos, resultados)
     if len(saida) > 10000: return saida[:10000] + "\n... [RESULTADO TRUNCADO]"
