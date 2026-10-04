@@ -725,6 +725,18 @@ def _abrir_quando_pronto(pid, porta):
         registrar_linha_processo(pid, f"[axio] não consegui abrir o navegador; abra manualmente: {url}")
 
 
+def _variaveis_da_linha(texto):
+    saida = {}
+    for linha in (texto or "").splitlines():
+        linha = linha.strip()
+        if not linha or "=" not in linha:
+            continue
+        nome, valor = linha.split("=", 1)
+        if nome.strip():
+            saida[nome.strip()] = valor.strip()
+    return saida
+
+
 @register(
     "tool_executar_processo",
     "Executa processos longos ou de bootstrap: criar venv, instalar dependências (pip/npm) e rodar servidores. Use modo='aguardar' (padrão) para venv/instalações e modo='segundo_plano' para servidores que não terminam (npm start, flask run). Para subir um SERVIDOR FLASK use 'python -m flask --app app run --port N' (a allowlist recusa 'python -c'). ATENÇÃO AO LEVANTAR UMA SEGUNDA INSTÂNCIA DO PRÓPRIO AXIO para testar o código do disco: ela arranca com o estado VAZIO (sem pasta de projeto), logo /preview/<p> responde 403 e tudo o que depende da pasta recusa — quem restaura a pasta no arranque é o frontend, e um servidor sem frontend não o faz. Nesse caso fixe a pasta de dentro da própria página, com um fetch relativo a POST /api/set_folder e {\"folder\":\"<raiz>\"}.",
@@ -734,11 +746,12 @@ def _abrir_quando_pronto(pid, porta):
         'timeout': {"tipo": "INTEGER", "padrao": None},
         'cwd': {"tipo": "STRING", "desc": "Pasta onde o processo corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
         'caminhos_extra': {"tipo": "STRING", "desc": "Pastas a por A FRENTE do PATH, separadas por ';'. Para programas fora do Python que precisam do seu proprio bin para arrancar (um toolchain, um kit do Qt) - o build script dessa linguagem procura o seu compilador no PATH.", "padrao": ""},
+        'ambiente': {"tipo": "STRING", "desc": "Variaveis de ambiente a acrescentar ao processo, uma por linha no formato NOME=valor. Para o que nao entra por argumento na linha de comando: um alvo de teste, um caminho de SDK, uma opcao que o programa so le do ambiente. As variaveis daqui ganham as que o Axio ja poe (PATH do venv, PYTHONUTF8).", "padrao": ""},
     },
     disponivel="edicao",
 )
 def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, cwd: str = "",
-                           caminhos_extra: str = ""):
+                           caminhos_extra: str = "", ambiente: str = ""):
     pasta_de_trabalho, erro_pasta = _pasta_de_trabalho(cwd)
     if erro_pasta:
         return erro_pasta
@@ -769,7 +782,8 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
     try:
         extras = [p.strip().strip('"') for p in (caminhos_extra or "").split(";") if p.strip()]
         reg = iniciar_processo(comando, cwd=pasta_de_trabalho, porta_env=porta_env, modo=modo,
-                               acompanhar=(modo == "segundo_plano"), caminhos_extra=extras)
+                               acompanhar=(modo == "segundo_plano"), caminhos_extra=extras,
+                               ambiente=_variaveis_da_linha(ambiente))
     except OSError as e:
         return f"ERRO: nao consegui iniciar o processo ({e})."
     pid = reg["id"]
@@ -853,7 +867,7 @@ def _encerrar_sobreviventes(alvos):
     return _esperar_morrer([item["pid"] for item in sobraram])
 
 def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False,
-                     caminhos_extra=None, rotulo=None, controles=None):
+                     caminhos_extra=None, rotulo=None, controles=None, ambiente=None):
     """Abre o comando, registra-o em estado['processos'] e liga o leitor da saida.
     Devolve o registo (com a thread leitora em '_leitor'). Com 'acompanhar' liga tambem o
     monitor que fecha o processo nos eventos quando ele terminar sozinho; quem espera pela
@@ -873,7 +887,7 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
         "stdout": subprocess.PIPE,
         "stderr": subprocess.STDOUT,
         "stdin": subprocess.PIPE if stdin_pipe else subprocess.DEVNULL,
-        "env": montar_env_processo(comando, porta_env, caminhos_extra),
+        "env": montar_env_processo(comando, porta_env, caminhos_extra, ambiente),
     }
     if os.name == "nt":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP

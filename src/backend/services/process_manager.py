@@ -276,7 +276,7 @@ def _pty_on_replay():
     with pty_lock:
         texto = _pty_hist_texto()
     socketio.emit('pty:replay', {'data': texto}, to=request.sid)
-def montar_env_processo(comando, porta_env=None, caminhos_extra=None):
+def montar_env_processo(comando, porta_env=None, caminhos_extra=None, ambiente=None):
     """Ambiente do processo: o venv do projeto mais as pastas que tenham de vir a frente.
 
     'caminhos_extra' existe para programas FORA do Python que precisam das suas proprias
@@ -299,6 +299,8 @@ def montar_env_processo(comando, porta_env=None, caminhos_extra=None):
         atual = env.get("PATH", "")
         novo = os.pathsep.join(caminhos)
         env["PATH"] = novo + os.pathsep + atual if atual else novo
+    for nome, valor in (ambiente or {}).items():
+        env[nome] = valor
     return env
 
 def _pastas_de_toolchain():
