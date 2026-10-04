@@ -28,6 +28,7 @@ ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escre
 LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
 EXTENSOES_DE_PAGINA = (".html", ".htm")
+ROTAS_DO_SERVIDOR = ("/preview/", "/vendor/", "/js/", "/icons/")
 
 
 def _endereco_local(destino):
@@ -51,6 +52,13 @@ def _origem_do_servidor():
         return request.host_url.rstrip("/")
     except Exception:
         return "http://127.0.0.1:5000"
+
+
+def _e_rota_do_servidor(alvo):
+    """Rota do proprio servidor do Axio (/preview/..., /js/...) - a forma que aparece na barra do preview."""
+    if not alvo.startswith("/") or alvo.startswith("//"):
+        return False
+    return alvo.split("?")[0].split("#")[0].startswith(ROTAS_DO_SERVIDOR)
 
 
 def _endereco_do_ficheiro(alvo):
@@ -1079,7 +1087,9 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         destino = (alvo or texto).strip()
         if not destino:
             return "ERRO: indique 'alvo' com o endereco ou o ficheiro a abrir no preview."
-        if not _e_endereco(destino):
+        if _e_rota_do_servidor(destino):
+            destino = _origem_do_servidor() + destino
+        elif not _e_endereco(destino):
             convertido, motivo = _endereco_do_ficheiro(destino)
             if motivo:
                 return f"ERRO: {motivo}."
