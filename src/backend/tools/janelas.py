@@ -1858,6 +1858,24 @@ def _acao_colar_ficheiro(janela, ficheiro):
     )
 
 
+def _texto_da_area_de_transferencia():
+    """Devolve, em TEXTO, o que esta copiado na area de transferencia do Windows."""
+    win32clipboard, win32con = _area_de_transferencia()
+    win32clipboard.OpenClipboard()
+    try:
+        if not win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
+            return (
+                "A area de transferencia nao tem texto nenhum - so ficheiros, ou vazia."
+                " Copie o texto na janela de origem (Ctrl+C) e repita."
+            )
+        texto = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
+    finally:
+        win32clipboard.CloseClipboard()
+    if not str(texto).strip():
+        return "A area de transferencia tem texto vazio."
+    return f"Texto copiado ({len(texto)} caracteres):\n{texto}"
+
+
 def _passos_do_roteiro(passos):
     """Lista de gestos validada - cada passo e o mesmo que uma chamada isolada.
 
@@ -2013,12 +2031,12 @@ def _passos_em_serie(passos, janela):
     {
         "acao": {
             "tipo": "STRING", "obrig": True,
-            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "situacao", "print", "mover", "esperar", "roteiro", "colar_ficheiro"],
-            "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' fecha a janela, responde ao aviso que ela abrir (nunca a gravar nada) e confirma que desapareceu; 'situacao' diz o que ficou pendente - os avisos a espera de resposta e as janelas ainda abertas, no ecra todo ou num programa; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra); 'colar_ficheiro' leva um ficheiro do disco a outra sessao (Windows Sandbox, maquina virtual, RDP): poe-no na area de transferencia e cola-o com Ctrl+V na janela indicada - essa janela tem de estar a MOSTRAR a pasta onde o ficheiro deve cair.",
+            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "situacao", "print", "mover", "esperar", "roteiro", "colar_ficheiro", "texto_copiado"],
+            "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' fecha a janela, responde ao aviso que ela abrir (nunca a gravar nada) e confirma que desapareceu; 'situacao' diz o que ficou pendente - os avisos a espera de resposta e as janelas ainda abertas, no ecra todo ou num programa; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra); 'colar_ficheiro' leva um ficheiro do disco a outra sessao (Windows Sandbox, maquina virtual, RDP): poe-no na area de transferencia e cola-o com Ctrl+V na janela indicada - essa janela tem de estar a MOSTRAR a pasta onde o ficheiro deve cair; 'texto_copiado' devolve em TEXTO o que esta copiado na area de transferencia, e e o caminho para LER o interior de outra sessao (Windows Sandbox, maquina virtual, RDP) sem depender de olhar para uma imagem - la dentro selecione tudo e copie (Ctrl+A, Ctrl+C) e o conteudo volta aqui em texto limpo.",
         },
         "janela": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Qual janela: o numero do hwnd (visto em acao='janelas'), 'pid:<numero>' (escolhe pelo processo - e o caminho para uma janela SEM titulo) ou um trecho do titulo, ex: 'Bloco de notas'. Com VARIAS janelas do mesmo titulo (tres clientes de um jogo, tres exploradores) acrescente '#N' para escolher a N-esima contando da ESQUERDA para a direita do ecra - ex: 'Tibia - 127.0.0.1:7171#2'. Sem o '#N' e com mais que uma candidata, a ferramenta RECUSA e lista as opcoes com o hwnd, em vez de agir num palpite. Obrigatorio em todas as acoes menos 'janelas', 'abrir' e 'roteiro'.",
+            "desc": "Qual janela: o numero do hwnd (visto em acao='janelas'), 'pid:<numero>' (escolhe pelo processo - e o caminho para uma janela SEM titulo) ou um trecho do titulo, ex: 'Bloco de notas'. Com VARIAS janelas do mesmo titulo (tres clientes de um jogo, tres exploradores) acrescente '#N' para escolher a N-esima contando da ESQUERDA para a direita do ecra - ex: 'Tibia - 127.0.0.1:7171#2'. Sem o '#N' e com mais que uma candidata, a ferramenta RECUSA e lista as opcoes com o hwnd, em vez de agir num palpite. Obrigatorio em todas as acoes menos 'janelas', 'abrir', 'roteiro' e 'texto_copiado'.",
         },
         "alvo": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -2133,6 +2151,9 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
 
     if acao == "colar_ficheiro":
         return _acao_colar_ficheiro(janela_escolhida, ficheiro)
+
+    if acao == "texto_copiado":
+        return _texto_da_area_de_transferencia()
 
     if acao == "teclas" and not str(alvo or "").strip():
         if not tecla:
