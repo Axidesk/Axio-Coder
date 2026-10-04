@@ -1541,6 +1541,7 @@ def _escrever(elemento, texto):
 
 
 MODIFICADORES_TECLA = {"ctrl": "^", "control": "^", "alt": "%", "shift": "+"}
+TECLAS_WIN = {"win", "windows", "super", "meta", "lwin"}
 
 NOMES_TECLA = {
     "enter": "ENTER", "return": "ENTER", "tab": "TAB", "esc": "ESC", "escape": "ESC",
@@ -1551,10 +1552,13 @@ NOMES_TECLA = {
 
 
 def _normalizar_teclas(tecla):
-    """Traduz 'ctrl+shift+r' para a sintaxe que o pywinauto injecta ('^+r').
+    """Traduz 'ctrl+shift+r' para a sintaxe que o pywinauto injecta ('^+r') e 'win+r'
+    para '{VK_LWIN down}r{VK_LWIN up}'.
 
     Sem isto o que vai para o ecra e a STRING 'ctrl+shift+r' escrita no campo: o atalho
-    nunca dispara e o campo fica com lixo la dentro. A sintaxe de chaves ('{ENTER}', '^a')
+    nunca dispara e o campo fica com lixo la dentro. O Win nao tem prefixo de um
+    caractere como o Ctrl/Alt/Shift - tem de ser pressionado e largado em volta da tecla,
+    senao o que chega ao ecra e so a ultima letra. A sintaxe de chaves ('{ENTER}', '^a')
     passa intacta, como sempre passou.
     """
     bruto = str(tecla or "").strip()
@@ -1562,19 +1566,31 @@ def _normalizar_teclas(tecla):
         return bruto
     tokens = [t.strip() for t in bruto.split("+")]
     modificadores = ""
-    while len(tokens) > 1 and tokens[0].lower() in MODIFICADORES_TECLA:
-        modificadores += MODIFICADORES_TECLA[tokens.pop(0).lower()]
+    com_win = False
+    while len(tokens) > 1:
+        baixo = tokens[0].lower()
+        if baixo in MODIFICADORES_TECLA:
+            modificadores += MODIFICADORES_TECLA[baixo]
+        elif baixo in TECLAS_WIN:
+            com_win = True
+        else:
+            break
+        tokens.pop(0)
     if not tokens:
         return bruto
     resto = tokens[-1]
     nome = NOMES_TECLA.get(resto.lower())
     if nome:
-        return modificadores + "{" + nome + "}"
-    if len(resto) == 1:
-        return modificadores + resto
-    if len(tokens) == 1 and not modificadores:
-        return bruto
-    return modificadores + "{" + resto.upper() + "}"
+        corpo = modificadores + "{" + nome + "}"
+    elif len(resto) == 1:
+        corpo = modificadores + resto
+    elif len(tokens) == 1 and not modificadores:
+        corpo = bruto
+    else:
+        corpo = modificadores + "{" + resto.upper() + "}"
+    if com_win:
+        return "{VK_LWIN down}" + corpo + "{VK_LWIN up}"
+    return corpo
 
 
 def _teclas_viraram_texto(antes, depois, tecla):
@@ -1958,7 +1974,7 @@ def _passos_em_serie(passos, janela):
         },
         "tecla": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Teclas em acao='teclas', na sintaxe do pywinauto: '{ENTER}', '{TAB}', '{ESC}', '^s' (Ctrl+S), '%f' (Alt+F). Injeta input: a janela tem de estar em primeiro plano.",
+            "desc": "Teclas em acao='teclas': '{ENTER}', '{TAB}', '{ESC}', 'ctrl+s', 'alt+f4' ou 'win+r' (o Win e escrito por nome, nao como prefixo). Injeta input: a janela tem de estar em primeiro plano.",
         },
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
