@@ -467,10 +467,7 @@ def _texto_do_mapa(dados):
         " As coordenadas sao relativas a janela (as mesmas que o clique usa)."
     )
     if not elementos:
-        return (
-            "Nenhum elemento interativo visivel nesta pagina."
-            f" {contexto} Confirme com acao='estado' que a pagina carregou."
-        )
+        return f"Nenhum elemento interativo visivel nesta pagina. {_porque_sem_mapa(dados)} {contexto}"
     linhas = [
         f"{dados.get('total') or 0} elemento(s) interativo(s) ao alcance de um gesto"
         f" (de {resumo.get('candidatos') or 0} candidato(s) no DOM)."
@@ -495,6 +492,25 @@ def _texto_do_mapa(dados):
             f" - centro ({centro.get('x')},{centro.get('y')}) {caixa.get('largura')}x{caixa.get('altura')}"
         )
     return "\n".join(linhas)
+
+
+def _porque_sem_mapa(dados):
+    """Distingue a pagina que ainda esta a montar-se da pagina mesmo sem nada ao alcance."""
+    diagnostico = dados.get("diagnostico") or {}
+    if diagnostico.get("corpo_escondido"):
+        return (
+            "O corpo da pagina esta escondido (display:none): ela ainda esta a montar-se ou depende"
+            " de um script que nao correu - repita o mapa daqui a instantes."
+        )
+    pronto = diagnostico.get("pronto") or ""
+    if pronto and pronto != "complete":
+        return f"A pagina ainda esta a carregar (readyState={pronto}) - repita o mapa daqui a instantes."
+    if diagnostico:
+        return (
+            f"A pagina tem {diagnostico.get('nos') or 0} elemento(s) no DOM e nenhum clicavel ao alcance"
+            " (fora da janela, escondidos ou tapados)."
+        )
+    return "Confirme com acao='estado' que a pagina carregou."
 
 
 def _caracteristicas(dados):

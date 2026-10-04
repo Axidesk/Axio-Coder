@@ -260,6 +260,16 @@ const SNIPPET_ALVOS = `(function (parametros) {
     };
   }
 
+  function diagnosticoDaPagina() {
+    var corpo = document.body;
+    var estilo = null;
+    try { estilo = corpo ? window.getComputedStyle(corpo) : null; } catch (e) { estilo = null; }
+    var escondido = !!estilo && (estilo.display === 'none' || estilo.visibility === 'hidden');
+    var nos = 0;
+    try { nos = document.querySelectorAll('*').length; } catch (e) { nos = 0; }
+    return { pronto: document.readyState, nos: nos, corpo_escondido: escondido };
+  }
+
   var elementos = [];
   var total = 0;
   var erro = '';
@@ -322,6 +332,7 @@ const SNIPPET_ALVOS = `(function (parametros) {
       fora: indice.fora,
       tapados: indice.tapados
     };
+    resposta.diagnostico = diagnosticoDaPagina();
   }
 
   return resposta;
