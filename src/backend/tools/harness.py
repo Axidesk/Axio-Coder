@@ -295,11 +295,22 @@ const importarProjeto = (rel) => import(__paraUrl(__juntar(process.cwd(), rel)))
 // Extrai do disco o corpo EXATO de uma funcao nomeada, pronto para new Function.
 // Inclui o 'async' quando existe (esquece-lo da um SyntaxError que nao aponta para
 // a causa) e equilibra chaves - nao distingue chaves dentro de strings.
+const __fechaOsParametros = (texto, inicio) => {
+    let nivel = 0;
+    for (let i = texto.indexOf("(", inicio); i >= 0 && i < texto.length; i++) {
+        if (texto[i] === "(") nivel++;
+        else if (texto[i] === ")" && --nivel === 0) return i;
+    }
+    return -1;
+};
+
 const __corpoDeFuncao = (texto, nome) => {
     let inicio = texto.indexOf("function " + nome + "(");
     if (inicio < 0) return "";
     if (texto.slice(inicio - 6, inicio) === "async ") inicio -= 6;
-    const abre = texto.indexOf("{", inicio);
+    const assinatura = __fechaOsParametros(texto, inicio);
+    if (assinatura < 0) return "";
+    const abre = texto.indexOf("{", assinatura);
     let nivel = 0;
     for (let i = abre; i < texto.length; i++) {
         if (texto[i] === "{") nivel++;
