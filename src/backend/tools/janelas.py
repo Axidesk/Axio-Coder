@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import struct
 import subprocess
 import time
 import unicodedata
@@ -71,6 +72,20 @@ RESPOSTAS_DE_AVISO = (
 _MODULO = None
 _RATO = None
 _TECLADO = None
+
+
+_CLIPBOARD = None
+
+
+def _area_de_transferencia():
+    """Os modulos da area de transferencia, com o import adiado (pywin32)."""
+    global _CLIPBOARD
+    if _CLIPBOARD is None:
+        import win32clipboard
+        import win32con
+
+        _CLIPBOARD = (win32clipboard, win32con)
+    return _CLIPBOARD
 
 
 def _desktop():
@@ -1802,6 +1817,47 @@ def _teclas_a_janela(janela, tecla, alvo_teclas):
     )
 
 
+def _por_na_area_de_transferencia(caminho):
+    """Deixa um FICHEIRO na area de transferencia do Windows (CF_HDROP) - o unico caminho para
+    o levar a outra sessao (Windows Sandbox, maquina virtual, RDP), onde um Ctrl+V o deposita
+    na pasta que a janela estiver a mostrar. A area de transferencia e partilhada entre as
+    sessoes; um caminho escrito como texto nao serve, porque a outra sessao nao o alcanca."""
+    win32clipboard, win32con = _area_de_transferencia()
+    lista = caminho + "\0\0"
+    cabecalho = struct.pack("<IiiII", 20, 0, 0, 0, 1)
+    win32clipboard.OpenClipboard()
+    try:
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(win32con.CF_HDROP, cabecalho + lista.encode("utf-16-le"))
+    finally:
+        win32clipboard.CloseClipboard()
+
+
+def _acao_colar_ficheiro(janela, ficheiro):
+    caminho = os.path.abspath(str(ficheiro or "").strip())
+    if not os.path.isfile(caminho):
+        return f"ERRO: nao encontrei o ficheiro {ficheiro!r} no disco."
+    _trazer_para_a_frente(janela)
+    time.sleep(0.3)
+    try:
+        _por_na_area_de_transferencia(caminho)
+    except Exception as exc:
+        return (
+            f"ERRO: nao consegui por o ficheiro na area de transferencia"
+            f" ({type(exc).__name__}: {exc})."
+        )
+    time.sleep(0.3)
+    _teclado().send_keys("^v")
+    time.sleep(1.2)
+    return (
+        f"Pus {os.path.basename(caminho)} na area de transferencia e colei-o com Ctrl+V na"
+        f" janela \"{_texto(janela)}\". A copia demora um instante (o ficheiro e grande) e cai"
+        " na pasta que essa janela estiver a mostrar - confirme com acao='print' que ele"
+        " apareceu, antes de contar com ele. Isto so vale entre sessoes que partilhem a area"
+        " de transferencia (no Windows Sandbox partilham por omissao)."
+    )
+
+
 def _passos_do_roteiro(passos):
     """Lista de gestos validada - cada passo e o mesmo que uma chamada isolada.
 
@@ -1957,8 +2013,8 @@ def _passos_em_serie(passos, janela):
     {
         "acao": {
             "tipo": "STRING", "obrig": True,
-            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "situacao", "print", "mover", "esperar", "roteiro"],
-            "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' fecha a janela, responde ao aviso que ela abrir (nunca a gravar nada) e confirma que desapareceu; 'situacao' diz o que ficou pendente - os avisos a espera de resposta e as janelas ainda abertas, no ecra todo ou num programa; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra).",
+            "enum": ["janelas", "abrir", "mapa", "elemento", "clicar", "escrever", "teclas", "arrastar", "fechar", "situacao", "print", "mover", "esperar", "roteiro", "colar_ficheiro"],
+            "desc": "'janelas' lista o que esta aberto (comece por aqui se nao souber o titulo); 'abrir' lanca um programa (o 'alvo' leva o nome ou o caminho) e devolve a janela dele; 'mapa' e o indice dos elementos operaveis da janela e das superficies de trabalho, marcadas [sup] (o canvas onde se desenha nao responde a gesto e por isso nunca entraria na lista de alvos - as [sup] dao a caixa dele, que e o que o 'arrastar' precisa); 'elemento' detalha um alvo; 'clicar', 'escrever' e 'teclas' agem sobre um alvo, e 'arrastar' desenha um traco por coordenadas do ecra (canvas, tela de desenho); 'fechar' fecha a janela, responde ao aviso que ela abrir (nunca a gravar nada) e confirma que desapareceu; 'situacao' diz o que ficou pendente - os avisos a espera de resposta e as janelas ainda abertas, no ecra todo ou num programa; 'print' entrega uma imagem dela (funciona com ela tapada por outra, porque le a superficie composta pelo sistema e nao o ecra); 'colar_ficheiro' leva um ficheiro do disco a outra sessao (Windows Sandbox, maquina virtual, RDP): poe-no na area de transferencia e cola-o com Ctrl+V na janela indicada - essa janela tem de estar a MOSTRAR a pasta onde o ficheiro deve cair.",
         },
         "janela": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -2000,13 +2056,17 @@ def _passos_em_serie(passos, janela):
             "tipo": "INTEGER", "obrig": False, "padrao": 0,
             "desc": "Em acao='print': desenha linhas de coordenadas a cada N px, cada uma rotulada com o valor daquele ponto na conta que o 'ponto' usa ('janela:x,y'). E o que deixa LER uma posicao na imagem e passa-la ao gesto tal e qual - escolha a medida que interessa (32 num jogo de tiles, 50 ou 100 num painel). 0 nao desenha nada.",
         },
+        "ficheiro": {
+            "tipo": "STRING", "obrig": False, "padrao": "",
+            "desc": "So em acao='colar_ficheiro': o caminho, no disco desta maquina, do ficheiro a levar para a outra sessao.",
+        },
         "ampliar": {
             "tipo": "INTEGER", "obrig": False, "padrao": 1,
             "desc": "Em acao='print': amplia a imagem N vezes por pixels intactos (sem inventar detalhe), para ler de perto um recorte pequeno - um slot de inventario, uma cota, um icone. Rende com 'regiao' pequena; ampliar a janela toda gasta o mesmo e nao acrescenta nada.",
         },
     },
 )
-def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0, botao="", grelha=0, ampliar=1):
+def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", ponto="", passos="", segundos=0, botao="", grelha=0, ampliar=1, ficheiro=""):
     emit_event("executing", function=f"Janelas nativas: {acao}")
     try:
         _desktop()
@@ -2070,6 +2130,9 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
         return _acao_print(janela_escolhida, regiao, alvo, grelha, ampliar)
     if acao == "mover":
         return _acao_mover(janela_escolhida, regiao)
+
+    if acao == "colar_ficheiro":
+        return _acao_colar_ficheiro(janela_escolhida, ficheiro)
 
     if acao == "teclas" and not str(alvo or "").strip():
         if not tecla:
