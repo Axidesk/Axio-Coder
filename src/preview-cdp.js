@@ -901,11 +901,19 @@ function textoDoArgumento(arg) {
 
 function descreverExcecao(detalhes) {
   if (!detalhes) return 'A pagina devolveu um erro sem descricao.';
-  const excecao = detalhes.exception || {};
-  const texto = String(detalhes.text || excecao.description || excecao.value || 'Erro na pagina.');
+  const texto = textoDaExcecao(detalhes) || 'Erro na pagina.';
   const linha = Number(detalhes.lineNumber);
   const onde = detalhes.url ? ` (${detalhes.url}${Number.isFinite(linha) && linha >= 0 ? ':' + (linha + 1) : ''})` : '';
-  return texto.split('\n')[0] + onde;
+  return texto + onde;
+}
+
+function textoDaExcecao(detalhes) {
+  const excecao = (detalhes && detalhes.exception) || {};
+  const candidatos = [excecao.description, excecao.value, detalhes && detalhes.text]
+    .map(function (t) { return String(t == null ? '' : t).trim(); })
+    .filter(Boolean);
+  const escolhido = candidatos.find(function (t) { return !/^uncaught\.?$/i.test(t); });
+  return (escolhido || candidatos[0] || '').split('\n')[0];
 }
 
 function guardarNaLista(lista, entrada, teto) {
@@ -1005,7 +1013,7 @@ function aoMensagemDoDepurador(depurador, metodo, params, wc) {
     registarEntrada({
       nivel: 'erro',
       origem: 'excecao',
-      texto: String(detalhes.text || excecao.description || '').slice(0, TETO_TEXTO_ENTRADA),
+      texto: textoDaExcecao(detalhes).slice(0, TETO_TEXTO_ENTRADA),
       ficheiro: String(detalhes.url || excecao.fileName || ''),
       linha: Number.isFinite(linha) && linha >= 0 ? linha + 1 : 0,
       quando: Date.now()
