@@ -484,6 +484,7 @@ _DOM_FALSO_JS = r'''
 //   //   Documento, Texto, instalar, remover   (NAO existe dom.createElement)
 //   dom.el("div",{id:"zona",class:"term-cards",texto:"oi",dataset:{pid:"p1"}})
 //   dom.porId("zona")   dom.sel("#a .b")   dom.selTodos(".card")
+//   dom.selTodos(raiz, ".card")   // com 2 argumentos procura DENTRO desse no
 //   dom.medir(el,{top:40,height:660,scrollHeight:2000})   // rect calculado no pedido
 //   dom.estilo(el,{color:"#fff"})                          // getComputedStyle
 //   dom.disparar("click",el)      // cria o evento E entrega-o (corre os listeners)
@@ -1600,8 +1601,9 @@ const criarDomFalso = (opcoes) => {
         el,
         criar: (tag, props, ...filhos) => el(tag, props, ...filhos),
         porId: (id) => doc.getElementById(id),
-        sel: (seletor) => doc.querySelector(seletor),
-        selTodos: (seletor) => doc.querySelectorAll(seletor),
+        sel: (alvo, seletor) => (seletor === undefined ? doc.querySelector(alvo) : alvo.querySelector(seletor)),
+        selTodos: (alvo, seletor) =>
+            seletor === undefined ? doc.querySelectorAll(alvo) : alvo.querySelectorAll(seletor),
         medir,
         estilo,
         evento,
@@ -1926,7 +1928,8 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
     "chamar da ReferenceError) e o valor devolvido traz el, sel, selTodos, porId, disparar, estilo, "
     "medir, agora e aguardar - document.querySelector/querySelectorAll funcionam, por isso NAO "
     "escreva um mini-DOM a mao para testar uma funcao que navega o DOM: monte a cena com dom.el(...) "
-    "e navegue-a com dom.sel/dom.selTodos. "
+    "e navegue-a com dom.sel/dom.selTodos - com UM argumento procuram no documento inteiro, com DOIS "
+    "(dom.selTodos(raiz, '.classe')) procuram dentro desse no. "
     "Antes de importar um modulo grande do frontend so para testar uma funcao, saiba que o state.js "
     "le o DOM ao importar: se rebentar, extraia o texto da funcao do disco e avalie-a isolada. "
     "PARA EXTRAIR UMA FUNCAO REAL DO DISCO o cabecalho ja traz o auxiliar: funcaoDoDisco('src/x.js', "
