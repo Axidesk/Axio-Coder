@@ -819,18 +819,22 @@ ESPERA_MORTE = 0.25
 TENTATIVAS_MORTE = 4
 
 
-def parar_processo_reg(pid, reg):
+def parar_processo_reg(pid, reg, arvore=True):
     """Marca o processo como parado, encerra a arvore e devolve quem morreu e quem escapou."""
     popen = reg.get("popen")
     alvos = []
     if popen is not None and _processo_vivo(reg):
         alvos = arvore_processos.arvore(getattr(popen, "pid", 0))
     reg["status"] = "parado"
+    raiz = getattr(popen, "pid", 0) if popen is not None else 0
     if popen is not None:
-        matar_arvore(popen)
-    sobraram = _encerrar_sobreviventes(alvos)
+        if arvore:
+            matar_arvore(popen)
+        elif raiz:
+            _matar_pid(raiz)
+    sobraram = _encerrar_sobreviventes(alvos) if arvore else _filhos_de_pe(alvos, raiz)
     emit_event("process_finished", pid=pid, exit_code=None, status="parado")
-    return {"alvos": alvos, "sobraram": sobraram}
+    return {"alvos": alvos, "sobraram": sobraram, "arvore": arvore}
 
 
 def _esperar_morrer(pids):
@@ -865,6 +869,13 @@ def _encerrar_sobreviventes(alvos):
     for item in sobraram:
         _matar_pid(item["pid"])
     return _esperar_morrer([item["pid"] for item in sobraram])
+
+def _filhos_de_pe(alvos, raiz):
+    """Reconta, sem matar nada, os descendentes que ficaram de pe depois de a raiz sair."""
+    pids = [item["pid"] for item in alvos if item.get("existe") and item.get("pid") != raiz]
+    if not pids:
+        return []
+    return _esperar_morrer(pids)
 
 def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompanhar=False, stdin_pipe=False,
                      caminhos_extra=None, rotulo=None, controles=None, ambiente=None):
@@ -947,13 +958,14 @@ def escrever_stdin_processo(pid, texto, timeout=2.0):
 
 @register(
     "tool_parar_processo",
-    'Para (mata) um processo em segundo plano pelo pid, com a arvore inteira. Use para encerrar servidores e processos longos antes de reinicia-los. Obtenha os pids em /api/processos. A resposta PROVA o que aconteceu: diz quantos processos a arvore tinha, quais morreram e se algum sobreviveu (com pid e nome) - sao os que seguram a porta que voce acha livre.',
+    'Para (mata) um processo em segundo plano pelo pid, com a arvore inteira. Use para encerrar servidores e processos longos antes de reinicia-los. Obtenha os pids em /api/processos. A resposta PROVA o que aconteceu: diz quantos processos a arvore tinha, quais morreram e se algum sobreviveu (com pid e nome) - sao os que seguram a porta que voce acha livre. Com arvore=false mata SO o processo pedido e deixa os filhos de pe - e o caminho para libertar um executavel que esta preso (um painel que segura o proprio exe para recompilar) sem derrubar o que ele lancou.',
     {
         'pid': {"tipo": "STRING", "desc": 'Identificador do processo (ex: proc_1)', "obrig": True, "padrao": ""},
+        'arvore': {"tipo": "BOOLEAN", "desc": 'True (padrao) mata a arvore inteira; false mata so este processo e deixa os filhos a correr (continuam agrupados na junta do Axio, logo fecham com ele)', "padrao": True},
     },
     disponivel="edicao",
 )
-def tool_parar_processo(pid: str):
+def tool_parar_processo(pid: str, arvore: bool = True):
     emit_event("executing", function="Parando processo")
     pid = (pid or "").strip()
     if not pid:
@@ -961,7 +973,7 @@ def tool_parar_processo(pid: str):
     reg = estado.get("processos", {}).get(pid)
     if reg is None:
         return f"ERRO: processo '{pid}' nao encontrado. Liste os pids em /api/processos."
-    return _texto_da_paragem(pid, parar_processo_reg(pid, reg))
+    return _texto_da_paragem(pid, parar_processo_reg(pid, reg, arvore))
 
 
 def _texto_da_paragem(pid, relato):
@@ -969,21 +981,34 @@ def _texto_da_paragem(pid, relato):
     vivos = [item for item in (relato.get("alvos") or []) if item.get("existe")]
     sobraram = relato.get("sobraram") or []
     escaparam = {item["pid"] for item in sobraram}
+    inteira = relato.get("arvore", True)
     if not vivos:
         return f"Processo {pid} parado: a arvore ja estava morta quando o pedido chegou."
-    linhas = [
-        f"Processo {pid} parado: a arvore tinha {len(vivos)} processo(s), "
-        f"morreram {len(vivos) - len(escaparam)}."
-    ]
+    if inteira:
+        linhas = [
+            f"Processo {pid} parado: a arvore tinha {len(vivos)} processo(s), "
+            f"morreram {len(vivos) - len(escaparam)}."
+        ]
+    else:
+        linhas = [
+            f"Processo {pid} parado sem a arvore: morreu so ele, "
+            f"{len(escaparam)} filho(s) ficaram de pe."
+        ]
     for item in sorted(vivos, key=lambda i: (i["nivel"], i["pid"])):
         marca = "SOBREVIVEU" if item["pid"] in escaparam else "morto"
         linhas.append(f"  {'  ' * item['nivel']}{item['pid']} {item['nome'] or '?'} [{marca}]")
     if sobraram:
         quem = ", ".join(f"{item['pid']} {item['nome'] or '?'}" for item in sobraram)
-        linhas.append(
-            f"AVISO: {quem} continua(m) vivo(s) - sem permissao para matar ou fora do alcance da "
-            "junta. Confirme com tool_listar_processos antes de arrancar outro igual."
-        )
+        if inteira:
+            linhas.append(
+                f"AVISO: {quem} continua(m) vivo(s) - sem permissao para matar ou fora do alcance da "
+                "junta. Confirme com tool_listar_processos antes de arrancar outro igual."
+            )
+        else:
+            linhas.append(
+                f"Deixados de pe de proposito (arvore=false): {quem}. Continuam agrupados na junta "
+                "do Axio, logo fecham com ele."
+            )
     return "\n".join(linhas)
 
 @register(
