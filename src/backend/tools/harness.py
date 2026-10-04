@@ -757,6 +757,12 @@ const __domEstilo = (dono) => {
     });
 };
 
+const __domRefletir = (dono, nome, valor) => {
+    const texto = String(valor == null ? "" : valor);
+    if (texto) dono.setAttribute(nome, texto);
+    else dono.removeAttribute(nome);
+};
+
 const __domDataset = (dono) => new Proxy({}, {
     get(_t, prop) {
         if (typeof prop !== "string") return undefined;
@@ -805,9 +811,6 @@ class __DomElemento extends __DomNo {
         this.disabled = false;
         this.hidden = false;
         this.readOnly = false;
-        this.title = "";
-        this.placeholder = "";
-        this.href = "";
         this.selectionStart = 0;
         this.selectionEnd = 0;
         this._scrollTop = 0;
@@ -823,6 +826,12 @@ class __DomElemento extends __DomNo {
     }
     get id() { return this._id; }
     set id(valor) { this._id = String(valor == null ? "" : valor); }
+    get title() { return this.getAttribute("title") || ""; }
+    set title(valor) { __domRefletir(this, "title", valor); }
+    get placeholder() { return this.getAttribute("placeholder") || ""; }
+    set placeholder(valor) { __domRefletir(this, "placeholder", valor); }
+    get href() { return this.getAttribute("href") || ""; }
+    set href(valor) { __domRefletir(this, "href", valor); }
     get className() { return this.classList.value; }
     set className(valor) {
         this._classeDefinida = true;
