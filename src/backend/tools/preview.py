@@ -155,7 +155,11 @@ def _passos_do_roteiro(passos):
         try:
             bruto = json.loads(escrito)
         except Exception as exc:
-            return None, f"'passos' nao e JSON valido ({exc})"
+            return None, (
+                f"'passos' nao e JSON valido ({exc}); cada gesto e um objeto com 'acao' e os seus"
+                " argumentos, dentro de uma lista, por exemplo: "
+                '[{"acao":"clicar","seletor":"#btn-x"},{"acao":"escrever","seletor":"#campo","texto":"oi"}]'
+            )
     if not isinstance(bruto, list) or not bruto:
         return None, "'passos' tem de ser uma lista com pelo menos um gesto"
     if len(bruto) > LIMITE_PASSOS_ROTEIRO:
