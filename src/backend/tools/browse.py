@@ -3,6 +3,7 @@
 Verbatim de tools/filesystem.py; importa-lo e o que regista as suas 3 tools e
 a pasta mostrada ao modelo passa a ser a que este modulo devolve.
 """
+import fnmatch
 import os
 import time
 
@@ -132,6 +133,93 @@ def tool_listar_arvore(caminho_relativo="", profundidade_max=4, max_entradas=400
 
 
 @register(
+    "tool_localizar_arquivos",
+    "Acha um arquivo ou uma pasta pelo NOME, no projeto inteiro, sem navegar pasta a pasta: aceita um nome ('Tibia.url', 'Tibia.exe') ou varios padroes com curinga ('*.spr', 'world.otbm'), um por linha. Devolve o caminho relativo com tamanho e data, agrupado por padrao. Use isto SEMPRE que precisar do caminho exato de algo: adivinhar o caminho a partir da estrutura lida da 'nao existe' em arquivo que esta la, e dois arquivos com o mesmo nome (o cliente do jogo e o cliente do instalador) so se distinguem pela pasta onde vivem e pelo tamanho.",
+    {
+        'nome': {"tipo": "STRING", "obrig": True, "padrao": "", "desc": "Um nome ou padrao, ou varios separados por quebra de linha (ex: 'Tibia.url\\n*.spr'). Sem curinga, casa por trecho do nome, sem distinguir maiusculas nem acentos."},
+        'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a procura a uma subpasta do projeto (ex: 'Tools/Compilador')."},
+        'excluir': {"tipo": "STRING", "padrao": "", "desc": "Uma pasta por linha (ex: 'libs') para a varredura ignorar PELO NOME, em qualquer nivel da arvore."},
+        'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist) - e o caminho para achar um arquivo dentro de uma dependencia instalada."},
+        'limite': {"tipo": "INTEGER", "padrao": 60, "desc": "Teto de resultados por padrao (padrao 60)."},
+    },
+)
+def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", incluir_ignoradas: bool = False, limite: int = 60):
+    padroes = [p.strip().strip("/\\") for p in str(nome).splitlines() if p.strip()]
+    if not padroes:
+        return "ERRO: indique pelo menos um nome ou padrao (ex: 'Tibia.url' ou '*.spr')."
+    alvos = [normalizar_unicode(p).lower() for p in padroes]
+    emit_event("executing", function="Procurando: " + ", ".join(padroes))
+
+    raiz_projeto = estado["pasta_raiz"]
+    raiz_busca, erro = _raiz_de_busca(pasta)
+    if erro:
+        return erro
+    if not os.path.isdir(raiz_busca):
+        return f"ERRO: '{pasta}' nao e uma pasta do projeto."
+
+    excluidas = {linha.strip().strip("/\\").lower() for linha in str(excluir).splitlines() if linha.strip()}
+    teto = max(1, int(limite or 60))
+    achados = [[] for _ in padroes]
+    ficheiros_vistos = 0
+    incompleta = False
+    tempo_inicio = time.time()
+
+    def casa(texto, alvo):
+        if any(caractere in alvo for caractere in "*?["):
+            return fnmatch.fnmatch(texto, alvo)
+        return alvo in texto
+
+    for root, dirs, files in os.walk(raiz_busca):
+        dirs[:] = [d for d in dirs if d != ".axio"]
+        if not incluir_ignoradas:
+            dirs[:] = [d for d in dirs if d not in PASTAS_FORA_DA_BUSCA and not d.startswith(".")]
+        if excluidas:
+            dirs[:] = [d for d in dirs if d.lower() not in excluidas]
+        if all(len(lista) >= teto for lista in achados):
+            incompleta = True
+            break
+
+        relativo = os.path.relpath(root, raiz_projeto)
+        prefixo = "" if relativo == "." else relativo + os.sep
+        for nome_pasta in dirs:
+            texto = normalizar_unicode(nome_pasta).lower()
+            for indice, alvo in enumerate(alvos):
+                if len(achados[indice]) < teto and casa(texto, alvo):
+                    achados[indice].append(prefixo + nome_pasta + os.sep)
+        ficheiros_vistos += len(files)
+        for nome_ficheiro in files:
+            texto = normalizar_unicode(nome_ficheiro).lower()
+            for indice, alvo in enumerate(alvos):
+                if len(achados[indice]) < teto and casa(texto, alvo):
+                    achados[indice].append(prefixo + nome_ficheiro)
+        if time.time() - tempo_inicio > 20:
+            incompleta = True
+            break
+
+    linhas = []
+    for indice, padrao in enumerate(padroes):
+        lista = achados[indice]
+        linhas.append(f"{padrao}: nenhum" if not lista else f"{padrao} ({len(lista)}):")
+        for item in sorted(lista):
+            caminho = os.path.join(raiz_projeto, item.rstrip("/\\"))
+            try:
+                st = os.stat(caminho)
+            except OSError:
+                linhas.append(f"    {item}")
+                continue
+            quando = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+            linhas.append(f"{quando}  {_formato_tamanho(st.st_size):>9}  {item}")
+
+    aviso = f"{ficheiros_vistos} arquivo(s) varrido(s)"
+    if incompleta:
+        aviso += (f" - VARREDURA PARADA no teto de {teto} resultado(s) por padrao (ou nos 20s): um padrao "
+                  "sem resultados aqui NAO prova que nao existe; repita com 'pasta' apontado a subpasta certa.")
+    if excluidas:
+        aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
+    return "\n".join([aviso, ""] + linhas)
+
+
+@register(
     "tool_pesquisar_no_projeto",
     'Busca ocorrências de string no código (compara com normalização Unicode NFC — acentos compostos e decompostos casam automaticamente). PROIBIDO pesquisar termos de leigo passados pelo humano (Ex: porta, alisar, camera, parede etc). Se o usuário citar, primeiro mapeie o código ou leia as assinaturas para descobrir o nome correto e evitar perder tempo. Passa o parametro revisao (ex: HEAD) para procurar na versao do git em vez do disco. Ignora por predefinicao node_modules, .venv, .git e pastas afins: ligue incluir_ignoradas para procurar tambem la dentro (tipagens e codigo das dependencias instaladas). Aceita VARIOS termos de uma vez, um por linha no campo termo: o projeto e varrido UMA so vez e a resposta sai agrupada por termo - use-o para investigar varios nomes correlacionados sem repetir a varredura. Com excluir (uma pasta por linha, ex: libs) a varredura ignora essas pastas PELO NOME em qualquer nivel - e o caminho para arvores de terceiros (boost, vendor) que fazem os 10s esgotarem antes de a busca chegar ao codigo do projeto.',
     {
@@ -164,23 +252,20 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
     excluidas = {linha.strip().strip("/\\").lower() for linha in str(excluir).splitlines() if linha.strip()}
 
     raiz_projeto = estado["pasta_raiz"]
-    raiz_busca = raiz_projeto
-    if pasta and pasta.strip():
-        candidata = os.path.abspath(os.path.join(raiz_projeto, pasta.strip().strip("/\\")))
-        if not candidata.startswith(os.path.abspath(raiz_projeto)):
-            return f"ERRO: '{pasta}' esta fora do projeto."
-        if os.path.isfile(candidata):
-            if os.path.getsize(candidata) > LIMITE_BYTES_LIDOS:
-                return f"ERRO: '{pasta}' tem mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB - nao vale a pena procura-lo como texto."
-            with open(candidata, "r", encoding="utf-8", errors="ignore") as ficheiro:
-                linhas_do_ficheiro = ficheiro.readlines()
-            achados = [[f"{pasta.strip()} (Linha {i + 1}): {_excerto(linha, p)}"
-                        for i, linha in enumerate(linhas_do_ficheiro)
-                        if p in normalizar_unicode(linha)][:100] for p in padroes]
-            return _formatar_busca(termos, achados, f" em '{pasta.strip()}'")[:10000]
-        if not os.path.isdir(candidata):
-            return f"ERRO: '{pasta}' nao e uma pasta nem um ficheiro do projeto."
-        raiz_busca = candidata
+    raiz_busca, erro = _raiz_de_busca(pasta)
+    if erro:
+        return erro
+    if os.path.isfile(raiz_busca):
+        if os.path.getsize(raiz_busca) > LIMITE_BYTES_LIDOS:
+            return f"ERRO: '{pasta}' tem mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB - nao vale a pena procura-lo como texto."
+        with open(raiz_busca, "r", encoding="utf-8", errors="ignore") as ficheiro:
+            linhas_do_ficheiro = ficheiro.readlines()
+        achados = [[f"{pasta.strip()} (Linha {i + 1}): {_excerto(linha, p)}"
+                    for i, linha in enumerate(linhas_do_ficheiro)
+                    if p in normalizar_unicode(linha)][:100] for p in padroes]
+        return _formatar_busca(termos, achados, f" em '{pasta.strip()}'")[:10000]
+    if not os.path.isdir(raiz_busca):
+        return f"ERRO: '{pasta}' nao e uma pasta nem um ficheiro do projeto."
 
     ignorados_por_tamanho = 0
 
@@ -255,3 +340,13 @@ def _excerto(linha, padrao):
     inicio = max(0, posicao - LIMITE_EXCERTO // 2)
     fim = inicio + LIMITE_EXCERTO
     return ("... " if inicio else "") + texto[inicio:fim] + (" ..." if fim < len(texto) else "")
+
+
+def _raiz_de_busca(pasta):
+    raiz_projeto = estado["pasta_raiz"]
+    if not pasta or not pasta.strip():
+        return raiz_projeto, ""
+    candidata = os.path.abspath(os.path.join(raiz_projeto, pasta.strip().strip("/\\")))
+    if not candidata.startswith(os.path.abspath(raiz_projeto)):
+        return "", f"ERRO: '{pasta}' esta fora do projeto."
+    return candidata, ""
