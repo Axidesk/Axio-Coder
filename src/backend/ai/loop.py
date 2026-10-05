@@ -57,6 +57,7 @@ from src.backend.tools import (
     publicacao,
     py_imports,
     read,
+    recentes,
     rede,
     refactor,
     referencia,
