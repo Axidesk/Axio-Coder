@@ -169,6 +169,89 @@ def _inspecionar(sessao, onde, js, depois):
     return "\n".join(linhas)
 
 
+_PRINT_DO_ALVO = """
+(() => {
+    const alvo = document.querySelector(%s);
+    if (!alvo) return '';
+    const caixa = alvo.getBoundingClientRect();
+    return JSON.stringify({
+        x: caixa.left + window.scrollX,
+        y: caixa.top + window.scrollY,
+        width: caixa.width,
+        height: caixa.height
+    });
+})()
+"""
+
+
+def _recorte_pedido(sessao, pedido):
+    texto = pedido.strip()
+    if texto.lower() in ("tudo", "ecra", "tela"):
+        return None
+    partes = texto.split(",")
+    if len(partes) == 4:
+        try:
+            x, y, largura, altura = (float(valor) for valor in partes)
+        except ValueError:
+            raise ValueError(
+                "a regiao tem de ser 'x,y,largura,altura' em numeros, um seletor CSS ou 'tudo'"
+            )
+        if largura < 1 or altura < 1:
+            raise ValueError("a regiao precisa de largura e altura maiores que zero")
+        return {"x": x, "y": y, "width": largura, "height": altura, "scale": 1}
+    try:
+        caixa = sessao.avaliar(_PRINT_DO_ALVO % json.dumps(texto))
+    except RuntimeError as falha:
+        raise ValueError(f"o seletor '{texto}' nao serve nesta pagina ({falha})") from falha
+    if not caixa:
+        raise ValueError(f"nao encontrei nenhum elemento que responda a '{texto}' nesta pagina")
+    recorte = json.loads(caixa)
+    if recorte["width"] < 1 or recorte["height"] < 1:
+        raise ValueError(
+            f"'{texto}' esta escondido ou sem tamanho (0x0): so da para fotografar o que esta "
+            "desenhado - abra a seccao que o esconde e repita"
+        )
+    return {**recorte, "scale": 1}
+
+
+def _pedir_o_print(sessao, recorte):
+    pedido = {"format": "png", "captureBeyondViewport": True}
+    if recorte:
+        pedido["clip"] = recorte
+    try:
+        return sessao.falar("Page.captureScreenshot", **pedido)
+    except RuntimeError:
+        sessao.falar("Page.enable")
+        return sessao.falar("Page.captureScreenshot", **pedido)
+
+
+def _print_da_pagina(sessao, onde, pedido):
+    try:
+        recorte = _recorte_pedido(sessao, pedido)
+    except ValueError as falha:
+        return f"ERRO: {falha}."
+    try:
+        resposta = _pedir_o_print(sessao, recorte)
+    except RuntimeError as falha:
+        return f"ERRO: a pagina recusou o print ({falha})."
+    dados = resposta.get("data")
+    if not dados:
+        return "ERRO: a pagina respondeu ao print sem imagem nenhuma."
+    medida = (
+        f"{round(recorte['width'])}x{round(recorte['height'])} px"
+        if recorte
+        else "a janela inteira da pagina"
+    )
+    return {
+        "texto": (
+            f"Print de {onde} ({medida}), tirado pelo proprio motor da pagina e nao pela janela: "
+            "vem sem moldura, sem deslocamento e sem depender de a janela estar a vista. A imagem "
+            "segue com esta resposta - olhe para ela antes de concluir."
+        ),
+        "imagem": {"base64": dados, "mime": "image/png", "rotulo": f"[Print da pagina: {onde}]"},
+    }
+
+
 _TOKENS_DO_TEMA = """
 (() => {
     const raiz = getComputedStyle(document.documentElement);
@@ -213,7 +296,10 @@ def _atalho(expressao):
     "segundo plano o Chromium para o requestAnimationFrame e a medicao nao arranca - nesse caso a "
     "ferramenta di-lo em vez de inventar um numero. Com 'medir'=False nao ha contagem nenhuma: "
     "corre 'js' e 'depois' e devolve o que lerem, ate com a janela em segundo plano - e o caminho "
-    "para INSPECIONAR uma app de fora (um Tauri, um Electron, um Chrome) sem lhe roubar o foco.",
+    "para INSPECIONAR uma app de fora (um Tauri, um Electron, um Chrome) sem lhe roubar o foco. "
+    "Com 'captura' FOTOGRAFA a pagina pelo motor dela e entrega a imagem (regiao em coordenadas "
+    "da pagina, seletor CSS ou 'tudo') - a unica via que ve a pagina inteira, sem moldura, sem "
+    "deslocamento e sem a janela precisar de estar a vista.",
     {
         "porta": {
             "tipo": "INTEGER",
@@ -250,10 +336,16 @@ def _atalho(expressao):
             "desc": "True (padrao) mede o ritmo de desenho. False conta zero quadros: corre 'js' e 'depois' e devolve o que lerem - para LER o estado de uma janela de fora sem a incomodar.",
             "padrao": True,
         },
+        "captura": {
+            "tipo": "STRING",
+            "desc": "Fotografa a pagina de fora e entrega a imagem, pelo proprio motor dela: aceita 'x,y,largura,altura' em coordenadas DA PAGINA (nao da janela), um seletor CSS (fotografa o elemento, mesmo fora do ecra) ou 'tudo'. E o caminho para OLHAR para uma app Chromium de fora sem adivinhar o deslocamento da moldura da janela, sem depender de a janela estar a vista e sem as outras janelas por cima. Vazio nao fotografa nada.",
+            "padrao": "",
+        },
     },
 )
 def tool_medir_fluidez(
-    porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois="", medir=True
+    porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois="", medir=True,
+    captura=""
 ):
     js = _atalho(js)
     depois = _atalho(depois)
@@ -278,7 +370,9 @@ def tool_medir_fluidez(
     espera = (total / 1000.0) + ESPERA_EXTRA
     if js.strip():
         espera = max(espera, ESPERA_DA_EXPRESSAO)
-    if medir:
+    if captura.strip():
+        emit_event("executing", function="A fotografar a pagina de fora")
+    elif medir:
         emit_event("executing", function=f"A medir o ritmo de desenho por {total} ms")
     else:
         emit_event("executing", function="A ler o estado da janela")
@@ -298,6 +392,8 @@ def tool_medir_fluidez(
     ecos = []
     finais = []
     try:
+        if captura.strip():
+            return _print_da_pagina(sessao, _onde_estou(pagina), captura)
         if not medir:
             return _inspecionar(sessao, _onde_estou(pagina), js, depois)
         if js.strip():

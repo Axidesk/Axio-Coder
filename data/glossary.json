@@ -804,10 +804,10 @@
       "descricao": "Contrato duro: comando irreversivel (git reset --hard, del /s, drop table) e recusado antes de tudo, e cada ferramenta com equivalente nativo e recusada com a dica da ferramenta. Fora isso vale uma lista fixa de executaveis (compiladores, gestores de pacotes, linters, git, midia, rede/sistema) MAIS qualquer .exe que viva DENTRO da pasta do projeto aberto - e o programa que o proprio projeto compilou, e poder arranca-lo e o que permite ler o arranque dele. Um caminho absoluto com espacos continua a ter de vir entre aspas, senao o tokenizador parte-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 225,
+        "linha": 226,
         "conferido": [
-          1791157485.691,
-          62696
+          1791238896.341,
+          63398
         ]
       }
     },
@@ -2327,10 +2327,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 384,
+        "linha": 385,
         "conferido": [
-          1791157485.691,
-          62696
+          1791238896.341,
+          63398
         ]
       }
     },
@@ -4671,10 +4671,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 412,
+        "linha": 413,
         "conferido": [
-          1791157485.691,
-          62696
+          1791238896.341,
+          63398
         ]
       }
     },
@@ -6673,7 +6673,11 @@
       "descricao": "Tira a linha do resumo do que fica a vista no chat e guarda-a para o contexto da rodada seguinte.",
       "localizacao": {
         "arquivo": "src/backend/ai/loop.py",
-        "linha": 292
+        "linha": 292,
+        "conferido": [
+          1791238929.067,
+          32231
+        ]
       }
     }
   ]
