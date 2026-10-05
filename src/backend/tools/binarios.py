@@ -23,6 +23,7 @@ LIMITE_DE_FUNCOES = 600
 LIMITE_DE_EXPORTADAS = 60000
 MAXIMO_DE_LEITURA = 64 * 1024 * 1024
 PREFIXOS_DE_CONJUNTO = ("api-ms-win-", "ext-ms-win-")
+LIMITE_NA_LISTA = 40
 
 
 @register(
@@ -32,7 +33,8 @@ PREFIXOS_DE_CONJUNTO = ("api-ms-win-", "ext-ms-win-")
     "serve?'. Le a tabela de importacao do proprio ficheiro (PE) sem o executar e sem carregar "
     "nada: diz o que ele pede, onde cada biblioteca existe (pasta do programa, System32, "
     "SysWOW64, PATH) e o que nao esta em lado nenhum. Com 'funcoes', diz tambem cada funcao "
-    "pedida e quais dessas a biblioteca nao exporta.",
+    "pedida e quais dessas a biblioteca nao exporta; com 'filtro', mostra so as funcoes que "
+    "contem esse texto - e' a resposta a 'este programa importa o FindWindow?'.",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -42,12 +44,17 @@ PREFIXOS_DE_CONJUNTO = ("api-ms-win-", "ext-ms-win-")
         },
         "funcoes": {
             "tipo": "BOOLEAN",
-            "desc": "Lista tambem as funcoes pedidas a cada biblioteca e acusa as que ela nao exporta.",
+            "desc": "Lista as funcoes pedidas a cada biblioteca (ate 40 por biblioteca) e acusa as que ela nao exporta.",
             "padrao": False,
+        },
+        "filtro": {
+            "tipo": "STRING",
+            "padrao": "",
+            "desc": "Parte do nome de uma funcao, sem maiusculas (ex: 'mutex', 'window'): mostra so as que o contem, sem limite.",
         },
     },
 )
-def tool_dependencias_do_programa(caminho_relativo, funcoes=False):
+def tool_dependencias_do_programa(caminho_relativo, funcoes=False, filtro=""):
     emit_event("executing", function=f"Dependencias de: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -82,10 +89,10 @@ def tool_dependencias_do_programa(caminho_relativo, funcoes=False):
             conjuntos[nome] = pedidas[nome]
         else:
             faltam.append(nome)
-    return _relato(caminho_relativo, bruto, bits, pedidas, achadas, faltam, conjuntos, funcoes)
+    return _relato(caminho_relativo, bruto, bits, pedidas, achadas, faltam, conjuntos, funcoes, filtro)
 
 
-def _relato(caminho, bruto, bits, pedidas, achadas, faltam, conjuntos, com_funcoes):
+def _relato(caminho, bruto, bits, pedidas, achadas, faltam, conjuntos, com_funcoes, filtro=""):
     linhas = [
         f"'{caminho}' ({bits} bits, {len(bruto) / 1024 / 1024:.2f} MB) pede {len(pedidas)}"
         f" biblioteca(s): {len(pedidas) - len(faltam) - len(conjuntos)} encontrada(s) no disco,"
@@ -129,7 +136,7 @@ def _relato(caminho, bruto, bits, pedidas, achadas, faltam, conjuntos, com_funco
             " como EM FALTA - procure a versao da arquitetura certa."
         )
     if com_funcoes:
-        linhas.extend(_relato_das_funcoes(pedidas, achadas))
+        linhas.extend(_relato_das_funcoes(pedidas, achadas, filtro))
     return "\n".join(linhas)
 
 
@@ -163,11 +170,13 @@ def _de_outra_arquitetura(achadas, bits):
     return outras
 
 
-def _relato_das_funcoes(pedidas, achadas):
+def _relato_das_funcoes(pedidas, achadas, filtro=""):
     """As funcoes pedidas a cada biblioteca e as que ela nao exporta."""
     por_nome = {nome.lower(): caminho for lista in achadas.values() for nome, caminho in lista}
+    procurado = (filtro or "").strip().lower()
     linhas = ["", "FUNCOES PEDIDAS A CADA BIBLIOTECA:"]
     sem_exportacao = []
+    quantas = 0
     for nome in sorted(pedidas, key=str.lower):
         funcoes = pedidas[nome]
         if not funcoes:
@@ -175,15 +184,25 @@ def _relato_das_funcoes(pedidas, achadas):
         caminho = por_nome.get(nome.lower())
         if not caminho:
             continue
-        exportadas = _exportadas(caminho)
-        conta = f"  {nome}: {len(funcoes)}"
-        if exportadas is None:
-            linhas.append(conta + " (nao consegui ler a tabela de exportacao)")
+        escolhidas = [funcao for funcao in funcoes if not procurado or procurado in funcao.lower()]
+        if not escolhidas:
             continue
-        faltam = [funcao for funcao in funcoes if not funcao.startswith("#") and funcao not in exportadas]
+        quantas += len(escolhidas)
+        exportadas = _exportadas(caminho)
+        conta = f"  {nome}: {len(escolhidas)}" + (f" de {len(funcoes)}" if procurado else "")
+        faltam = ([] if exportadas is None else
+                  [funcao for funcao in escolhidas if not funcao.startswith("#") and funcao not in exportadas])
         linhas.append(conta + ("" if not faltam else f", NAO exporta {len(faltam)}"))
+        linhas.extend(f"      {funcao}" for funcao in sorted(escolhidas)[:LIMITE_NA_LISTA])
+        if len(escolhidas) > LIMITE_NA_LISTA:
+            linhas.append(f"      ... e mais {len(escolhidas) - LIMITE_NA_LISTA} (veem-se com o filtro)")
+        if exportadas is None:
+            linhas.append("      (nao consegui ler a tabela de exportacao desta biblioteca)")
         if faltam:
             sem_exportacao.append((nome, faltam, caminho))
+    if not quantas:
+        linhas.append(f"  Nenhuma funcao pedida contem '{filtro}'.")
+        return linhas
     if not sem_exportacao:
         linhas.append("Cada biblioteca encontrada exporta tudo o que o programa lhe pede.")
         return linhas
