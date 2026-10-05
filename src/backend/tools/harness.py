@@ -852,6 +852,8 @@ class __DomElemento extends __DomNo {
     set placeholder(valor) { __domRefletir(this, "placeholder", valor); }
     get href() { return this.getAttribute("href") || ""; }
     set href(valor) { __domRefletir(this, "href", valor); }
+    get type() { return this.getAttribute("type") || ""; }
+    set type(valor) { __domRefletir(this, "type", valor); }
     get className() { return this.classList.value; }
     set className(valor) {
         this._classeDefinida = true;
