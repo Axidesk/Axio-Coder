@@ -678,8 +678,11 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         "tool_deletar_arquivo, tool_mover_funcao_verbatim, tool_mover_bloco_verbatim) DEVE terminar com uma ÚLTIMA linha "
         "no formato \"[RESUMO_RODADA] <o que foi feito/decidido> em <arquivo>:<função>:<linha aproximada>\". "
         "O campo <onde> DEVE citar arquivo, função e linha aproximada para permitir re-localização direta sem nova busca. "
-        "É PROIBIDO omitir essa linha após editar código. O sistema extrairá essa linha, a removerá da exibição no chat "
-        "e a guardará na memória acumulada. Se a rodada não alterou nenhum arquivo, a linha é opcional.\n"
+        "É UMA LINHA CURTA E OBJETIVA: o que mudou e os <arquivo>:<função>:<linha> tocados, e mais nada. "
+        "NUNCA junte ao resumo listas de provas, medições, comandos corridos, saídas de ferramentas nem a repetição "
+        "do que já está na conversa - isso gasta o contexto da rodada seguinte e esconde o que interessa. "
+        "É PROIBIDO omitir essa linha após editar código. O sistema extrai a linha, remove-a da exibição no chat "
+        "e guarda-a na memória da rodada seguinte. Se a rodada não alterou nenhum arquivo, a linha é opcional.\n"
     )
 
     instrucao += (

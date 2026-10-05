@@ -1,6 +1,7 @@
 import codecs
 import ctypes
 import locale
+import math
 import os
 import re
 import socket
@@ -1189,6 +1190,8 @@ def run_com_timeout(cmd, timeout=60, cwd=None):
 FATIA_PROGRESSO_PROCESSO = 2.0
 PASSO_VIGIA_PROGRESSO = 0.25
 
+_FASE_DA_COMPILACAO = 0.05
+_UNIDADES_ATE_MEIA_BARRA = 100
 _FIM_DA_COMPILACAO = 0.95
 
 _ROTULO_CURTO = 32
@@ -1214,12 +1217,10 @@ _RE_BUILD_FIM = re.compile(
     re.IGNORECASE,
 )
 
+_ALVOS_DE_COMPILACAO = ("clcompile", "compiling", "checking", "building", "bundling")
+
 _ALVO_PARA_FASE = {
-    "clcompile": 0.05,
-    "compiling": 0.05,
-    "checking": 0.05,
-    "building": 0.05,
-    "bundling": 0.05,
+    **{alvo: _FASE_DA_COMPILACAO for alvo in _ALVOS_DE_COMPILACAO},
     "linking": 0.62,
     "link": 0.62,
 }
@@ -1327,14 +1328,17 @@ def _progresso_do_log(log):
     CL.exe mandou compilar. Cada invocacao do CL.exe e um lote e os lotes somam-se - o lote
     novo so aparece depois de o anterior ter acabado, logo um segundo projeto do mesmo .sln
     continua a contagem em vez de a reiniciar. A compilacao enche ate _FIM_DA_COMPILACAO; o
-    resto e o linker, que fecha com a percentagem do LTCG quando a imprime. Sem numero nenhum
-    para contar - um build com tudo ja compilado - resta a fase: _fase_anunciada diz onde o
-    build esta, em degraus, sem inventar percentagem nenhuma.
+    resto e o linker, que fecha com a percentagem do LTCG quando a imprime. Quando o programa
+    anuncia unidades sem dizer quantas sao ao todo - o cargo, com um 'Compiling <crate>' por
+    unidade - a compilacao enche por elas de forma saturante: sem total nao ha percentagem
+    exata, mas a barra acompanha o trabalho em vez de ficar presa no degrau de arranque.
+    Sem numero nenhum para contar resta a fase: _fase_anunciada diz onde o build esta.
     """
     etapas = None
     percento = None
     fase = None
     geracao = False
+    unidades = 0
     lotes = []
     nomes = set()
     feitos = set()
@@ -1351,6 +1355,9 @@ def _progresso_do_log(log):
             if 0 <= valor <= 100:
                 percento = min(1.0, valor / 100.0)
         fase, geracao = _fase_anunciada(texto, fase, geracao)
+        alvo = _RE_ALVO_DO_BUILD.match(texto)
+        if alvo and alvo.group(1).lower() in _ALVOS_DE_COMPILACAO:
+            unidades += 1
         fontes = _RE_FONTE.findall(texto)
         if len(fontes) >= 3 and ".exe" in texto.lower():
             if nomes:
@@ -1381,6 +1388,9 @@ def _progresso_do_log(log):
     if fase is not None:
         if geracao and percento is not None:
             return max(fase, _FIM_DA_GERACAO + (_TOPO_DA_GERACAO - _FIM_DA_GERACAO) * percento)
+        if unidades > 1 and fase == _FASE_DA_COMPILACAO:
+            cheio = 1 - math.exp(-unidades / _UNIDADES_ATE_MEIA_BARRA)
+            return _FASE_DA_COMPILACAO + (_FIM_DA_GERACAO - _FASE_DA_COMPILACAO) * cheio
         return fase
     if percento is not None:
         return percento

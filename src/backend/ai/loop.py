@@ -76,6 +76,8 @@ from src.backend.tools.registry import build_function_declarations, dispatch, re
 
 from google.genai import types
 
+_LIMITE_DO_RESUMO = 4000
+
 @register(
     "tool_aprovar_plano",
     "Destrava as ferramentas de edição no modo semi-automático. Chame apenas quando perceber que o usuário aprovou/confirmou o plano (qualquer forma de 'sim', 'pode', 'aplica', etc.).",
@@ -286,6 +288,24 @@ def _injetar_citacoes_inline(texto, citacoes):
     for num, c in numeradas:
         linhas.append(f"[^{num}] [{c['titulo']}]({c['url']})")
     return texto, "\n\n" + "\n".join(linhas)
+
+def _extrair_resumo(texto):
+    """Tira a linha do resumo da rodada do texto que fica a vista: devolve (texto, resumo).
+
+    A marca e escrita de varias maneiras ("[RESUMO_RODADA]", "RESUMO_RODADA:" sem colchetes,
+    com negrito ou cabecalho a frente), por isso a procura e tolerante: o que nao casar fica
+    no chat a poluir e o resumo perde-se. O teto existe para um resumo gigante nao entrar
+    inteiro no contexto da rodada seguinte - e o que ficar cortado di-lo.
+    """
+    marca = re.compile(r"(?m)^[ \t>*_#]*\[?\s*resumo(?:[ _]da)?[ _]rodada\s*\]?[ \t>*_:#]*",
+                       re.IGNORECASE)
+    achado = marca.search(texto or "")
+    if not achado:
+        return texto, ""
+    resumo = texto[achado.end():].strip()
+    if len(resumo) > _LIMITE_DO_RESUMO:
+        resumo = resumo[:_LIMITE_DO_RESUMO].rstrip() + " [...resumo cortado]"
+    return texto[:achado.start()].strip(), resumo
 
 def _montar_bloco_continuidade():
     """Bloco de continuidade: checkpoint pendente + bootstrap em andamento."""
@@ -597,13 +617,9 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                 if not texto_final:
                     texto_final = "⚠️ [Aviso do Sistema] O processamento foi concluído, mas o agente esqueceu de escrever a mensagem final."
 
-                resumo_semantico = ""
-                m_resumo = re.search(r"\[RESUMO_RODADA\]\s*(.*)$", texto_final, flags=re.DOTALL)
-                if m_resumo:
-                    resumo_semantico = m_resumo.group(1).strip()
-                    texto_final = re.sub(r"\s*\[RESUMO_RODADA\].*$", "", texto_final, flags=re.DOTALL).strip()
-                    if not texto_final:
-                        texto_final = "Processamento concluído."
+                texto_final, resumo_semantico = _extrair_resumo(texto_final)
+                if resumo_semantico and not texto_final:
+                    texto_final = "Processamento concluído."
 
                 texto_usuario_final = prompt_usuario
                 linhas_sistema = []
