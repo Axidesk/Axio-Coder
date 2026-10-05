@@ -682,6 +682,17 @@ class __DomNo {
         velho.parentNode = null;
         return velho;
     }
+    append(...nos) {
+        for (const no of nos) this.appendChild(typeof no === "string" ? new __DomTexto(no) : no);
+    }
+    prepend(...nos) {
+        const primeiro = this.childNodes[0] || null;
+        for (const no of nos) this.insertBefore(typeof no === "string" ? new __DomTexto(no) : no, primeiro);
+    }
+    replaceChildren(...nos) {
+        for (const filho of [...this.childNodes]) this.removeChild(filho);
+        this.append(...nos);
+    }
     remove() { if (this.parentNode) this.parentNode.removeChild(this); }
     replaceWith(...nos) {
         const pai = this.parentNode;
@@ -732,6 +743,11 @@ class __DomFragmento extends __DomNo {
         this.nodeType = 11;
         this.nodeName = "#document-fragment";
     }
+    querySelector(seletor) {
+        const achados = __domProcurar(this, seletor, true);
+        return achados.length ? achados[0] : null;
+    }
+    querySelectorAll(seletor) { return __domProcurar(this, seletor, false); }
 }
 
 const __domEstilo = (dono) => {
@@ -927,17 +943,6 @@ class __DomElemento extends __DomNo {
         return this.querySelectorAll("." + String(classe).trim().split(/\s+/).join("."));
     }
     getElementsByTagName(tag) { return this.querySelectorAll(String(tag)); }
-    append(...nos) {
-        for (const no of nos) this.appendChild(typeof no === "string" ? new __DomTexto(no) : no);
-    }
-    prepend(...nos) {
-        const primeiro = this.childNodes[0] || null;
-        for (const no of nos) this.insertBefore(typeof no === "string" ? new __DomTexto(no) : no, primeiro);
-    }
-    replaceChildren(...nos) {
-        for (const filho of [...this.childNodes]) this.removeChild(filho);
-        this.append(...nos);
-    }
     insertAdjacentHTML(posicao, markup) {
         const nos = __domNosDeHtml(String(markup == null ? "" : markup), (tag) => new __DomElemento(tag));
         if (posicao === "beforeend") { for (const no of nos) this.appendChild(no); return; }
