@@ -5858,10 +5858,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 128,
+        "linha": 131,
         "conferido": [
-          1791230391.582,
-          45756
+          1791242307.345,
+          46982
         ]
       }
     },
@@ -5880,10 +5880,10 @@
       "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/interface.js",
-        "linha": 281,
+        "linha": 302,
         "conferido": [
-          1791238092.454,
-          10688
+          1791242646.31,
+          11429
         ]
       }
     },
@@ -5924,10 +5924,10 @@
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 99,
+        "linha": 98,
         "conferido": [
-          1791238096.974,
-          18465
+          1791241012.006,
+          17904
         ]
       }
     },
@@ -5940,8 +5940,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1791238264.077,
-          37938
+          1791241043.379,
+          38493
         ]
       }
     },
@@ -5967,10 +5967,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 288,
+        "linha": 293,
         "conferido": [
-          1791230391.582,
-          45756
+          1791242307.345,
+          46982
         ]
       }
     },
@@ -5990,10 +5990,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 255,
+        "linha": 348,
         "conferido": [
-          1791236873.963,
-          16168
+          1791242842.351,
+          20485
         ]
       }
     },
@@ -6004,10 +6004,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 2236,
+        "linha": 2234,
         "conferido": [
-          1791238105.585,
-          86130
+          1791242294.311,
+          86138
         ]
       }
     },
@@ -6018,10 +6018,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 483,
+        "linha": 488,
         "conferido": [
-          1791230391.582,
-          45756
+          1791242307.345,
+          46982
         ]
       }
     },
@@ -6037,10 +6037,10 @@
       "descricao": "O numero entre parenteses ao lado do nome da pasta na arvore de ficheiros do painel do Tibia74 - so na pasta de topo (a pasta data), nunca nas subpastas. Sem filtro mostra o total; com filtro mostra quantos de quantos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/conteudo.js",
-        "linha": 82,
+        "linha": 83,
         "conferido": [
-          1791174371.521,
-          13783
+          1791241039.49,
+          14438
         ]
       }
     },
@@ -6100,10 +6100,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 439,
+        "linha": 444,
         "conferido": [
-          1791230391.582,
-          45756
+          1791242307.345,
+          46982
         ]
       }
     },
@@ -6120,10 +6120,10 @@
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 231,
+        "linha": 225,
         "conferido": [
-          1791238096.974,
-          18465
+          1791241012.006,
+          17904
         ]
       }
     },
@@ -6208,10 +6208,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 1394,
+        "linha": 1392,
         "conferido": [
-          1791238105.585,
-          86130
+          1791242294.311,
+          86138
         ]
       }
     },
@@ -6409,10 +6409,10 @@
       "descricao": "Le a tabela de importacao do .exe/.dll e diz o que ele pede, onde cada biblioteca existe e quais faltam.",
       "localizacao": {
         "arquivo": "src/backend/tools/binarios.py",
-        "linha": 50,
+        "linha": 57,
         "conferido": [
-          1791071952.261,
-          16127
+          1791241558.214,
+          17269
         ]
       }
     },
@@ -6428,10 +6428,10 @@
       "descricao": "Barra fininha na base da consola do painel, enquanto o Preparar instala o xampp e liga as pecas. Alimentada pelo evento `painel:progresso` (avisar_progresso em xampp.rs) e escondida no fim do comando.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 275,
+        "linha": 269,
         "conferido": [
-          1791238096.974,
-          18465
+          1791241012.006,
+          17904
         ]
       }
     },
@@ -6448,10 +6448,10 @@
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 523,
+        "linha": 527,
         "conferido": [
-          1791230391.582,
-          45756
+          1791242307.345,
+          46982
         ]
       }
     },
@@ -6492,8 +6492,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 696,
         "conferido": [
-          1791238105.585,
-          86130
+          1791242294.311,
+          86138
         ]
       }
     },
@@ -6512,10 +6512,10 @@
       "descricao": "A copia do cliente com 127.0.0.1 gravado nos campos do endereco, guardada em Tools/CPanel/estado/Tibia (servidor local).exe. E sempre ela que o painel abre - `garantir` cria-a/atualiza e `Cliente::abrir` lanca-a com o diretorio de trabalho na pasta do cliente original (senao o cliente nao acha o Tibia.dat), por isso o jogo entra sempre neste computador mesmo com o DNS gravado no exe.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/cliente.rs",
-        "linha": 140,
+        "linha": 141,
         "conferido": [
-          1791225883.522,
-          40028
+          1791242313.539,
+          40962
         ]
       }
     },
@@ -6534,8 +6534,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 186,
         "conferido": [
-          1791238105.585,
-          86130
+          1791242294.311,
+          86138
         ]
       }
     },
@@ -6552,10 +6552,10 @@
       "descricao": "Botao do guia que abre uma pasta no Explorador. O texto e escrito no guia entre [[...]] e o `rico` de tutorial.js monta o botao; o caminho e resolvido no Rust por `abrir_caminho`, contra a RAIZ DO PROJETO (raiz(None)), e nao contra pasta_do_projeto (a pasta do servidor).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/interface.js",
-        "linha": 167,
+        "linha": 188,
         "conferido": [
-          1791238092.454,
-          10688
+          1791242646.31,
+          11429
         ]
       }
     },
@@ -6595,8 +6595,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
         "linha": 1064,
         "conferido": [
-          1791238264.002,
-          42323
+          1791239639.18,
+          42341
         ]
       }
     },
@@ -6612,10 +6612,10 @@
       "descricao": "O comando que acha o Editor_x64.exe dentro da pasta Tools (procurar_editores) e o abre. Botao no cartao Editar mapa do guia.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 798,
+        "linha": 796,
         "conferido": [
-          1791238105.585,
-          86130
+          1791242294.311,
+          86138
         ]
       }
     },
@@ -6636,8 +6636,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
         "linha": 124,
         "conferido": [
-          1791238264.002,
-          42323
+          1791239639.18,
+          42341
         ]
       }
     },
@@ -6654,10 +6654,10 @@
       "descricao": "Botao pill sem fundo (o `--bg-selecao` so entra no hover/active ou com `aria-pressed=\"true\"`). O \"Abrir editor\" fica aceso enquanto o Editor_x64.exe corre: quem responde e o comando `editor_do_mapa_aberto` (tasklist por IMAGENAME) e o vigia e um setTimeout recursivo de 2,5 s que so roda com o editor aberto, mais uma verificacao ao voltar a pagina a vista.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
-        "linha": 1331,
+        "linha": 1363,
         "conferido": [
-          1791238264.077,
-          37938
+          1791241043.379,
+          38493
         ]
       }
     },
@@ -6677,6 +6677,65 @@
         "conferido": [
           1791238929.067,
           32231
+        ]
+      }
+    },
+    {
+      "termo": "botao jogar",
+      "aliases": [
+        "botao de jogar",
+        "botao que abre o jogo",
+        "abrir outro cliente",
+        "botao do cliente",
+        "botao verde de jogar"
+      ],
+      "identificador": "#btn-jogar",
+      "descricao": "Botao de largura total que sobe com fade quando o servidor fica no ar; abre o cliente do jogo e, depois da primeira vez, passa a \"Abrir outro cliente\" (abre mais uma instancia). Vive em .jogo > .jogo-clip, o estado e decidido por pintarJogo em app.js:549.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "linha": 82,
+        "conferido": [
+          1791241012.006,
+          17904
+        ]
+      }
+    },
+    {
+      "termo": "x do editor de codigo",
+      "aliases": [
+        "fechar o editor",
+        "x do editor",
+        "x ao lado de salvar",
+        "botao de fechar o codigo"
+      ],
+      "identificador": "#btn-fechar-editor",
+      "descricao": "Botao X ao lado do Salvar, no cabecalho do editor de codigo do painel; fecha o arquivo aberto e volta a mensagem \"Escolha um arquivo...\". Com alteracoes por gravar nao fecha: deixa o recado \"grava ou descarta antes de fechar\" (fechar em conteudo.js:308).",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "linha": 284,
+        "conferido": [
+          1791241012.006,
+          17904
+        ]
+      }
+    },
+    {
+      "termo": "botao jogar - voltar a Jogar",
+      "aliases": [
+        "quantos clientes estao abertos",
+        "contagem de clientes abertos",
+        "abrir outro cliente",
+        "clientes vivos",
+        "voltar a jogar"
+      ],
+      "identificador": "vivos",
+      "descricao": "A contagem de clientes vivos do jogo: o motor tira os que ja fecharam e devolve o tamanho da lista; o botao Jogar decide o rotulo por ela (0 = Jogar).",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/cliente.rs",
+        "linha": 639,
+        "conferido": [
+          1791242313.539,
+          40962
         ]
       }
     }

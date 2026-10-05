@@ -11,6 +11,9 @@ from src.backend.tools.registry import register
 DURACAO_PADRAO = 2500
 DURACAO_MINIMA = 400
 DURACAO_MAXIMA = 12000
+INTERVALO_PADRAO = 50
+INTERVALO_MINIMO = 10
+INTERVALO_MAXIMO = 2000
 ESPERA_EXTRA = 8.0
 PAUSA_ANTES_DE_MEDIR = 0.15
 ESPERA_DA_EXPRESSAO = 45.0
@@ -43,6 +46,34 @@ new Promise((pronto) => {
         }));
     };
     requestAnimationFrame(passo);
+})
+"""
+
+_AMOSTRAGEM = """
+new Promise((pronto) => {
+    const ler = () => {
+        try {
+            return String(__EXPRESSAO__);
+        } catch (erro) {
+            return 'rebentou: ' + erro.message;
+        }
+    };
+    const t0 = performance.now();
+    const marcas = [];
+    let anterior = null;
+    const passo = () => {
+        const valor = ler();
+        if (valor !== anterior) {
+            marcas.push([Math.round(performance.now() - t0), valor]);
+            anterior = valor;
+        }
+        if (performance.now() - t0 < __DURACAO__) {
+            setTimeout(passo, __PASSO__);
+            return;
+        }
+        pronto(JSON.stringify(marcas));
+    };
+    passo();
 })
 """
 
@@ -168,6 +199,35 @@ def _inspecionar(sessao, onde, js, depois, aviso=""):
         linhas.append("Nao pediu nada para ler: passe 'js' e/ou 'depois'.")
     if aviso:
         linhas.append(aviso.strip())
+    return "\n".join(linhas)
+
+
+def _amostrar(sessao, onde, expressao, durante, passo):
+    guiao = (
+        _AMOSTRAGEM.replace("__EXPRESSAO__", expressao)
+        .replace("__DURACAO__", str(durante))
+        .replace("__PASSO__", str(passo))
+    )
+    try:
+        bruto = sessao.avaliar(guiao)
+    except cdp.SemResposta:
+        return (
+            f"Em {onde}: a amostragem nao devolveu nada em {sessao.espera:.0f} s "
+            "(promessa por resolver?)."
+        )
+    except RuntimeError as falha:
+        return f"Em {onde}: a amostragem rebentou ({falha})."
+    try:
+        marcas = json.loads(bruto)
+    except (TypeError, ValueError):
+        return f"Em {onde}: a amostragem devolveu um formato inesperado ({str(bruto)[:200]})."
+    linhas = [
+        f"Em {onde}: {len(marcas)} mudanca(s) em {durante} ms, lendo a expressao a cada {passo} ms:"
+    ]
+    if not marcas:
+        linhas.append("  (a expressao devolveu sempre o mesmo neste tempo)")
+    for instante, valor in marcas:
+        linhas.append(f"  {instante} ms: {valor}")
     return "\n".join(linhas)
 
 
@@ -301,7 +361,9 @@ def _atalho(expressao):
     "para INSPECIONAR uma app de fora (um Tauri, um Electron, um Chrome) sem lhe roubar o foco. "
     "Com 'captura' FOTOGRAFA a pagina pelo motor dela e entrega a imagem (regiao em coordenadas "
     "da pagina, seletor CSS ou 'tudo') - a unica via que ve a pagina inteira, sem moldura, sem "
-    "deslocamento e sem a janela precisar de estar a vista.",
+    "deslocamento e sem a janela precisar de estar a vista. Com 'amostrar' SEGUE uma expressao ao "
+    "longo do tempo e devolve so as mudancas, com o instante de cada uma - e o caminho para ver uma "
+    "transicao, uma animacao ou um carregamento A ACONTECER, sem escrever um amostrador a mao.",
     {
         "porta": {
             "tipo": "INTEGER",
@@ -343,14 +405,25 @@ def _atalho(expressao):
             "desc": "Fotografa a pagina de fora e entrega a imagem, pelo proprio motor dela: aceita 'x,y,largura,altura' em coordenadas DA PAGINA (nao da janela), um seletor CSS (fotografa o elemento, mesmo fora do ecra) ou 'tudo'. E o caminho para OLHAR para uma app Chromium de fora sem adivinhar o deslocamento da moldura da janela, sem depender de a janela estar a vista e sem as outras janelas por cima. Vazio nao fotografa nada.",
             "padrao": "",
         },
+        "amostrar": {
+            "tipo": "STRING",
+            "desc": "Expressao a SEGUIR ao longo do tempo (ex: 'getComputedStyle(document.getElementById(\"x\")).opacity'). Devolve so as amostras em que o valor MUDOU, cada uma com o instante em ms - e o caminho para ver uma transicao, uma barra a encher ou um estado a virar acontecerem, numa chamada so. Funciona com 'js' (para disparar o efeito) e tanto serve com 'medir' ligado como desligado; substitui o amostrador escrito a mao que se repetia em cada medicao.",
+            "padrao": "",
+        },
+        "intervalo": {
+            "tipo": "INTEGER",
+            "desc": f"De quantos em quantos milissegundos ler a expressao de 'amostrar' ({INTERVALO_MINIMO} a {INTERVALO_MAXIMO}).",
+            "padrao": INTERVALO_PADRAO,
+        },
     },
 )
 def tool_medir_fluidez(
     porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois="", medir=True,
-    captura=""
+    captura="", amostrar="", intervalo=INTERVALO_PADRAO
 ):
     js = _atalho(js)
     depois = _atalho(depois)
+    amostrar = _atalho(amostrar)
     escolhido = int(porta or 0)
     if not escolhido:
         escolhido = cdp.descobrir_porta()
@@ -370,11 +443,14 @@ def tool_medir_fluidez(
     aviso_das_outras = "" if alvo.strip() else _aviso_das_outras_paginas(paginas, pagina)
 
     total = min(max(int(durante or DURACAO_PADRAO), DURACAO_MINIMA), DURACAO_MAXIMA)
+    passo = min(max(int(intervalo or INTERVALO_PADRAO), INTERVALO_MINIMO), INTERVALO_MAXIMO)
     espera = (total / 1000.0) + ESPERA_EXTRA
     if js.strip():
         espera = max(espera, ESPERA_DA_EXPRESSAO)
     if captura.strip():
         emit_event("executing", function="A fotografar a pagina de fora")
+    elif amostrar.strip():
+        emit_event("executing", function=f"A seguir a pagina de fora por {total} ms")
     elif medir:
         emit_event("executing", function=f"A medir o ritmo de desenho por {total} ms")
     else:
@@ -397,7 +473,7 @@ def tool_medir_fluidez(
     try:
         if captura.strip():
             return _print_da_pagina(sessao, _onde_estou(pagina), captura)
-        if not medir:
+        if not medir and not amostrar.strip():
             return _inspecionar(sessao, _onde_estou(pagina), js, depois, aviso_das_outras)
         if js.strip():
             try:
@@ -425,6 +501,13 @@ def tool_medir_fluidez(
             if resultado is not None:
                 ecos.append(json.dumps(resultado, ensure_ascii=False, default=str))
             time.sleep(PAUSA_ANTES_DE_MEDIR)
+        if amostrar.strip():
+            linhas = [_amostrar(sessao, _onde_estou(pagina), amostrar, total, passo)]
+            if ecos:
+                linhas.insert(0, f"O que a expressao devolveu antes: {'; '.join(ecos)}")
+            if aviso_das_outras:
+                linhas.append(aviso_das_outras.strip())
+            return "\n".join(linhas)
         bruto = sessao.avaliar(_MEDICAO % total)
         if depois.strip():
             try:
