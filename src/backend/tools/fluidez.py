@@ -169,9 +169,32 @@ def _inspecionar(sessao, onde, js, depois):
     return "\n".join(linhas)
 
 
+_TOKENS_DO_TEMA = """
+(() => {
+    const raiz = getComputedStyle(document.documentElement);
+    const nomes = new Set();
+    const recolher = (regras) => {
+        for (const regra of regras) {
+            if (regra.style && regra.selectorText && /^(:root|html|\\*)$/.test(regra.selectorText.trim())) {
+                for (const nome of regra.style) if (nome.startsWith('--')) nomes.add(nome);
+            }
+            if (regra.cssRules) recolher(regra.cssRules);
+        }
+    };
+    for (const folha of document.styleSheets) {
+        try { recolher(folha.cssRules); } catch (erro) { }
+    }
+    const tokens = [...nomes].sort().map(nome => [nome, raiz.getPropertyValue(nome).trim()]);
+    return JSON.stringify({ total: tokens.length, tokens });
+})()
+"""
+
+
 def _atalho(expressao):
     if expressao.strip() == "@mapa":
         return _MAPA_DA_JANELA
+    if expressao.strip() == "@tokens":
+        return _TOKENS_DO_TEMA
     return expressao
 
 
@@ -209,7 +232,7 @@ def _atalho(expressao):
         },
         "js": {
             "tipo": "STRING",
-            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. O atalho '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada - sem o escrever a mao.",
+            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Dois atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada - e '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao.",
             "padrao": "",
         },
         "depois": {
