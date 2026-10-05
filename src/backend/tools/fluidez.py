@@ -47,6 +47,41 @@ new Promise((pronto) => {
 """
 
 
+_MAPA_DA_JANELA = """
+(() => {
+    const visivel = (el) => {
+        const caixa = el.getBoundingClientRect();
+        return caixa.width > 0 && caixa.height > 0 && getComputedStyle(el).visibility !== 'hidden';
+    };
+    const comoChamar = (el) => {
+        if (el.id) return '#' + el.id;
+        const partes = [el.tagName.toLowerCase()];
+        if (el.className && typeof el.className === 'string') {
+            const classe = el.className.trim().split(/\\s+/).slice(0, 2).join('.');
+            if (classe) partes.push('.' + classe);
+        }
+        const pai = el.parentElement;
+        if (pai && pai.id) partes.push(' (dentro de #' + pai.id + ')');
+        return partes.join('');
+    };
+    const alvos = [...document.querySelectorAll(
+        'button, a[href], input, select, textarea, [role="button"], [role="tab"], [role="checkbox"]'
+    )].filter(visivel).slice(0, 60).map((el) => {
+        const caixa = el.getBoundingClientRect();
+        const rotulo = el.getAttribute('aria-label') || el.value || el.textContent || el.placeholder || '';
+        return {
+            seletor: comoChamar(el),
+            o_que: String(rotulo).replace(/\\s+/g, ' ').trim().slice(0, 50),
+            tipo: el.tagName.toLowerCase() + (el.type ? ':' + el.type : ''),
+            ponto: Math.round(caixa.x + caixa.width / 2) + ',' + Math.round(caixa.y + caixa.height / 2),
+            cabe_na_janela: caixa.y >= 0 && caixa.y + caixa.height <= innerHeight
+        };
+    });
+    return JSON.stringify({ janela: innerWidth + 'x' + innerHeight, quantos: alvos.length, alvos }, null, 1);
+})()
+"""
+
+
 def _texto_dos_alvos(porta, paginas):
     linhas = [f"Porto {porta}: {len(paginas)} pagina(s) ao alcance."]
     for indice, pagina in enumerate(paginas, start=1):
@@ -134,6 +169,12 @@ def _inspecionar(sessao, onde, js, depois):
     return "\n".join(linhas)
 
 
+def _atalho(expressao):
+    if expressao.strip() == "@mapa":
+        return _MAPA_DA_JANELA
+    return expressao
+
+
 @register(
     "tool_medir_fluidez",
     "Mede o RITMO DE DESENHO (fps, intervalo medio, mediana, p95 e quadros acima de 32 ms) de uma "
@@ -168,7 +209,7 @@ def _inspecionar(sessao, onde, js, depois):
         },
         "js": {
             "tipo": "STRING",
-            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido.",
+            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. O atalho '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada - sem o escrever a mao.",
             "padrao": "",
         },
         "depois": {
@@ -191,6 +232,8 @@ def _inspecionar(sessao, onde, js, depois):
 def tool_medir_fluidez(
     porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois="", medir=True
 ):
+    js = _atalho(js)
+    depois = _atalho(depois)
     escolhido = int(porta or 0)
     if not escolhido:
         escolhido = cdp.descobrir_porta()
