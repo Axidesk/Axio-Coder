@@ -151,7 +151,7 @@ def _porto_em_falta():
     )
 
 
-def _inspecionar(sessao, onde, js, depois):
+def _inspecionar(sessao, onde, js, depois, aviso=""):
     linhas = [f"Em {onde}:"]
     for expressao, rotulo in ((js, "O que a expressao devolveu"), (depois, "O estado")):
         if not expressao.strip():
@@ -166,6 +166,8 @@ def _inspecionar(sessao, onde, js, depois):
             linhas.append(f"{rotulo}: {json.dumps(resultado, ensure_ascii=False, default=str)}")
     if len(linhas) == 1:
         linhas.append("Nao pediu nada para ler: passe 'js' e/ou 'depois'.")
+    if aviso:
+        linhas.append(aviso.strip())
     return "\n".join(linhas)
 
 
@@ -365,6 +367,7 @@ def tool_medir_fluidez(
             f"ERRO: nenhuma pagina do porto {escolhido} tem '{alvo}' no endereco ou no titulo.\n"
             + _texto_dos_alvos(escolhido, paginas)
         )
+    aviso_das_outras = "" if alvo.strip() else _aviso_das_outras_paginas(paginas, pagina)
 
     total = min(max(int(durante or DURACAO_PADRAO), DURACAO_MINIMA), DURACAO_MAXIMA)
     espera = (total / 1000.0) + ESPERA_EXTRA
@@ -395,7 +398,7 @@ def tool_medir_fluidez(
         if captura.strip():
             return _print_da_pagina(sessao, _onde_estou(pagina), captura)
         if not medir:
-            return _inspecionar(sessao, _onde_estou(pagina), js, depois)
+            return _inspecionar(sessao, _onde_estou(pagina), js, depois, aviso_das_outras)
         if js.strip():
             try:
                 resultado = sessao.avaliar(js)
@@ -461,4 +464,6 @@ def tool_medir_fluidez(
     if finais:
         linhas.append(f"O estado no fim da medicao: {'; '.join(finais)}")
     linhas.append(texto_dos_quadros(dados))
+    if aviso_das_outras:
+        linhas.append(aviso_das_outras.strip())
     return "\n".join(linhas)
