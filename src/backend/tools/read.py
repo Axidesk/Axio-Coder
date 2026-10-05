@@ -152,6 +152,42 @@ def _intervalos_pedidos(texto, total):
     return intervalos, ""
 
 
+_PADROES_DE_DEFINICAO = {
+    ".py": r"^\s*(?:async\s+)?(?:def|class)\s+\w+",
+    ".pyi": r"^\s*(?:async\s+)?(?:def|class)\s+\w+",
+    ".rs": r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:fn|struct|enum|trait|impl|mod)\s+\w+",
+    ".js": r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function|class)\s+\w+|^\s*(?:export\s+)?const\s+\w+\s*=\s*(?:async\s*)?\(",
+    ".php": r"^\s*(?:public\s+|private\s+|protected\s+|static\s+|abstract\s+|final\s+)*function\s+\w+",
+    ".lua": r"^\s*(?:local\s+)?function\s+[\w.:]+",
+    ".c": r"^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct|namespace)\s+\w+|^[A-Za-z_][\w:<>,*&\s]*\s+\w+\s*\([^;]*\)\s*(?:const\s*)?\{?\s*$",
+}
+for _extra in (".jsx", ".mjs", ".cjs", ".ts", ".tsx"):
+    _PADROES_DE_DEFINICAO[_extra] = _PADROES_DE_DEFINICAO[".js"]
+for _extra in (".cc", ".cxx", ".cpp", ".h", ".hh", ".hpp", ".hxx", ".ino"):
+    _PADROES_DE_DEFINICAO[_extra] = _PADROES_DE_DEFINICAO[".c"]
+
+_PALAVRAS_DE_CONTROLE = frozenset(
+    {"if", "for", "while", "switch", "catch", "else", "return", "match", "loop", "do"}
+)
+
+
+def _definicao_acima(caminho, linhas, inicio):
+    """A definicao mais proxima acima do trecho, so para orientar quem le (nunca decide nada)."""
+    achado = re.search(r"(\.[A-Za-z0-9_]+)$", caminho.split(" [")[0])
+    padrao = _PADROES_DE_DEFINICAO.get(achado.group(1).lower() if achado else "")
+    if not padrao:
+        return ""
+    for indice in range(inicio - 2, max(-1, inicio - 402), -1):
+        linha = linhas[indice]
+        if not re.search(padrao, linha):
+            continue
+        primeira = re.match(r"\s*(?:pub\s+)?(?:async\s+)?(\w+)", linha)
+        if primeira and primeira.group(1) in _PALAVRAS_DE_CONTROLE:
+            continue
+        return f" · dentro de: {linha.strip()[:90]} (linha {indice + 1})"
+    return ""
+
+
 def _ler_varios_trechos(caminho_relativo, linhas, trechos):
     intervalos, erro = _intervalos_pedidos(trechos, len(linhas))
     if erro:
@@ -160,13 +196,14 @@ def _ler_varios_trechos(caminho_relativo, linhas, trechos):
         return "ERRO: nenhum intervalo utilizavel em 'trechos'."
     blocos = []
     for inicio, fim in intervalos:
-        blocos.append(f"--- Trecho de {caminho_relativo} (Linhas {inicio} a {fim}) ---\n" + "".join(linhas[inicio - 1:fim]))
+        onde = _definicao_acima(caminho_relativo, linhas, inicio)
+        blocos.append(f"--- Trecho de {caminho_relativo} (Linhas {inicio} a {fim}){onde} ---\n" + "".join(linhas[inicio - 1:fim]))
     return "\n\n".join(blocos)
 
 
 @register(
     "tool_ler_trecho_arquivo",
-    'Lê linhas específicas de um arquivo. Aceita VARIOS intervalos numa so chamada no campo trechos (ex: "12-60;210-320;1180-1240"): o ficheiro e lido uma vez e cada intervalo sai com o seu cabecalho - use-o em vez de repetir a chamada por bloco. Passa o parametro revisao (ex: HEAD) para ler a versao do git em vez do disco.',
+    'Lê linhas específicas de um arquivo. Aceita VARIOS intervalos numa so chamada no campo trechos (ex: "12-60;210-320;1180-1240"): o ficheiro e lido uma vez e cada intervalo sai com o seu cabecalho - use-o em vez de repetir a chamada por bloco. Cada cabecalho diz tambem a definicao mais proxima acima do trecho ("dentro de: ..."), para nao confundir a funcao onde o trecho vive com a que vem antes dele. Passa o parametro revisao (ex: HEAD) para ler a versao do git em vez do disco.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
         'linha_inicio': {"tipo": "INTEGER", "padrao": 1},
@@ -196,7 +233,8 @@ def tool_ler_trecho_arquivo(caminho_relativo: str, linha_inicio: int = 1, linha_
     fim = min(len(linhas), linha_fim)
     if inicio >= fim: return "ERRO: Intervalo inválido."
     trecho = "".join(linhas[inicio:fim])
-    return f"--- Trecho de {caminho_relativo} (Linhas {linha_inicio} a {linha_fim}) ---\n{trecho}"
+    onde = _definicao_acima(caminho_relativo, linhas, linha_inicio)
+    return f"--- Trecho de {caminho_relativo} (Linhas {linha_inicio} a {linha_fim}){onde} ---\n{trecho}"
 
 
 @register(
