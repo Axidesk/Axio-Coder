@@ -1027,10 +1027,8 @@ const __domNosDeHtml = (markup, criarElemento) => {
             continue;
         }
         if (casado[5] !== undefined) {
-            const brutoTexto = casado[5];
-            if (/^\s*$/.test(brutoTexto) && brutoTexto.indexOf("\n") >= 0) continue;
-            const conteudo = brutoTexto.indexOf("\n") >= 0 ? brutoTexto.replace(/\s+/g, " ") : brutoTexto;
-            const texto = new __DomTexto(conteudo);
+            // quem colapsa espacos e o desenho (white-space), nunca o analisador de markup
+            const texto = new __DomTexto(casado[5]);
             const pai = pilha[pilha.length - 1];
             if (pai) pai.appendChild(texto);
             else raiz.push(texto);
