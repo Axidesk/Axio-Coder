@@ -281,6 +281,10 @@ import { pathToFileURL as __paraUrl } from "node:url";
 import { join as __juntar } from "node:path";
 import { createRequire as __criarRequire } from "node:module";
 
+// o cabecalho deste harness manda importar modulos do projeto por
+// pathToFileURL(...).href - o nome tem de existir, e nao so o __paraUrl
+const pathToFileURL = __paraUrl;
+
 // o corpo extraido do disco pode chamar require(...): sem isto o new Function rebenta com ReferenceError
 globalThis.require = __criarRequire(import.meta.url);
 
@@ -1680,7 +1684,9 @@ def _snippet_python(codigo, raiz_projeto):
     """
     return _CABECALHO_PYTHON.format(raiz_app=APP_ROOT, raiz_projeto=raiz_projeto) + codigo + "\n"
 
-_NOMES_DO_CABECALHO_JS = frozenset({"process", "fs", "path", "assert", "importarProjeto", "__paraUrl", "__juntar"})
+_NOMES_DO_CABECALHO_JS = frozenset(
+    {"process", "fs", "path", "assert", "importarProjeto", "pathToFileURL", "__paraUrl", "__juntar"}
+)
 _INICIO_IMPORT_JS = re.compile(r"^\s*import\b")
 _LIGACOES_IMPORT_JS = re.compile(r"^\s*import\s+(?:([\w$]+)\s*,?\s*)?(?:\*\s+as\s+([\w$]+)|\{([^}]*)\})\s*from\b")
 _LIGACAO_DIRETA_JS = re.compile(r"^\s*import\s+([\w$]+)\s+from\b")
