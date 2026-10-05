@@ -1225,6 +1225,43 @@ def _pedido_do_sistema(titulo):
     return any(marca in texto for marca in MARCAS_DE_PEDIDO_DO_SISTEMA)
 
 
+_NOME_DO_PROCESSO = {}
+
+
+def _nome_do_processo(pid):
+    """O executavel dono daquele pid, so o nome do ficheiro.
+
+    E' o que responde "de QUEM e' esta janela?" quando o aviso nao tem titulo nem dono - sem
+    isto, um dialogo sem titulo e' uma incognita, e saber de que programa ele veio e' o que
+    diz se foi ele que eu abri ou se ja la estava.
+    """
+    try:
+        inteiro = int(pid or 0)
+    except (TypeError, ValueError):
+        return ""
+    if not inteiro:
+        return ""
+    if inteiro in _NOME_DO_PROCESSO:
+        return _NOME_DO_PROCESSO[inteiro]
+    nome = ""
+    try:
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        kernel32 = ctypes.windll.kernel32
+        dono = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, inteiro)
+        if dono:
+            try:
+                tamanho = wintypes.DWORD(260)
+                caminho = ctypes.create_unicode_buffer(260)
+                if kernel32.QueryFullProcessImageNameW(dono, 0, caminho, ctypes.byref(tamanho)):
+                    nome = os.path.basename(caminho.value)
+            finally:
+                kernel32.CloseHandle(dono)
+    except Exception:
+        nome = ""
+    _NOME_DO_PROCESSO[inteiro] = nome
+    return nome
+
+
 def _dialogos_a_espera(pid=None):
     """Os avisos a vista que pedem resposta, do ecra todo ou so de um processo.
 
@@ -1241,7 +1278,10 @@ def _dialogos_a_espera(pid=None):
         dono = int(user32.GetWindow(registo["handle"], 4) or 0)
         if not dono and _classe_do_hwnd(registo["handle"]) != "#32770":
             continue
-        de_quem = _titulo_do_hwnd(dono) if dono else f"pid {registo['pid']}"
+        programa = _nome_do_processo(registo["pid"])
+        de_quem = _titulo_do_hwnd(dono) if dono else (
+            f"{programa} (pid {registo['pid']})" if programa else f"pid {registo['pid']}"
+        )
         achados.append({
             "hwnd": registo["handle"],
             "titulo": registo["titulo"] or "(sem titulo)",
@@ -2166,10 +2206,13 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
         abertas.extend(avulsas)
         if not abertas:
             return "Nenhuma janela aberta."
-        linhas = [
-            f"  hwnd={w.handle:<12} {_tipo(w):<8} pid={getattr(w.element_info, 'process_id', 0):<7} {_texto(w)[:70] or '(sem titulo)'}"
-            for w in abertas
-        ]
+        linhas = []
+        for w in abertas:
+            pid = int(getattr(w.element_info, "process_id", 0) or 0)
+            programa = _nome_do_processo(pid)[:26]
+            linhas.append(
+                f"  hwnd={w.handle:<12} {_tipo(w):<8} pid={pid:<7} {programa:<26} {_texto(w)[:70] or '(sem titulo)'}"
+            )
         falta = f" (+{restantes} ocultas)" if restantes else ""
         return (
             f"{len(abertas)} janelas abertas{falta} (use o hwnd, 'pid:<numero>' ou um trecho do titulo em 'janela'):\n"
