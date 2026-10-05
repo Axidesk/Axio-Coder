@@ -2100,7 +2100,7 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
         return "ERRO: " + SEM_BIBLIOTECA
 
     if acao == "abrir":
-        return _acao_abrir(alvo)
+        return _acao_abrir(alvo or janela)
 
     if acao == "roteiro":
         lista, falha = _passos_do_roteiro(passos)
