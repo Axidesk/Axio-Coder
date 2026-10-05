@@ -1305,6 +1305,44 @@ def _responde(hwnd, prazo_ms=400):
     return bool(atendida)
 
 
+PALAVRAS_DE_GRAVACAO = ("salvar", "gravar", "guardar", "save", "saving")
+PALAVRAS_DE_SAIDA = ("exit", "sair", "quit", "encerrar", "fechar", "close")
+PALAVRAS_DE_SIM = ("sim", "yes", "ok")
+
+def _botoes_do_aviso(janela):
+    try:
+        return list(janela.descendants(control_type="Button"))
+    except Exception:
+        return []
+
+def _insistir_no_fecho(hwnd, janela):
+    """A ultima tentativa quando o aviso de saida fica pendurado.
+
+    O caminho de fecho responde sempre pela opcao mais segura - nunca "Salvar" -, e num aviso de
+    saida essa opcao e a que NAO sai: a janela continua aberta e o trabalho seguinte fica a olhar
+    para ela. Aqui, e SO quando o texto do aviso fala de sair e nao fala de gravar, procura-se o
+    botao afirmativo e clica-se - fechar era o pedido de quem chamou a ferramenta, e nada e gravado.
+    """
+    if not _responde(hwnd):
+        return ""
+    aviso = _janela_avulsa(hwnd)
+    if aviso is None:
+        return ""
+    texto = _texto(aviso).lower()
+    if any(palavra in texto for palavra in PALAVRAS_DE_GRAVACAO):
+        return ""
+    if not any(palavra in texto for palavra in PALAVRAS_DE_SAIDA):
+        return ""
+    for botao in _botoes_do_aviso(aviso):
+        if _texto(botao).strip().lower() not in PALAVRAS_DE_SIM:
+            continue
+        metodo, erro = _clicar(botao)
+        if erro:
+            return ""
+        time.sleep(PAUSA_DEPOIS_DO_AVISO)
+        return f"{_texto(botao)!r} ({metodo})"
+    return ""
+
 def _acao_fechar(janela, segundos=0):
     """Fecha a janela E confirma o fecho, respondendo ao aviso que ela abrir pelo caminho.
 
@@ -1344,6 +1382,10 @@ def _acao_fechar(janela, segundos=0):
             )
         respondidos.append(f"{nome!r} ({metodo})")
         time.sleep(PAUSA_DEPOIS_DO_AVISO)
+    if _viva(hwnd) and respondidos:
+        ultima = _insistir_no_fecho(hwnd, janela)
+        if ultima:
+            respondidos.append(ultima)
     fechou = not _viva(hwnd)
     resposta = f" Ao aviso que ela abriu respondi {', '.join(respondidos)}." if respondidos else ""
     if fechou:
