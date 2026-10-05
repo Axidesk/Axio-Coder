@@ -874,7 +874,7 @@ class __DomElemento extends __DomNo {
             return;
         }
         this._atributos.set(chave, texto);
-        if (chave === "value" || chave === "title" || chave === "placeholder" || chave === "href") this[chave] = texto;
+        if (chave === "value") this.value = texto;
         if (chave === "disabled" || chave === "checked" || chave === "hidden") this[chave] = true;
         if (chave === "readonly") this.readOnly = true;
     }
