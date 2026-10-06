@@ -9,6 +9,12 @@ PASTAS_IGNORADAS = {
     'target', 'coverage', '.turbo', '.parcel-cache', 'gen',
 }
 
+PASTAS_DE_TERCEIROS = {
+    'libs', 'lib', 'vendor', 'third_party', 'thirdparty', 'third-party',
+    'extern', 'external', 'externe', 'deps', 'dependencies', 'dependencias',
+    'packages', 'libraries', 'bibliotecas', 'sdk', 'qt', 'boost',
+}
+
 EXTS_BINARIAS = {
     '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.tif', '.tiff',
     '.psd', '.heic', '.avif', '.exe', '.dll', '.obj', '.o', '.a', '.lib',
@@ -55,6 +61,18 @@ def _recorte_de_linha(linha, destaque, limite):
     inicio = max(0, pos - limite // 4)
     recorte = texto[inicio:inicio + limite]
     return ("…" if inicio > 0 else "") + recorte + ("…" if inicio + limite < len(texto) else "")
+
+
+def _peso_da_pasta(nome):
+    baixo = nome.lower()
+    if baixo in PASTAS_DE_TERCEIROS or baixo.startswith(('boost', 'qt5', 'qt6', 'qt-', 'qt_')):
+        return 1
+    return 0
+
+
+def _pastas_em_ordem(dirnames):
+    aceitas = [d for d in dirnames if d not in PASTAS_IGNORADAS and not d.startswith(".")]
+    return sorted(aceitas, key=lambda d: (_peso_da_pasta(d), d.lower()))
 
 
 def busca_no_texto(texto, termo, limite=LIMITE_OCORRENCIAS):
@@ -112,7 +130,7 @@ def buscar_no_projeto(raiz, termo, limite_arquivos=LIMITE_ARQUIVOS):
     if not raiz or not termo or not os.path.isdir(raiz):
         return resultados
     for dirpath, dirnames, filenames in os.walk(raiz):
-        dirnames[:] = [d for d in dirnames if d not in PASTAS_IGNORADAS and not d.startswith(".")]
+        dirnames[:] = _pastas_em_ordem(dirnames)
         for nome in filenames:
             if nome.startswith("."):
                 continue
