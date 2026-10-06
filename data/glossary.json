@@ -804,10 +804,10 @@
       "descricao": "Contrato duro: comando irreversivel (git reset --hard, del /s, drop table) e recusado antes de tudo, e cada ferramenta com equivalente nativo e recusada com a dica da ferramenta. Fora isso vale uma lista fixa de executaveis (compiladores, gestores de pacotes, linters, git, midia, rede/sistema) MAIS qualquer .exe que viva DENTRO da pasta do projeto aberto - e o programa que o proprio projeto compilou, e poder arranca-lo e o que permite ler o arranque dele. Um caminho absoluto com espacos continua a ter de vir entre aspas, senao o tokenizador parte-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 226,
+        "linha": 244,
         "conferido": [
-          1791238896.341,
-          63398
+          1791244830.832,
+          64427
         ]
       }
     },
@@ -2327,10 +2327,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 385,
+        "linha": 404,
         "conferido": [
-          1791238896.341,
-          63398
+          1791244830.832,
+          64427
         ]
       }
     },
@@ -4671,10 +4671,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 413,
+        "linha": 432,
         "conferido": [
-          1791238896.341,
-          63398
+          1791244830.832,
+          64427
         ]
       }
     },
@@ -6004,10 +6004,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 2234,
+        "linha": 2281,
         "conferido": [
-          1791242294.311,
-          86138
+          1791244596.844,
+          88444
         ]
       }
     },
@@ -6069,8 +6069,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 571,
         "conferido": [
-          1791081899.74,
-          49352
+          1791244583.649,
+          49381
         ]
       }
     },
@@ -6083,8 +6083,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1219,
         "conferido": [
-          1791081899.74,
-          49352
+          1791244583.649,
+          49381
         ]
       }
     },
@@ -6176,8 +6176,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1251,
         "conferido": [
-          1791081899.74,
-          49352
+          1791244583.649,
+          49381
         ]
       }
     },
@@ -6208,10 +6208,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 1392,
+        "linha": 1439,
         "conferido": [
-          1791242294.311,
-          86138
+          1791244596.844,
+          88444
         ]
       }
     },
@@ -6490,10 +6490,10 @@
       "descricao": "A pasta onde o painel guarda o que e dele, dentro do proprio CPanel (Tools/CPanel/estado): os ajustes em painel.json e o registo dos valores originais do cliente em cliente_original.json. Ja nao vive em Server/data/painel - so a fila da mensagem global continua dentro do servidor, em data/anuncio.lua.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 696,
+        "linha": 698,
         "conferido": [
-          1791242294.311,
-          86138
+          1791244596.844,
+          88444
         ]
       }
     },
@@ -6532,10 +6532,10 @@
       "descricao": "O unico ficheiro do painel que fica dentro do servidor: data/anuncio.lua, porque e o canal Lua (data/globalevents/scripts/painel_anuncio.lua) que o le e o apaga. O roteiro do canal e reescrito a cada abertura do painel.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 186,
+        "linha": 188,
         "conferido": [
-          1791242294.311,
-          86138
+          1791244596.844,
+          88444
         ]
       }
     },
@@ -6612,10 +6612,10 @@
       "descricao": "O comando que acha o Editor_x64.exe dentro da pasta Tools (procurar_editores) e o abre. Botao no cartao Editar mapa do guia.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 796,
+        "linha": 798,
         "conferido": [
-          1791242294.311,
-          86138
+          1791244596.844,
+          88444
         ]
       }
     },

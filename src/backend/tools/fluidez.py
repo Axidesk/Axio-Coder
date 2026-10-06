@@ -182,7 +182,21 @@ def _porto_em_falta():
     )
 
 
-def _inspecionar(sessao, onde, js, depois, aviso=""):
+def _porque_nao_veio(sessao, pagina, expressao):
+    curta = " ".join(str(expressao).split())
+    if len(curta) > 80:
+        curta = curta[:77] + "..."
+    if pagina is not None and not _responde_a_cdp(pagina):
+        return (
+            "nao veio nada, e a pagina nao responde nem a uma expressao trivial: o motor esta "
+            "suspenso, congelado ou morto. Em segundo plano o Chromium congela paginas, e uma "
+            "recarga a meio deixa-o assim - traga a janela para a frente (ou recarregue-a) e "
+            "repita"
+        )
+    return f"nao veio nada em {sessao.espera:.0f} s (promessa por resolver? '{curta}')"
+
+
+def _inspecionar(sessao, onde, js, depois, aviso="", pagina=None):
     linhas = [f"Em {onde}:"]
     for expressao, rotulo in ((js, "O que a expressao devolveu"), (depois, "O estado")):
         if not expressao.strip():
@@ -190,7 +204,7 @@ def _inspecionar(sessao, onde, js, depois, aviso=""):
         try:
             resultado = sessao.avaliar(expressao)
         except cdp.SemResposta:
-            linhas.append(f"{rotulo}: nao veio nada (promessa por resolver?)")
+            linhas.append(f"{rotulo}: {_porque_nao_veio(sessao, pagina, expressao)}")
         except RuntimeError as falha:
             linhas.append(f"{rotulo}: rebentou ({falha})")
         else:
@@ -474,7 +488,7 @@ def tool_medir_fluidez(
         if captura.strip():
             return _print_da_pagina(sessao, _onde_estou(pagina), captura)
         if not medir and not amostrar.strip():
-            return _inspecionar(sessao, _onde_estou(pagina), js, depois, aviso_das_outras)
+            return _inspecionar(sessao, _onde_estou(pagina), js, depois, aviso_das_outras, pagina)
         if js.strip():
             try:
                 resultado = sessao.avaliar(js)
