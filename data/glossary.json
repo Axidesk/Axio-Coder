@@ -5860,8 +5860,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
         "linha": 131,
         "conferido": [
-          1791242307.345,
-          46982
+          1791243548.489,
+          47563
         ]
       }
     },
@@ -5940,8 +5940,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1791241043.379,
-          38493
+          1791243754.455,
+          38847
         ]
       }
     },
@@ -5967,10 +5967,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 293,
+        "linha": 294,
         "conferido": [
-          1791242307.345,
-          46982
+          1791243548.489,
+          47563
         ]
       }
     },
@@ -5990,10 +5990,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 348,
+        "linha": 420,
         "conferido": [
-          1791242842.351,
-          20485
+          1791243893.231,
+          24064
         ]
       }
     },
@@ -6018,10 +6018,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 488,
+        "linha": 501,
         "conferido": [
-          1791242307.345,
-          46982
+          1791243548.489,
+          47563
         ]
       }
     },
@@ -6100,10 +6100,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 444,
+        "linha": 457,
         "conferido": [
-          1791242307.345,
-          46982
+          1791243548.489,
+          47563
         ]
       }
     },
@@ -6448,10 +6448,10 @@
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 527,
+        "linha": 540,
         "conferido": [
-          1791242307.345,
-          46982
+          1791243548.489,
+          47563
         ]
       }
     },
@@ -6654,10 +6654,10 @@
       "descricao": "Botao pill sem fundo (o `--bg-selecao` so entra no hover/active ou com `aria-pressed=\"true\"`). O \"Abrir editor\" fica aceso enquanto o Editor_x64.exe corre: quem responde e o comando `editor_do_mapa_aberto` (tasklist por IMAGENAME) e o vigia e um setTimeout recursivo de 2,5 s que so roda com o editor aberto, mais uma verificacao ao voltar a pagina a vista.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
-        "linha": 1363,
+        "linha": 1378,
         "conferido": [
-          1791241043.379,
-          38493
+          1791243754.455,
+          38847
         ]
       }
     },

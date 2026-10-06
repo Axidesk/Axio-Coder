@@ -223,6 +223,24 @@ def _exe_do_projeto(caminho, cwd=""):
     return alvo
 
 
+def _dica_do_exe_recusado(caminho):
+    """O que fazer quando o .exe existe no disco mas vive fora da pasta do projeto aberto.
+
+    Dois caminhos reais, e o aviso tem de os dizer: o programa saiu da pasta do projeto (e o
+    caminho tem de ser o LITERAL, como aparece na arvore, porque as pastas hospedadas sao juncoes
+    e o caminho de destino fica fora da raiz), ou e um programa de fora, que se lanca pela
+    ferramenta de janelas. Sem isto, o aviso diz so o que nao pode ser feito.
+    """
+    token = (caminho or "").strip().strip('"')
+    if not re.search(r"\.exe$", token, re.IGNORECASE):
+        return ""
+    if not os.path.isfile(os.path.abspath(token)):
+        return ""
+    return ("\nEste programa existe no disco: se saiu da pasta do projeto aberto, passe o caminho "
+            "LITERAL como ele aparece na arvore do Axio; se e um programa de fora, quem o abre e a "
+            "ferramenta de janelas - tool_operar_janela com acao='abrir'.")
+
+
 def _validar_comando_processo(comando, cwd=""):
     cmd = (comando or "").strip()
     if not cmd:
@@ -319,6 +337,7 @@ def _validar_comando_processo(comando, cwd=""):
     return False, (
         f"Executável '{exe}' não está na lista permitida.{dica}\n"
         f"Permitidos: {permitidos}."
+        f"{_dica_do_exe_recusado(partes[0])}"
     )
 
 
