@@ -301,18 +301,19 @@ def _pedir_o_print(sessao, recorte):
         return sessao.falar("Page.captureScreenshot", **pedido)
 
 
-def _print_da_pagina(sessao, onde, pedido):
+def _print_da_pagina(sessao, onde, pedido, extra=""):
+    extra = f" {extra.strip()}" if extra.strip() else ""
     try:
         recorte = _recorte_pedido(sessao, pedido)
     except ValueError as falha:
-        return f"ERRO: {falha}."
+        return f"ERRO: {falha}.{extra}"
     try:
         resposta = _pedir_o_print(sessao, recorte)
     except RuntimeError as falha:
-        return f"ERRO: a pagina recusou o print ({falha})."
+        return f"ERRO: a pagina recusou o print ({falha}).{extra}"
     dados = resposta.get("data")
     if not dados:
-        return "ERRO: a pagina respondeu ao print sem imagem nenhuma."
+        return f"ERRO: a pagina respondeu ao print sem imagem nenhuma.{extra}"
     medida = (
         f"{round(recorte['width'])}x{round(recorte['height'])} px"
         if recorte
@@ -323,9 +324,28 @@ def _print_da_pagina(sessao, onde, pedido):
             f"Print de {onde} ({medida}), tirado pelo proprio motor da pagina e nao pela janela: "
             "vem sem moldura, sem deslocamento e sem depender de a janela estar a vista. A imagem "
             "segue com esta resposta - olhe para ela antes de concluir."
-        ),
+        )
+        + extra,
         "imagem": {"base64": dados, "mime": "image/png", "rotulo": f"[Print da pagina: {onde}]"},
     }
+
+
+def _antes_do_print(sessao, pagina, expressao):
+    if not expressao.strip():
+        return ""
+    try:
+        resultado = sessao.avaliar(expressao)
+    except cdp.SemResposta:
+        return f" Antes da fotografia: {_porque_nao_veio(sessao, pagina, expressao)}."
+    except RuntimeError as falha:
+        return (
+            f" Antes da fotografia a expressao rebentou ({falha}): a imagem pode nao mostrar o "
+            "efeito pedido."
+        )
+    return (
+        " Antes da fotografia, o que a expressao devolveu: "
+        f"{json.dumps(resultado, ensure_ascii=False, default=str)}"
+    )
 
 
 _TOKENS_DO_TEMA = """
@@ -374,8 +394,9 @@ def _atalho(expressao):
     "corre 'js' e 'depois' e devolve o que lerem, ate com a janela em segundo plano - e o caminho "
     "para INSPECIONAR uma app de fora (um Tauri, um Electron, um Chrome) sem lhe roubar o foco. "
     "Com 'captura' FOTOGRAFA a pagina pelo motor dela e entrega a imagem (regiao em coordenadas "
-    "da pagina, seletor CSS ou 'tudo') - a unica via que ve a pagina inteira, sem moldura, sem "
-    "deslocamento e sem a janela precisar de estar a vista. Com 'amostrar' SEGUE uma expressao ao "
+    "da pagina, seletor CSS ou 'tudo'), e com 'js' a expressao corre ANTES da fotografia (abrir um "
+    "grupo, mudar de aba, arrumar a cena) e o valor dela vem no texto. Com 'amostrar' SEGUE uma "
+    "expressao ao "
     "longo do tempo e devolve so as mudancas, com o instante de cada uma - e o caminho para ver uma "
     "transicao, uma animacao ou um carregamento A ACONTECER, sem escrever um amostrador a mao.",
     {
@@ -486,7 +507,8 @@ def tool_medir_fluidez(
     finais = []
     try:
         if captura.strip():
-            return _print_da_pagina(sessao, _onde_estou(pagina), captura)
+            extra = _antes_do_print(sessao, pagina, js) + aviso_das_outras
+            return _print_da_pagina(sessao, _onde_estou(pagina), captura, extra)
         if not medir and not amostrar.strip():
             return _inspecionar(sessao, _onde_estou(pagina), js, depois, aviso_das_outras, pagina)
         if js.strip():
