@@ -369,11 +369,68 @@ _TOKENS_DO_TEMA = """
 """
 
 
+_CLICAR_PELO_TEXTO = """
+(() => {
+    const procurado = __ALVO__;
+    const limpo = (t) => (t || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const alvo = limpo(procurado);
+    const folhas = Array.from(document.querySelectorAll('*')).filter(
+        (e) => e.children.length === 0 && limpo(e.textContent) === alvo
+    );
+    if (!folhas.length) {
+        const parecidos = Array.from(document.querySelectorAll('*'))
+            .filter((e) => e.children.length === 0 && limpo(e.textContent).includes(alvo))
+            .map((e) => limpo(e.textContent).slice(0, 40));
+        return JSON.stringify({
+            clicou: false,
+            porque: 'nao achei um elemento com esse texto',
+            parecidos: [...new Set(parecidos)].slice(0, 8),
+        });
+    }
+    const elemento = folhas[0];
+    const clicavel = (e) => e && e.matches && e.matches('button, a, [role=button], summary, label, [tabindex]');
+    let onde = elemento;
+    while (onde && onde !== document.body && !clicavel(onde)) {
+        const pai = onde.parentElement;
+        const irmao = pai ? Array.from(pai.children).find((x) => clicavel(x) && !x.contains(onde)) : null;
+        if (irmao) {
+            onde = irmao;
+            break;
+        }
+        onde = pai;
+    }
+    if (!onde || onde === document.body || !clicavel(onde)) {
+        const caixa = elemento.closest('li, tr, section, div');
+        if (!caixa || !caixa.click) {
+            return JSON.stringify({ clicou: false, porque: 'esse texto nao tem nada clicavel a volta' });
+        }
+        caixa.click();
+        return JSON.stringify({ clicou: true, onde: caixa.tagName + '.' + String(caixa.className).split(' ')[0] });
+    }
+    onde.click();
+    return JSON.stringify({
+        clicou: true,
+        onde: onde.tagName + (onde.className ? '.' + String(onde.className).split(' ')[0] : ''),
+        agora: onde.getAttribute ? onde.getAttribute('aria-expanded') : null,
+    });
+})()
+"""
+
+
+def _clicar_pelo_texto(procurado):
+    return _CLICAR_PELO_TEXTO.replace("__ALVO__", json.dumps(procurado, ensure_ascii=False))
+
+
 def _atalho(expressao):
-    if expressao.strip() == "@mapa":
+    texto = expressao.strip()
+    if texto == "@mapa":
         return _MAPA_DA_JANELA
-    if expressao.strip() == "@tokens":
+    if texto == "@tokens":
         return _TOKENS_DO_TEMA
+    if texto.lower().startswith("@clicar:"):
+        procurado = texto.split(":", 1)[1].strip()
+        if procurado:
+            return _clicar_pelo_texto(procurado)
     return expressao
 
 
@@ -417,7 +474,7 @@ def _atalho(expressao):
         },
         "js": {
             "tipo": "STRING",
-            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Dois atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada - e '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao.",
+            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Tres atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada; '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao; e '@clicar:<texto>' clica no que responde por esse texto, subindo do rotulo ao botao ou ao irmao clicavel dele (o caso de um titulo de seccao cujo botao esta ao lado) - devolve onde clicou e, se a peca o tiver, o aria-expanded que ficou.",
             "padrao": "",
         },
         "depois": {

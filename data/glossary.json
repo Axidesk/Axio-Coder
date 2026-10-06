@@ -464,10 +464,10 @@
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 736,
+        "linha": 764,
         "conferido": [
-          1791074217.015,
-          38284
+          1791246965.246,
+          39291
         ]
       }
     },
@@ -804,10 +804,10 @@
       "descricao": "Contrato duro: comando irreversivel (git reset --hard, del /s, drop table) e recusado antes de tudo, e cada ferramenta com equivalente nativo e recusada com a dica da ferramenta. Fora isso vale uma lista fixa de executaveis (compiladores, gestores de pacotes, linters, git, midia, rede/sistema) MAIS qualquer .exe que viva DENTRO da pasta do projeto aberto - e o programa que o proprio projeto compilou, e poder arranca-lo e o que permite ler o arranque dele. Um caminho absoluto com espacos continua a ter de vir entre aspas, senao o tokenizador parte-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 244,
+        "linha": 263,
         "conferido": [
-          1791244830.832,
-          64427
+          1791249807.512,
+          65349
         ]
       }
     },
@@ -824,10 +824,10 @@
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 870,
+        "linha": 898,
         "conferido": [
-          1791074217.015,
-          38284
+          1791246965.246,
+          39291
         ]
       }
     },
@@ -2306,10 +2306,10 @@
       "descricao": "Busca da arvore de ficheiros: acha um trecho colado mesmo com indentacao, tabs, quebras de linha ou linhas coladas sem separador, porque compara com TODO o espaco em branco removido dos dois lados. Consumida pela rota /api/search_files (src/backend/routes/editor.py) e pelo #explorer-search-input (src/frontend/js/editor/workspace.js:performExplorerSearch).",
       "localizacao": {
         "arquivo": "src/backend/services/busca_texto.py",
-        "linha": 108,
+        "linha": 126,
         "conferido": [
-          1790905834.737,
-          5544
+          1791248160.325,
+          6132
         ]
       }
     },
@@ -2327,10 +2327,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 404,
+        "linha": 423,
         "conferido": [
-          1791244830.832,
-          64427
+          1791249807.512,
+          65349
         ]
       }
     },
@@ -4671,10 +4671,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 432,
+        "linha": 451,
         "conferido": [
-          1791244830.832,
-          64427
+          1791249807.512,
+          65349
         ]
       }
     },
@@ -5509,10 +5509,10 @@
       "descricao": "Aviso que aparece no retorno de qualquer edicao de um .py (CHECKLIST ESTRUTURAL) quando uma chamada a funcao do proprio modulo usa uma palavra-chave que a assinatura dela nao tem. A sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta - foi o caso do _texto_depuracao(registo_id=) contra def _texto_depuracao(registro_id,...). Nao bloqueia a escrita; confirma no codigo real e acerta a chamada ou a assinatura.",
       "localizacao": {
         "arquivo": "src/backend/tools/syntax.py",
-        "linha": 810,
+        "linha": 838,
         "conferido": [
-          1791074217.015,
-          38284
+          1791246965.246,
+          39291
         ]
       }
     },
@@ -5741,8 +5741,8 @@
         "arquivo": "docs/projetos/Tibia74/Server/config.lua",
         "linha": 17,
         "conferido": [
-          1791049584.013,
-          5537
+          1791251987.427,
+          7089
         ]
       }
     },
@@ -5798,10 +5798,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
-        "linha": 702,
+        "linha": 767,
         "conferido": [
-          1791174367.678,
-          29835
+          1791250887.437,
+          32631
         ]
       }
     },
@@ -5819,10 +5819,10 @@
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
-        "linha": 327,
+        "linha": 392,
         "conferido": [
-          1791174367.678,
-          29835
+          1791250887.437,
+          32631
         ]
       }
     },
@@ -5838,10 +5838,10 @@
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
-        "linha": 513,
+        "linha": 578,
         "conferido": [
-          1791174367.678,
-          29835
+          1791250887.437,
+          32631
         ]
       }
     },
@@ -5858,10 +5858,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 131,
+        "linha": 130,
         "conferido": [
-          1791243548.489,
-          47563
+          1791245425.926,
+          47471
         ]
       }
     },
@@ -5926,8 +5926,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 98,
         "conferido": [
-          1791241012.006,
-          17904
+          1791245421.327,
+          17861
         ]
       }
     },
@@ -5940,8 +5940,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1791243754.455,
-          38847
+          1791245426.013,
+          38888
         ]
       }
     },
@@ -5967,10 +5967,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 294,
+        "linha": 293,
         "conferido": [
-          1791243548.489,
-          47563
+          1791245425.926,
+          47471
         ]
       }
     },
@@ -5990,10 +5990,10 @@
       "descricao": "Mede o ritmo de desenho (fps, mediana, p95, quadros acima de 32 ms) de qualquer app Chromium - janela Tauri/WebView2, Electron, Edge, Chrome - de FORA, pela porta de depuracao (CDP) que a app abre com --remote-debugging-port=N. porta=0 procura nos portos habituais (9222, 9223, 9229, 9333 - o do painel do Tibia74). 'js' corre uma expressao ANTES de medir, e o resultado dela sai no relato: e assim que se mede um efeito a acontecer (agendar o clique com setTimeout para ele cair DENTRO da janela de medicao). A janela tem de estar a vista - em segundo plano o Chromium para o requestAnimationFrame e a ferramenta di-lo em vez de inventar um numero. Para a janela do PROPRIO Axio a via e o tool_observar_preview (acao='quadros').",
       "localizacao": {
         "arquivo": "src/backend/tools/fluidez.py",
-        "linha": 420,
+        "linha": 455,
         "conferido": [
-          1791243893.231,
-          24064
+          1791251214.681,
+          25577
         ]
       }
     },
@@ -6004,10 +6004,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 2281,
+        "linha": 2280,
         "conferido": [
-          1791244596.844,
-          88444
+          1791248878.029,
+          88339
         ]
       }
     },
@@ -6018,10 +6018,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 501,
+        "linha": 500,
         "conferido": [
-          1791243548.489,
-          47563
+          1791245425.926,
+          47471
         ]
       }
     },
@@ -6039,8 +6039,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/conteudo.js",
         "linha": 83,
         "conferido": [
-          1791241039.49,
-          14438
+          1791245421.256,
+          14476
         ]
       }
     },
@@ -6069,8 +6069,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 571,
         "conferido": [
-          1791244583.649,
-          49381
+          1791248882.111,
+          49376
         ]
       }
     },
@@ -6083,8 +6083,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1219,
         "conferido": [
-          1791244583.649,
-          49381
+          1791248882.111,
+          49376
         ]
       }
     },
@@ -6100,10 +6100,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 457,
+        "linha": 456,
         "conferido": [
-          1791243548.489,
-          47563
+          1791245425.926,
+          47471
         ]
       }
     },
@@ -6122,8 +6122,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 225,
         "conferido": [
-          1791241012.006,
-          17904
+          1791245421.327,
+          17861
         ]
       }
     },
@@ -6176,8 +6176,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1251,
         "conferido": [
-          1791244583.649,
-          49381
+          1791248882.111,
+          49376
         ]
       }
     },
@@ -6208,10 +6208,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 1439,
+        "linha": 1438,
         "conferido": [
-          1791244596.844,
-          88444
+          1791248878.029,
+          88339
         ]
       }
     },
@@ -6430,8 +6430,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 269,
         "conferido": [
-          1791241012.006,
-          17904
+          1791245421.327,
+          17861
         ]
       }
     },
@@ -6448,10 +6448,10 @@
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 540,
+        "linha": 539,
         "conferido": [
-          1791243548.489,
-          47563
+          1791245425.926,
+          47471
         ]
       }
     },
@@ -6492,8 +6492,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 698,
         "conferido": [
-          1791244596.844,
-          88444
+          1791248878.029,
+          88339
         ]
       }
     },
@@ -6534,8 +6534,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 188,
         "conferido": [
-          1791244596.844,
-          88444
+          1791248878.029,
+          88339
         ]
       }
     },
@@ -6595,8 +6595,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
         "linha": 1064,
         "conferido": [
-          1791239639.18,
-          42341
+          1791250886.45,
+          42325
         ]
       }
     },
@@ -6614,8 +6614,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 798,
         "conferido": [
-          1791244596.844,
-          88444
+          1791248878.029,
+          88339
         ]
       }
     },
@@ -6634,10 +6634,10 @@
       "descricao": "A descricao de cada pasta da arvore vive em UMA linha; quando nao cabe, o Chromium poe o \"...\" e a classe `.cortada` (posta por `ajustarDescricoes`, que mede `scrollHeight > clientHeight`) da cursor de mao; clicar poe `.aberta`, tira o `-webkit-line-clamp` e a linha desce. A deteccao SALTA as linhas com `.aberta`, senao o texto deixa de transbordar ao abrir e a propria rotina fecha-o.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
-        "linha": 124,
+        "linha": 123,
         "conferido": [
-          1791239639.18,
-          42341
+          1791250886.45,
+          42325
         ]
       }
     },
@@ -6654,10 +6654,10 @@
       "descricao": "Botao pill sem fundo (o `--bg-selecao` so entra no hover/active ou com `aria-pressed=\"true\"`). O \"Abrir editor\" fica aceso enquanto o Editor_x64.exe corre: quem responde e o comando `editor_do_mapa_aberto` (tasklist por IMAGENAME) e o vigia e um setTimeout recursivo de 2,5 s que so roda com o editor aberto, mais uma verificacao ao voltar a pagina a vista.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
-        "linha": 1378,
+        "linha": 1382,
         "conferido": [
-          1791243754.455,
-          38847
+          1791245426.013,
+          38888
         ]
       }
     },
@@ -6695,8 +6695,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 82,
         "conferido": [
-          1791241012.006,
-          17904
+          1791245421.327,
+          17861
         ]
       }
     },
@@ -6714,8 +6714,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 284,
         "conferido": [
-          1791241012.006,
-          17904
+          1791245421.327,
+          17861
         ]
       }
     },
@@ -6736,6 +6736,43 @@
         "conferido": [
           1791242313.539,
           40962
+        ]
+      }
+    },
+    {
+      "termo": "ban automatico",
+      "aliases": [
+        "ban automatico",
+        "ban por mortes",
+        "red skull ban"
+      ],
+      "identificador": "RED_SKULL_BAN_LENGTH_1",
+      "descricao": "Duração do primeiro ban automático por mortes injustificadas, em segundos no config.lua e em dias no painel. O segundo e o terceiro são RED_SKULL_BAN_LENGTH_2 e _3.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Solution/src/configmanager.h",
+        "linha": 120,
+        "conferido": [
+          1791247355.213,
+          4755
+        ]
+      }
+    },
+    {
+      "termo": "perdas ao morrer",
+      "aliases": [
+        "perda de exp ao morrer",
+        "perdas ao morrer",
+        "loss",
+        "o que se perde quando morre"
+      ],
+      "identificador": "perda",
+      "descricao": "Percentuais de exp, habilidades/magias e loot que o personagem perde ao morrer, lidos do config.lua pelo login.lua; cada bênção tira 1 ponto.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Server/data/creaturescripts/scripts/login.lua",
+        "linha": 5,
+        "conferido": [
+          1791247338.64,
+          1428
         ]
       }
     }
