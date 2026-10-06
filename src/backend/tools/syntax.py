@@ -39,6 +39,7 @@ EXTENSOES = {
     ".tpp": "cpp",
     ".h": "cpp",
     ".c": "cpp",
+    ".lua": "lua",
 }
 
 def _detectar_linguagem(caminho, linguagem):
@@ -215,6 +216,23 @@ def _parser_rust():
 
 def _validar_rust(conteudo):
     parser, erro = _parser_rust()
+    if erro:
+        return erro
+    return _validar_com_tree_sitter(conteudo, parser)
+
+def _parser_lua():
+    try:
+        from tree_sitter import Language, Parser
+        import tree_sitter_lua
+    except ImportError:
+        return None, "ERRO: tree-sitter ou tree-sitter-lua nao instalados (necessarios para validar Lua)."
+    try:
+        return Parser(Language(tree_sitter_lua.language())), None
+    except Exception as e:
+        return None, f"ERRO: falha ao iniciar o parser de Lua (tree-sitter): {e}"
+
+def _validar_lua(conteudo):
+    parser, erro = _parser_lua()
     if erro:
         return erro
     return _validar_com_tree_sitter(conteudo, parser)
@@ -417,10 +435,10 @@ def _erros_php(abs_path):
 
 @register(
     "tool_validar_sintaxe",
-    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, Rust, JSON, CSS, HTML ou PHP) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Em Rust a leitura tambem e pela arvore (tree-sitter), onde os atributos #[...] contam como parte do item. Retorna OK ou o erro com linha/coluna.',
+    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, Rust, Lua, JSON, CSS, HTML ou PHP) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Em Rust e em Lua a leitura tambem e pela arvore (tree-sitter), onde os atributos #[...] contam como parte do item. Retorna OK ou o erro com linha/coluna.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'rust', 'json', 'css', 'html', 'php'], "padrao": ""},
+        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'rust', 'lua', 'json', 'css', 'html', 'php'], "padrao": ""},
     },
 )
 def tool_validar_sintaxe(caminho_relativo, linguagem=""):
@@ -473,6 +491,12 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
         except OSError as e:
             return f"ERRO ao ler o arquivo: {e}"
         erro_msg = _validar_rust(conteudo)
+    elif lang == "lua":
+        try:
+            conteudo = _ler_texto(abs_path)
+        except OSError as e:
+            return f"ERRO ao ler o arquivo: {e}"
+        erro_msg = _validar_lua(conteudo)
     elif lang == "cpp":
         return _veredicto_cpp(caminho_relativo, abs_path)
     elif lang == "php":
@@ -509,6 +533,8 @@ def validar_texto(caminho_relativo, conteudo):
             return cpp.erros_de_texto(conteudo, caminho_relativo)
         if lang == "rust":
             return rust.erros_de_texto(conteudo)
+        if lang == "lua":
+            return _validar_lua(conteudo)
     except Exception as e:
         return f"falha ao validar: {e}"
     return None
@@ -516,7 +542,7 @@ def validar_texto(caminho_relativo, conteudo):
 def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None, antes=None):
     """Em C++ vale por 'antes' o TEXTO anterior completo (None = ir busca-lo ao historico de edicoes)."""
     lang = _detectar_linguagem(caminho_relativo, "")
-    if lang not in ("python", "javascript", "json", "css", "html", "cpp", "rust", "php"):
+    if lang not in ("python", "javascript", "json", "css", "html", "cpp", "rust", "php", "lua"):
         return ""
     if caminho_absoluto is None:
         caminho_absoluto, erro = resolver_caminho(caminho_relativo)
@@ -537,6 +563,8 @@ def validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto=None, antes=N
             erro = _erros_php(caminho_absoluto)
         elif lang == "rust":
             erro = _validar_rust(_ler_texto(caminho_absoluto))
+        elif lang == "lua":
+            erro = _validar_lua(_ler_texto(caminho_absoluto))
         else:
             erro = _validar_javascript(caminho_absoluto)
     except OSError:
