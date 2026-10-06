@@ -241,6 +241,25 @@ def _dica_do_exe_recusado(caminho):
             "ferramenta de janelas - tool_operar_janela com acao='abrir'.")
 
 
+def _comando_para_o_cmd(comando):
+    """O cmd.exe nao aceita a barra ('/') a abrir o nome do programa.
+
+    'pasta/programa.exe' aponta um ficheiro que existe, mas o cmd.exe le '-pasta' e responde
+    "'pasta' nao e reconhecido como um comando". Aqui a barra vira a do Windows e um caminho
+    relativo ganha o '.\\' que o cmd.exe exige para o procurar na pasta de trabalho. So o PRIMEIRO
+    token e tocado: em 'node x.mjs --a/b' ou 'git diff -- a/b.txt' nada muda.
+    """
+    if os.name != "nt" or not isinstance(comando, str):
+        return comando
+    partes = tokenizar_linha(comando)
+    if not partes or "/" not in partes[0]:
+        return comando
+    caminho = partes[0].replace("/", "\\")
+    if not os.path.isabs(caminho):
+        caminho = ".\\" + caminho
+    return comando.replace(partes[0], caminho, 1)
+
+
 def _validar_comando_processo(comando, cwd=""):
     cmd = (comando or "").strip()
     if not cmd:
@@ -905,6 +924,7 @@ def iniciar_processo(comando, cwd=None, porta_env=None, modo="aguardar", acompan
     conclusao (modo 'aguardar') passa False e trata o fim por si, para nao haver dois fim.
     Com 'stdin_pipe' a entrada fica aberta para escrever_stdin_processo (cards do terminal)."""
     cwd = cwd or estado.get("pasta_raiz", "") or os.getcwd()
+    comando = _comando_para_o_cmd(comando)
     pid = id_processo()
     reg = {"id": pid, "comando": comando, "status": "rodando", "log": [], "cwd": cwd,
            "popen": None, "stdin": None, "modo": modo, "nascimento": time.time(),
@@ -1182,6 +1202,7 @@ def run_com_timeout(cmd, timeout=60, cwd=None):
     e, ao estourar, encerramos a arvore inteira com matar_arvore antes de relancar
     subprocess.TimeoutExpired para o chamador tratar.
     """
+    cmd = _comando_para_o_cmd(cmd)
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
