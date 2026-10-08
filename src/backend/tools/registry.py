@@ -32,6 +32,7 @@ Disponibilidade ('disponivel'):
 Adicionar uma ferramenta passou a ser: 1 funcao no modulo dela + este decorador
 acima dela.
 """
+import difflib
 import importlib
 import threading
 import time
@@ -164,12 +165,45 @@ def resolver_kwargs(params, args):
     return kwargs
 
 
+def argumentos_desconhecidos(params, args):
+    """Nomes recebidos que o esquema nao declara, cada um com o parente mais proximo."""
+    conhecidos = list((params or {}).keys())
+    estranhos = []
+    for nome in (args or {}):
+        if nome in conhecidos:
+            continue
+        proximo = difflib.get_close_matches(nome, conhecidos, n=1)
+        estranhos.append((nome, proximo[0] if proximo else None))
+    return estranhos
+
+
+def _aviso_dos_desconhecidos(params, args):
+    estranhos = argumentos_desconhecidos(params, args)
+    if not estranhos:
+        return ""
+    conhecidos = list((params or {}).keys())
+    lista = ", ".join(conhecidos[:10]) + ("..." if len(conhecidos) > 10 else "")
+    partes = [
+        f"'{nome}'" + (f" (querias '{proximo}'?)" if proximo else "")
+        for nome, proximo in estranhos
+    ]
+    return (
+        "[AVISO] A ferramenta nao aceita "
+        + ", ".join(partes)
+        + f". Aceita: {lista}."
+    )
+
+
 def dispatch(nome, args):
     """Chama o handler registado. Devolve (resultado, conhecida)."""
     entry = TOOL_REGISTRY.get(nome)
     if entry is None:
         return None, False
-    return _com_vigia(nome, entry["handler"], resolver_kwargs(entry["params"], args or {})), True
+    resultado = _com_vigia(nome, entry["handler"], resolver_kwargs(entry["params"], args or {}))
+    aviso = _aviso_dos_desconhecidos(entry["params"], args or {})
+    if aviso and isinstance(resultado, str):
+        resultado = f"{aviso}\n\n{resultado}"
+    return resultado, True
 
 
 def _com_vigia(nome, handler, kwargs):
