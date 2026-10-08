@@ -113,6 +113,39 @@ _MAPA_DA_JANELA = """
 """
 
 
+_GEOMETRIA = """
+(() => {
+    const alvos = __ALVOS__;
+    const ver = (seletor) => {
+        let elemento = null;
+        try {
+            elemento = document.querySelector(seletor);
+        } catch (erro) {
+            return { seletor, erro: 'seletor invalido' };
+        }
+        if (!elemento) return { seletor, achado: false };
+        const caixa = elemento.getBoundingClientRect();
+        const estilo = getComputedStyle(elemento);
+        return {
+            seletor,
+            achado: true,
+            tag: elemento.tagName.toLowerCase(),
+            texto: String(elemento.textContent || '').trim().split('\\n').join(' ').slice(0, 60),
+            x: Math.round(caixa.left),
+            y: Math.round(caixa.top),
+            largura: Math.round(caixa.width),
+            altura: Math.round(caixa.height),
+            pintado: elemento.getClientRects().length > 0 && caixa.width > 0 && caixa.height > 0,
+            fonte: estilo.fontSize,
+            cor: estilo.color,
+            fundo: estilo.backgroundColor
+        };
+    };
+    return JSON.stringify(alvos.map(ver));
+})()
+"""
+
+
 def _texto_dos_alvos(porta, paginas):
     linhas = [f"Porto {porta}: {len(paginas)} pagina(s) ao alcance."]
     for indice, pagina in enumerate(paginas, start=1):
@@ -196,7 +229,7 @@ def _porque_nao_veio(sessao, pagina, expressao):
     return f"nao veio nada em {sessao.espera:.0f} s (promessa por resolver? '{curta}')"
 
 
-def _inspecionar(sessao, onde, js, depois, aviso="", pagina=None):
+def _inspecionar(sessao, onde, js, depois, aviso="", pagina=None, seletores=""):
     linhas = [f"Em {onde}:"]
     for expressao, rotulo in ((js, "O que a expressao devolveu"), (depois, "O estado")):
         if not expressao.strip():
@@ -209,10 +242,49 @@ def _inspecionar(sessao, onde, js, depois, aviso="", pagina=None):
             linhas.append(f"{rotulo}: rebentou ({falha})")
         else:
             linhas.append(f"{rotulo}: {json.dumps(resultado, ensure_ascii=False, default=str)}")
+    if seletores.strip():
+        linhas.append(_geometria(sessao, seletores))
     if len(linhas) == 1:
-        linhas.append("Nao pediu nada para ler: passe 'js' e/ou 'depois'.")
+        linhas.append("Nao pediu nada para ler: passe 'js', 'depois' e/ou 'seletores'.")
     if aviso:
         linhas.append(aviso.strip())
+    return "\n".join(linhas)
+
+
+def _geometria(sessao, seletores):
+    alvos = [linha.strip() for linha in str(seletores).splitlines() if linha.strip()]
+    if not alvos:
+        return ""
+    guiao = _GEOMETRIA.replace("__ALVOS__", json.dumps(alvos, ensure_ascii=False))
+    try:
+        bruto = sessao.avaliar(guiao)
+    except cdp.SemResposta:
+        return "A geometria nao devolveu nada (promessa por resolver?)."
+    except RuntimeError as falha:
+        return f"A geometria rebentou ({falha})."
+    try:
+        itens = json.loads(bruto)
+    except (TypeError, ValueError):
+        return f"A geometria devolveu um formato inesperado ({str(bruto)[:200]})."
+
+    linhas = [f"Geometria de {len(itens)} seletor(es):"]
+    for item in itens:
+        if item.get("erro"):
+            linhas.append(f"  {item['seletor']}: {item['erro']}")
+            continue
+        if not item.get("achado"):
+            linhas.append(f"  {item['seletor']}: nao existe na pagina")
+            continue
+        linhas.append(
+            f"  {item['seletor']}: <{item['tag']}> x={item['x']} y={item['y']} "
+            f"{item['largura']}x{item['altura']} fonte={item['fonte']} cor={item['cor']} "
+            f"fundo={item['fundo']} | {item['texto']}"
+        )
+        if not item.get("pintado"):
+            linhas.append(
+                "    ATENCAO: ocupa 0x0 - esta oculto (display none, aba fechada ou fora do "
+                "desenho), logo a medida nao vale"
+            )
     return "\n".join(linhas)
 
 
@@ -455,7 +527,10 @@ def _atalho(expressao):
     "grupo, mudar de aba, arrumar a cena) e o valor dela vem no texto. Com 'amostrar' SEGUE uma "
     "expressao ao "
     "longo do tempo e devolve so as mudancas, com o instante de cada uma - e o caminho para ver uma "
-    "transicao, uma animacao ou um carregamento A ACONTECER, sem escrever um amostrador a mao.",
+    "transicao, uma animacao ou um carregamento A ACONTECER, sem escrever um amostrador a mao. "
+    "Com 'seletores' (um seletor CSS por linha) devolve a geometria e o estilo de cada um - x, y, "
+    "largura, altura, fonte, cor, fundo - e AVISA quando o elemento ocupa 0x0, que e o caso do "
+    "que esta oculto e cuja medida nao vale.",
     {
         "porta": {
             "tipo": "INTEGER",
@@ -507,11 +582,16 @@ def _atalho(expressao):
             "desc": f"De quantos em quantos milissegundos ler a expressao de 'amostrar' ({INTERVALO_MINIMO} a {INTERVALO_MAXIMO}).",
             "padrao": INTERVALO_PADRAO,
         },
+        "seletores": {
+            "tipo": "STRING",
+            "desc": "Um seletor CSS por linha: devolve a geometria e o estilo real de cada um (x, y, largura, altura, fonte, cor, fundo) e AVISA quando o elemento ocupa 0x0 - oculto, numa aba fechada ou fora do desenho - porque nesse caso a medida nao vale. Substitui o getBoundingClientRect escrito a mao em cada medicao; corre com 'medir'=False e aceita vir junto de 'js' (para abrir o que se vai medir).",
+            "padrao": "",
+        },
     },
 )
 def tool_medir_fluidez(
     porta=0, alvo="", durante=DURACAO_PADRAO, js="", listar=False, depois="", medir=True,
-    captura="", amostrar="", intervalo=INTERVALO_PADRAO
+    captura="", amostrar="", intervalo=INTERVALO_PADRAO, seletores=""
 ):
     js = _atalho(js)
     depois = _atalho(depois)
@@ -543,7 +623,7 @@ def tool_medir_fluidez(
         emit_event("executing", function="A fotografar a pagina de fora")
     elif amostrar.strip():
         emit_event("executing", function=f"A seguir a pagina de fora por {total} ms")
-    elif medir:
+    elif medir and not seletores.strip():
         emit_event("executing", function=f"A medir o ritmo de desenho por {total} ms")
     else:
         emit_event("executing", function="A ler o estado da janela")
@@ -566,8 +646,10 @@ def tool_medir_fluidez(
         if captura.strip():
             extra = _antes_do_print(sessao, pagina, js) + aviso_das_outras
             return _print_da_pagina(sessao, _onde_estou(pagina), captura, extra)
-        if not medir and not amostrar.strip():
-            return _inspecionar(sessao, _onde_estou(pagina), js, depois, aviso_das_outras, pagina)
+        if not amostrar.strip() and (not medir or seletores.strip()):
+            return _inspecionar(
+                sessao, _onde_estou(pagina), js, depois, aviso_das_outras, pagina, seletores
+            )
         if js.strip():
             try:
                 resultado = sessao.avaliar(js)
