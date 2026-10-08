@@ -78,6 +78,47 @@ new Promise((pronto) => {
 """
 
 
+_CONSOLA_DA_PAGINA = """
+(() => {
+    if (!window.__axio_consola) {
+        const lista = [];
+        const guardar = (tipo, texto) => {
+            lista.push({ tipo: tipo, texto: String(texto).slice(0, 300), aos_ms: Math.round(performance.now()) });
+            if (lista.length > 200) lista.shift();
+        };
+        for (const nome of ['error', 'warn']) {
+            const original = console[nome].bind(console);
+            console[nome] = function () {
+                const partes = Array.from(arguments).map((p) => (p && p.message ? p.message : p));
+                guardar(nome, partes.join(' '));
+                original.apply(null, arguments);
+            };
+        }
+        window.addEventListener('error', (evento) => {
+            const alvo = evento.target;
+            if (alvo && alvo !== window && alvo.tagName) {
+                guardar('recurso', alvo.tagName + ' ' + (alvo.src || alvo.href || ''));
+                return;
+            }
+            guardar('erro', (evento.message || 'sem mensagem') + ' @ ' + (evento.filename || '?') + ':' + (evento.lineno || '?'));
+        }, true);
+        window.addEventListener('unhandledrejection', (evento) => {
+            guardar('promessa', (evento.reason && evento.reason.message) || evento.reason);
+        });
+        window.__axio_consola = lista;
+    }
+    const lista = window.__axio_consola;
+    return JSON.stringify({
+        quantas: lista.length,
+        nota: lista.length
+            ? ''
+            : 'nada apanhado desde que a ferramenta olhou para esta pagina pela primeira vez - a consola so guarda o que acontece depois disso',
+        entradas: lista.slice(-40),
+    });
+})()
+"""
+
+
 _MAPA_DA_JANELA = """
 (() => {
     const visivel = (el) => {
@@ -531,6 +572,8 @@ def _atalho(expressao):
     texto = expressao.strip()
     if texto == "@mapa":
         return _MAPA_DA_JANELA
+    if texto == "@consola":
+        return _CONSOLA_DA_PAGINA
     if texto == "@tokens":
         return _TOKENS_DO_TEMA
     if texto.lower().startswith("@clicar:"):
@@ -568,9 +611,15 @@ def _atalho(expressao):
     "codigo a mao: '@mapa' devolve o indice da pagina - cada botao, ligacao e campo, com o seletor, "
     "o que diz, DE ONDE vem esse rotulo ('diz': aria-label, texto, valor ou placeholder) e os "
     "atributos 'data-*' do elemento em 'dados' (ex: data-aba=site), que sao a forma estavel de o "
-    "achar por codigo em vez de o procurar pelo texto; '@tokens' devolve os tokens de tema; e "
+    "achar por codigo em vez de o procurar pelo texto; '@tokens' devolve os tokens de tema; "
+    "'@consola' devolve os erros, avisos, recursos falhados e promessas rebentadas que a pagina "
+    "deitou fora (tipo, texto e instante) desde a primeira vez que a ferramenta olhou para ela - a "
+    "resposta para 'porque e que este botao nao faz nada' sem andar a adivinhar pelo DOM; e "
     "'@clicar:<texto>' clica no elemento que responde por esse texto, subindo do rotulo ao elemento "
-    "clicavel.",
+    "clicavel; e '@consola' devolve os erros e avisos que a pagina deitou fora desde a primeira vez "
+    "que esta ferramenta olhou para ela - o erro de JavaScript, o pedido ou a imagem que falharam e a "
+    "promessa que rebentou sem ninguem a apanhar, com o tipo e o instante de cada um, que e o caminho "
+    "para saber PORQUE um botao nao responde ou uma imagem nao aparece sem andar a adivinhar pelo DOM.",
     {
         "porta": {
             "tipo": "INTEGER",
@@ -589,7 +638,7 @@ def _atalho(expressao):
         },
         "js": {
             "tipo": "STRING",
-            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Tres atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada; '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao; e '@clicar:<texto>' clica no que responde por esse texto, subindo do rotulo ao botao ou ao irmao clicavel dele (o caso de um titulo de seccao cujo botao esta ao lado) - devolve onde clicou e, se a peca o tiver, o aria-expanded que ficou.",
+            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Quatro atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada; '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao; '@consola' devolve os erros, avisos, recursos falhados e promessas rebentadas que a pagina deitou fora (tipo, texto e instante) desde a primeira vez que a ferramenta olhou para ela - e a resposta a 'porque e que este botao nao faz nada' sem andar a adivinhar pelo DOM; e '@clicar:<texto>' clica no que responde por esse texto, subindo do rotulo ao botao ou ao irmao clicavel dele (o caso de um titulo de seccao cujo botao esta ao lado) - devolve onde clicou e, se a peca o tiver, o aria-expanded que ficou.",
             "padrao": "",
         },
         "depois": {
