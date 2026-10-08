@@ -16,6 +16,7 @@ from PIL import Image, ImageGrab
 
 from src.backend.geometry.vista import EXTENSOES_MODELO, desenhar, desenho_do_ficheiro, vistas_do_pedido
 from src.backend.state import caminho_estado_projeto, emit_event, estado
+from src.backend.tools import janelas
 from src.backend.tools.registry import register
 from src.backend.services.capturas import fins_do_conteudo, mapa_de_atividade, preparar_captura
 from src.backend.services.file_service import resolver_caminho
@@ -231,11 +232,16 @@ def _imagens_em_pedacos(imagem, relativo, caixas):
     "tamanho original - e o unico caminho para ler um ecra inteiro de uma vez, ao custo de "
     "384 tokens por pedaco. O retorno declara sempre o tamanho que chegou ao modelo e, havendo "
     "mais do que um monitor, o mapa dos ecras (numero, tamanho e posicao): use esse numero em "
-    "'ecra' para capturar so o que interessa. PARA OLHAR PARA UMA JANELA ESPECIFICA use a outra "
-    "ferramenta: 'tool_operar_janela' com acao='print' e 'janela' por um trecho do titulo (ex: "
-    "'Axio Coder') - ela le a janela pela composicao do sistema, logo funciona mesmo com a janela "
-    "tapada, e o 'regiao' dela e relativo a janela (0,0 = canto superior esquerdo dela).",
+    "'ecra' para capturar so o que interessa. PARA OLHAR PARA UMA JANELA ESPECIFICA passe 'janela' "
+    "(um trecho do titulo como 'Axio Coder', o hwnd, ou 'pid:1234'): o print e dessa janela, lida "
+    "por ela propria a desenhar-se - funciona mesmo tapada ou minimizada e NAO lhe rouba o foco, "
+    "por isso fotografa-se uma janela enquanto se trabalha noutra. Com 'janela', o 'regiao' passa "
+    "a ser contado do canto dela (0,0).",
     {
+        "janela": {
+            "tipo": "STRING", "obrig": False, "padrao": "",
+            "desc": "Trecho do titulo de uma janela nativa do Windows ('Axio Coder', 'Control Panel'), o hwnd dela ou 'pid:1234'. Preenchido, o print e dessa janela (lida por ela propria, mesmo tapada ou minimizada, sem roubar o foco) e 'regiao' conta do canto dela. Vazio, o print e do ecra.",
+        },
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
             "desc": "Retangulo a capturar, 'x,y,largura,altura' em pixeis, nas coordenadas da area total dos monitores (podem ser negativas, quando ha um ecra a esquerda do principal). Vazio captura o ecra inteiro. Quanto menor a regiao, mais nitida ela chega ao modelo: abaixo de ~640 000 px chega em tamanho original - use uma tira estreita para ler texto fino.",
@@ -251,7 +257,9 @@ def _imagens_em_pedacos(imagem, relativo, caixas):
         },
     },
 )
-def tool_capturar_print(regiao="", ecra="principal", detalhe="unico"):
+def tool_capturar_print(regiao="", ecra="principal", detalhe="unico", janela=""):
+    if str(janela or "").strip():
+        return _print_de_janela(janela, regiao)
     emit_event("executing", function="Capturando o ecrã")
     try:
         _consciencia_de_dpi()
@@ -321,6 +329,14 @@ def tool_capturar_print(regiao="", ecra="principal", detalhe="unico"):
         ),
         "imagem": {"base64": base64_img, "mime": mime, "rotulo": f"[Print do ecra: {relativo}]"},
     }
+
+
+def _print_de_janela(janela, regiao):
+    alvo, erro = janelas._janela(janela)
+    if alvo is None:
+        return "ERRO: " + (erro or "nao encontrei essa janela.")
+    emit_event("executing", function="Capturando a janela")
+    return janelas._acao_print(alvo, regiao)
 
 
 @register(

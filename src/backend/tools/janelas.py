@@ -202,10 +202,7 @@ def _por_posicao(janelas):
     notas abertos: das quatro, a '#1' era a minimizada.
     """
     def chave(janela):
-        try:
-            minimizada = bool(ctypes.windll.user32.IsIconic(int(getattr(janela, "handle", 0) or 0)))
-        except Exception:
-            minimizada = False
+        minimizada = _esta_minimizada(janela)
         try:
             caixa = janela.rectangle()
             canto = (int(caixa.left), int(caixa.top))
@@ -987,6 +984,13 @@ def _motivo_de_vazio(janela):
     return "a janela nao tem area visivel (minimizada, escondida ou a fechar): restaure-a e traga-a para a frente"
 
 
+def _esta_minimizada(janela):
+    try:
+        return bool(ctypes.windll.user32.IsIconic(int(getattr(janela, "handle", 0) or 0)))
+    except Exception:
+        return False
+
+
 def _a_frente(hwnd):
     """A janela e mesmo a que esta em primeiro plano? Sem confirmar, um gesto injectado vai para outra em silencio. O restype tem de sair largos: sem ele o ctypes trunca o handle a 32 bits e a comparacao mente."""
     try:
@@ -1049,8 +1053,11 @@ def _acao_print(janela, regiao, alvo="", grelha=0, ampliar=1):
         if erro:
             return "ERRO: " + erro
         limpa = _pedido_relativo(regiao) or str(regiao or "").strip()
-    _, recado_frente = _trazer_para_a_frente(janela)
     imagem, metodo, erro = _capturar_janela(janela)
+    recado_frente = ""
+    if imagem is None or _esta_minimizada(janela):
+        _, recado_frente = _trazer_para_a_frente(janela)
+        imagem, metodo, erro = _capturar_janela(janela)
     if imagem is None:
         return f"ERRO: nao consegui capturar a janela ({erro})."
     recorte = retangulo_da_regiao(limpa)
