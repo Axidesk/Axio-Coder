@@ -167,9 +167,12 @@ def _aviso_das_outras_paginas(paginas, escolhida=None):
         return ""
     nomes = "; ".join(outras[:4])
     resto = f" (+{len(outras) - 4})" if len(outras) > 4 else ""
+    onde = f"em {onde_escolhi}" if onde_escolhi else "numa delas"
     return (
-        f" Este porto tem {len(paginas)} paginas. As outras ao alcance: {nomes}{resto}"
-        " - para medir uma delas, passe 'alvo' com um trecho do titulo."
+        f"ATENCAO: o porto tem {len(paginas)} paginas e nenhuma foi pinada, logo escolhi eu - "
+        f"tudo o que esta chamada fez (inclusive o que a expressao possa ter mudado) foi {onde}. "
+        f"As outras ao alcance: {nomes}{resto}. Se era a outra, repita com 'alvo' com um trecho "
+        "do titulo: sem 'alvo' a escolha sai pela ordem da lista e muda de chamada para chamada."
     )
 
 
@@ -231,9 +234,13 @@ def _porque_nao_veio(sessao, pagina, expressao):
 
 def _inspecionar(sessao, onde, js, depois, aviso="", pagina=None, seletores=""):
     linhas = [f"Em {onde}:"]
+    if aviso.strip():
+        linhas.append(aviso.strip())
+    lidos = 0
     for expressao, rotulo in ((js, "O que a expressao devolveu"), (depois, "O estado")):
         if not expressao.strip():
             continue
+        lidos += 1
         try:
             resultado = sessao.avaliar(expressao)
         except cdp.SemResposta:
@@ -243,11 +250,10 @@ def _inspecionar(sessao, onde, js, depois, aviso="", pagina=None, seletores=""):
         else:
             linhas.append(f"{rotulo}: {json.dumps(resultado, ensure_ascii=False, default=str)}")
     if seletores.strip():
+        lidos += 1
         linhas.append(_geometria(sessao, seletores))
-    if len(linhas) == 1:
+    if not lidos:
         linhas.append("Nao pediu nada para ler: passe 'js', 'depois' e/ou 'seletores'.")
-    if aviso:
-        linhas.append(aviso.strip())
     return "\n".join(linhas)
 
 
@@ -411,11 +417,11 @@ def _print_da_pagina(sessao, onde, pedido, extra=""):
     )
     return {
         "texto": (
-            f"Print de {onde} ({medida}), tirado pelo proprio motor da pagina e nao pela janela: "
+            (f"{extra.strip()} " if extra.strip() else "")
+            + f"Print de {onde} ({medida}), tirado pelo proprio motor da pagina e nao pela janela: "
             "vem sem moldura, sem deslocamento e sem depender de a janela estar a vista. A imagem "
             "segue com esta resposta - olhe para ela antes de concluir."
-        )
-        + extra,
+        ),
         "imagem": {"base64": dados, "mime": "image/png", "rotulo": f"[Print da pagina: {onde}]"},
     }
 
