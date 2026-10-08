@@ -592,10 +592,10 @@ def tool_remover_funcao(arquivo, nome_funcao, preview=False):
 
 @register(
     "tool_mover_bloco_verbatim",
-    "Move um bloco/range de linhas (ou um bloco delimitado por tags, ex: '<style>...</style>') de um arquivo para outro copiando os bytes exatos do disco (verbatim, sem redigitar). Use OU linha_inicio/linha_fim OU tag_abertura/tag_fechamento (com 'ocorrencia' para escolher qual bloco quando houver mais de um). Remove o bloco da origem e verifica por SHA-256 e por presença/ausência que saiu inteiro da origem e entrou idêntico no destino. Ideal para CSS/HTML/blocos de texto que tool_mover_funcao_verbatim não cobre. Use SEMPRE para mover blocos grandes em vez de fatiar manualmente.",
+    "Move um bloco/range de linhas (ou um bloco delimitado por tags, ex: '<style>...</style>') de um arquivo para outro copiando os bytes exatos do disco (verbatim, sem redigitar). Use OU linha_inicio/linha_fim OU tag_abertura/tag_fechamento (com 'ocorrencia' para escolher qual bloco quando houver mais de um). Remove o bloco da origem e verifica por SHA-256 e por presença/ausência que saiu inteiro da origem e entrou idêntico no destino. Ideal para CSS/HTML/blocos de texto que tool_mover_funcao_verbatim não cobre. Use SEMPRE para mover blocos grandes em vez de fatiar manualmente. Com 'arquivo_destino' VAZIO ele SO APAGA o bloco da origem, sem criar destino nenhum - e o caminho para tirar um trecho grande (corpo de email, bloco de HTML, lista) sem o redigitar no tool_substituir_texto.",
     {
         'arquivo_origem': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'arquivo_destino': {"tipo": "STRING", "obrig": True, "padrao": ""},
+        'arquivo_destino': {"tipo": "STRING", "obrig": False, "padrao": ""},
         'linha_inicio': {"tipo": "INTEGER", "padrao": 0},
         'linha_fim': {"tipo": "INTEGER", "padrao": 0},
         'tag_abertura': {"tipo": "STRING", "padrao": ""},
@@ -675,6 +675,27 @@ def tool_mover_bloco_verbatim(arquivo_origem, arquivo_destino, linha_inicio=0, l
         return "ERRO: O bloco selecionado está vazio."
 
     hash_corpo = hashlib.sha256(corpo.encode("utf-8")).hexdigest()
+
+    if not str(arquivo_destino or "").strip():
+        if not remover_origem:
+            return "ERRO: sem arquivo_destino nao ha para onde mover - diga o destino ou use remover_origem=True para so apagar."
+        del linhas_orig[inicio - 1:fim]
+        novo_orig = "".join(linhas_orig)
+        registrar_edicao(origem_abs, conteudo_orig, novo_orig)
+        with open(origem_abs, "w", encoding="utf-8", errors="ignore") as f:
+            f.write(novo_orig)
+        emit_event("action_diff", actionName=arquivo_origem, actionType="deleted", diff=gerar_diff(conteudo_orig, novo_orig))
+        notificar_mudanca_arquivos()
+        with open(origem_abs, "r", encoding="utf-8", errors="ignore") as f:
+            sobrou = corpo in f.read().replace("\r\n", "\n")
+        return (
+            f"SUCESSO: Bloco apagado da origem (modo={modo}, sem destino).\n"
+            f"Arquivo: {arquivo_origem} (linhas {inicio}-{fim})\n"
+            f"Linhas apagadas: {fim - inicio + 1}\n"
+            f"SHA-256 do bloco: {hash_corpo}\n"
+            f"ORIGEM: {'FALHOU (o bloco ainda esta la)' if sobrou else 'OK (bloco inteiro removido, zero residuo)'}\n"
+            "Desfazivel com tool_desfazer; confirme a sintaxe com tool_validar_sintaxe."
+        )
 
     dest_abs, erro_dest = resolver_caminho(arquivo_destino, permitir_extra=False, permitir_escrita=True)
     if erro_dest:
