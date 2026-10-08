@@ -373,8 +373,26 @@ def _pedir_o_print(sessao, recorte):
         return sessao.falar("Page.captureScreenshot", **pedido)
 
 
+def _aviso_do_quadro(sessao):
+    try:
+        estado = sessao.avaliar("({ visivel: document.visibilityState, foco: document.hasFocus() })")
+    except (RuntimeError, cdp.SemResposta):
+        return ""
+    if not isinstance(estado, dict):
+        return ""
+    if estado.get("visivel") == "visible" and estado.get("foco"):
+        return ""
+    escondida = estado.get("visivel") != "visible"
+    return (
+        " ATENCAO: a janela nao esta a frente"
+        + (" e o motor considera-a escondida" if escondida else "")
+        + ": o motor pode devolver o ULTIMO quadro desenhado, logo esta imagem pode mostrar um "
+        "estado antigo. Traga a janela para a frente e repita - ou leia o que o DOM devolve."
+    )
+
+
 def _print_da_pagina(sessao, onde, pedido, extra=""):
-    extra = f" {extra.strip()}" if extra.strip() else ""
+    extra = _aviso_do_quadro(sessao) + (f" {extra.strip()}" if extra.strip() else "")
     try:
         recorte = _recorte_pedido(sessao, pedido)
     except ValueError as falha:
