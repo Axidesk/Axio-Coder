@@ -100,9 +100,19 @@ _MAPA_DA_JANELA = """
     )].filter(visivel).slice(0, 60).map((el) => {
         const caixa = el.getBoundingClientRect();
         const rotulo = el.getAttribute('aria-label') || el.value || el.textContent || el.placeholder || '';
+        const diz = el.getAttribute('aria-label') ? 'aria-label'
+            : el.value ? 'valor'
+            : String(el.textContent || '').trim() ? 'texto'
+            : el.placeholder ? 'placeholder' : 'sem rotulo';
+        const dados = [...el.attributes]
+            .filter((a) => a.name.startsWith('data-'))
+            .map((a) => a.name + '=' + a.value)
+            .join(' ');
         return {
             seletor: comoChamar(el),
             o_que: String(rotulo).replace(/\\s+/g, ' ').trim().slice(0, 50),
+            diz,
+            dados,
             tipo: el.tagName.toLowerCase() + (el.type ? ':' + el.type : ''),
             ponto: Math.round(caixa.x + caixa.width / 2) + ',' + Math.round(caixa.y + caixa.height / 2),
             cabe_na_janela: caixa.y >= 0 && caixa.y + caixa.height <= innerHeight
@@ -556,8 +566,11 @@ def _atalho(expressao):
     "largura, altura, fonte, cor, fundo - e AVISA quando o elemento ocupa 0x0, que e o caso do "
     "que esta oculto e cuja medida nao vale. Em 'js' valem ATALHOS prontos, para nao escrever "
     "codigo a mao: '@mapa' devolve o indice da pagina - cada botao, ligacao e campo, com o seletor, "
-    "o que diz e o ponto para clicar; '@tokens' devolve os tokens de tema; e '@clicar:<texto>' "
-    "clica no elemento que responde por esse texto, subindo do rotulo ao elemento clicavel.",
+    "o que diz, DE ONDE vem esse rotulo ('diz': aria-label, texto, valor ou placeholder) e os "
+    "atributos 'data-*' do elemento em 'dados' (ex: data-aba=site), que sao a forma estavel de o "
+    "achar por codigo em vez de o procurar pelo texto; '@tokens' devolve os tokens de tema; e "
+    "'@clicar:<texto>' clica no elemento que responde por esse texto, subindo do rotulo ao elemento "
+    "clicavel.",
     {
         "porta": {
             "tipo": "INTEGER",
