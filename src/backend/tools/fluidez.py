@@ -548,7 +548,10 @@ def _atalho(expressao):
     "transicao, uma animacao ou um carregamento A ACONTECER, sem escrever um amostrador a mao. "
     "Com 'seletores' (um seletor CSS por linha) devolve a geometria e o estilo de cada um - x, y, "
     "largura, altura, fonte, cor, fundo - e AVISA quando o elemento ocupa 0x0, que e o caso do "
-    "que esta oculto e cuja medida nao vale.",
+    "que esta oculto e cuja medida nao vale. Em 'js' valem ATALHOS prontos, para nao escrever "
+    "codigo a mao: '@mapa' devolve o indice da pagina - cada botao, ligacao e campo, com o seletor, "
+    "o que diz e o ponto para clicar; '@tokens' devolve os tokens de tema; e '@clicar:<texto>' "
+    "clica no elemento que responde por esse texto, subindo do rotulo ao elemento clicavel.",
     {
         "porta": {
             "tipo": "INTEGER",
