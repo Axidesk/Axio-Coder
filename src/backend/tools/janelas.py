@@ -256,6 +256,8 @@ def _janela(identificador, fresco=False):
         contem = [w for w in abertas if colado and colado in _colado(_texto(w))]
     casadas = _por_posicao(exatas or contem)
     if not casadas:
+        casadas = _por_posicao(_por_processo(pedido, abertas))
+    if not casadas:
         return _procurar_no_win32(pedido)
     if indice > len(casadas):
         return None, (
@@ -273,6 +275,27 @@ def _janela(identificador, fresco=False):
             + f"\n  A ordem e da ESQUERDA para a direita no ecra."
         )
     return casadas[indice - 1], ""
+
+
+def _por_processo(pedido, abertas):
+    """As janelas cujo PROGRAMA casa com o pedido - o outro nome pelo qual se chama uma janela.
+
+    A lista de `acao='janelas'` mostra o executavel de cada janela, e escrever esse nome e o
+    caminho natural de quem le a lista. Medido a 2026-10-18 com o painel do Tibia74: o titulo e
+    'Control Panel' e o programa e 'ControlPanel.exe', logo pedir a janela pelo nome que a lista
+    mostra falhava, e a recusa nao dizia por que. So entra quando a procura pelo TITULO nao
+    achou nada, para nao roubar o caminho normal.
+    """
+    procurado = _colado(pedido)
+    if len(procurado) < 3:
+        return []
+    achadas = []
+    for janela in abertas:
+        pid = getattr(janela.element_info, "process_id", None)
+        nome = _colado(_nome_do_processo(pid)) if pid else ""
+        if nome and (procurado in nome or nome in procurado):
+            achadas.append(janela)
+    return achadas
 
 
 def _caminho_do_programa(nome):
