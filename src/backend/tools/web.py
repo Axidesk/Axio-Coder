@@ -114,6 +114,18 @@ def _aviso_de_fontes(niveis):
         "Nao afirme facto tecnico a partir destas fontes: repita a pesquisa com 'dominios' apontado\n"
         "a documentacao oficial (ex: dominios=\"docs.python.org\") ou use 'url_especifica' na pagina oficial.\n"
     )
+
+def _motivo_da_falha(resultado):
+    """Diz PORQUE uma extracao nao trouxe nada, em vez de responder so 'nenhum resultado'."""
+    if not resultado:
+        return "a API nao devolveu resposta"
+    falhas = resultado.get("failed_results") or []
+    if falhas:
+        return "; ".join(
+            f"{f.get('url', '?')}: {f.get('error', 'erro nao informado')}" for f in falhas
+        )
+    return "a API respondeu sem resultados e sem motivo declarado"
+
 def _conteudo_ilegivel(conteudo):
     """Detecta se o conteúdo extraído está ilegível/garbled (ex: Shiki, JS toggles).
     Retorna (bool, str): (é_ilegivel, motivo)"""
@@ -201,12 +213,22 @@ def tool_buscar_web(query="", url_especifica="", dominios=""):
         return "ERRO: Cliente Tavily não inicializado."
     
     try:
+        falha = ""
         if url_especifica:
             emit_event("status", message=f"Navegando: {url_especifica}")
             resultado = tavily_client.extract(
                 urls=[url_especifica],
                 extract_depth="advanced"
             )
+            if not resultado or not resultado.get('results'):
+                falha = _motivo_da_falha(resultado)
+                emit_event("status", message=f"Navegando: procurando {url_especifica[:60]}")
+                busca = tavily_client.search(
+                    query=url_especifica, max_results=3, search_depth="advanced"
+                )
+                urls = [r['url'] for r in busca.get('results', []) if r.get('url')]
+                if urls:
+                    resultado = tavily_client.extract(urls=urls, extract_depth="advanced")
         elif query:
             emit_event("status", message=f"Navegando: pesquisando '{query[:60]}'...")
             opcoes = {"query": query, "max_results": 3, "search_depth": "advanced"}
@@ -229,6 +251,8 @@ def tool_buscar_web(query="", url_especifica="", dominios=""):
             return "ERRO: Forneça 'query' ou 'url_especifica'."
 
         if not resultado or not resultado.get('results'):
+            if falha:
+                return f"Nenhum resultado encontrado na web. A extracao direta falhou — {falha}"
             return "Nenhum resultado encontrado na web."
 
         contexto = ""
