@@ -22,7 +22,7 @@ import time
 
 from src.backend.config import APP_ROOT
 from src.backend.services import executaveis
-from src.backend.services.saida import recortar_texto
+from src.backend.services.saida import linhas_com_termo, recortar_texto
 from src.backend.state import emit_event, estado
 from src.backend.tools.process import correr_como_card
 from src.backend.tools.registry import register
@@ -1779,15 +1779,30 @@ def _aviso_harness_velho():
             "a versao de antes - Ctrl+Shift+B para entrar em vigor (o resultado abaixo pode nao refletir "
             "o ficheiro atual).")
 
-def _relatorio_execucao(proc, limite, linguagem):
+def _filtrar_saida(texto, filtro):
+    """Devolve (linhas casadas, cabecalho). Sem filtro, devolve o texto recortado e sem cabecalho."""
+    termos = [t.strip() for t in str(filtro or "").splitlines() if t.strip()]
+    if not termos:
+        return recortar_texto(texto), ""
+    total = len((texto or "").splitlines())
+    casadas = linhas_com_termo(texto, termos)
+    cabeca = f"[filtro {termos}: {len(casadas)} de {total} linhas]"
+    if not casadas:
+        return "(nenhuma linha casou o filtro)", cabeca
+    return recortar_texto("\n".join(casadas)), cabeca
+
+def _relatorio_execucao(proc, limite, linguagem, filtro=""):
     veredito = "OK" if proc.returncode == 0 else f"FALHOU (codigo de saida {proc.returncode})"
+    saida, cabeca = _filtrar_saida(proc.stdout, filtro)
     partes = [f"TRECHO {linguagem}: {veredito} | limite {limite}s | ficheiro temporario apagado",
               "--- stdout ---",
-              recortar_texto(proc.stdout) or "(vazio)"]
+              saida or "(vazio)"]
+    if cabeca:
+        partes.insert(1, cabeca)
     aviso = _aviso_harness_velho()
     if aviso:
         partes.insert(0, aviso)
-    erro = recortar_texto(proc.stderr)
+    erro, _ = _filtrar_saida(proc.stderr, filtro)
     if erro:
         partes.append("--- stderr ---")
         partes.append(erro)
@@ -1848,7 +1863,7 @@ _TRECHOS = {
     },
 }
 
-def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
+def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro=""):
     """Escreve o trecho num ficheiro temporario do sistema, corre-o num processo novo
     com timeout que mata a arvore, apaga o ficheiro e devolve o relatorio."""
     cfg = _TRECHOS[chave]
@@ -1887,7 +1902,7 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
                  "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
         parcial = recortar_texto(resultado.stdout)
         return f"{aviso}\n--- stdout (ate ao limite) ---\n{parcial}" if parcial.strip() else aviso
-    return _relatorio_execucao(resultado, limite, cfg["linguagem"])
+    return _relatorio_execucao(resultado, limite, cfg["linguagem"], filtro)
 
 @register(
     "tool_executar_python",
@@ -1901,18 +1916,22 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador=""):
     "subprocess.run a mao - que perde a saida INTEIRA quando ela nao e UTF-8. correr() aceita a linha "
     "como texto ('git status') ou como lista de argumentos, e devolve (saida, codigo de saida): "
     "codigo -1 quer dizer que o comando nem chegou a arrancar e nesse caso a 'saida' traz o motivo - "
-    "confira-o antes de ler o texto como resultado.",
+    "confira-o antes de ler o texto como resultado. Quando a saida for grande e so uma parte "
+    "interessar, passe 'filtro' (um ou mais termos, um por linha): voltam so as linhas do stdout/stderr "
+    "que contem algum deles, com a contagem do que casou - e o caminho para a resposta nao vir cortada "
+    "a meio.",
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo Python a executar (varios imports e asserts sao bem-vindos)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Bluesky: criar a app password'). Sem ele o card mostra a primeira linha com conteudo - e como quase todos os trechos comecam por imports iguais, probes distintos ficam com o mesmo nome e parecem o mesmo a repetir-se.", "padrao": ""},
+        "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar (so os erros, so os nomes de uma pasta, so o que sobrou).", "padrao": ""},
     },
 )
-def tool_executar_python(codigo, timeout=60, rotulo=""):
+def tool_executar_python(codigo, timeout=60, rotulo="", filtro=""):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho Python a executar."
-    return _correr_trecho("python", trecho, timeout, rotulo)
+    return _correr_trecho("python", trecho, timeout, rotulo, filtro=filtro)
 
 @register(
     "tool_executar_js",
@@ -1973,13 +1992,14 @@ def tool_executar_python(codigo, timeout=60, rotulo=""):
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo JavaScript (ESM) a executar (imports e asserts sao bem-vindos). Imports de modulos do projeto tem de ser por caminho ABSOLUTO: use pathToFileURL(path.join(process.cwd(), 'src/...')).href"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Provar o arredondamento das abas'). Sem ele o card fica com a primeira linha do codigo, que quase sempre e um import - igual ao de todos os outros.", "padrao": ""},
+        "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar.", "padrao": ""},
     },
 )
-def tool_executar_js(codigo, timeout=60, rotulo=""):
+def tool_executar_js(codigo, timeout=60, rotulo="", filtro=""):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho JavaScript a executar."
-    return _correr_trecho("javascript", trecho, timeout, rotulo)
+    return _correr_trecho("javascript", trecho, timeout, rotulo, filtro=filtro)
 
 @register(
     "tool_executar_php",
@@ -1998,10 +2018,11 @@ def tool_executar_js(codigo, timeout=60, rotulo=""):
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal", "padrao": ""},
         "interpretador": {"tipo": "STRING", "desc": "Caminho do php.exe. Sem isto, procura no PHP_EXE, no PATH e nos locais habituais de instalacao.", "padrao": ""},
+        "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar.", "padrao": ""},
     },
 )
-def tool_executar_php(codigo, timeout=60, rotulo="", interpretador=""):
+def tool_executar_php(codigo, timeout=60, rotulo="", interpretador="", filtro=""):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho PHP a executar."
-    return _correr_trecho("php", trecho, timeout, rotulo, interpretador)
+    return _correr_trecho("php", trecho, timeout, rotulo, interpretador, filtro=filtro)

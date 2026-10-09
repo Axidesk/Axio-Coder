@@ -24,3 +24,23 @@ def recortar_texto(texto, teto_cabeca=TETO_CABECA_TEXTO, teto_cauda=TETO_CAUDA_T
     omitidos = len(texto) - teto_cabeca - teto_cauda
     aviso = f"\n... (saida cortada; {omitidos} caracteres omitidos entre as duas pontas)\n"
     return texto[:teto_cabeca] + aviso + texto[-teto_cauda:]
+
+
+def linhas_com_termo(texto, termos, com_numero=False):
+    """As linhas de 'texto' que contem algum dos termos, sem diferenciar maiusculas.
+
+    E a primitiva partilhada de quem precisa de ver so um pedaco de uma saida ou de uma
+    fonte comprida: o filtro do harness (saida de um processo) e o da consulta de API
+    (declaracao de um pacote) contam com ela, em vez de cada um casar linhas a sua maneira.
+    Com 'com_numero', cada linha vem precedida do numero dela no texto.
+    """
+    if isinstance(termos, str):
+        termos = [termos]
+    chaves = [str(t).strip().lower() for t in (termos or []) if str(t or "").strip()]
+    if not chaves:
+        return []
+    guardadas = []
+    for numero, linha in enumerate((texto or "").splitlines(), 1):
+        if any(chave in linha.lower() for chave in chaves):
+            guardadas.append(f"{numero}: {linha}" if com_numero else linha)
+    return guardadas

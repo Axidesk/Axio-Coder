@@ -27,6 +27,7 @@ from src.backend.tools.projeto_comum import (
     gravar_cache_projeto,
     ler_cache_projeto,
 )
+from src.backend.services.saida import linhas_com_termo
 from src.backend.tools.registry import register
 
 TTL_DESATUALIZADOS = 86400
@@ -723,9 +724,7 @@ def _filtrar_linhas(texto, filtro):
     """
     if not filtro:
         return texto
-    chave = filtro.lower()
-    guardadas = [f"{numero}: {linha}" for numero, linha in enumerate(texto.splitlines(), 1)
-                 if chave in linha.lower()]
+    guardadas = linhas_com_termo(texto, filtro, com_numero=True)
     if not guardadas:
         return f"(nenhuma linha com '{filtro}')"
     if len(guardadas) > LIMITE_LINHAS_FILTRO:
