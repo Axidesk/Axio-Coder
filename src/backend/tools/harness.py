@@ -22,7 +22,7 @@ import time
 
 from src.backend.config import APP_ROOT
 from src.backend.services import executaveis
-from src.backend.services.saida import linhas_com_termo, recortar_texto
+from src.backend.services.saida import linhas_com_termo, recortar_texto, repartir_teto
 from src.backend.state import emit_event, estado
 from src.backend.tools.process import correr_como_card
 from src.backend.tools.registry import register
@@ -1779,21 +1779,27 @@ def _aviso_harness_velho():
             "a versao de antes - Ctrl+Shift+B para entrar em vigor (o resultado abaixo pode nao refletir "
             "o ficheiro atual).")
 
-def _filtrar_saida(texto, filtro):
+def _filtrar_saida(texto, filtro, teto=0):
     """Devolve (linhas casadas, cabecalho). Sem filtro, devolve o texto recortado e sem cabecalho."""
     termos = [t.strip() for t in str(filtro or "").splitlines() if t.strip()]
     if not termos:
-        return recortar_texto(texto), ""
+        return _recortar_saida(texto, teto), ""
     total = len((texto or "").splitlines())
     casadas = linhas_com_termo(texto, termos)
     cabeca = f"[filtro {termos}: {len(casadas)} de {total} linhas]"
     if not casadas:
         return "(nenhuma linha casou o filtro)", cabeca
-    return recortar_texto("\n".join(casadas)), cabeca
+    return _recortar_saida("\n".join(casadas), teto), cabeca
 
-def _relatorio_execucao(proc, limite, linguagem, filtro=""):
+def _recortar_saida(texto, teto=0):
+    """Recorta a saida pelas duas pontas; com 'teto' pedido na chamada, o tamanho e o do pedido."""
+    if teto:
+        return recortar_texto(texto, *repartir_teto(teto))
+    return recortar_texto(texto)
+
+def _relatorio_execucao(proc, limite, linguagem, filtro="", teto=0):
     veredito = "OK" if proc.returncode == 0 else f"FALHOU (codigo de saida {proc.returncode})"
-    saida, cabeca = _filtrar_saida(proc.stdout, filtro)
+    saida, cabeca = _filtrar_saida(proc.stdout, filtro, teto)
     partes = [f"TRECHO {linguagem}: {veredito} | limite {limite}s | ficheiro temporario apagado",
               "--- stdout ---",
               saida or "(vazio)"]
@@ -1802,7 +1808,7 @@ def _relatorio_execucao(proc, limite, linguagem, filtro=""):
     aviso = _aviso_harness_velho()
     if aviso:
         partes.insert(0, aviso)
-    erro, _ = _filtrar_saida(proc.stderr, filtro)
+    erro, _ = _filtrar_saida(proc.stderr, filtro, teto)
     if erro:
         partes.append("--- stderr ---")
         partes.append(erro)
@@ -1863,7 +1869,7 @@ _TRECHOS = {
     },
 }
 
-def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro=""):
+def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="", teto=0):
     """Escreve o trecho num ficheiro temporario do sistema, corre-o num processo novo
     com timeout que mata a arvore, apaga o ficheiro e devolve o relatorio."""
     cfg = _TRECHOS[chave]
@@ -1900,9 +1906,9 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
     if getattr(resultado, "status", "") == "timeout":
         aviso = (f"ERRO: o trecho passou de {limite}s e a arvore de processos foi encerrada. Se o codigo "
                  "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
-        parcial = recortar_texto(resultado.stdout)
+        parcial = _recortar_saida(resultado.stdout, teto)
         return f"{aviso}\n--- stdout (ate ao limite) ---\n{parcial}" if parcial.strip() else aviso
-    return _relatorio_execucao(resultado, limite, cfg["linguagem"], filtro)
+    return _relatorio_execucao(resultado, limite, cfg["linguagem"], filtro, teto)
 
 @register(
     "tool_executar_python",
@@ -1919,19 +1925,21 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
     "confira-o antes de ler o texto como resultado. Quando a saida for grande e so uma parte "
     "interessar, passe 'filtro' (um ou mais termos, um por linha): voltam so as linhas do stdout/stderr "
     "que contem algum deles, com a contagem do que casou - e o caminho para a resposta nao vir cortada "
-    "a meio.",
+    "a meio. Quando a saida vier mesmo cortada entre as duas pontas, o proprio aviso diz o numero "
+    "exato a passar em 'teto_saida' para o texto vir inteiro.",
     {
         "codigo": {"tipo": "STRING", "obrig": True, "desc": "Codigo Python a executar (varios imports e asserts sao bem-vindos)"},
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Bluesky: criar a app password'). Sem ele o card mostra a primeira linha com conteudo - e como quase todos os trechos comecam por imports iguais, probes distintos ficam com o mesmo nome e parecem o mesmo a repetir-se.", "padrao": ""},
         "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar (so os erros, so os nomes de uma pasta, so o que sobrou).", "padrao": ""},
+        "teto_saida": {"tipo": "INTEGER", "desc": "Teto em caracteres para a saida devolvida (0 = o padrao, que corta entre as duas pontas). Passe o numero que o aviso de corte indicar quando precisar de ver o texto inteiro - ex: um censo, uma listagem longa.", "padrao": 0},
     },
 )
-def tool_executar_python(codigo, timeout=60, rotulo="", filtro=""):
+def tool_executar_python(codigo, timeout=60, rotulo="", filtro="", teto_saida=0):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho Python a executar."
-    return _correr_trecho("python", trecho, timeout, rotulo, filtro=filtro)
+    return _correr_trecho("python", trecho, timeout, rotulo, filtro=filtro, teto=teto_saida)
 
 @register(
     "tool_executar_js",
@@ -1993,13 +2001,14 @@ def tool_executar_python(codigo, timeout=60, rotulo="", filtro=""):
         "timeout": {"tipo": "INTEGER", "desc": "Segundos maximos (default 60, teto 300)", "padrao": 60},
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Provar o arredondamento das abas'). Sem ele o card fica com a primeira linha do codigo, que quase sempre e um import - igual ao de todos os outros.", "padrao": ""},
         "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar.", "padrao": ""},
+        "teto_saida": {"tipo": "INTEGER", "desc": "Teto em caracteres para a saida devolvida (0 = o padrao, que corta entre as duas pontas). Passe o numero que o aviso de corte indicar quando precisar de ver o texto inteiro.", "padrao": 0},
     },
 )
-def tool_executar_js(codigo, timeout=60, rotulo="", filtro=""):
+def tool_executar_js(codigo, timeout=60, rotulo="", filtro="", teto_saida=0):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho JavaScript a executar."
-    return _correr_trecho("javascript", trecho, timeout, rotulo, filtro=filtro)
+    return _correr_trecho("javascript", trecho, timeout, rotulo, filtro=filtro, teto=teto_saida)
 
 @register(
     "tool_executar_php",
@@ -2019,10 +2028,11 @@ def tool_executar_js(codigo, timeout=60, rotulo="", filtro=""):
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal", "padrao": ""},
         "interpretador": {"tipo": "STRING", "desc": "Caminho do php.exe. Sem isto, procura no PHP_EXE, no PATH e nos locais habituais de instalacao.", "padrao": ""},
         "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar.", "padrao": ""},
+        "teto_saida": {"tipo": "INTEGER", "desc": "Teto em caracteres para a saida devolvida (0 = o padrao, que corta entre as duas pontas). Passe o numero que o aviso de corte indicar quando precisar de ver o texto inteiro.", "padrao": 0},
     },
 )
-def tool_executar_php(codigo, timeout=60, rotulo="", interpretador="", filtro=""):
+def tool_executar_php(codigo, timeout=60, rotulo="", interpretador="", filtro="", teto_saida=0):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho PHP a executar."
-    return _correr_trecho("php", trecho, timeout, rotulo, interpretador, filtro=filtro)
+    return _correr_trecho("php", trecho, timeout, rotulo, interpretador, filtro=filtro, teto=teto_saida)

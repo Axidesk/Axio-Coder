@@ -16,13 +16,25 @@ def recortar_linhas(linhas, teto_cabeca=TETO_CABECA_LINHAS, teto_cauda=TETO_CAUD
     return "\n".join(linhas[:teto_cabeca] + [aviso] + linhas[-teto_cauda:])
 
 
+def repartir_teto(teto):
+    """As duas pontas de um teto pedido pela chamada: 3/4 na cabeca, o resto na cauda."""
+    teto = max(0, int(teto or 0))
+    cabeca = int(teto * 0.75)
+    return cabeca, teto - cabeca
+
+
 def recortar_texto(texto, teto_cabeca=TETO_CABECA_TEXTO, teto_cauda=TETO_CAUDA_TEXTO):
-    """Preserva as duas pontas de uma saida comprida; a cabeca sozinha perdia a excecao do fim."""
+    """Preserva as duas pontas de uma saida comprida; a cabeca sozinha perdia a excecao do fim.
+
+    O aviso diz quanto ficou de fora E o 'teto_saida' exato que traz o texto inteiro: sem essa
+    conta, uma saida cortada a meio so se resolvia repetindo o trecho para ver a outra ponta.
+    """
     texto = (texto or "").strip()
     if len(texto) <= teto_cabeca + teto_cauda:
         return texto
     omitidos = len(texto) - teto_cabeca - teto_cauda
-    aviso = f"\n... (saida cortada; {omitidos} caracteres omitidos entre as duas pontas)\n"
+    aviso = (f"\n... (saida cortada: {omitidos} de {len(texto)} caracteres ficaram de fora entre as "
+             f"duas pontas; repita com teto_saida={len(texto)} para ver tudo)\n")
     return texto[:teto_cabeca] + aviso + texto[-teto_cauda:]
 
 
