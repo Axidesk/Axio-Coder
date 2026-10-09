@@ -183,6 +183,21 @@ _GEOMETRIA = """
         if (!elemento) return { seletor, achado: false };
         const caixa = elemento.getBoundingClientRect();
         const estilo = getComputedStyle(elemento);
+        const partes = [
+            'display=' + estilo.display,
+            'position=' + estilo.position,
+            'white-space=' + estilo.whiteSpace,
+            'overflow=' + estilo.overflowX + '/' + estilo.overflowY,
+            'box-sizing=' + estilo.boxSizing,
+            'line-height=' + estilo.lineHeight
+        ];
+        if (estilo.float !== 'none') partes.push('float=' + estilo.float);
+        if (estilo.zIndex !== 'auto') partes.push('z-index=' + estilo.zIndex);
+        if (estilo.padding !== '0px') partes.push('padding=' + estilo.padding);
+        if (estilo.margin !== '0px') partes.push('margin=' + estilo.margin);
+        if (estilo.minWidth !== '0px' && estilo.minWidth !== 'auto') partes.push('min-width=' + estilo.minWidth);
+        if (estilo.maxWidth !== 'none') partes.push('max-width=' + estilo.maxWidth);
+        if (estilo.textOverflow !== 'clip') partes.push('text-overflow=' + estilo.textOverflow);
         return {
             seletor,
             achado: true,
@@ -195,7 +210,8 @@ _GEOMETRIA = """
             pintado: elemento.getClientRects().length > 0 && caixa.width > 0 && caixa.height > 0,
             fonte: estilo.fontSize,
             cor: estilo.color,
-            fundo: estilo.backgroundColor
+            fundo: estilo.backgroundColor,
+            disposicao: partes.join(' ')
         };
     };
     return JSON.stringify(alvos.map(ver));
@@ -343,6 +359,8 @@ def _geometria(sessao, seletores):
             f"{item['largura']}x{item['altura']} fonte={item['fonte']} cor={item['cor']} "
             f"fundo={item['fundo']} | {item['texto']}"
         )
+        if item.get("disposicao"):
+            linhas.append(f"    disposicao: {item['disposicao']}")
         if not item.get("pintado"):
             linhas.append(
                 "    ATENCAO: ocupa 0x0 - esta oculto (display none, aba fechada ou fora do "
@@ -623,8 +641,11 @@ def _atalho(expressao):
     "longo do tempo e devolve so as mudancas, com o instante de cada uma - e o caminho para ver uma "
     "transicao, uma animacao ou um carregamento A ACONTECER, sem escrever um amostrador a mao. "
     "Com 'seletores' (um seletor CSS por linha) devolve a geometria e o estilo de cada um - x, y, "
-    "largura, altura, fonte, cor, fundo - e AVISA quando o elemento ocupa 0x0, que e o caso do "
-    "que esta oculto e cuja medida nao vale. Em 'js' valem ATALHOS prontos, para nao escrever "
+    "largura, altura, fonte, cor, fundo - mais a DISPOSICAO que explica o desenho (display, "
+    "position, float, white-space, overflow, z-index, line-height, padding, min/max-width), que e "
+    "o que responde a 'porque e que isto quebra a linha, sai do sitio ou nao cabe'; e AVISA quando "
+    "o elemento ocupa 0x0, que e o caso do que esta oculto e cuja medida nao vale. Em 'js' valem "
+    "ATALHOS prontos, para nao escrever "
     "codigo a mao: '@mapa' devolve o indice da pagina - cada botao, ligacao e campo, com o seletor, "
     "o que diz, DE ONDE vem esse rotulo ('diz': aria-label, texto, valor ou placeholder) e os "
     "atributos 'data-*' do elemento em 'dados' (ex: data-aba=site), que sao a forma estavel de o "
@@ -692,7 +713,7 @@ def _atalho(expressao):
         },
         "seletores": {
             "tipo": "STRING",
-            "desc": "Um seletor CSS por linha: devolve a geometria e o estilo real de cada um (x, y, largura, altura, fonte, cor, fundo) e AVISA quando o elemento ocupa 0x0 - oculto, numa aba fechada ou fora do desenho - porque nesse caso a medida nao vale. Substitui o getBoundingClientRect escrito a mao em cada medicao; corre com 'medir'=False e aceita vir junto de 'js' (para abrir o que se vai medir).",
+            "desc": "Um seletor CSS por linha: devolve a geometria e o estilo real de cada um (x, y, largura, altura, fonte, cor, fundo) mais a disposicao que explica o desenho (display, position, float, white-space, overflow, z-index, line-height, padding, min/max-width) - e o que responde a 'porque e que este elemento quebra a linha, sai do sitio ou nao cabe'; e AVISA quando o elemento ocupa 0x0 - oculto, numa aba fechada ou fora do desenho - porque nesse caso a medida nao vale. Substitui o getBoundingClientRect escrito a mao em cada medicao; corre com 'medir'=False e aceita vir junto de 'js' (para abrir o que se vai medir).",
             "padrao": "",
         },
     },
