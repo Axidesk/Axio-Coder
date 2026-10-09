@@ -770,7 +770,7 @@ def tool_medir_fluidez(
             if ecos:
                 linhas.insert(0, f"O que a expressao devolveu antes: {'; '.join(ecos)}")
             if aviso_das_outras:
-                linhas.append(aviso_das_outras.strip())
+                linhas.insert(0, aviso_das_outras.strip())
             return "\n".join(linhas)
         bruto = sessao.avaliar(_MEDICAO % total)
         if depois.strip():
@@ -803,14 +803,14 @@ def tool_medir_fluidez(
     if not int(dados.get("quadros") or 0):
         return (
             f"Nenhum quadro desenhado em {total} ms em {_onde_estou(pagina)}: a janela esta mesmo a "
-            "vista? Em segundo plano o Chromium nao desenha."
+            f"vista? Em segundo plano o Chromium nao desenha.\n{aviso_das_outras.strip()}"
         )
     linhas = [f"No porto {escolhido}, {_onde_estou(pagina)}:"]
+    if aviso_das_outras:
+        linhas.append(aviso_das_outras.strip())
     if ecos:
         linhas.append(f"O que a expressao devolveu: {'; '.join(ecos)}")
     if finais:
         linhas.append(f"O estado no fim da medicao: {'; '.join(finais)}")
     linhas.append(texto_dos_quadros(dados))
-    if aviso_das_outras:
-        linhas.append(aviso_das_outras.strip())
     return "\n".join(linhas)
