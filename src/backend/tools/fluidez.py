@@ -521,21 +521,24 @@ _CLICAR_PELO_TEXTO = """
     const procurado = __ALVO__;
     const limpo = (t) => (t || '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const alvo = limpo(procurado);
-    const folhas = Array.from(document.querySelectorAll('*')).filter(
-        (e) => e.children.length === 0 && limpo(e.textContent) === alvo
-    );
-    if (!folhas.length) {
-        const parecidos = Array.from(document.querySelectorAll('*'))
+    const clicavel = (e) => e && e.matches && e.matches('button, a, [role=button], summary, label, [tabindex]');
+    const rotulo = (e) => (e.getAttribute && limpo(e.getAttribute('aria-label') || e.getAttribute('title'))) || '';
+    const todos = Array.from(document.querySelectorAll('*'));
+    const porRotulo = todos.filter((e) => rotulo(e) === alvo);
+    const porTexto = todos.filter((e) => e.children.length === 0 && limpo(e.textContent) === alvo);
+    const candidatos = [...porRotulo, ...porTexto].filter((e, i, lista) => lista.indexOf(e) === i);
+    candidatos.sort((a, b) => (clicavel(a) ? 0 : 1) - (clicavel(b) ? 0 : 1));
+    if (!candidatos.length) {
+        const parecidos = todos
             .filter((e) => e.children.length === 0 && limpo(e.textContent).includes(alvo))
             .map((e) => limpo(e.textContent).slice(0, 40));
         return JSON.stringify({
             clicou: false,
-            porque: 'nao achei um elemento com esse texto',
+            porque: 'nao achei um elemento com esse texto (nem com esse aria-label ou title)',
             parecidos: [...new Set(parecidos)].slice(0, 8),
         });
     }
-    const elemento = folhas[0];
-    const clicavel = (e) => e && e.matches && e.matches('button, a, [role=button], summary, label, [tabindex]');
+    const elemento = candidatos[0];
     let onde = elemento;
     while (onde && onde !== document.body && !clicavel(onde)) {
         const pai = onde.parentElement;
@@ -558,6 +561,7 @@ _CLICAR_PELO_TEXTO = """
     return JSON.stringify({
         clicou: true,
         onde: onde.tagName + (onde.className ? '.' + String(onde.className).split(' ')[0] : ''),
+        quantos_tinham_esse_nome: candidatos.length,
         agora: onde.getAttribute ? onde.getAttribute('aria-expanded') : null,
     });
 })()
@@ -615,7 +619,9 @@ def _atalho(expressao):
     "'@consola' devolve os erros, avisos, recursos falhados e promessas rebentadas que a pagina "
     "deitou fora (tipo, texto e instante) desde a primeira vez que a ferramenta olhou para ela - a "
     "resposta para 'porque e que este botao nao faz nada' sem andar a adivinhar pelo DOM; e "
-    "'@clicar:<texto>' clica no elemento que responde por esse texto, subindo do rotulo ao elemento "
+    "'@clicar:<texto>' clica no elemento que responde por esse texto OU pelo aria-label/title dele "
+    "(os BOTOES vem primeiro, que e o que quase sempre se quer - 'Site' num painel com barra lateral "
+    "e o botao e nao o rotulo de outra linha), subindo depois do rotulo ao elemento "
     "clicavel; e '@consola' devolve os erros e avisos que a pagina deitou fora desde a primeira vez "
     "que esta ferramenta olhou para ela - o erro de JavaScript, o pedido ou a imagem que falharam e a "
     "promessa que rebentou sem ninguem a apanhar, com o tipo e o instante de cada um, que e o caminho "
@@ -638,7 +644,7 @@ def _atalho(expressao):
         },
         "js": {
             "tipo": "STRING",
-            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Quatro atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada; '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao; '@consola' devolve os erros, avisos, recursos falhados e promessas rebentadas que a pagina deitou fora (tipo, texto e instante) desde a primeira vez que a ferramenta olhou para ela - e a resposta a 'porque e que este botao nao faz nada' sem andar a adivinhar pelo DOM; e '@clicar:<texto>' clica no que responde por esse texto, subindo do rotulo ao botao ou ao irmao clicavel dele (o caso de um titulo de seccao cujo botao esta ao lado) - devolve onde clicou e, se a peca o tiver, o aria-expanded que ficou.",
+            "desc": "Expressao a correr dentro da app ANTES de medir, para o efeito estar a acontecer (ex: clicar no botao que abre a seccao). Vazio so mede. Pode usar async/await: uma promessa devolvida e esperada e o que sai e o valor resolvido. Quatro atalhos: '@mapa' corre o indice da pagina - botoes, campos e ligacoes com o texto, o seletor e a coordenada; '@tokens' devolve as variaveis de tema da app (--cor: valor), sem ter de cacar o ficheiro do tema a mao; '@consola' devolve os erros, avisos, recursos falhados e promessas rebentadas que a pagina deitou fora (tipo, texto e instante) desde a primeira vez que a ferramenta olhou para ela - e a resposta a 'porque e que este botao nao faz nada' sem andar a adivinhar pelo DOM; e '@clicar:<texto>' clica no que responde por esse texto OU pelo aria-label/title dele, com os BOTOES a frente dos rotulos (achar 'Site' num painel com barra lateral e o botao, nao o rotulo de outra linha), subindo do rotulo ao botao ou ao irmao clicavel dele (o caso de um titulo de seccao cujo botao esta ao lado) - devolve onde clicou, quantos elementos tinham esse nome e, se a peca o tiver, o aria-expanded que ficou.",
             "padrao": "",
         },
         "depois": {
