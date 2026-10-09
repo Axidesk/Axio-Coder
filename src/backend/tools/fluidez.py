@@ -127,7 +127,13 @@ _MAPA_DA_JANELA = """
     };
     const comoChamar = (el) => {
         if (el.id) return '#' + el.id;
-        const partes = [el.tagName.toLowerCase()];
+        const tag = el.tagName.toLowerCase();
+        const dado = [...el.attributes].find((a) => a.name.startsWith('data-') && a.value);
+        if (dado) {
+            const curto = tag + '[' + dado.name + '="' + dado.value + '"]';
+            if (document.querySelectorAll(curto).length === 1) return curto;
+        }
+        const partes = [tag];
         if (el.className && typeof el.className === 'string') {
             const classe = el.className.trim().split(/\\s+/).slice(0, 2).join('.');
             if (classe) partes.push('.' + classe);
@@ -521,13 +527,19 @@ _CLICAR_PELO_TEXTO = """
     const procurado = __ALVO__;
     const limpo = (t) => (t || '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const alvo = limpo(procurado);
-    const clicavel = (e) => e && e.matches && e.matches('button, a, [role=button], summary, label, [tabindex]');
+    const botaoDeVerdade = (e) => e && e.matches && e.matches('button, a[href], [role=button], summary');
+    const clicavel = (e) => botaoDeVerdade(e) || (e && e.matches && e.matches('label, [tabindex]'));
+    const peso = (e) => (botaoDeVerdade(e) ? 0 : clicavel(e) ? 1 : 2);
+    const apelido = (e) => e.tagName.toLowerCase()
+        + (e.id ? '#' + e.id : '')
+        + (e.getAttribute && e.getAttribute('aria-label') ? ' "' + e.getAttribute('aria-label') + '"' : '')
+        + (typeof e.className === 'string' && e.className.trim() ? ' .' + e.className.trim().split(/\\s+/)[0] : '');
     const rotulo = (e) => (e.getAttribute && limpo(e.getAttribute('aria-label') || e.getAttribute('title'))) || '';
     const todos = Array.from(document.querySelectorAll('*'));
     const porRotulo = todos.filter((e) => rotulo(e) === alvo);
     const porTexto = todos.filter((e) => e.children.length === 0 && limpo(e.textContent) === alvo);
     const candidatos = [...porRotulo, ...porTexto].filter((e, i, lista) => lista.indexOf(e) === i);
-    candidatos.sort((a, b) => (clicavel(a) ? 0 : 1) - (clicavel(b) ? 0 : 1));
+    candidatos.sort((a, b) => peso(a) - peso(b));
     if (!candidatos.length) {
         const parecidos = todos
             .filter((e) => e.children.length === 0 && limpo(e.textContent).includes(alvo))
@@ -560,8 +572,9 @@ _CLICAR_PELO_TEXTO = """
     onde.click();
     return JSON.stringify({
         clicou: true,
-        onde: onde.tagName + (onde.className ? '.' + String(onde.className).split(' ')[0] : ''),
+        onde: apelido(onde),
         quantos_tinham_esse_nome: candidatos.length,
+        outros_candidatos: candidatos.length > 1 ? candidatos.slice(0, 6).map(apelido) : undefined,
         agora: onde.getAttribute ? onde.getAttribute('aria-expanded') : null,
     });
 })()
