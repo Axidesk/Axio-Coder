@@ -133,8 +133,9 @@ def _conteudo_ilegivel(conteudo):
         return False, ""
     
     chars = len(conteudo)
-    espacos = conteudo.count(' ')
-    densidade_espacos = espacos / chars if chars > 0 else 0
+    sem_urls = re.sub(r'https?://\S+', '', conteudo)
+    base_espacos = len(sem_urls)
+    densidade_espacos = sem_urls.count(' ') / base_espacos if base_espacos > 0 else 0
     
     tem_view_code = 'View Code' in conteudo or 'View Format' in conteudo
     tem_copy = 'Copy' in conteudo
