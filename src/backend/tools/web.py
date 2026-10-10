@@ -49,7 +49,11 @@ DOMINIOS_OFICIAIS = (
     "buildingsmart.org", "iso.org", "iec.ch", "arxiv.org", "doi.org",
 )
 
-DOMINIOS_DE_CODIGO = ("github.com", "gitlab.com", "bitbucket.org")
+DOMINIOS_DE_CODIGO = (
+    "github.com", "githubusercontent.com", "github.io", "gist.github.com",
+    "gitlab.com", "bitbucket.org", "codeberg.org", "gitea.com", "sourceforge.net",
+    "sr.ht", "gitee.com",
+)
 
 DOMINIOS_FRACOS = (
     "linkedin.com", "medium.com", "dev.to", "blogspot.", "wordpress.com", "quora.com",
