@@ -2,7 +2,7 @@
 
 Verbatim de tools/filesystem.py; importa-lo e o que regista as suas 3 tools de
 gravacao, todas passando por `gravar_edicao_com_diff` - o unico ponto onde se
-escreve um ficheiro (a cadeia de avisos/gates de escrita esta em tools/syntax.py).
+escreve um ficheiro (a cadeia de avisos/gates de escrita esta em tools/syntax_estrutural.py).
 """
 import difflib
 import os
@@ -11,7 +11,8 @@ from src.backend.state import estado, emit_event, notificar_mudanca_arquivos
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, normalizar_unicode, registrar_edicao
 from src.backend.services.diff import gerar_diff
-from src.backend.tools.syntax import aviso_estrutural_pos_edicao, aviso_import_local, bloquear_import_local, validar_arquivo_apos_edicao
+from src.backend.tools.syntax import validar_arquivo_apos_edicao
+from src.backend.tools.syntax_estrutural import aviso_estrutural_pos_edicao, aviso_import_local, bloquear_import_local
 
 
 def codificacao_do_ficheiro(caminho_absoluto):
