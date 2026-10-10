@@ -59,15 +59,7 @@ def _deletar_pasta(caminho_relativo, caminho_absoluto):
         return f"ERRO: {e}"
 
 
-@register(
-    "tool_deletar_arquivo",
-    'Move um arquivo ou uma pasta do projeto para a lixeira (recuperável pela interface, inclusive pasta vazia). Não exclui a raiz do projeto nem as pastas .git e .axio.',
-    {
-        'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-    },
-    disponivel="edicao",
-)
-def tool_deletar_arquivo(caminho_relativo: str):
+def _deletar_um(caminho_relativo: str):
     if estado.get("bloquear_edicao"):
         return "BLOQUEADO (FASE 1): Você está em modo semi-automático e ainda não recebeu aprovação para editar. Apresente seu plano e pergunte ao usuário se pode aplicar. Após a aprovação, chame 'tool_aprovar_plano' para destravar a edição."
     emit_event("executing", function=f"Excluindo: {caminho_relativo}")
@@ -102,6 +94,32 @@ def tool_deletar_arquivo(caminho_relativo: str):
         notificar_mudanca_arquivos()
         return f"SUCESSO: Arquivo '{caminho_relativo}' movido para a lixeira."
     except Exception as e: return f"ERRO: {str(e)}"
+
+
+@register(
+    "tool_deletar_arquivo",
+    'Move um arquivo ou uma pasta do projeto para a lixeira (recuperável pela interface, inclusive pasta vazia). Não exclui a raiz do projeto nem as pastas .git e .axio. Com "caminhos" (um por linha) move VARIOS numa so chamada, com uma linha de resultado por item - e o caminho para limpar um lote sem gastar uma chamada por arquivo.',
+    {
+        'caminho_relativo': {"tipo": "STRING", "obrig": False, "padrao": ""},
+        'caminhos': {"tipo": "STRING", "obrig": False, "padrao": ""},
+    },
+    disponivel="edicao",
+)
+def tool_deletar_arquivo(caminho_relativo: str = "", caminhos: str = ""):
+    alvos = [c.strip() for c in str(caminhos or "").splitlines() if c.strip()]
+    if caminho_relativo and caminho_relativo not in alvos:
+        alvos.insert(0, caminho_relativo)
+    if not alvos:
+        return "ERRO: passe 'caminho_relativo' (um arquivo) ou 'caminhos' (um por linha)."
+    if len(alvos) == 1:
+        return _deletar_um(alvos[0])
+    resultados, falhas = [], 0
+    for alvo in alvos:
+        linha = _deletar_um(alvo)
+        if not linha.startswith("SUCESSO"):
+            falhas += 1
+        resultados.append(linha)
+    return "\n".join([f"LOTE: {len(alvos) - falhas} de {len(alvos)} movidos para a lixeira."] + resultados)
 
 
 @register(
