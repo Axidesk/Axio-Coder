@@ -77,7 +77,8 @@ def _diagnostico_ancora(conteudo, texto_antigo):
         if linha.strip() != primeira.strip():
             continue
         if linha != primeira:
-            return (f" A linha {i + 1} tem esse texto mas com indentacao DIFERENTE: "
+            return (f" A linha {i + 1} tem esse texto mas difere em espacos: "
+                    f"{_diferenca_de_espacos(linha, primeira)}. "
                     f"ficheiro={linha!r} vs ancora={primeira!r}.")
         for j, alvo in enumerate(busca):
             if i + j >= len(linhas_arquivo):
@@ -145,6 +146,28 @@ def _intervalo_tolerando_espacos(conteudo, antigo):
         ultima = i + len(linhas_ancora) - 1
         achado = (inicio_de[i], inicio_de[ultima] + len(linhas[ultima]))
     return achado
+
+
+def _diferenca_de_espacos(no_ficheiro, na_ancora):
+    """Onde estao os espacos que fazem duas linhas iguais divergirem, dito em palavras."""
+    partes = []
+    fim_ficheiro = len(no_ficheiro) - len(no_ficheiro.rstrip())
+    fim_ancora = len(na_ancora) - len(na_ancora.rstrip())
+    if fim_ficheiro > fim_ancora:
+        partes.append(f"o FICHEIRO tem {fim_ficheiro - fim_ancora} espaco(s) no FIM da linha a mais - "
+                      "inclua-os no fim da ancora")
+    elif fim_ancora > fim_ficheiro:
+        partes.append(f"a ANCORA tem {fim_ancora - fim_ficheiro} espaco(s) no FIM que o ficheiro nao tem - "
+                      "tire-os")
+    inicio_ficheiro = len(no_ficheiro) - len(no_ficheiro.lstrip())
+    inicio_ancora = len(na_ancora) - len(na_ancora.lstrip())
+    if inicio_ficheiro != inicio_ancora:
+        partes.append(f"indentacao: o ficheiro comeca com {inicio_ficheiro} espaco(s) e a ancora com "
+                      f"{inicio_ancora}")
+    if not partes:
+        partes.append("a diferenca nao e espaco comum (tabulacao ou caracter invisivel) - leia a linha com "
+                      "tool_ler_trecho_arquivo e copie-a verbatim")
+    return "; ".join(partes)
 
 
 def gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, action_name):
