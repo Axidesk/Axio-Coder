@@ -141,9 +141,10 @@ def tool_listar_arvore(caminho_relativo="", profundidade_max=4, max_entradas=400
         'excluir': {"tipo": "STRING", "padrao": "", "desc": "Uma pasta por linha (ex: 'libs') para a varredura ignorar PELO NOME, em qualquer nivel da arvore."},
         'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist) - e o caminho para achar um arquivo dentro de uma dependencia instalada."},
         'limite': {"tipo": "INTEGER", "padrao": 60, "desc": "Teto de resultados por padrao (padrao 60)."},
+        'no_sistema': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura FORA do projeto, numa pasta desta maquina: 'pasta' passa a ser um caminho absoluto ou com variaveis de ambiente (ex: '%APPDATA%/Algum Programa', 'C:/Program Files/...'). E o caminho para achar a pasta de dados de um programa instalado (o editor de mapa, o XAMPP, o Visual Studio) e os arquivos que ele guarda no perfil do utilizador, sem sair a escrever um script. So LE nomes, tamanhos e datas."},
     },
 )
-def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", incluir_ignoradas: bool = False, limite: int = 60):
+def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", incluir_ignoradas: bool = False, limite: int = 60, no_sistema: bool = False):
     padroes = [p.strip().strip("/\\") for p in str(nome).splitlines() if p.strip()]
     if not padroes:
         return "ERRO: indique pelo menos um nome ou padrao (ex: 'Tibia.url' ou '*.spr')."
@@ -151,11 +152,12 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
     emit_event("executing", function="Procurando: " + ", ".join(padroes))
 
     raiz_projeto = estado["pasta_raiz"]
-    raiz_busca, erro = _raiz_de_busca(pasta)
+    raiz_busca, erro = _raiz_de_busca(pasta, no_sistema)
     if erro:
         return erro
     if not os.path.isdir(raiz_busca):
-        return f"ERRO: '{pasta}' nao e uma pasta do projeto."
+        return f"ERRO: '{pasta}' nao e uma pasta (nem do projeto nem desta maquina)."
+    base_da_varredura = raiz_busca if no_sistema else raiz_projeto
 
     excluidas = {linha.strip().strip("/\\").lower() for linha in str(excluir).splitlines() if linha.strip()}
     teto = max(1, int(limite or 60))
@@ -179,7 +181,7 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
             incompleta = True
             break
 
-        relativo = os.path.relpath(root, raiz_projeto)
+        relativo = os.path.relpath(root, base_da_varredura)
         prefixo = "" if relativo == "." else relativo + os.sep
         for nome_pasta in dirs:
             texto = normalizar_unicode(nome_pasta).lower()
@@ -201,7 +203,7 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
         lista = achados[indice]
         linhas.append(f"{padrao}: nenhum" if not lista else f"{padrao} ({len(lista)}):")
         for item in sorted(lista):
-            caminho = os.path.join(raiz_projeto, item.rstrip("/\\"))
+            caminho = os.path.join(base_da_varredura, item.rstrip("/\\"))
             try:
                 st = os.stat(caminho)
             except OSError:
@@ -211,6 +213,8 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
             linhas.append(f"{quando}  {_formato_tamanho(st.st_size):>9}  {item}")
 
     aviso = f"{ficheiros_vistos} arquivo(s) varrido(s)"
+    if no_sistema:
+        aviso = f"Varredura FORA do projeto, em '{raiz_busca}' - " + aviso
     if incompleta:
         aviso += (f" - VARREDURA PARADA no teto de {teto} resultado(s) por padrao (ou nos 20s): um padrao "
                   "sem resultados aqui NAO prova que nao existe; repita com 'pasta' apontado a subpasta certa.")
@@ -342,11 +346,17 @@ def _excerto(linha, padrao):
     return ("... " if inicio else "") + texto[inicio:fim] + (" ..." if fim < len(texto) else "")
 
 
-def _raiz_de_busca(pasta):
+def _raiz_de_busca(pasta, no_sistema=False):
     raiz_projeto = estado["pasta_raiz"]
     if not pasta or not pasta.strip():
         return raiz_projeto, ""
-    candidata = os.path.abspath(os.path.join(raiz_projeto, pasta.strip().strip("/\\")))
+    texto = pasta.strip().strip('"')
+    if no_sistema:
+        caminho_maquina = os.path.abspath(os.path.expandvars(os.path.expanduser(texto)))
+        if not os.path.isdir(caminho_maquina):
+            return "", f"ERRO: '{texto}' nao e uma pasta desta maquina."
+        return caminho_maquina, ""
+    candidata = os.path.abspath(os.path.join(raiz_projeto, texto.strip("/\\")))
     if not candidata.startswith(os.path.abspath(raiz_projeto)):
         return "", f"ERRO: '{pasta}' esta fora do projeto."
     return candidata, ""
