@@ -452,10 +452,10 @@ def _erros_php(abs_path):
 
 @register(
     "tool_validar_sintaxe",
-    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, Rust, Lua, JSON, CSS, HTML ou PHP) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Em Rust e em Lua a leitura tambem e pela arvore (tree-sitter), onde os atributos #[...] contam como parte do item. Retorna OK ou o erro com linha/coluna.',
+    'Valida a sintaxe de um arquivo (Python, JavaScript, TypeScript, C/C++, Rust, Lua, JSON, CSS, HTML, XML ou PHP) após editar/mover código. Use SEMPRE após edições para confirmar que não quebrou sintaxe — NÃO use comandos proibidos (python, py_compile, node --check, grep, sed, cat, echo) para isso. No HTML confere o balanceamento das tags, os ids repetidos e os tokens mal formados. Num XML com prologo <?xml faz o parse a serio (tag desalinhada, atributo mal fechado); o XML sem prologo continua a ser lido como HTML, para nao acusar ficheiros de terceiros que nunca foram nossos. Em C/C++ a leitura e pela arvore (tree-sitter): palavras que so o pre-processador conhece (Q_OBJECT, signals:, emit) nao contam como erro. Em Rust e em Lua a leitura tambem e pela arvore (tree-sitter), onde os atributos #[...] contam como parte do item. Retorna OK ou o erro com linha/coluna.',
     {
         'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'rust', 'lua', 'json', 'css', 'html', 'php'], "padrao": ""},
+        'linguagem': {"tipo": "STRING", "enum": ['python', 'javascript', 'typescript', 'cpp', 'rust', 'lua', 'json', 'css', 'html', 'xml', 'php'], "padrao": ""},
     },
 )
 def tool_validar_sintaxe(caminho_relativo, linguagem=""):
@@ -488,12 +488,16 @@ def tool_validar_sintaxe(caminho_relativo, linguagem=""):
         except OSError as e:
             return f"ERRO ao ler o arquivo: {e}"
         erro_msg = _validar_css(conteudo)
-    elif lang == "html":
+    elif lang in ("html", "xml"):
         try:
             conteudo = _ler_texto(abs_path)
         except OSError as e:
             return f"ERRO ao ler o arquivo: {e}"
-        erro_msg = _validar_html(conteudo)
+        if lang == "xml" or _PROLOGO_XML.match(conteudo):
+            lang = "xml"
+            erro_msg = _validar_xml(conteudo)
+        else:
+            erro_msg = _validar_html(conteudo)
     elif lang == "javascript":
         erro_msg = _validar_javascript(abs_path)
     elif lang == "typescript":
