@@ -23,6 +23,9 @@ LADO_DA_AREA = 256
 LIMITE_VAZIOS = 200
 LIMITE_ITENS = 20
 
+_CACHE_DE_BYTES = {}
+_CACHE_DE_AREAS = {}
+
 
 @register(
     "tool_medir_mapa_otbm",
@@ -34,7 +37,9 @@ LIMITE_ITENS = 20
     "atributo 9 - quando o chao tem atributos (um dirt com action id, por exemplo), o editor grava-o "
     "como no filho. Logo, tile sem atributo 9 mas com filho NAO e tile vazio; vazio e so o que nao "
     "tem chao nem filho. Um mapa grande (88 MB, ~10 milhoes de tiles) faz 'ponto' responder na hora, "
-    "mas 'resumo' e 'vazios' leem o mapa inteiro.",
+    "mas 'resumo' e 'vazios' leem o mapa inteiro. Varrer a vizinhanca de um ponto nao se faz com uma "
+    "chamada por coordenada: passa-se a lista inteira em 'pontos' (uma por linha, x,y,z) - a primeira "
+    "leitura paga o custo, as seguintes saem do cache e milhares de coordenadas custam o mesmo que uma.",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -62,6 +67,11 @@ LIMITE_ITENS = 20
             "desc": "Andar para 'ponto'.",
             "padrao": 0,
         },
+        "pontos": {
+            "tipo": "STRING",
+            "desc": "Varias coordenadas numa so chamada para 'ponto', uma por linha no formato x,y,z - poupa uma chamada por coordenada.",
+            "padrao": "",
+        },
         "limite": {
             "tipo": "INTEGER",
             "desc": "Quantos tiles sem chao listar em 'vazios'.",
@@ -69,7 +79,7 @@ LIMITE_ITENS = 20
         },
     },
 )
-def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS):
+def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS, pontos=""):
     emit_event("executing", function=f"Medindo mapa OTBM: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -77,8 +87,7 @@ def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=L
     if not os.path.isfile(alvo):
         return f"ERRO: arquivo nao encontrado: {caminho_relativo}"
     try:
-        with open(alvo, "rb") as arquivo:
-            dados = arquivo.read()
+        dados = _bytes_do_mapa(alvo)
     except OSError as falha:
         return f"ERRO: nao consegui ler '{caminho_relativo}' ({falha})."
     if len(dados) < 8:
@@ -92,7 +101,11 @@ def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=L
     escolha = str(acao or "ponto").strip().lower()
     try:
         if escolha == "ponto":
-            return _relato_ponto(dados, caminho_relativo, int(x), int(y), int(z))
+            lista = _pontos_pedidos(pontos, x, y, z)
+            if not lista:
+                return "ERRO: nenhuma coordenada valida em 'pontos' (escreve x,y,z por linha)."
+            relatos = [_relato_ponto(dados, caminho_relativo, px, py, pz) for px, py, pz in lista]
+            return relatos[0] if len(relatos) == 1 else "\n".join(relatos)
         if escolha == "vazios":
             return _relato_vazios(dados, caminho_relativo, _teto(limite))
         if escolha == "resumo":
@@ -100,6 +113,33 @@ def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=L
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
     return f"ERRO: acao desconhecida '{acao}' (usa 'ponto', 'vazios' ou 'resumo')."
+
+
+def _bytes_do_mapa(alvo):
+    marca = os.path.getmtime(alvo), os.path.getsize(alvo)
+    guardado = _CACHE_DE_BYTES.get(alvo)
+    if guardado is not None and guardado[0] == marca:
+        return guardado[1]
+    with open(alvo, "rb") as arquivo:
+        dados = arquivo.read()
+    _CACHE_DE_BYTES.clear()
+    _CACHE_DE_BYTES[alvo] = (marca, dados)
+    return dados
+
+
+def _pontos_pedidos(pontos, x, y, z):
+    if not str(pontos or "").strip():
+        return [(int(x), int(y), int(z))]
+    lista = []
+    for linha in str(pontos).splitlines():
+        campos = [c.strip() for c in linha.replace(";", ",").split(",") if c.strip()]
+        if len(campos) != 3:
+            continue
+        try:
+            lista.append(tuple(int(c) for c in campos))
+        except ValueError:
+            continue
+    return lista
 
 
 def _relato_ponto(dados, rotulo, x, y, z):
@@ -285,6 +325,16 @@ def _atributos(limpos, i):
 
 
 def _areas(dados):
+    guardado = _CACHE_DE_AREAS.get(id(dados))
+    if guardado is not None and guardado[0] is dados:
+        return guardado[1]
+    lista = list(_areas_do_ficheiro(dados))
+    _CACHE_DE_AREAS.clear()
+    _CACHE_DE_AREAS[id(dados)] = (dados, lista)
+    return lista
+
+
+def _areas_do_ficheiro(dados):
     alvo = bytes((NODE_START, TIPO_TILE_AREA))
     procura = 0
     while True:
