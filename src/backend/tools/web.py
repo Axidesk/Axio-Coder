@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from urllib.parse import urlparse
@@ -135,6 +136,14 @@ def _conteudo_ilegivel(conteudo):
     Retorna (bool, str): (é_ilegivel, motivo)"""
     if not conteudo or len(conteudo) < 50:
         return False, ""
+
+    texto = conteudo.strip()
+    if texto[:1] in "{[":
+        try:
+            json.loads(texto)
+            return False, ""
+        except (ValueError, TypeError):
+            pass
     
     chars = len(conteudo)
     sem_urls = re.sub(r'https?://\S+', '', conteudo)
