@@ -469,11 +469,12 @@ def _parece_url(alvo):
     """Dominio escrito sem esquema (ex: 'sqlite.org/lang_vacuum.html').
 
     Pasta oculta do projeto ('.axio/...') tambem tem ponto no primeiro segmento,
-    por isso comecar por ponto exclui a hipotese de dominio.
+    por isso comecar por ponto exclui a hipotese de dominio. O '//dominio/...'
+    (URL cujo esquema a captura cortou) conta pelo primeiro segmento com letra.
     """
     if "/" not in alvo:
         return False
-    primeiro = alvo.split("/", 1)[0]
+    primeiro = next((s for s in alvo.split("/") if s), "")
     if primeiro.startswith("."):
         return False
     return "." in primeiro
