@@ -1399,6 +1399,10 @@ app.on('ready', () => {
     if (veioDaJanelaPrincipal(e)) executarAcaoDoMenu(acao, valor);
   });
 
+  ipcMain.on('interface:reiniciar', (e) => {
+    if (veioDaJanelaPrincipal(e)) restartFlask();
+  });
+
   ipcMain.handle('menu:zoom-atual', (e) => (
     veioDaJanelaPrincipal(e)
       ? { ok: true, zoom: zoomDaInterface, minimo: ZOOM_MINIMO, maximo: ZOOM_MAXIMO }

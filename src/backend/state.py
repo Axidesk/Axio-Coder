@@ -98,6 +98,28 @@ def emit_event(event_type, **kwargs):
     for fila in filas:
         fila.put(msg)
 
+_pedido_de_reinicio = False
+_lock_do_reinicio = threading.Lock()
+
+def pedir_reinicio_da_interface():
+    """Marca que a janela e o servidor devem reiniciar no FIM da rodada.
+
+    O pedido nunca se executa a meio: quem reinicia e a janela, quando a rodada
+    ja acabou e a resposta esta entregue - por isso o sinal vai agarrado ao
+    evento 'done' e nao a uma accao imediata.
+    """
+    global _pedido_de_reinicio
+    with _lock_do_reinicio:
+        _pedido_de_reinicio = True
+
+def consumir_pedido_de_reinicio():
+    """Devolve se houve pedido e limpa-o - cada pedido vale por uma rodada so."""
+    global _pedido_de_reinicio
+    with _lock_do_reinicio:
+        pedido = _pedido_de_reinicio
+        _pedido_de_reinicio = False
+    return pedido
+
 _avisos_de_mudanca = []
 
 def registar_aviso_de_mudanca(fn):

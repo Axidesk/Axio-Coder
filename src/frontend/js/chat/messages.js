@@ -13,10 +13,15 @@ import { formatMessage, formatInlineText, formatInline } from './markdown.js';
 import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao, _pararPlanoEmCurso, criarBlocoEtapas, pintarBlocoEtapas, etapaDePlano, marcarEtapaDoPlano } from './plan_cards.js';
 import { reavaliarBuscaChat } from './busca_chat.js';
 import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
+import { aoRestaurar, esquecerConversa, guardarConversa, reiniciarAInterface } from './conversa_viva.js';
 
 const { alertPopup, alertPopupContent, btnSend, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, contextAcumuladaFill, contextInfoLimite, contextSessaoFill, contextUsage, contextUsageAcumulada, contextUsageFill, contextUsageLabel, contextUsageSessao, currentLogsList, currentLogsWrapper, inputText, lblExecuting, lblFolder, lblMetrics, lblStatus, terminalMode } = dom;
 
 let currentPlanContainer = null;
+
+aoRestaurar(() => {
+    [chatInnerLeft, chatInnerRight].forEach((painel) => attachCodeBlockListeners(painel));
+});
 
 function corDeUsoContexto(pct, emExecucao) {
     if (emExecucao) return { cor: 'var(--azul-acao)', glow: 'var(--azul-glow)' };
@@ -692,7 +697,7 @@ async function tratar_cancel() {
     currentSessionPlano = [];
     currentSessionPlanoTotal = 0;
 }
-async function tratar_done() {
+async function tratar_done(data) {
     pararAutosaveDoTurno();
     if (!window.lastStatusError) {
         lblStatus.textContent = 'Aguardando instrução';
@@ -741,6 +746,11 @@ async function tratar_done() {
     window.pendingUserQuestion = null;
     window.currentAIMessageDiv = null;
     window.currentGroupBalloon = null;
+    guardarConversa();
+    if (data && data.reiniciar) {
+        lblStatus.textContent = 'Reiniciando a interface — a conversa continua aqui.';
+        reiniciarAInterface();
+    }
 }
 
 const HANDLERS = {
@@ -857,6 +867,7 @@ function resetEstadoDoTurno() {
     const SAIDA_CONVERSA = 300;
 
     function limparConversa() {
+        esquecerConversa();
         const paineis = [
             [chatInnerLeft, chatContainerLeft],
             [chatInnerRight, chatContainerRight],

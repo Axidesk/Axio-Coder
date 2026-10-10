@@ -21,7 +21,7 @@ import os
 import time
 
 from src.backend.config import APP_ROOT
-from src.backend.state import ARRANQUE, emit_event
+from src.backend.state import ARRANQUE, emit_event, pedir_reinicio_da_interface
 from src.backend.tools.registry import register
 
 _EPOCA_DO_FILETIME = 116444736000000000
@@ -357,3 +357,23 @@ def tool_diagnosticar_execucao():
     else:
         linhas.append("VEREDITO: o que esta a correr ja tem o codigo do disco (so o frontend pede recarregar)")
     return "\n".join(linhas)
+
+
+@register(
+    "tool_reiniciar_interface",
+    "Pede o reinicio da janela do Axio e do servidor Python no FIM desta rodada, para o codigo que acabaste "
+    "de escrever entrar em vigor sem o utilizador ter de carregar em nada. A conversa continua a vista no ecra "
+    "depois de reiniciar (nao se perde o que esta escrito nem o historico das perguntas) e, se a janela for "
+    "fechada a mao, abre limpa como sempre. Use no fim de uma rodada que melhorou ou criou alguma ferramenta "
+    "tua; NAO use a meio do trabalho nem quando nao mexeste no codigo do proprio Axio.",
+    {},
+    disponivel="edicao",
+)
+def tool_reiniciar_interface():
+    emit_event("executing", function="Marcando o reinicio da interface para o fim da rodada")
+    pedir_reinicio_da_interface()
+    return (
+        "REINICIO MARCADO: quando esta rodada terminar, a janela recarrega sozinha e o servidor Python "
+        "arranca de novo com o codigo novo. A resposta e a conversa continuam a vista depois de reiniciar. "
+        "Nao precisas de pedir nada ao utilizador nem de o avisar para carregar em Ctrl+Shift+B."
+    )

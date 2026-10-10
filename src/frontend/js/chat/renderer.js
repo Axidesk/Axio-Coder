@@ -99,6 +99,7 @@ import { closeRestoreConfirmPopup, performSessionRestore } from './historico/res
 import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderInspectTooltip, executarItemInspect, ligarInspectAoMenu, renderizarInspect, selecionarItemInspect, suprimirTooltipNativo } from './inspect.js';
 import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
 import { renderThoughts, renderTools, sendMessage, showQuestionPanel, sortToolArgsKeys, startSSE } from './messages.js';
+import { restaurarConversa } from './conversa_viva.js';
 import { aplicarEstadoReveal, aplicarEstadoToggleDeepseek, aplicarEstadoToggleGemini, aplicarEstadoToggleNav, aplicarEstadoToggleVertex, atualizarBotaoLimparVertex, closeSettingsModal, limparErroDeepseek, limparErroGemini, mostrarErroDeepseek, mostrarErroGemini, mostrarErroTavily, openSettingsModal, salvarConfiguracoes, validarChaveDeepseek, validarChaveStudio, validarChaveTavily } from './settings.js';
 import { applyGlossaryChip, clearContextMemory, closeClearContextPopup, confirmarEscolha, contextPopupVisivel, esconderChip, esconderIconTooltip, fecharConfirmPopup, loadGlossary, mostrarIconTooltip, openClearContextPopup, posicionarContextUsageUI, posicionarIconTooltip, recolherContextPopup, renderCurrentSessionLogs, resizeChatInput, showAlert, showGlossaryChip, syncMenuIcons, syncWorkspaceTopBar, toggleWorkspaceView } from './ui.js';
 import { copiarTexto } from './clipboard.js';
@@ -857,6 +858,7 @@ import './busca_chat.js';
     }
     
     restaurarPastaSelecionada();
+    restaurarConversa();
 
     if (btnSessionHistory) {
         btnSessionHistory.addEventListener('click', (e) => {

@@ -8,7 +8,7 @@ import logging
 
 logging.getLogger("google.genai").setLevel(logging.ERROR)
 
-from src.backend.state import estado, emit_event, set_turn_id, caminho_estado_projeto
+from src.backend.state import estado, emit_event, set_turn_id, caminho_estado_projeto, consumir_pedido_de_reinicio
 from src.backend.tools.registry import register
 from src.backend.memory.vector import wing_da_pasta, espelhar_notas_existentes, minerar_em_segundo_plano
 from src.backend.services.session import carregar_checkpoint, formatar_checkpoint, salvar_checkpoint
@@ -656,7 +656,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                         texto_exibicao += bloco_fontes
                 emit_event("ai_response", message=texto_exibicao)
                 emit_event("ai_question", text=prompt_usuario)
-                emit_event("done")
+                emit_event("done", reiniciar=consumir_pedido_de_reinicio())
 
                 threading.Thread(
                     target=minerar_em_segundo_plano,
@@ -671,12 +671,14 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                 continue
             salvar_checkpoint(prompt_usuario, use_deepseek, e, ferramentas_usadas_rodada, historico_sessao)
             emit_event("status", message=f"Erro (contexto excedido): {str(e)}")
+            consumir_pedido_de_reinicio()
             emit_event("done")
             break
         except Exception as e:
             salvar_checkpoint(prompt_usuario, use_deepseek, e, ferramentas_usadas_rodada, historico_sessao)
             amigavel = mensagem_amigavel_de_erro(e)
             emit_event("status", message=f"Erro: {amigavel or str(e)}")
+            consumir_pedido_de_reinicio()
             emit_event("done")
             break
 

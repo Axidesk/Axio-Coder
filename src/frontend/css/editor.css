@@ -916,6 +916,11 @@ body.theme-espacial #editor-view { background: var(--bg-panel); }
 #chat-inner-right > .conversa-busca-fora { display: none !important; }
 #chat-inner-left > .conversa-busca-casa,
 #chat-inner-right > .conversa-busca-casa { color: var(--text-usuario); }
+#chat-inner-left.conversa-restaurada > *,
+#chat-inner-right.conversa-restaurada > * {
+    animation: none;
+    transition: none;
+}
 body.theme-espacial #ws-top-bar + div {
     background: var(--bg-panel);
 }
