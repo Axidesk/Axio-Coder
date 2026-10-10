@@ -209,15 +209,16 @@ def _conteudo_ilegivel(conteudo):
     return False, ""
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em .axio/busca.txt.",
+    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em .axio/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo', "padrao": ""},
         'dominios': {"tipo": "STRING", "desc": 'Domínios a privilegiar, separados por vírgula (ex: docs.python.org,mozilla.org). Use para refazer a busca quando as fontes vierem de blogs.', "padrao": ""},
+        'filtro': {"tipo": "STRING", "desc": 'Mostra só as linhas do conteúdo extraído que contêm algum destes termos (um por linha, sem distinguir maiúsculas). O texto integral fica em .axio/busca.txt — use o filtro para não encher o contexto com uma página inteira.', "padrao": ""},
     },
     disponivel="web",
 )
-def tool_buscar_web(query="", url_especifica="", dominios=""):
+def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
     """Busca na web usando Tavily. Usa workflow 2 passos: Search → Extract (advanced) para maior fidelidade."""
     if not tavily_configurada():
         return "ERRO: navegação web desativada. Ative o globo em Configurações → APIs (ao lado do DeepSeek) e informe a chave Tavily."
@@ -225,7 +226,9 @@ def tool_buscar_web(query="", url_especifica="", dominios=""):
     tavily_client = _get_tavily_client()
     if not tavily_client:
         return "ERRO: Cliente Tavily não inicializado."
-    
+
+    termos = [t.strip().lower() for t in filtro.splitlines() if t.strip()]
+
     try:
         falha = ""
         if url_especifica:
@@ -290,7 +293,12 @@ def tool_buscar_web(query="", url_especifica="", dominios=""):
             contexto += f"--- FONTE {idx}: {url} ---\n"
             if ilegivel:
                 contexto += f"⚠️ CONTEÚDO ILEGÍVEL ({motivo}). NÃO INVENTE CÓDIGO — avise o usuário que esta fonte não pôde ser extraída corretamente.\n"
-            contexto += f"{conteudo[:30000]}\n\n"
+            if termos:
+                achadas = [linha for linha in conteudo.splitlines() if any(t in linha.lower() for t in termos)]
+                contexto += f"   [filtro: {len(achadas)} linha(s) de {len(conteudo.splitlines())}]\n"
+                contexto += "\n".join(achadas)[:12000] + "\n\n"
+            else:
+                contexto += f"{conteudo[:30000]}\n\n"
         
         estado["urls_navegadas_turno"].update(fontes)
 
@@ -335,7 +343,10 @@ def tool_buscar_web(query="", url_especifica="", dominios=""):
                 resumo += f"🚫 NENHUMA fonte legível. NÃO INVENTE CÓDIGO — informe o usuário honestamente.\n"
             resumo += f"\n"
         
-        resumo += "=== CONTEÚDO EXTRAÍDO (primeiros 30000 chars por fonte) ===\n" + contexto
+        if termos:
+            resumo += f"=== CONTEÚDO FILTRADO por {', '.join(termos)} (o integral está no log) ===\n" + contexto
+        else:
+            resumo += "=== CONTEÚDO EXTRAÍDO (primeiros 30000 chars por fonte) ===\n" + contexto
         
         return resumo
         
