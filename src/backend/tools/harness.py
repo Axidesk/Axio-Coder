@@ -867,6 +867,12 @@ class __DomElemento extends __DomNo {
             this.appendChild(no);
         }
     }
+    cloneNode(profundo) {
+        const vazio = () => new __DomElemento(this.localName || this.tagName);
+        if (!profundo) return vazio();
+        const copias = __domNosDeHtml(this.outerHTML, (tag) => new __DomElemento(tag));
+        return copias[0] || vazio();
+    }
     get scrollTop() { return this._scrollTop; }
     set scrollTop(valor) {
         const maximo = this.scrollHeight > 0 ? Math.max(0, this.scrollHeight - this.clientHeight) : Infinity;
