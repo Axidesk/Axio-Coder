@@ -10,6 +10,7 @@ import time
 from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, entradas_diretorio, resumo_entradas, normalizar_unicode, buscar_em_revisao, PASTAS_FORA_DA_BUSCA, EXT_FORA_DA_BUSCA
+from src.backend.services.busca_texto import EXTS_TEXTO
 
 LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
 LIMITE_EXCERTO = 200
@@ -232,9 +233,10 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
         'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist). Serve para ler tipagens e codigo das dependencias instaladas. Custa tempo - em pastas enormes o limite de 10s corta a busca."},
         'excluir': {"tipo": "STRING", "obrig": False, "padrao": "", "desc": "Uma pasta por linha (ex: 'libs') para a varredura ignorar PELO NOME, em qualquer nivel da arvore. Serve para arvores de terceiros (boost, vendor, libs externas) que fazem a busca esgotar os 10s antes de chegar ao codigo do projeto."},
         'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a busca a uma pasta (ex: node_modules/dxf-viewer) OU a um ficheiro do projeto (procura so dentro dele). E o caminho para procurar dentro de uma dependencia SEM percorrer as outras todas: sem isto, incluir_ignoradas varre o node_modules inteiro e o limite de 10s devolve resultados parciais (os ficheiros ordenados depois do corte nunca sao vistos)."},
+        'segundos': {"tipo": "INTEGER", "obrig": False, "padrao": 10, "desc": "Teto de tempo da varredura, em segundos (padrao 10, maximo 120). Aumente quando a arvore for grande - pasta de terceiros com milhares de arquivos, ou XMLs de varios MB - e a busca cortar a meio sem chegar ao fim."},
     },
 )
-def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: bool = False, pasta: str = "", excluir: str = ""):
+def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: bool = False, pasta: str = "", excluir: str = "", segundos: int = 10):
     termos = [t.strip() for t in str(termo).split("\n") if t.strip()]
     if not termos:
         return "ERRO: indique pelo menos um termo para procurar."
@@ -250,6 +252,10 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         saida = _formatar_busca(termos, achados, f" na revisao {revisao}")
         return saida[:10000] + "\n... [RESULTADO TRUNCADO]" if len(saida) > 10000 else saida
     resultados = [[] for _ in termos]
+    try:
+        limite_segundos = max(5, min(120, int(segundos)))
+    except (TypeError, ValueError):
+        limite_segundos = 10
     tempo_inicio = time.time()
     pastas_ignoradas = PASTAS_FORA_DA_BUSCA
     extensoes_ignoradas = EXT_FORA_DA_BUSCA
@@ -272,6 +278,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         return f"ERRO: '{pasta}' nao e uma pasta nem um ficheiro do projeto."
 
     ignorados_por_tamanho = 0
+    ignorados_por_binario = 0
 
     for root, dirs, files in os.walk(raiz_busca):
         dirs[:] = [d for d in dirs if d != '.axio']
@@ -282,9 +289,9 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
 
         
         for name in files:
-            if time.time() - tempo_inicio > 10:
+            if time.time() - tempo_inicio > limite_segundos:
                 onde = os.path.relpath(root, estado["pasta_raiz"])
-                aviso = (f"[AVISO] VARREDURA INCOMPLETA: os 10s esgotaram em '{onde}' e o resto da arvore "
+                aviso = (f"[AVISO] VARREDURA INCOMPLETA: os {limite_segundos}s esgotaram em '{onde}' e o resto da arvore "
                          "nao chegou a ser varrido. Um termo sem resultados ABAIXO nao e prova de que nao "
                          "existe - so diz que nao esta na parte varrida. Repita com 'pasta' apontado a "
                          "subpasta certa antes de concluir que algo nao existe.")
@@ -293,6 +300,10 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
 
             if name.endswith(extensoes_ignoradas): continue
             caminho_absoluto = os.path.join(root, name)
+
+            if os.path.splitext(name)[1].lower() not in EXTS_TEXTO and _parece_binario(caminho_absoluto):
+                ignorados_por_binario += 1
+                continue
             
             try:
                 if os.path.getsize(caminho_absoluto) > LIMITE_BYTES_LIDOS:
@@ -309,9 +320,11 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
             except Exception: pass
             
     aviso = ""
+    if ignorados_por_binario:
+        aviso += f" [{ignorados_por_binario} ficheiro(s) binario(s) saltados - nao ha la codigo para procurar.]"
     if ignorados_por_tamanho:
-        aviso = (f" [{ignorados_por_tamanho} ficheiro(s) com mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB"
-                 f" nao foram lidos nesta busca; os bundles em dist/ ficam sempre de fora.]")
+        aviso += (f" [{ignorados_por_tamanho} ficheiro(s) com mais de {LIMITE_BYTES_LIDOS // (1024 * 1024)} MB"
+                  f" nao foram lidos nesta busca; os bundles em dist/ ficam sempre de fora.]")
     if excluidas:
         aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
     if not any(resultados): return _formatar_busca(termos, resultados) + aviso
@@ -331,6 +344,14 @@ def _formatar_busca(termos, achados, sufixo=""):
         linhas.extend(achadas or ["(nenhuma ocorrência)"])
         linhas.append("")
     return "\n".join(linhas).rstrip()
+
+
+def _parece_binario(caminho_absoluto):
+    try:
+        with open(caminho_absoluto, "rb") as ficheiro:
+            return b"\x00" in ficheiro.read(4096)
+    except OSError:
+        return False
 
 
 def _excerto(linha, padrao):
