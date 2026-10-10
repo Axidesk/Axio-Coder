@@ -100,7 +100,7 @@ def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=L
 
     escolha = str(acao or "ponto").strip().lower()
     try:
-        if escolha == "ponto":
+        if escolha in ("ponto", "pontos"):
             lista = _pontos_pedidos(pontos, x, y, z)
             if not lista:
                 return "ERRO: nenhuma coordenada valida em 'pontos' (escreve x,y,z por linha)."
@@ -112,7 +112,7 @@ def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=L
             return _relato_resumo(dados, caminho_relativo)
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
-    return f"ERRO: acao desconhecida '{acao}' (usa 'ponto', 'vazios' ou 'resumo')."
+    return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios' ou 'resumo')."
 
 
 def _bytes_do_mapa(alvo):
