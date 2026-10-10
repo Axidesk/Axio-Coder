@@ -336,7 +336,8 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
                   f" nao foram lidos nesta busca; os bundles em dist/ ficam sempre de fora.]")
     if excluidas:
         aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
-    if not any(resultados): return _formatar_busca(termos, resultados) + aviso
+    if not any(resultados):
+        return _aviso_busca_literal(termos, resultados) + _formatar_busca(termos, resultados) + aviso
     saida = _formatar_busca(termos, resultados)
     if len(saida) > 10000: return saida[:10000] + "\n... [RESULTADO TRUNCADO]" + aviso
     return saida + aviso
@@ -353,6 +354,19 @@ def _formatar_busca(termos, achados, sufixo=""):
         linhas.extend(achadas or ["(nenhuma ocorrência)"])
         linhas.append("")
     return "\n".join(linhas).rstrip()
+
+
+def _aviso_busca_literal(termos, resultados):
+    curingas = set("*?[]()|^$+\\")
+    suspeitos = [t for t, achadas in zip(termos, resultados)
+                 if not achadas and any(c in curingas for c in t)]
+    if not suspeitos:
+        return ""
+    lista = ", ".join("'" + t + "'" for t in suspeitos)
+    return ("[AVISO] A busca e LITERAL, nao aceita padrao: "
+            f"{lista} foi procurado caractere a caractere - o '[' e o '*' valem como si mesmos, "
+            "nao como curinga. Nenhum resultado aqui NAO prova que a forma nao existe; "
+            "para varrer por forma use tool_executar_python a ler o texto.\n")
 
 
 def _parece_binario(caminho_absoluto):
