@@ -4,6 +4,7 @@ import sys
 import ast
 import json
 import subprocess
+import xml.etree.ElementTree as ET
 
 from html.parser import HTMLParser
 
@@ -40,6 +41,11 @@ EXTENSOES = {
     ".h": "cpp",
     ".c": "cpp",
     ".lua": "lua",
+    ".xml": "html",
+    ".xsd": "html",
+    ".xsl": "html",
+    ".svg": "html",
+    ".xhtml": "html",
 }
 
 def _detectar_linguagem(caminho, linguagem):
@@ -399,12 +405,23 @@ def _erros_finos_html(conteudo):
     return _erros_como_texto(erros, len(erros), conteudo).splitlines()
 
 def _validar_html(conteudo):
+    if _PROLOGO_XML.match(conteudo):
+        return _validar_xml(conteudo)
     erros = _erros_de_estrutura_html(conteudo) + _erros_finos_html(conteudo)
     if not erros:
         return None
     if len(erros) > 8:
         return "\n".join(erros[:8]) + f"\n... e mais {len(erros) - 8} erro(s) nao listado(s)."
     return "\n".join(erros)
+
+_PROLOGO_XML = re.compile(r"^[^\S\n]*<\?xml\b", re.IGNORECASE)
+
+def _validar_xml(conteudo):
+    try:
+        ET.fromstring(conteudo.encode("utf-8"))
+        return None
+    except ET.ParseError as e:
+        return str(e)
 
 def _limpar_saida_php(texto):
     limpo = texto.strip()
