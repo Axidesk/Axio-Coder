@@ -42,10 +42,8 @@ export function guardarConversa() {
             html: recorte(par.inner, quantas),
             rolagem: par.rolagem ? par.rolagem.scrollTop : 0,
         }));
-        if (!dados.some((dado) => dado.html)) {
-            esquecerConversa();
-            return false;
-        }
+        if (!dados.some((dado) => dado.html)) return false;
+        // painel vazio NAO apaga o que ja esta guardado: um bug que limpe a tela nao leva a conversa com ele.
         try {
             sessionStorage.setItem(CHAVE, JSON.stringify(dados));
             return true;
