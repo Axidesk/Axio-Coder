@@ -49,6 +49,7 @@ from src.backend.tools import (
     memory_tools,
     modelagem,
     ocr,
+    otbm,
     paint,
     plan,
     preferencias,
