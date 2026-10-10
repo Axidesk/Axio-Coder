@@ -155,15 +155,7 @@ def _resolver_arquivo_existente(caminho_relativo):
     return caminho_absoluto, None
 
 
-@register(
-    "tool_ler_arquivo",
-    "Lê o conteúdo completo. USE APENAS para arquivos pequenos (até ~600 linhas ou ~25k caracteres). Para arquivos grandes como .cpp, use obrigatoriamente 'tool_mapear_codigo' primeiro e depois 'tool_ler_trecho_arquivo'.",
-    {
-        'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
-    },
-)
-def tool_ler_arquivo(caminho_relativo: str):
-    emit_event("executing", function=f"Lendo arquivo: {caminho_relativo}")
+def _ler_um_arquivo(caminho_relativo):
     caminho_absoluto, erro_caminho = _resolver_arquivo_existente(caminho_relativo)
     if erro_caminho: return erro_caminho
     try:
@@ -179,6 +171,26 @@ def tool_ler_arquivo(caminho_relativo: str):
                 return f"ERRO: {aviso} Use 'tool_mapear_codigo' e depois 'tool_ler_trecho_arquivo' para ler blocos específicos."
             return conteudo
     except Exception as e: return f"ERRO: {str(e)}"
+
+
+@register(
+    "tool_ler_arquivo",
+    "Lê o conteúdo completo. USE APENAS para arquivos pequenos (até ~600 linhas ou ~25k caracteres). Para arquivos grandes como .cpp, use obrigatoriamente 'tool_mapear_codigo' primeiro e depois 'tool_ler_trecho_arquivo'. Aceita VÁRIOS arquivos numa só chamada: um caminho por linha no próprio 'caminho_relativo' (o caminho pode ter espaços), e cada um volta com o seu cabeçalho — use isso em vez de repetir a chamada arquivo a arquivo.",
+    {
+        'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
+    },
+)
+def tool_ler_arquivo(caminho_relativo: str):
+    caminhos = [c.strip() for c in (caminho_relativo or "").splitlines() if c.strip()]
+    if len(caminhos) <= 1:
+        alvo = caminhos[0] if caminhos else caminho_relativo
+        emit_event("executing", function=f"Lendo arquivo: {alvo}")
+        return _ler_um_arquivo(alvo)
+    emit_event("executing", function=f"Lendo {len(caminhos)} arquivos")
+    partes = []
+    for caminho in caminhos:
+        partes.append(f"===== {caminho} =====\n{_ler_um_arquivo(caminho)}")
+    return "\n\n".join(partes)
 
 
 def _intervalos_pedidos(texto, total):
