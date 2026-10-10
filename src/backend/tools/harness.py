@@ -41,11 +41,11 @@ import subprocess as _subprocess
 import sys
 import time
 
-for _raiz in ({raiz_app!r}, {raiz_projeto!r}):
+for _raiz in ({RAIZ_APP_PY}, {RAIZ_PY}):
     if _raiz and _raiz not in sys.path:
         sys.path.insert(0, _raiz)
-if {raiz_projeto!r} and os.path.isdir({raiz_projeto!r}):
-    os.chdir({raiz_projeto!r})
+if {RAIZ_PY} and os.path.isdir({RAIZ_PY}):
+    os.chdir({RAIZ_PY})
 for _fluxo in (sys.stdout, sys.stderr):
     if hasattr(_fluxo, "reconfigure"):
         _fluxo.reconfigure(encoding="utf-8", errors="replace")
@@ -57,7 +57,7 @@ for _fluxo in (sys.stdout, sys.stderr):
 # Para exercitar o caso "sem pasta aberta", limpe-a dentro do proprio trecho.
 try:
     from src.backend.state import estado as _estado
-    _estado["pasta_raiz"] = {raiz_projeto!r} or os.getcwd()
+    _estado["pasta_raiz"] = {RAIZ_PY} or os.getcwd()
 except Exception:
     pass
 #
@@ -1699,7 +1699,11 @@ def _snippet_python(codigo, raiz_projeto):
     aberto, cwd nessa pasta e stdout/stderr em utf-8 (no Windows o subprocesso
     escreve em cp1252 e os acentos chegavam corrompidos ao relatorio).
     """
-    return _CABECALHO_PYTHON.format(raiz_app=APP_ROOT, raiz_projeto=raiz_projeto) + codigo + "\n"
+    return (
+        _CABECALHO_PYTHON.replace("{RAIZ_APP_PY}", repr(APP_ROOT)).replace("{RAIZ_PY}", repr(raiz_projeto))
+        + codigo
+        + "\n"
+    )
 
 _NOMES_DO_CABECALHO_JS = frozenset(
     {"process", "fs", "path", "assert", "importarProjeto", "pathToFileURL", "__paraUrl", "__juntar"}
