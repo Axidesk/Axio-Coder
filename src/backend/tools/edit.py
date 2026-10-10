@@ -116,6 +116,37 @@ def _linha_mais_parecida(linhas, procurada):
     return " Nao ha nenhuma linha parecida com a ancora neste ficheiro - confirme o FICHEIRO."
 
 
+def _intervalo_tolerando_espacos(conteudo, antigo):
+    """O intervalo onde a ancora casa ignorando espacos no fim das linhas.
+
+    O codigo legado (servidores de OT, datapacks, HTML e CSS antigos) tem espacos
+    a mais no fim das linhas: quem escreve a ancora a partir do que le no ficheiro
+    nao os ve, e a substituicao falha por causa deles. Devolve (inicio, fim) so
+    quando ha UMA correspondencia - com mais do que uma, a ancora e ambigua e o
+    erro normal (com o diagnostico) e que deve sair.
+    """
+    linhas_ancora = [linha.rstrip() for linha in antigo.split("\n")]
+    if not any(linhas_ancora):
+        return None
+    linhas = conteudo.split("\n")
+    if len(linhas_ancora) > len(linhas):
+        return None
+    inicio_de = []
+    posicao = 0
+    for linha in linhas:
+        inicio_de.append(posicao)
+        posicao += len(linha) + 1
+    achado = None
+    for i in range(len(linhas) - len(linhas_ancora) + 1):
+        if any(linhas[i + j].rstrip() != linhas_ancora[j] for j in range(len(linhas_ancora))):
+            continue
+        if achado is not None:
+            return None
+        ultima = i + len(linhas_ancora) - 1
+        achado = (inicio_de[i], inicio_de[ultima] + len(linhas[ultima]))
+    return achado
+
+
 def gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, action_name):
     """Grava o novo conteudo, registra no undo e emite o diff para a UI.
 
@@ -162,7 +193,14 @@ def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: 
         return erro
     caminho_absoluto, conteudo, conteudo_nfc, texto_antigo_nfc, texto_novo_nfc, ocorrencias = dados
     try:
-        if ocorrencias == 0: return ("ERRO: O 'texto_antigo' não foi encontrado." + _diagnostico_ancora(conteudo_nfc, texto_antigo_nfc))
+        if ocorrencias == 0:
+            intervalo = _intervalo_tolerando_espacos(conteudo_nfc, texto_antigo_nfc)
+            if intervalo is None:
+                return ("ERRO: O 'texto_antigo' não foi encontrado." + _diagnostico_ancora(conteudo_nfc, texto_antigo_nfc))
+            novo_conteudo = conteudo_nfc[:intervalo[0]] + texto_novo_nfc + conteudo_nfc[intervalo[1]:]
+            aviso = gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, f"Modificado: {caminho_relativo}")
+            return (f"SUCESSO: Trecho substituído em '{caminho_relativo}' "
+                    f"(a âncora casou ignorando espaços no fim das linhas).{aviso}")
         elif ocorrencias > 1: return f"ERRO: O 'texto_antigo' ocorre {ocorrencias} vezes no arquivo. A âncora é ambígua. Forneça um trecho maior ou mais específico para garantir que apenas o local correto seja alterado."
         
         novo_conteudo = conteudo_nfc.replace(texto_antigo_nfc, texto_novo_nfc, 1)
@@ -217,12 +255,16 @@ def _aplicar_lote(conteudo_nfc, itens):
         if not antigo:
             return None, f"ERRO: o bloco {indice} tem o trecho antigo vazio."
         ocorrencias = atual.count(antigo)
-        if ocorrencias == 0:
-            return None, (f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado)."
-                          + _diagnostico_ancora(atual, antigo))
         if ocorrencias > 1:
             return None, f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro (ancora ambigua) - nada foi gravado."
-        atual = atual.replace(antigo, novo, 1)
+        if ocorrencias == 1:
+            atual = atual.replace(antigo, novo, 1)
+            continue
+        intervalo = _intervalo_tolerando_espacos(atual, antigo)
+        if intervalo is None:
+            return None, (f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado)."
+                          + _diagnostico_ancora(atual, antigo))
+        atual = atual[:intervalo[0]] + novo + atual[intervalo[1]:]
     if atual == conteudo_nfc:
         return None, "ERRO: as substituicoes deixariam o ficheiro igual - nada foi gravado."
     return atual, None
