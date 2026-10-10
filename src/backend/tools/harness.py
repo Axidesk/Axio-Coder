@@ -74,6 +74,7 @@ except Exception:
 #   texto, codigo = correr(["cmake", "--help"])
 #   texto, _ = correr("git status", shell=True)
 #   pids = processos("cl.exe")        # [] = nenhum build a correr
+#   tudo = processos()                # {imagem: [pids]} de tudo o que corre
 
 def _texto_do_subprocesso(bruto):
     if not bruto:
@@ -95,18 +96,23 @@ def correr(comando, cwd=None, timeout=120, shell=False):
         return "(falha a executar " + str(comando) + ": " + str(_erro) + ")", -1
     return _texto_do_subprocesso(proc.stdout) + _texto_do_subprocesso(proc.stderr), proc.returncode
 
-def processos(nome):
-    """Pids dos processos do sistema com esse nome exato (ex: 'cl.exe'); lista vazia = nenhum."""
-    texto, _ = correr(["tasklist", "/FI", "IMAGENAME eq " + nome, "/NH", "/FO", "CSV"])
-    pids = []
+def processos(nome=None):
+    """Sem nome: {imagem: [pids]} de tudo o que corre. Com nome: os pids cuja imagem contem esse texto."""
+    texto, _ = correr(["tasklist", "/NH", "/FO", "CSV"])
+    imagens = {}
     for linha in (texto or "").splitlines():
         campos = [campo.strip().strip('"') for campo in linha.split('","')]
-        if len(campos) >= 2 and campos[0].lower().endswith(nome.lower()):
-            try:
-                pids.append(int(campos[1]))
-            except ValueError:
-                pass
-    return pids
+        if len(campos) < 2:
+            continue
+        try:
+            pid = int(campos[1])
+        except ValueError:
+            continue
+        imagens.setdefault(campos[0], []).append(pid)
+    if nome is None:
+        return imagens
+    alvo = str(nome).lower()
+    return [pid for imagem, pids in imagens.items() if alvo in imagem.lower() for pid in pids]
 
 def porta_aberta(porta):
     """Diz se algo responde nessa porta em localhost (nao prova que e o programa certo)."""
@@ -1924,7 +1930,8 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
     "(um assert sobre a funcao real, um calculo, um resultado do despacho) em vez de criar scripts de "
     "prova na raiz. Nao substitui as ferramentas nativas: ler/editar/buscar/validar sintaxe tem "
     "ferramenta propria e a app Flask a responder tem tool_auditar_rotas. O cabecalho traz correr() e "
-    "processos() para correr um comando do sistema ou saber se um build esta a correr, sem escrever "
+    "processos() - sem nome devolve {imagem: [pids]} de tudo o que corre, com um nome filtra as "
+    "imagens que o contem - para correr um comando do sistema ou saber se um build esta a correr, sem escrever "
     "subprocess.run a mao - que perde a saida INTEIRA quando ela nao e UTF-8. correr() aceita a linha "
     "como texto ('git status') ou como lista de argumentos, e devolve (saida, codigo de saida): "
     "codigo -1 quer dizer que o comando nem chegou a arrancar e nesse caso a 'saida' traz o motivo - "
