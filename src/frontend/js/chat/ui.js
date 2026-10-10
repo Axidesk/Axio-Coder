@@ -415,7 +415,7 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         if (currentLogsList) currentLogsList.scrollTop = 0;
         selectFirstSessionLogCard();
     }
-    function resetWorkspaceUI() {
+    function resetWorkspaceUI(limparChat = true) {
         window.sessionLogsData = [];
         if (currentLogsWrapper) currentLogsWrapper.innerHTML = '';
         state.currentTurnLogs = [];
@@ -431,10 +431,12 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         state.porSubirLido = false;
         state.temRemotoGit = false;
         state.commitsPorSubir = [];
-        if (chatInnerLeft) chatInnerLeft.innerHTML = '';
-        if (chatInnerRight) chatInnerRight.innerHTML = '';
-        if (chatContainerLeft) chatContainerLeft.scrollTop = 0;
-        if (chatContainerRight) chatContainerRight.scrollTop = 0;
+        if (limparChat) {
+            if (chatInnerLeft) chatInnerLeft.innerHTML = '';
+            if (chatInnerRight) chatInnerRight.innerHTML = '';
+            if (chatContainerLeft) chatContainerLeft.scrollTop = 0;
+            if (chatContainerRight) chatContainerRight.scrollTop = 0;
+        }
         renderCurrentSessionLogs();
         openLogDock();
 

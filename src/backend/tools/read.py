@@ -58,6 +58,47 @@ def _resumo_python(arvore, conteudo):
             f"de texto de {chars} chars - o resto ({total - dado}) e codigo")
 
 
+def _indice_do_arquivo(caminho_relativo, linhas, limite=60):
+    """O esqueleto de um ficheiro grande: os titulos (texto) ou as definicoes (codigo), com a linha.
+
+    E o que falta a quem recebe 'arquivo muito grande': sem isto so resta adivinhar o intervalo
+    ou varrer o ficheiro com um script de fora. Cobre .md/.html/.css (onde nao ha definicoes) e
+    o codigo pela mesma tabela de padroes que o tool_ler_trecho_arquivo usa.
+    """
+    extensao = os.path.splitext(caminho_relativo.split(" [")[0])[1].lower()
+    achados = []
+    if extensao in (".md", ".markdown", ".txt", ".rst"):
+        for i, linha in enumerate(linhas, 1):
+            if re.match(r"^#{1,6}\s+\S", linha.rstrip()):
+                achados.append((i, linha.rstrip()))
+    elif extensao in (".html", ".htm", ".vue", ".svelte"):
+        for i, linha in enumerate(linhas, 1):
+            if re.search(r"<(h[1-4]|section|article|nav|header|footer)[\s>]", linha):
+                achados.append((i, linha.strip()[:110]))
+    elif extensao == ".css":
+        for i, linha in enumerate(linhas, 1):
+            if re.match(r"^[.#@:\[\w][^{};]*\{\s*$", linha):
+                achados.append((i, linha.strip()[:110]))
+    else:
+        padrao = _PADROES_DE_DEFINICAO.get(extensao)
+        if padrao:
+            for i, linha in enumerate(linhas, 1):
+                if not re.search(padrao, linha):
+                    continue
+                primeira = re.match(r"\s*(?:pub\s+)?(?:async\s+)?(\w+)", linha)
+                if primeira and primeira.group(1) in _PALAVRAS_DE_CONTROLE:
+                    continue
+                achados.append((i, linha.strip()[:110]))
+    if not achados:
+        return ""
+    total_chars = sum(len(l) + 1 for l in linhas)
+    cabeca = f"[{len(linhas)} linhas | {total_chars} caracteres | {len(achados)} titulo(s)/definicao(oes)]"
+    corpo = [f"{i:>6} | {texto}" for i, texto in achados[:limite]]
+    if len(achados) > limite:
+        corpo.append(f"       ... e mais {len(achados) - limite}")
+    return cabeca + "\n" + "\n".join(corpo)
+
+
 @register(
     "tool_mapear_codigo",
     'Lista as funções e classes de um arquivo para você saber onde alterar.',
@@ -129,7 +170,13 @@ def tool_ler_arquivo(caminho_relativo: str):
         with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
             conteudo = f.read()
             num_linhas = conteudo.count("\n") + 1
-            if len(conteudo) > 25000 or num_linhas > 600: return f"ERRO: Arquivo muito grande ({len(conteudo)} caracteres, {num_linhas} linhas). Use 'tool_mapear_codigo' e depois 'tool_ler_trecho_arquivo' para ler blocos específicos."
+            if len(conteudo) > 25000 or num_linhas > 600:
+                aviso = f"Arquivo grande demais para ler de uma vez ({len(conteudo)} caracteres, {num_linhas} linhas)."
+                indice = _indice_do_arquivo(caminho_relativo, conteudo.splitlines())
+                dica = "\nLeia por partes: tool_ler_trecho_arquivo com trechos=\"12-60;210-320\"."
+                if indice:
+                    return f"{aviso} Indice para escolher o trecho:\n{indice}{dica}"
+                return f"ERRO: {aviso} Use 'tool_mapear_codigo' e depois 'tool_ler_trecho_arquivo' para ler blocos específicos."
             return conteudo
     except Exception as e: return f"ERRO: {str(e)}"
 

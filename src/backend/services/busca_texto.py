@@ -63,7 +63,7 @@ def _recorte_de_linha(linha, destaque, limite):
     return ("…" if inicio > 0 else "") + recorte + ("…" if inicio + limite < len(texto) else "")
 
 
-def _peso_da_pasta(nome):
+def peso_da_pasta(nome):
     baixo = nome.lower()
     if baixo in PASTAS_DE_TERCEIROS or baixo.startswith(('boost', 'qt5', 'qt6', 'qt-', 'qt_')):
         return 1
@@ -72,7 +72,7 @@ def _peso_da_pasta(nome):
 
 def _pastas_em_ordem(dirnames):
     aceitas = [d for d in dirnames if d not in PASTAS_IGNORADAS and not d.startswith(".")]
-    return sorted(aceitas, key=lambda d: (_peso_da_pasta(d), d.lower()))
+    return sorted(aceitas, key=lambda d: (peso_da_pasta(d), d.lower()))
 
 
 def busca_no_texto(texto, termo, limite=LIMITE_OCORRENCIAS):

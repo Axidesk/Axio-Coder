@@ -10,7 +10,7 @@ import time
 from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, entradas_diretorio, resumo_entradas, normalizar_unicode, buscar_em_revisao, PASTAS_FORA_DA_BUSCA, EXT_FORA_DA_BUSCA
-from src.backend.services.busca_texto import EXTS_TEXTO
+from src.backend.services.busca_texto import EXTS_TEXTO, peso_da_pasta
 
 LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
 LIMITE_EXCERTO = 200
@@ -230,7 +230,7 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
     {
         'termo': {"tipo": "STRING", "obrig": True, "padrao": "", "desc": "Um termo, ou varios separados por quebra de linha (ex: 'nome1\\nnome2'). Com varios, o projeto e varrido uma so vez e cada termo sai com o seu bloco."},
         'revisao': {"tipo": "STRING", "padrao": ""},
-        'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist). Serve para ler tipagens e codigo das dependencias instaladas. Custa tempo - em pastas enormes o limite de 10s corta a busca."},
+        'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao: as de build (node_modules, .venv, .git, build, dist, target) E as de terceiros (libs, vendor, third_party, boost, qt, sdk, deps). Serve para ler tipagens e codigo das dependencias instaladas. Custa tempo - so numa arvore de biblioteca sao centenas de MB de texto; a busca avisa sempre quais as pastas que saltou."},
         'excluir': {"tipo": "STRING", "obrig": False, "padrao": "", "desc": "Uma pasta por linha (ex: 'libs') para a varredura ignorar PELO NOME, em qualquer nivel da arvore. Serve para arvores de terceiros (boost, vendor, libs externas) que fazem a busca esgotar os 10s antes de chegar ao codigo do projeto."},
         'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a busca a uma pasta (ex: node_modules/dxf-viewer) OU a um ficheiro do projeto (procura so dentro dele). E o caminho para procurar dentro de uma dependencia SEM percorrer as outras todas: sem isto, incluir_ignoradas varre o node_modules inteiro e o limite de 10s devolve resultados parciais (os ficheiros ordenados depois do corte nunca sao vistos)."},
         'segundos': {"tipo": "INTEGER", "obrig": False, "padrao": 10, "desc": "Teto de tempo da varredura, em segundos (padrao 10, maximo 120). Aumente quando a arvore for grande - pasta de terceiros com milhares de arquivos, ou XMLs de varios MB - e a busca cortar a meio sem chegar ao fim."},
@@ -279,6 +279,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
 
     ignorados_por_tamanho = 0
     ignorados_por_binario = 0
+    terceiros_saltados = set()
 
     for root, dirs, files in os.walk(raiz_busca):
         dirs[:] = [d for d in dirs if d != '.axio']
@@ -286,6 +287,9 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
             dirs[:] = [d for d in dirs if d not in pastas_ignoradas and not d.startswith('.')]
         if excluidas:
             dirs[:] = [d for d in dirs if d.lower() not in excluidas]
+        if not incluir_ignoradas:
+            terceiros_saltados.update(d for d in dirs if peso_da_pasta(d))
+            dirs[:] = [d for d in dirs if not peso_da_pasta(d)]
 
         
         for name in files:
@@ -320,6 +324,11 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
             except Exception: pass
             
     aviso = ""
+    if terceiros_saltados:
+        nomes = sorted(terceiros_saltados)
+        amostra = ", ".join(nomes[:6]) + (" ..." if len(nomes) > 6 else "")
+        aviso += (f" [pastas de terceiros saltadas: {amostra}"
+                  " - um clone de biblioteca nao tem codigo do projeto; use incluir_ignoradas para as varrer.]")
     if ignorados_por_binario:
         aviso += f" [{ignorados_por_binario} ficheiro(s) binario(s) saltados - nao ha la codigo para procurar.]"
     if ignorados_por_tamanho:
@@ -329,8 +338,8 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
     if not any(resultados): return _formatar_busca(termos, resultados) + aviso
     saida = _formatar_busca(termos, resultados)
-    if len(saida) > 10000: return saida[:10000] + "\n... [RESULTADO TRUNCADO]"
-    return saida
+    if len(saida) > 10000: return saida[:10000] + "\n... [RESULTADO TRUNCADO]" + aviso
+    return saida + aviso
 
 
 def _formatar_busca(termos, achados, sufixo=""):

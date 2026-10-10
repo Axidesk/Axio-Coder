@@ -5,6 +5,7 @@ import { closeCol3, closePanelCol, closePlusMenus, openCol3Panel, openLogDockInW
 import { criarVista, vistaDoElemento } from './colunas.js';
 import { escapeHtml } from './messages.js';
 import { resetWorkspaceUI } from './ui.js';
+import { esquecerConversa } from './conversa_viva.js';
 import { createCopyButton } from './clipboard.js';
 
 import { ALTURA_LINHA, PADDING_TOPO } from '../editor/metricas.js';
@@ -650,6 +651,7 @@ const NL = String.fromCharCode(10);
 
     function aplicarPastaSelecionada(folder) {
         const jaEra = pastaSelecionada === folder;
+        const primeiraVez = !pastaSelecionada;
         pastaSelecionada = folder;
         lblFolder.textContent = folder;
         if (btnSelectFolder) {
@@ -659,7 +661,7 @@ const NL = String.fromCharCode(10);
             btnSelectFolder.title = folder;
         }
         if (!jaEra) {
-            resetWorkspaceUI();
+            resetWorkspaceUI(!primeiraVez);
             if (window.WorkspaceView && typeof window.WorkspaceView.reloadExplorer === 'function') {
                 window.WorkspaceView.reloadExplorer();
             }
@@ -717,6 +719,7 @@ const NL = String.fromCharCode(10);
 
     async function reiniciarInterfaceDaPasta() {
         lblStatus.textContent = 'Diretorio trocado: a reiniciar a interface...';
+        esquecerConversa();
         try {
             await ipcRenderer.invoke('preview:descartar');
         } catch (e) {
