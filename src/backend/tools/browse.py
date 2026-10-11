@@ -5,6 +5,7 @@ a pasta mostrada ao modelo passa a ser a que este modulo devolve.
 """
 import fnmatch
 import os
+import re
 import time
 
 from src.backend.state import estado, emit_event
@@ -14,6 +15,8 @@ from src.backend.services.busca_texto import EXTS_TEXTO, peso_da_pasta
 
 LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
 LIMITE_EXCERTO = 200
+_TETO_CANDIDATOS = 8
+_RE_DEFINICAO = re.compile(r"(?:function|def|class|sub)\s+([A-Za-z_][A-Za-z0-9_.:]*)")
 
 
 def _formato_tamanho(num):
@@ -280,6 +283,10 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
     ignorados_por_tamanho = 0
     ignorados_por_binario = 0
     terceiros_saltados = set()
+    fragmentos = {}
+    for t in termos:
+        for frag in _fragmentos(t):
+            fragmentos.setdefault(frag, [])
 
     for root, dirs, files in os.walk(raiz_busca):
         dirs[:] = [d for d in dirs if d != '.axio']
@@ -318,6 +325,8 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
                 with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
                     for i, linha in enumerate(f):
                         alvo = normalizar_unicode(linha)
+                        if fragmentos and ("function" in alvo or "def " in alvo or "class " in alvo):
+                            _recolher_candidatos(fragmentos, _TETO_CANDIDATOS, caminho_relativo, i + 1, alvo)
                         for indice, p in enumerate(padroes):
                             if p in alvo:
                                 resultados[indice].append(f"{caminho_relativo} (Linha {i+1}): {_excerto(linha, p)}")
@@ -337,7 +346,9 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
     if excluidas:
         aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
     if not any(resultados):
-        return _aviso_busca_literal(termos, resultados) + _formatar_busca(termos, resultados) + aviso
+        return (_aviso_busca_literal(termos, resultados)
+                + _aviso_nomes_parecidos(termos, resultados, fragmentos, terceiros_saltados)
+                + _formatar_busca(termos, resultados) + aviso)
     saida = _formatar_busca(termos, resultados)
     if len(saida) > 10000: return saida[:10000] + "\n... [RESULTADO TRUNCADO]" + aviso
     return saida + aviso
@@ -367,6 +378,51 @@ def _aviso_busca_literal(termos, resultados):
             f"{lista} foi procurado caractere a caractere - o '[' e o '*' valem como si mesmos, "
             "nao como curinga. Nenhum resultado aqui NAO prova que a forma nao existe; "
             "para varrer por forma use tool_executar_python a ler o texto.\n")
+
+
+def _fragmentos(termo):
+    frags = []
+    for parte in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", str(termo)):
+        for sub in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", parte) + [parte]:
+            sub = sub.lower()
+            if len(sub) >= 3 and sub not in frags:
+                frags.append(sub)
+    return frags
+
+
+def _recolher_candidatos(fragmentos, teto, caminho, numero, linha):
+    definicao = _RE_DEFINICAO.search(linha)
+    if not definicao:
+        return
+    nome = definicao.group(1)
+    minusculo = nome.lower()
+    for frag, achados in fragmentos.items():
+        if len(achados) >= teto or frag not in minusculo:
+            continue
+        entrada = f"   {nome}  ->  {caminho}:{numero}"
+        if entrada not in achados:
+            achados.append(entrada)
+
+
+def _aviso_nomes_parecidos(termos, resultados, fragmentos, pastas_saltadas=None):
+    vazios = [t for t, achadas in zip(termos, resultados) if not achadas]
+    if not vazios:
+        return ""
+    sugestoes = []
+    for frag in fragmentos or {}:
+        for entrada in fragmentos[frag]:
+            if entrada not in sugestoes:
+                sugestoes.append(entrada)
+    lista = ", ".join("'" + t + "'" for t in vazios)
+    aviso = ("[AVISO] Sem ocorrencias para " + lista + ". Isto so prova que ESTE nome nao existe no "
+             "projeto - NAO que a funcionalidade nao exista. Um zero com o nome errado diz apenas que se "
+             "procurou mal: procure pelo VERBO ou pelo EFEITO, nunca pelo nome que supoe.")
+    if sugestoes:
+        aviso += " Nomes parecidos que o projeto define:\n" + "\n".join(sugestoes[:12])
+    elif pastas_saltadas:
+        aviso += (" E esta busca NAO varreu " + ", ".join(sorted(pastas_saltadas))
+                  + " - repita com incluir_ignoradas=true antes de dar a funcionalidade por inexistente.")
+    return aviso + "\n"
 
 
 def _parece_binario(caminho_absoluto):
