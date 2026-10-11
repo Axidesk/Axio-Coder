@@ -209,10 +209,10 @@ def _conteudo_ilegivel(conteudo):
     return False, ""
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em .axio/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página.",
+    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em .axio/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
-        'query': {"tipo": "STRING", "desc": 'Termo de busca na web', "padrao": ""},
-        'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo', "padrao": ""},
+        'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
+        'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
         'dominios': {"tipo": "STRING", "desc": 'Domínios a privilegiar, separados por vírgula (ex: docs.python.org,mozilla.org). Use para refazer a busca quando as fontes vierem de blogs.', "padrao": ""},
         'filtro': {"tipo": "STRING", "desc": 'Mostra só as linhas do conteúdo extraído que contêm algum destes termos (um por linha, sem distinguir maiúsculas). O texto integral fica em .axio/busca.txt — use o filtro para não encher o contexto com uma página inteira.', "padrao": ""},
     },
@@ -227,25 +227,56 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
     if not tavily_client:
         return "ERRO: Cliente Tavily não inicializado."
 
+    pedidos = [linha.strip() for linha in query.splitlines() if linha.strip()]
+    if len(pedidos) > 1 and not url_especifica:
+        partes = []
+        for indice, termo in enumerate(pedidos, 1):
+            partes.append(f"===== BUSCA {indice}/{len(pedidos)}: {termo} =====")
+            partes.append(tool_buscar_web(query=termo, dominios=dominios, filtro=filtro))
+        return "\n\n".join(partes)
+
     termos = [p.strip().lower() for linha in filtro.splitlines() for p in linha.split("|") if p.strip()]
 
     try:
         falha = ""
+        aviso_extracao = ""
         if url_especifica:
-            emit_event("status", message=f"Navegando: {url_especifica}")
-            resultado = tavily_client.extract(
-                urls=[url_especifica],
-                extract_depth="advanced"
-            )
-            if not resultado or not resultado.get('results'):
+            pedidas = [linha.strip() for linha in url_especifica.splitlines() if linha.strip()]
+            emit_event("status", message=f"Navegando: {', '.join(pedidas)[:120]}")
+            if len(pedidas) > 1:
+                juntos, falhados = [], []
+                for endereco in pedidas:
+                    try:
+                        peca = tavily_client.extract(urls=[endereco], extract_depth="advanced")
+                    except Exception:
+                        peca = None
+                    achou = (peca or {}).get('results') or []
+                    if achou:
+                        juntos.extend(achou)
+                    else:
+                        falhados.append({"url": endereco, "error": _motivo_da_falha(peca)})
+                resultado = {"results": juntos, "failed_results": falhados}
+            else:
+                resultado = tavily_client.extract(
+                    urls=pedidas,
+                    extract_depth="advanced"
+                )
+            if (not resultado or not resultado.get('results')) and len(pedidas) == 1:
                 falha = _motivo_da_falha(resultado)
-                emit_event("status", message=f"Navegando: procurando {url_especifica[:60]}")
+                emit_event("status", message=f"Navegando: procurando {pedidas[0][:60]}")
                 busca = tavily_client.search(
-                    query=url_especifica, max_results=3, search_depth="advanced"
+                    query=pedidas[0], max_results=3, search_depth="advanced"
                 )
                 urls = [r['url'] for r in busca.get('results', []) if r.get('url')]
                 if urls:
                     resultado = tavily_client.extract(urls=urls, extract_depth="advanced")
+            devolvidas = {item.get('url', '') for item in (resultado or {}).get('results', [])}
+            faltaram = [endereco for endereco in pedidas if endereco not in devolvidas]
+            if faltaram:
+                motivos = {falhou.get('url'): falhou.get('error', '') for falhou in (resultado or {}).get('failed_results', [])}
+                aviso_extracao = "".join(
+                    f"  ⚠️ NÃO EXTRAÍDA: {endereco} — {motivos.get(endereco) or 'o extrator não devolveu conteudo'}\n"
+                    for endereco in faltaram)
         elif query:
             emit_event("status", message=f"Navegando: pesquisando '{query[:60]}'...")
             opcoes = {"query": query, "max_results": 3, "search_depth": "advanced"}
@@ -340,7 +371,10 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             resumo += f"  [{i}] {url}{marca}{status_fonte}\n"
 
         resumo += _aviso_de_fontes(niveis)
-        
+
+        if aviso_extracao:
+            resumo += "\n⚠️ PÁGINA(S) PEDIDA(S) QUE NÃO VIERAM:\n" + aviso_extracao
+
         resumo += f"\n📄 Log COMPLETO salvo em '{debug_path or 'busca.txt'}'.\n"
         
         if total_ilegiveis > 0:
