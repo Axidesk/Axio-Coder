@@ -227,7 +227,7 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
     if not tavily_client:
         return "ERRO: Cliente Tavily não inicializado."
 
-    termos = [t.strip().lower() for t in filtro.splitlines() if t.strip()]
+    termos = [p.strip().lower() for linha in filtro.splitlines() for p in linha.split("|") if p.strip()]
 
     try:
         falha = ""
