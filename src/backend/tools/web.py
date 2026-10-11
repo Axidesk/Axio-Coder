@@ -294,9 +294,17 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             if ilegivel:
                 contexto += f"⚠️ CONTEÚDO ILEGÍVEL ({motivo}). NÃO INVENTE CÓDIGO — avise o usuário que esta fonte não pôde ser extraída corretamente.\n"
             if termos:
-                achadas = [linha for linha in conteudo.splitlines() if any(t in linha.lower() for t in termos)]
-                contexto += f"   [filtro: {len(achadas)} linha(s) de {len(conteudo.splitlines())}]\n"
-                contexto += "\n".join(achadas)[:12000] + "\n\n"
+                linhas = conteudo.splitlines()
+                achadas = [linha for linha in linhas if any(t in linha.lower() for t in termos)]
+                contexto += f"   [filtro: {len(achadas)} linha(s) de {len(linhas)}]\n"
+                if achadas:
+                    contexto += "\n".join(achadas)[:12000] + "\n\n"
+                else:
+                    inicio = [linha for linha in linhas if linha.strip()][:15]
+                    contexto += ("   O filtro NAO casou nenhuma linha, mas a pagina TEM conteudo. "
+                                 "O texto completo ficou em .axio/busca.txt (tool_ler_trecho_arquivo). "
+                                 "Comeco da pagina:\n")
+                    contexto += "\n".join(inicio)[:12000] + "\n\n"
             else:
                 contexto += f"{conteudo[:30000]}\n\n"
         
