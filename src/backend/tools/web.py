@@ -207,6 +207,23 @@ def _conteudo_ilegivel(conteudo):
     if sinais_fortes > 0:
         return True, "; ".join(motivos)
     return False, ""
+
+
+def _extrair_cru(tavily_client, endereco):
+    if "?" in endereco:
+        return None
+    try:
+        resposta = tavily_client.extract(urls=[endereco + "?action=raw"], extract_depth="advanced")
+    except Exception:
+        return None
+    achados = (resposta or {}).get('results') or []
+    if not achados:
+        return None
+    for item in achados:
+        item['url'] = endereco
+    return {"results": achados}
+
+
 @register(
     "tool_buscar_web",
     "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em .axio/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
@@ -251,6 +268,9 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
                     except Exception:
                         peca = None
                     achou = (peca or {}).get('results') or []
+                    if not achou:
+                        peca = _extrair_cru(tavily_client, endereco)
+                        achou = (peca or {}).get('results') or []
                     if achou:
                         juntos.extend(achou)
                     else:
@@ -262,14 +282,21 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
                     extract_depth="advanced"
                 )
             if (not resultado or not resultado.get('results')) and len(pedidas) == 1:
-                falha = _motivo_da_falha(resultado)
-                emit_event("status", message=f"Navegando: procurando {pedidas[0][:60]}")
-                busca = tavily_client.search(
-                    query=pedidas[0], max_results=3, search_depth="advanced"
-                )
-                urls = [r['url'] for r in busca.get('results', []) if r.get('url')]
-                if urls:
-                    resultado = tavily_client.extract(urls=urls, extract_depth="advanced")
+                anterior = resultado
+                falha = _motivo_da_falha(anterior)
+                cru = _extrair_cru(tavily_client, pedidas[0])
+                if cru:
+                    resultado = cru
+                    aviso_extracao = f"  ℹ️ a pagina normal nao veio; o conteudo veio pela versao CRUA (?action=raw) de {pedidas[0]}\n"
+                else:
+                    resultado = anterior
+                    emit_event("status", message=f"Navegando: procurando {pedidas[0][:60]}")
+                    busca = tavily_client.search(
+                        query=pedidas[0], max_results=3, search_depth="advanced"
+                    )
+                    urls = [r['url'] for r in busca.get('results', []) if r.get('url')]
+                    if urls:
+                        resultado = tavily_client.extract(urls=urls, extract_depth="advanced")
             devolvidas = {item.get('url', '') for item in (resultado or {}).get('results', [])}
             faltaram = [endereco for endereco in pedidas if endereco not in devolvidas]
             if faltaram:
