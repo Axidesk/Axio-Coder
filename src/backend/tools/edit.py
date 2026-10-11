@@ -236,12 +236,14 @@ def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: 
 _MARCA_ANTIGO = "<<<<<<< ANTIGO"
 _MARCA_SEPARADOR = "======="
 _MARCA_NOVO = ">>>>>>> NOVO"
+_MARCA_ESCOPO = "@"
 
 
 def _dividir_lote(texto):
-    """Corta o texto em pares (antigo, novo) pelas marcas de bloco, sem tocar no codigo la dentro."""
+    """Corta o texto em blocos (escopo, antigo, novo) pelas marcas, sem tocar no codigo la dentro."""
     itens = []
     antigo = novo = None
+    escopo = None
     for linha in normalizar_unicode(texto).split("\n"):
         marca = linha.strip()
         if marca == _MARCA_ANTIGO:
@@ -249,8 +251,14 @@ def _dividir_lote(texto):
                 return None, f"ERRO: o bloco {len(itens) + 1} nao foi fechado com '>>>>>>> NOVO'."
             antigo = []
         elif antigo is None:
-            if marca:
-                return None, f"ERRO: texto fora de um bloco: '{marca[:60]}'. Cada alteracao comeca com uma linha '{_MARCA_ANTIGO}'."
+            if marca.startswith(_MARCA_ESCOPO):
+                escopo = marca[len(_MARCA_ESCOPO):].strip()
+                if not escopo:
+                    return None, (f"ERRO: a linha '@' do bloco {len(itens) + 1} nao diz o ficheiro "
+                                  "- escreva '@ <caminho>' ou tire a linha para o bloco valer em todos.")
+            elif marca:
+                return None, (f"ERRO: texto fora de um bloco: '{marca[:60]}'. Cada alteracao comeca com a linha "
+                              f"'{_MARCA_ANTIGO}' ou com '@ <caminho>'.")
         elif marca == _MARCA_SEPARADOR:
             if novo is not None:
                 return None, f"ERRO: o bloco {len(itens) + 1} tem dois separadores '======='."
@@ -259,8 +267,8 @@ def _dividir_lote(texto):
             if novo is None:
                 return None, (f"ERRO: o bloco {len(itens) + 1} fechou sem o separador '======='. "
                               "Para APAGAR o trecho antigo, escreva na mesma a linha '=======' e deixe o lado novo vazio.")
-            itens.append(("\n".join(antigo), "\n".join(novo)))
-            antigo = novo = None
+            itens.append((escopo, "\n".join(antigo), "\n".join(novo)))
+            antigo = novo = escopo = None
         else:
             (antigo if novo is None else novo).append(linha)
     if antigo is not None:
@@ -270,28 +278,112 @@ def _dividir_lote(texto):
     return itens, None
 
 
-def _aplicar_lote(conteudo_nfc, itens):
-    """Aplica os pares por ordem no conteudo ja normalizado; se um falhar, nada e gravado."""
+def _aplicar_lote(conteudo_nfc, itens, caminho=None):
+    """Aplica por ordem os blocos que tocam este ficheiro; se um falhar, nada e gravado.
+
+    Devolve (conteudo_novo, erro, quantos_blocos). Com caminho=None todos os
+    blocos contam; com caminho, os blocos com escopo de outro ficheiro sao saltados.
+    """
     atual = conteudo_nfc
-    for indice, (antigo, novo) in enumerate(itens, 1):
+    usados = 0
+    for indice, (escopo, antigo, novo) in enumerate(itens, 1):
+        if escopo is not None and not _mesmo_caminho(escopo, caminho):
+            continue
+        usados += 1
         antigo = normalizar_unicode(antigo)
         novo = normalizar_unicode(novo)
         if not antigo:
-            return None, f"ERRO: o bloco {indice} tem o trecho antigo vazio."
+            return None, f"ERRO: o bloco {indice} tem o trecho antigo vazio.", usados
         ocorrencias = atual.count(antigo)
         if ocorrencias > 1:
-            return None, f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro (ancora ambigua) - nada foi gravado."
+            return None, f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro (ancora ambigua) - nada foi gravado.", usados
         if ocorrencias == 1:
             atual = atual.replace(antigo, novo, 1)
             continue
         intervalo = _intervalo_tolerando_espacos(atual, antigo)
         if intervalo is None:
             return None, (f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado)."
-                          + _diagnostico_ancora(atual, antigo))
+                          + _diagnostico_ancora(atual, antigo)), usados
         atual = atual[:intervalo[0]] + novo + atual[intervalo[1]:]
+    if not usados:
+        return conteudo_nfc, None, 0
     if atual == conteudo_nfc:
-        return None, "ERRO: as substituicoes deixariam o ficheiro igual - nada foi gravado."
-    return atual, None
+        return None, "ERRO: as substituicoes deixariam o ficheiro igual - nada foi gravado.", usados
+    return atual, None, usados
+
+
+def _chave_caminho(caminho):
+    return normalizar_unicode(caminho).strip().replace("\\", "/").strip("/").lower()
+
+
+def _mesmo_caminho(um, outro):
+    if not um or not outro:
+        return False
+    return _chave_caminho(um) == _chave_caminho(outro)
+
+
+def _validar_escopos(itens, caminhos):
+    """Recusa um bloco que aponte para ficheiro fora da lista (apanha o caminho mal escrito)."""
+    chaves = {_chave_caminho(c) for c in caminhos}
+    for indice, (escopo, _, _) in enumerate(itens, 1):
+        if escopo is not None and _chave_caminho(escopo) not in chaves:
+            return (f"ERRO: o bloco {indice} aponta para '{escopo}', que nao esta na lista de ficheiros. "
+                    "Nada foi gravado.")
+    return None
+
+
+def _resumir_motivo(motivo):
+    texto = " ".join(str(motivo).split())
+    return texto if len(texto) <= 220 else texto[:217] + "..."
+
+
+def _lote_num_ficheiro(caminho, itens):
+    dados, erro = _ler_para_edicao(caminho, "Substituindo em lote")
+    if erro:
+        return erro
+    caminho_absoluto, conteudo, conteudo_nfc = dados
+    novo_conteudo, erro, usados = _aplicar_lote(conteudo_nfc, itens, caminho)
+    if erro:
+        return erro
+    if not usados:
+        return f"ERRO: nenhum bloco se aplica a '{caminho}'. Nada foi gravado."
+    try:
+        aviso = gravar_edicao_com_diff(caminho, caminho_absoluto, conteudo, novo_conteudo, f"Modificado em lote: {caminho}")
+        return f"SUCESSO: {usados} substituicoes em '{caminho}'.{aviso}"
+    except Exception as e:
+        return f"ERRO: {str(e)}"
+
+
+def _lote_em_varios(caminhos, itens):
+    """Corre cada ficheiro por si: o que falha num fica intacto e nao trava os outros."""
+    feitos, falhas, vazios = [], [], []
+    for caminho in caminhos:
+        chave = _chave_caminho(caminho)
+        if not any(escopo is None or _chave_caminho(escopo) == chave for escopo, _, _ in itens):
+            vazios.append(caminho)
+            continue
+        dados, erro = _ler_para_edicao(caminho, "Substituindo em lote")
+        if erro:
+            falhas.append((caminho, erro))
+            continue
+        caminho_absoluto, conteudo, conteudo_nfc = dados
+        novo_conteudo, erro, usados = _aplicar_lote(conteudo_nfc, itens, caminho)
+        if erro:
+            falhas.append((caminho, erro))
+            continue
+        try:
+            gravar_edicao_com_diff(caminho, caminho_absoluto, conteudo, novo_conteudo, f"Modificado em lote: {caminho}")
+            feitos.append((caminho, usados))
+        except Exception as e:
+            falhas.append((caminho, f"ERRO: {str(e)}"))
+    linhas = [f"LOTE: {len(feitos)} de {len(caminhos)} arquivos alterados, {len(falhas) + len(vazios)} sem alteracao."]
+    for caminho, quantos in feitos:
+        linhas.append(f"  ok: {caminho} ({quantos} bloco(s))")
+    for caminho, motivo in falhas:
+        linhas.append(f"  falhou: {caminho} -> {_resumir_motivo(motivo)}")
+    for caminho in vazios:
+        linhas.append(f"  sem bloco: {caminho}")
+    return "\n".join(linhas)
 
 
 _PARAMS_LOTE = {
@@ -302,7 +394,7 @@ _PARAMS_LOTE = {
 
 @register(
     "tool_substituir_lote",
-    'Aplica VARIAS substituicoes no mesmo ficheiro numa so gravacao (um unico diff e um unico passo de desfazer) - use quando as alteracoes ja foram decididas em conjunto. Cada alteracao vai num bloco, com quebras de linha REAIS: uma linha "<<<<<<< ANTIGO", o trecho exato como esta agora, uma linha "=======", o trecho novo (vazio para apagar) e uma linha ">>>>>>> NOVO"; repita o bloco quantas vezes precisar. Cada trecho antigo tem de ser UNICO no ficheiro e os blocos sao aplicados por ordem; se UM bloco falhar, NADA e gravado. Para APAGAR uma linha inteira, inclua a quebra de linha no fim do trecho antigo (senao fica uma linha vazia no lugar).',
+    'Aplica VARIAS substituicoes numa so gravacao (um diff e um passo de desfazer por arquivo) - use quando as alteracoes ja foram decididas em conjunto. Cada alteracao vai num bloco, com quebras de linha REAIS: uma linha "<<<<<<< ANTIGO", o trecho exato como esta agora, uma linha "=======", o trecho novo (vazio para apagar) e uma linha ">>>>>>> NOVO"; repita o bloco quantas vezes precisar. Cada trecho antigo tem de ser UNICO no ficheiro e os blocos sao aplicados por ordem; se UM bloco falhar, NADA e gravado NESSE arquivo. Para APAGAR uma linha inteira, inclua a quebra de linha no fim do trecho antigo (senao fica uma linha vazia no lugar). VARIOS ARQUIVOS: escreva um caminho por linha em "caminho_relativo" e o mesmo conjunto de blocos passa a valer para todos; um bloco com a linha "@ <caminho>" imediatamente acima do "<<<<<<< ANTIGO" vale SO para esse arquivo (os restantes aplicam-se a cada arquivo que tenha o trecho). Os arquivos sao tratados um a um - o que falhar fica intacto e nao trava os outros - e o relatorio diz o que mudou em cada um.',
     _PARAMS_LOTE,
     disponivel="edicao",
 )
@@ -310,17 +402,15 @@ def tool_substituir_lote(caminho_relativo: str, substituicoes: str):
     itens, erro = _dividir_lote(substituicoes)
     if erro:
         return erro
-    dados, erro = _ler_para_edicao(caminho_relativo, "Substituindo em lote")
+    caminhos = [linha.strip() for linha in normalizar_unicode(caminho_relativo).splitlines() if linha.strip()]
+    if not caminhos:
+        return "ERRO: nenhum arquivo indicado."
+    erro = _validar_escopos(itens, caminhos)
     if erro:
         return erro
-    caminho_absoluto, conteudo, conteudo_nfc = dados
-    novo_conteudo, erro = _aplicar_lote(conteudo_nfc, itens)
-    if erro:
-        return erro
-    try:
-        aviso = gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, f"Modificado em lote: {caminho_relativo}")
-        return f"SUCESSO: {len(itens)} substituicoes em '{caminho_relativo}'.{aviso}"
-    except Exception as e: return f"ERRO: {str(e)}"
+    if len(caminhos) == 1:
+        return _lote_num_ficheiro(caminhos[0], itens)
+    return _lote_em_varios(caminhos, itens)
 
 
 def _eh_projeto_novo():
