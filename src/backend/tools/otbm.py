@@ -1,7 +1,9 @@
 import os
+import re
 import struct
 import tempfile
 import time
+import xml.etree.ElementTree as ET
 
 from src.backend.services.file_service import resolver_caminho
 from src.backend.state import emit_event
@@ -49,7 +51,9 @@ _CACHE_DE_AREAS = {}
     "leitura paga o custo, as seguintes saem do cache e milhares de coordenadas custam o mesmo que uma. "
     "'portas' lista os itens de porta (ou os ids pedidos em 'ids') dentro de 'regiao', com o action id de "
     "cada um - e como so o action id faz a porta selar e fechar depois de passar, a lista diz logo quais "
-    "estao sem ele.",
+    "estao sem ele. 'spawns' le o ficheiro de spawn ao lado do mapa e conta os blocos, as criaturas, os "
+    "blocos sem criatura nenhuma e as POSICOES REPETIDAS - que sao as que fazem o editor de mapa recusar a "
+    "segunda e avisar 'Duplicate spawn on position', deixando um bloco grande e vazio no ecra.",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -59,7 +63,7 @@ _CACHE_DE_AREAS = {}
         },
         "acao": {
             "tipo": "STRING",
-            "desc": "'ponto' (o tile de x,y,z), 'vazios' (tiles sem chao nem item), 'resumo' (contagens do mapa inteiro) ou 'portas' (itens de porta numa regiao, com o action id de cada um).",
+            "desc": "'ponto' (o tile de x,y,z), 'vazios' (tiles sem chao nem item), 'resumo' (contagens do mapa inteiro), 'portas' (itens de porta numa regiao, com o action id de cada um) ou 'spawns' (o ficheiro de spawn: blocos, criaturas e posicoes repetidas).",
             "padrao": "ponto",
         },
         "x": {
@@ -97,10 +101,15 @@ _CACHE_DE_AREAS = {}
             "desc": "Para 'portas': a caixa onde procurar, 'x1,y1,x2,y2' e opcionalmente o andar, 'x1,y1,x2,y2,z'. Vazio varre o mapa todo - sempre que possivel passe a caixa, que poupa a leitura das areas de fora.",
             "padrao": "",
         },
+        "spawn": {
+            "tipo": "STRING",
+            "desc": "Para 'spawns': o ficheiro de spawn (spawn.xml do servidor). Vazio usa o 'spawn.xml' que estiver ao lado do mapa.",
+            "padrao": "",
+        },
     },
 )
 def tool_medir_mapa_otbm(
-    caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS, pontos="", ids="", regiao=""
+    caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS, pontos="", ids="", regiao="", spawn=""
 ):
     emit_event("executing", function=f"Medindo mapa OTBM: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
@@ -134,9 +143,11 @@ def tool_medir_mapa_otbm(
             return _relato_resumo(dados, caminho_relativo)
         if escolha == "portas":
             return _relato_portas(dados, caminho_relativo, ids, regiao, _teto(limite, 5000, LIMITE_PORTAS))
+        if escolha == "spawns":
+            return _relato_spawns(caminho_relativo, alvo, spawn, _teto(limite))
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
-    return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo' ou 'portas')."
+    return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo', 'portas' ou 'spawns')."
 
 
 @register(
@@ -387,6 +398,76 @@ def _relato_resumo(dados, rotulo):
             f"CAIXA DO CHAO: x {caixa[0]}..{caixa[1]}, y {caixa[2]}..{caixa[3]}",
         ]
     )
+
+
+def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite):
+    if not str(caminho_spawn or "").strip():
+        caminho_spawn = os.path.join(os.path.dirname(caminho_mapa), "spawn.xml")
+    else:
+        alvo, erro = resolver_caminho(caminho_spawn, permitir_extra=True)
+        if erro:
+            return erro
+        caminho_spawn = alvo
+    if not os.path.isfile(caminho_spawn):
+        return (
+            f"ERRO: nao encontrei o ficheiro de spawn '{caminho_spawn}'.\n"
+            "O TFS guarda-o ao lado do mapa com o nome 'spawn.xml' - se tiver outro nome, passe o caminho em 'spawn'."
+        )
+    try:
+        with open(caminho_spawn, encoding="utf-8", errors="replace") as arquivo:
+            texto = arquivo.read()
+    except OSError as falha:
+        return f"ERRO: nao consegui ler '{caminho_spawn}' ({falha})."
+    try:
+        raiz = ET.fromstring(texto)
+    except ET.ParseError as falha:
+        return f"ERRO: '{caminho_spawn}' nao e um XML valido ({falha})."
+    if raiz.tag != "spawns":
+        return f"ERRO: '{caminho_spawn}' tem <{raiz.tag}> na raiz; o TFS espera <spawns>."
+
+    blocos = raiz.findall("spawn")
+    sem_criatura = len(re.findall(r"<spawn[^>]*/>", texto))
+    monstros = npcs = 0
+    fora = []
+    quantos = {}
+    for bloco in blocos:
+        centro = (
+            int(bloco.get("centerx") or 0),
+            int(bloco.get("centery") or 0),
+            int(bloco.get("centerz") or 0),
+        )
+        raio = int(bloco.get("radius") or 0)
+        quantos[centro] = quantos.get(centro, 0) + 1
+        for criatura in bloco:
+            if criatura.tag == "monster":
+                monstros += 1
+            elif criatura.tag == "npc":
+                npcs += 1
+            else:
+                continue
+            deslocamento = (int(criatura.get("x") or 0), int(criatura.get("y") or 0))
+            if abs(deslocamento[0]) > raio or abs(deslocamento[1]) > raio:
+                fora.append(
+                    (centro, raio, criatura.tag, criatura.get("name") or "?", deslocamento)
+                )
+
+    repetidas = sorted(posicao for posicao, total in quantos.items() if total > 1)
+    linhas = [
+        f"SPAWNS '{os.path.basename(caminho_spawn)}' (o de '{rotulo}'):",
+        f"  blocos <spawn>: {len(blocos)} | criaturas: {monstros + npcs} ({monstros} monstros + {npcs} NPCs)",
+        f"  blocos sem criatura nenhuma: {sem_criatura}",
+        f"  posicoes repetidas: {len(repetidas)}",
+    ]
+    if repetidas:
+        linhas.append("  REPETIDAS (o editor recusa a segunda e avisa 'Duplicate spawn'):")
+        linhas += [f"    {x}, {y}, {z} - {quantos[(x, y, z)]} blocos" for x, y, z in repetidas[:limite]]
+    linhas.append(f"  criaturas fora do raio do bloco: {len(fora)}")
+    if fora:
+        linhas += [
+            f"    [{x}, {y}, {z}] raio {raio}: {tag} '{nome}' em {dx:+d},{dy:+d}"
+            for (x, y, z), raio, tag, nome, (dx, dy) in fora[:limite]
+        ]
+    return "\n".join(linhas)
 
 
 def _relato_portas(dados, rotulo, ids, regiao, limite):
