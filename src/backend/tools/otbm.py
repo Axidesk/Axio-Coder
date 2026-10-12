@@ -1,5 +1,7 @@
 import os
 import struct
+import tempfile
+import time
 
 from src.backend.services.file_service import resolver_caminho
 from src.backend.state import emit_event
@@ -135,6 +137,135 @@ def tool_medir_mapa_otbm(
     return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo' ou 'portas')."
 
 
+@register(
+    "tool_marcar_portas_otbm",
+    "Escreve o action id (a chave de storage da quest) nos itens de porta de um mapa .otbm, POR POSICAO - "
+    "e o que se faria a mao no editor de mapa, feito por codigo. E o caminho de raiz de uma porta de quest "
+    "sem action id: o script da porta le o action id como chave e, sem ele, a porta abre para qualquer um e "
+    "nao fecha depois de passar. Sem 'aplicar' apenas relata (o action id de cada porta, o que entraria e o "
+    "que ja la esta); com 'aplicar' grava o mapa, guardando o original na pasta temporaria e conferindo o "
+    "resultado por nova leitura. Nao toca em nenhum item fora das posicoes pedidas.",
+    {
+        "caminho_relativo": {
+            "tipo": "STRING",
+            "desc": "Arquivo do mapa (.otbm), dentro do projeto.",
+            "obrig": True,
+            "padrao": "",
+        },
+        "posicoes": {
+            "tipo": "STRING",
+            "desc": "As portas a marcar, uma por linha no formato x,y,z. So entra a porta que existir mesmo nessa coordenada.",
+            "padrao": "",
+        },
+        "actionid": {
+            "tipo": "INTEGER",
+            "desc": "O action id a escrever - que e a chave de storage da quest (a porta abre a quem tiver essa storage >= 1).",
+            "padrao": 0,
+        },
+        "ids": {
+            "tipo": "STRING",
+            "desc": "Item ids considerados porta, separados por virgula. Vazio usa os 8 ids de porta de quest (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551).",
+            "padrao": "",
+        },
+        "aplicar": {
+            "tipo": "BOOLEAN",
+            "desc": "False (padrao) so relata; True grava o mapa.",
+            "padrao": False,
+        },
+    },
+)
+def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", aplicar=False):
+    emit_event("executing", function=f"Marcando portas no mapa: {caminho_relativo}")
+    alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
+    if erro:
+        return erro
+    if not os.path.isfile(alvo):
+        return f"ERRO: arquivo nao encontrado: {caminho_relativo}"
+
+    pedidas = _posicoes_pedidas(posicoes)
+    if not pedidas:
+        return "ERRO: nenhuma coordenada valida em 'posicoes' (escreve x,y,z por linha)."
+    try:
+        chave = int(actionid)
+    except (TypeError, ValueError):
+        return "ERRO: o action id tem de ser um numero."
+    if not 0 < chave < 65536:
+        return "ERRO: o action id tem de estar entre 1 e 65535."
+
+    try:
+        dados = _bytes_do_mapa(alvo)
+    except OSError as falha:
+        return f"ERRO: nao consegui ler '{caminho_relativo}' ({falha})."
+    if len(dados) < 8 or (dados[0] != NODE_START and not (dados[:4] == bytes(4) and dados[4] == NODE_START)):
+        return f"ERRO: '{caminho_relativo}' nao comeca com o cabecalho de um mapa OTBM."
+
+    alvos = _ids_pedidos(ids)
+    try:
+        achados = _portas_com_offset(dados, alvos, pedidas)
+    except ValueError as falha:
+        return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
+
+    if not achados:
+        return (
+            f"Nada a fazer: nenhuma das {len(pedidas)} posicao(oes) tem um item de porta "
+            f"({'/'.join(str(i) for i in alvos)}) neste mapa."
+        )
+
+    linhas = [
+        f"MAPA '{caminho_relativo}': action id {chave} em {len(achados)} porta(s).",
+        "ANTES:",
+    ]
+    linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(info)}" for x, y, z, info, _ in achados]
+    faltam = pedidas - {(x, y, z) for x, y, z, _, _ in achados}
+    if faltam:
+        linhas.append("  SEM PORTA aqui: " + "; ".join(f"{x},{y},{z}" for x, y, z in sorted(faltam)))
+
+    trocadas = [a for a in achados if a[3].get("acao") not in (None, chave)]
+    if trocadas:
+        linhas.append(
+            "  ATENCAO: "
+            + "; ".join(f"[{x}, {y}, {z}] ja tem action id {info.get('acao')}" for x, y, z, info, _ in trocadas)
+        )
+        return "\n".join(linhas) + (
+            "\nNada foi gravado: porta que ja tem um action id nao se troca por cima (seria trocar a quest dela)."
+        )
+
+    insercoes = [offset for _, _, _, info, offset in achados if info.get("acao") != chave]
+    if not insercoes:
+        return "\n".join(linhas) + "\nNada a fazer: as portas ja tem esse action id."
+
+    if not aplicar:
+        return "\n".join(linhas) + (
+            f"\nA GRAVAR: {len(insercoes)} porta(s) ganham o atributo de action id, {len(insercoes) * 3} byte(s) a mais. "
+            "Repita com aplicar=True para gravar."
+        )
+
+    novos = _com_action_id_na_porta(dados, insercoes, chave)
+    copia = _guardar_copia_do_mapa(alvo, dados)
+    with open(alvo, "wb") as arquivo:
+        arquivo.write(novos)
+    _CACHE_DE_BYTES.clear()
+    _CACHE_DE_AREAS.clear()
+
+    confirmados = _portas_com_offset(_bytes_do_mapa(alvo), alvos, pedidas)
+    lidas = [c for c in confirmados if c[3].get("acao") == chave]
+    linhas.append(f"GRAVADO: {len(novos)} bytes (era {len(dados)}). Original guardado em {copia}")
+    linhas.append(f"CONFERIDO POR NOVA LEITURA: {len(lidas)} de {len(achados)} porta(s) com action id {chave}.")
+    linhas.append("DEPOIS:")
+    linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(info)}" for x, y, z, info, _ in confirmados]
+    if len(lidas) != len(achados):
+        linhas.append("ERRO: nem todas ficaram gravadas - reponha o original guardado acima e diga-me.")
+    return "\n".join(linhas)
+
+
+def _guardar_copia_do_mapa(alvo, dados):
+    marca = time.strftime("%Y%m%d-%H%M%S")
+    destino = os.path.join(tempfile.gettempdir(), f"{os.path.basename(alvo)}.{marca}.bak")
+    with open(destino, "wb") as arquivo:
+        arquivo.write(dados)
+    return destino
+
+
 def _bytes_do_mapa(alvo):
     marca = os.path.getmtime(alvo), os.path.getsize(alvo)
     guardado = _CACHE_DE_BYTES.get(alvo)
@@ -255,6 +386,58 @@ def _relato_portas(dados, rotulo, ids, regiao, limite):
                         achados.append((x, y, z, item))
             indice = seguinte
     return "\n".join(_linhas_das_portas(rotulo, alvos, caixa, achados, limite))
+
+
+def _posicoes_pedidas(posicoes):
+    achadas = set()
+    for linha in str(posicoes or "").replace(";", "\n").splitlines():
+        campos = [c.strip() for c in linha.split(",") if c.strip()]
+        if len(campos) < 3:
+            continue
+        try:
+            x, y, z = int(campos[0]), int(campos[1]), int(campos[2])
+        except ValueError:
+            continue
+        achadas.add((x, y, z))
+    return achadas
+
+
+def _portas_com_offset(dados, alvos, posicoes):
+    xs = [p[0] for p in posicoes]
+    ys = [p[1] for p in posicoes]
+    caixa = (min(xs), min(ys), max(xs), max(ys), {p[2] for p in posicoes})
+    sinais = [bytes((NODE_START, TIPO_ITEM, i & 0xFF, (i >> 8) & 0xFF)) for i in alvos]
+    achados = []
+    for base, inicio, _, ultimo in _areas_com_sinal(dados, sinais, caixa):
+        indice = inicio
+        while dados[indice] == NODE_START and indice <= ultimo:
+            x, y, z, _, tem_filho, seguinte = _tile_curto(dados, indice, base)
+            if tem_filho and (x, y, z) in posicoes and _tem_sinal(dados, indice, seguinte, sinais):
+                ponteiro = _ate_marcador(dados, indice + 2)[1]
+                while dados[ponteiro] == NODE_START:
+                    props, fim_props = _ate_marcador(dados, ponteiro + 2)
+                    info = _item(_sem_escape(props))
+                    if info.get("id") in alvos:
+                        achados.append((x, y, z, info, fim_props))
+                    ponteiro = _fim_do_no(dados, ponteiro)
+            indice = seguinte
+    return achados
+
+
+def _com_action_id_na_porta(dados, insercoes, chave):
+    acrescento = bytearray()
+    for byte in bytes((ATTR_ACAO,)) + struct.pack("<H", chave):
+        if byte in (NODE_START, NODE_END, ESCAPE):
+            acrescento.append(ESCAPE)
+        acrescento.append(byte)
+    saida = bytearray()
+    anterior = 0
+    for offset in sorted(insercoes):
+        saida += dados[anterior:offset]
+        saida += acrescento
+        anterior = offset
+    saida += dados[anterior:]
+    return bytes(saida)
 
 
 def _ids_pedidos(ids):
