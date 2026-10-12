@@ -295,7 +295,7 @@ def _caminhos_no_repositorio(raiz, lista):
         alvo = os.path.normpath(os.path.join(raiz, escrito))
         if not os.path.exists(alvo):
             direto = os.path.normpath(escrito)
-            if os.path.exists(direto) and _dentro_de(direto, raiz):
+            if _dentro_de(direto, raiz):
                 alvo = direto
         relativo = os.path.relpath(alvo, raiz)
         if relativo == os.pardir or relativo.startswith(os.pardir + os.sep):
@@ -380,6 +380,8 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
                           ", ".join(sobra[:8]) + (f" e mais {len(sobra) - 8}" if len(sobra) > 8 else "") +
                           ") - o commit leva so os caminhos indicados.")
         _, erro = git_saida(raiz, "add", "--", *lista)
+        if erro and "did not match any files" in erro:
+            erro += " (um dos caminhos ja nao existe no disco - apagado ou movido; passa a PASTA dele)"
         linhas.append("git add " + " ".join(lista) + ": " + (f"ERRO: {erro}" if erro else "ok"))
     elif prefixo:
         _, erro = git_saida(raiz, "add", "-A", "--", prefixo)
