@@ -463,11 +463,11 @@
       "identificador": "aviso_estrutural_pos_edicao",
       "descricao": "Checklist estrutural automático anexado ao retorno das ferramentas de edição: avisa quando uma edição cria funções novas (obriga a checar duplicação) ou remove funções (obriga a checar dead code órfão)",
       "localizacao": {
-        "arquivo": "src/backend/tools/syntax.py",
-        "linha": 764,
+        "arquivo": "src/backend/tools/syntax_estrutural.py",
+        "linha": 196,
         "conferido": [
-          1791246965.246,
-          39291
+          1791648265.29,
+          17233
         ]
       }
     },
@@ -823,11 +823,11 @@
       "identificador": "bloquear_import_local",
       "descricao": "Trava de escrita ligada as ferramentas de edicao: recusa edicoes que introduzem import de biblioteca padrao dentro de uma funcao/bloco. Stdlib vai sempre no topo do arquivo; dependencia externa ou do proprio projeto so gera aviso, e a excecao pode ser declarada com '# import-local: motivo' na propria linha.",
       "localizacao": {
-        "arquivo": "src/backend/tools/syntax.py",
-        "linha": 898,
+        "arquivo": "src/backend/tools/syntax_estrutural.py",
+        "linha": 330,
         "conferido": [
-          1791246965.246,
-          39291
+          1791648265.29,
+          17233
         ]
       }
     },
@@ -1171,10 +1171,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1944,
+        "linha": 1955,
         "conferido": [
-          1791637697.253,
-          97307
+          1791643354.3,
+          97679
         ]
       }
     },
@@ -1616,10 +1616,10 @@
       "descricao": "A troca da camada do code view pelo Monaco. REGRA: A CAMADA NAO TOCA NO MONACO AO ABRIR, SO NA ENTREGA. files.js:entregarAoMonaco(vista) le a linha do retrato (marcas [data-ln] -> linhaNoFicheiroAtual; vista de FICHEIRO -> a grelha) e chama SEMPRE workspace.js:transferirDaCamada(caminho, linha, arquivoOriginal), que sai do modo do Monaco sem fade, recarrega o ficheiro quando o modelo em maos nao e o ficheiro e alinha. O 4o argumento entrar do setCodeViewContent controla o fade de entrada (diff passa false). Duas vistas chamam isto: a doc (vistaDock) e o HISTORICO (vistaHistorico). NA DOC: o clique entrega e a camada sai em fade, sempre. NO HISTORICO (2026-09-15): (a) com CODIGO a mostra (vista de ficheiro ou diff) entrega como o dock e a camada sai - e a unica forma de ver o Monaco, porque a camada e inset 0 por cima do #editor-host-wrap; (b) com um PAINEL aberto (raciocinio, ferramentas ou pergunta) NAO fecha a camada nem le linha nenhuma (o corpo mostra o painel, nao codigo) - o guard olhava so para tools/thoughts, logo clicar no painel da PERGUNTA entregava com uma linha falsa e fechava a camada a meio da leitura. O abrirDiff do historico passou a chamar marcarLinhasAlteradas e a marcar caminhoEntrega E caminhoOriginal como o do dock (era o que deixava o diff do historico sem linha). O MONACO DEPOIS DA ENTREGA NAO FECHA O HISTORICO: entregar codigo do historico liga state.codigoDoHistoricoNoEditor, que isenta o clique no editor no clique-fora (renderer.js) - sem isso, clicar no Monaco fechava o painel do historico (closeHistoryPanel). Desliga-se no closeHistory, na entrega da doc e no axio-editor-file-open (arvore).",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 387,
+        "linha": 388,
         "conferido": [
-          1790391058.825,
-          42746
+          1791639217.567,
+          42891
         ]
       }
     },
@@ -1638,10 +1638,10 @@
       "descricao": "As quebras que morriam no retrato, por DUAS vias distintas. (1) VISTA DE FICHEIRO: o texto entrava por textContent num contentor com white-space normal e o ficheiro inteiro virava um paragrafo; o pre vive no PROPRIO texto (files.js:setCodeViewContent com escapeHtml), nunca no contentor, onde o raciocinio/ferramentas/pergunta precisam de quebrar - css/dock.css:.code-view-plain. (2) RETRATO DO DIFF: files.js:marcarLado reconstroi cada linha num span proprio e deitava fora a quebra final de cada bloco .diff-*, logo o ultimo pedaco de um bloco \"added\" colava-se ao bloco seguinte (as tres frases e a aspa de fecho vem em blocos separados) - a flag quebraFinal repoe-a.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 173,
+        "linha": 174,
         "conferido": [
-          1790391058.825,
-          42746
+          1791639217.567,
+          42891
         ]
       }
     },
@@ -1748,10 +1748,10 @@
       "descricao": "Ficheiros com o MESMO nome em pastas diferentes (src/backend/services/session.py e src/backend/routes/session.py) tem de ser identificados pelo CAMINHO, nunca pelo nome. encontrarArquivoUndo (files.js) procura match exato pelo caminho_relativo, depois por sufixo, e o nome simples SO se houver um unico candidato - antes havia um OR com o basename e, como o /api/undo_redo_status devolve a lista ordenada por nome, qualquer card abria sempre o PRIMEIRO da lista. O rotulo da aba e decidido por rotulosDasAbas (src/frontend/js/editor/editor.js, chamada por renderTabs): o PRIMEIRO ficheiro da lista fica com o nome simples e os seguintes ganham o sufixo da pasta (routes/session.py), subindo niveis enquanto houver colisao.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 191,
+        "linha": 192,
         "conferido": [
-          1790391058.825,
-          42746
+          1791639217.567,
+          42891
         ]
       }
     },
@@ -2244,10 +2244,10 @@
       "descricao": "document/window/location minimos que o cabecalho do harness de trechos injeta antes do codigo do tool_executar_js, para testar codigo de browser num processo Node sem reescrever o stub a mao. Vive em src/backend/tools/harness.py (constante _DOM_FALSO_JS, ~1088 linhas de JavaScript dentro de uma string Python; ate 2026-10-01 vivia no modulo dos processos). Instala os globais (document, window, location, HTMLElement, Event, getComputedStyle, requestAnimationFrame, localStorage) e devolve o handle: dom.el(tag,{id,class,texto,html,style,dataset,attrs},...filhos), dom.porId/sel/selTodos, dom.medir(el,{top,left,width,height,clientHeight,scrollHeight,scrollWidth}), dom.estilo(el,{color}), dom.disparar(tipo,alvo,props), dom.evento(tipo,alvo,props), dom.serializar/el.outerHTML, dom.html(markup) (o inverso: monta nos a partir de markup e devolve um array de nos soltos), dom.agora(), await dom.aguardar(), dom.remover(). O SELETOR suporta tag, #id, .classe, [attr=valor], :not(), :nth-child(n) e :nth-of-type(n). Resolve as armadilhas ja conhecidas: appendChild/insertBefore SOLTAM o no do pai, className e classList sao a MESMA fonte, classList.toggle respeita a forca, getBoundingClientRect e CALCULADO a cada pedido a partir dos offset*, e dispatchEvent propaga captura->alvo->bolha. LIMITES: nao ha layout nem motor de CSS (as medidas declaram-se com dom.medir) nem navegacao/canvas/MutationObserver. Como a constante vive em RAM no Flask, para testar o fake DO DISCO extraia o bloco entre _DOM_FALSO_JS = r''' e o ''' seguinte e avalie-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1464,
+        "linha": 1470,
         "conferido": [
-          1791637697.253,
-          97307
+          1791643354.3,
+          97679
         ]
       }
     },
@@ -2308,8 +2308,8 @@
         "arquivo": "src/backend/services/busca_texto.py",
         "linha": 126,
         "conferido": [
-          1791248160.325,
-          6132
+          1791639455.051,
+          6130
         ]
       }
     },
@@ -3672,10 +3672,10 @@
       "descricao": "Etiqueta cada fonte da busca por confianca (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG) usando a tabela DOMINIOS_OFICIAIS/DOMINIOS_FRACOS; sem fonte oficial entre as encontradas, avisa e manda refazer a busca com 'dominios' (um filtro que privilegia o dominio da documentacao oficial).",
       "localizacao": {
         "arquivo": "src/backend/tools/web.py",
-        "linha": 73,
+        "linha": 78,
         "conferido": [
-          1791636618.317,
-          14372
+          1791744436.156,
+          19623
         ]
       }
     },
@@ -4392,10 +4392,10 @@
       "descricao": "A camada da coluna 3 fecha porque o clique e interpretado como entrega de codigo ao Monaco. entregarAoMonaco so considerava os paineis ferramentas/raciocinio/pergunta; com o painel GIT aberto o painelAberto era falso, o alvo ficava null e a camada era fechada. A lista inclui agora state.isShowingGit e vale para qualquer painel novo que se acrescente a coluna 3.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 392,
+        "linha": 393,
         "conferido": [
-          1790391058.825,
-          42746
+          1791639217.567,
+          42891
         ]
       }
     },
@@ -4799,10 +4799,10 @@
       "descricao": "Liga o TITULO da coluna 3 (doc e historico) ao explorer: poe cursor-pointer, o title 'Mostrar na arvore de ficheiros' e o onclick para WorkspaceView.revealAndSelectFile(caminho). O titulo e INFORMACAO E NAVEGACAO; a ENTREGA AO MONACO e o clique no CORPO do code view. Antes, no dock, o titulo entregava ao Monaco e no historico nao fazia nada.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/files.js",
-        "linha": 156,
+        "linha": 157,
         "conferido": [
-          1790391058.825,
-          42746
+          1791639217.567,
+          42891
         ]
       }
     },
@@ -4976,10 +4976,10 @@
       "descricao": "Popup de sim/nao reutilizavel, ao lado do showAlert do qual herda o desenho (#confirm-popup no index.html, aberto por opacity). ui.js:showConfirm(mensagem, rotulo, aoConfirmar) escreve a pergunta, o texto do botao de confirmar e guarda o callback; ui.js:confirmarEscolha corre o callback DEPOIS de fechar (nunca durante, para o popup nao ficar preso se o callback falhar) e ui.js:fecharConfirmPopup limpa a escolha pendente. Os botoes sao ligados em renderer.js junto dos outros modais e #confirm-popup entrou na lista de hit(clickedOnModal) do clique-fora. Quem o usa hoje: git_panel.js:pintarBotaoEnvio, com a pergunta montada a partir de descricaoDoEnvio (a MESMA do tooltip do aviao) e o botao 'Enviar'. NAO confundir com #fs-confirm-popup (editor.js:openFsConfirm), que e do sistema de ficheiros e tem o botao fixo 'Excluir' - sao dois dialogos de confirmacao no projeto, candidatos a fusao num so.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/ui.js",
-        "linha": 467,
+        "linha": 469,
         "conferido": [
-          1790915612.916,
-          22611
+          1791639217.15,
+          22682
         ]
       }
     },
@@ -5508,11 +5508,11 @@
       "identificador": "_aviso_chamada_sem_parametro",
       "descricao": "Aviso que aparece no retorno de qualquer edicao de um .py (CHECKLIST ESTRUTURAL) quando uma chamada a funcao do proprio modulo usa uma palavra-chave que a assinatura dela nao tem. A sintaxe passa e so rebenta em execucao, com TypeError a meio da ferramenta - foi o caso do _texto_depuracao(registo_id=) contra def _texto_depuracao(registro_id,...). Nao bloqueia a escrita; confirma no codigo real e acerta a chamada ou a assinatura.",
       "localizacao": {
-        "arquivo": "src/backend/tools/syntax.py",
-        "linha": 838,
+        "arquivo": "src/backend/tools/syntax_estrutural.py",
+        "linha": 270,
         "conferido": [
-          1791246965.246,
-          39291
+          1791648265.29,
+          17233
         ]
       }
     },
@@ -6572,10 +6572,10 @@
       "descricao": "Acha arquivo ou pasta pelo NOME no projeto inteiro (nome simples ou curinga), com tamanho e data, sem navegar pasta a pasta. E o caminho para nao voltar a adivinhar caminhos a partir da estrutura lida.",
       "localizacao": {
         "arquivo": "src/backend/tools/browse.py",
-        "linha": 148,
+        "linha": 151,
         "conferido": [
-          1791638694.523,
-          22639
+          1791746660.307,
+          26523
         ]
       }
     },
@@ -6673,10 +6673,10 @@
       "descricao": "Tira a linha do resumo do que fica a vista no chat e guarda-a para o contexto da rodada seguinte.",
       "localizacao": {
         "arquivo": "src/backend/ai/loop.py",
-        "linha": 292,
+        "linha": 293,
         "conferido": [
-          1791637355.309,
-          32387
+          1791650778.251,
+          32398
         ]
       }
     },
@@ -6855,6 +6855,48 @@
         "conferido": [
           1791637351.122,
           15218
+        ]
+      }
+    },
+    {
+      "termo": "npc que anda sozinho",
+      "aliases": [
+        "npc parado",
+        "deixar o npc parado",
+        "npc se movendo",
+        "npc andando sozinho",
+        "estatua que anda",
+        "andar sozinho",
+        "walkinterval"
+      ],
+      "identificador": "overrideWalk / walkTicks",
+      "descricao": "O walkinterval do XML so vale se o npc tiver overrideWalk=\"1\" (ou true/yes): sem isso o servidor usa o npcWalkInterval global do config.lua (2000) e o npc da passos aleatorios sozinho. overrideWalk=\"1\" + walkinterval=\"0\" -> walkTicks=0 -> getNextStep devolve false e o npc nunca sai do tile.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Solution/src/npc.cpp",
+        "linha": 216,
+        "conferido": [
+          1790559629.622,
+          77962
+        ]
+      }
+    },
+    {
+      "termo": "comparar os npcs",
+      "aliases": [
+        "comparar npc",
+        "conferir as falas dos npcs",
+        "comparar o npc com o arquivo original",
+        "ver o que falta no npc",
+        "auditar os npcs"
+      ],
+      "identificador": "comparar_npc.py (modo normal = fidelidade da fala; --itens = id de item que o items.xml nao tem)",
+      "descricao": "Le o .npc real da CipSoft e compara palavra a palavra com o nosso XML: o que falta, o que esta desalinhado e o que tem texto diferente. Aceita nomes para filtrar (ex: 'python Tools/comparar_npc.py Umar Gabel') e mostra o detalhe de cada falha. Com '--itens' faz a outra pergunta: confere o shop_buyable do XML e os Create/Delete/Count do .npc contra os ids que existem no items.xml.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Tools/comparar_npc.py",
+        "linha": 4,
+        "conferido": [
+          1791768095.107,
+          38123
         ]
       }
     }

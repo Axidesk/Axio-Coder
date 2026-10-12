@@ -22,6 +22,9 @@ ATTR_CHAO = 9
 LADO_DA_AREA = 256
 LIMITE_VAZIOS = 200
 LIMITE_ITENS = 20
+LIMITE_PORTAS = 200
+TIPO_ITEM = 6
+IDS_PORTA = (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551)
 
 _CACHE_DE_BYTES = {}
 _CACHE_DE_AREAS = {}
@@ -39,7 +42,10 @@ _CACHE_DE_AREAS = {}
     "tem chao nem filho. Um mapa grande (88 MB, ~10 milhoes de tiles) faz 'ponto' responder na hora, "
     "mas 'resumo' e 'vazios' leem o mapa inteiro. Varrer a vizinhanca de um ponto nao se faz com uma "
     "chamada por coordenada: passa-se a lista inteira em 'pontos' (uma por linha, x,y,z) - a primeira "
-    "leitura paga o custo, as seguintes saem do cache e milhares de coordenadas custam o mesmo que uma.",
+    "leitura paga o custo, as seguintes saem do cache e milhares de coordenadas custam o mesmo que uma. "
+    "'portas' lista os itens de porta (ou os ids pedidos em 'ids') dentro de 'regiao', com o action id de "
+    "cada um - e como so o action id faz a porta selar e fechar depois de passar, a lista diz logo quais "
+    "estao sem ele.",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -49,7 +55,7 @@ _CACHE_DE_AREAS = {}
         },
         "acao": {
             "tipo": "STRING",
-            "desc": "'ponto' (o tile de x,y,z), 'vazios' (tiles sem chao nem item) ou 'resumo' (contagens do mapa inteiro).",
+            "desc": "'ponto' (o tile de x,y,z), 'vazios' (tiles sem chao nem item), 'resumo' (contagens do mapa inteiro) ou 'portas' (itens de porta numa regiao, com o action id de cada um).",
             "padrao": "ponto",
         },
         "x": {
@@ -77,9 +83,21 @@ _CACHE_DE_AREAS = {}
             "desc": "Quantos tiles sem chao listar em 'vazios'.",
             "padrao": LIMITE_VAZIOS,
         },
+        "ids": {
+            "tipo": "STRING",
+            "desc": "Para 'portas': os item ids a procurar, separados por virgula. Vazio usa os 8 ids de porta de quest (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551).",
+            "padrao": "",
+        },
+        "regiao": {
+            "tipo": "STRING",
+            "desc": "Para 'portas': a caixa onde procurar, 'x1,y1,x2,y2' e opcionalmente o andar, 'x1,y1,x2,y2,z'. Vazio varre o mapa todo - sempre que possivel passe a caixa, que poupa a leitura das areas de fora.",
+            "padrao": "",
+        },
     },
 )
-def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS, pontos=""):
+def tool_medir_mapa_otbm(
+    caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS, pontos="", ids="", regiao=""
+):
     emit_event("executing", function=f"Medindo mapa OTBM: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -110,9 +128,11 @@ def tool_medir_mapa_otbm(caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=L
             return _relato_vazios(dados, caminho_relativo, _teto(limite))
         if escolha == "resumo":
             return _relato_resumo(dados, caminho_relativo)
+        if escolha == "portas":
+            return _relato_portas(dados, caminho_relativo, ids, regiao, _teto(limite, 5000, LIMITE_PORTAS))
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
-    return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios' ou 'resumo')."
+    return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo' ou 'portas')."
 
 
 def _bytes_do_mapa(alvo):
@@ -220,6 +240,59 @@ def _relato_resumo(dados, rotulo):
     )
 
 
+def _relato_portas(dados, rotulo, ids, regiao, limite):
+    alvos = _ids_pedidos(ids)
+    caixa = _caixa_pedida(regiao)
+    sinais = [bytes((NODE_START, TIPO_ITEM, i & 0xFF, (i >> 8) & 0xFF)) for i in alvos]
+    achados = []
+    for base, inicio, fim, ultimo in _areas_com_sinal(dados, sinais, caixa):
+        indice = inicio
+        while dados[indice] == NODE_START and indice <= ultimo and len(achados) < limite:
+            x, y, z, _, tem_filho, seguinte = _tile_curto(dados, indice, base)
+            if tem_filho and _dentro_da_caixa(caixa, x, y, z) and _tem_sinal(dados, indice, seguinte, sinais):
+                for item in _tile(dados, indice, base)["itens"]:
+                    if item.get("id") in alvos:
+                        achados.append((x, y, z, item))
+            indice = seguinte
+    return "\n".join(_linhas_das_portas(rotulo, alvos, caixa, achados, limite))
+
+
+def _ids_pedidos(ids):
+    if not str(ids or "").strip():
+        return list(IDS_PORTA)
+    lista = []
+    for pedaco in str(ids).replace(";", ",").split(","):
+        pedaco = pedaco.strip()
+        if pedaco.isdigit() and int(pedaco) not in lista:
+            lista.append(int(pedaco))
+    return lista
+
+
+def _caixa_pedida(regiao):
+    campos = [c.strip() for c in str(regiao or "").replace(";", ",").split(",") if c.strip()]
+    if len(campos) < 4:
+        return None
+    try:
+        numeros = [int(c) for c in campos]
+    except ValueError:
+        return None
+    return (
+        min(numeros[0], numeros[2]),
+        min(numeros[1], numeros[3]),
+        max(numeros[0], numeros[2]),
+        max(numeros[1], numeros[3]),
+        set(numeros[4:]) or None,
+    )
+
+
+def _dentro_da_caixa(caixa, x, y, z):
+    if caixa is None:
+        return True
+    if not (caixa[0] <= x <= caixa[2] and caixa[1] <= y <= caixa[3]):
+        return False
+    return caixa[4] is None or z in caixa[4]
+
+
 def _tiles(dados):
     for base, inicio in _areas(dados):
         indice = inicio
@@ -297,6 +370,10 @@ def _tem_atributo(limpos, i, alvo):
     return False
 
 
+def _tem_sinal(dados, indice, seguinte, sinais):
+    return any(dados.find(sinal, indice, seguinte) >= 0 for sinal in sinais)
+
+
 def _atributos(limpos, i):
     achados = {}
     tamanho = len(limpos)
@@ -332,6 +409,30 @@ def _areas(dados):
     _CACHE_DE_AREAS.clear()
     _CACHE_DE_AREAS[id(dados)] = (dados, lista)
     return lista
+
+
+def _areas_com_sinal(dados, sinais, caixa):
+    areas = _areas(dados)
+    for posicao, (base, inicio) in enumerate(areas):
+        fim = areas[posicao + 1][1] if posicao + 1 < len(areas) else len(dados)
+        if caixa is not None:
+            x0, y0, z0 = base
+            if (
+                x0 + LADO_DA_AREA - 1 < caixa[0]
+                or x0 > caixa[2]
+                or y0 + LADO_DA_AREA - 1 < caixa[1]
+                or y0 > caixa[3]
+            ):
+                continue
+            if caixa[4] is not None and z0 not in caixa[4]:
+                continue
+        ultimo = -1
+        for sinal in sinais:
+            encontrado = dados.rfind(sinal, inicio, fim)
+            if encontrado > ultimo:
+                ultimo = encontrado
+        if ultimo >= 0:
+            yield base, inicio, fim, ultimo
 
 
 def _areas_do_ficheiro(dados):
@@ -451,6 +552,34 @@ def _linhas_do_tile(rotulo, tile):
             linhas.append("    " + _linha_do_item(item))
         if len(itens) > LIMITE_ITENS:
             linhas.append(f"    ... e mais {len(itens) - LIMITE_ITENS}")
+    return linhas
+
+
+def _linhas_das_portas(rotulo, alvos, caixa, achados, limite):
+    onde = "o mapa todo" if caixa is None else f"a caixa {caixa[0]}..{caixa[2]} x {caixa[1]}..{caixa[3]}"
+    com_acao = [a for a in achados if a[3].get("acao")]
+    sem_acao = [a for a in achados if not a[3].get("acao")]
+    linhas = [
+        f"MAPA '{rotulo}': {len(achados)} item(ns) de {'/'.join(str(i) for i in alvos)} em {onde}.",
+        f"  COM action id: {len(com_acao)}",
+        f"  SEM action id: {len(sem_acao)}",
+    ]
+    if sem_acao:
+        linhas.append(
+            "  Porta de quest sem action id no mapa nao sela nem fecha apos a passagem: "
+            "o script so sabe qual e a chave pelo action id."
+        )
+    if len(achados) >= limite:
+        linhas.append(f"  (lista cortada em {limite} - passe 'regiao' ou suba 'limite')")
+    contagem = {}
+    for _, _, _, item in achados:
+        contagem[item.get("id")] = contagem.get(item.get("id"), 0) + 1
+    if contagem:
+        linhas.append("POR ID:")
+        linhas += [f"  {identificador}: {quantos}" for identificador, quantos in sorted(contagem.items())]
+    if achados:
+        linhas.append("POSICOES:")
+        linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(item)}" for x, y, z, item in achados]
     return linhas
 
 
