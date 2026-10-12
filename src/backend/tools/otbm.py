@@ -146,7 +146,9 @@ def tool_medir_mapa_otbm(
     "sem action id: o script da porta le o action id como chave e, sem ele, a porta abre para qualquer um e "
     "nao fecha depois de passar. Sem 'aplicar' apenas relata (o action id de cada porta, o que entraria e o "
     "que ja la esta); com 'aplicar' grava o mapa, guardando o original na pasta temporaria e conferindo o "
-    "resultado por nova leitura. Nao toca em nenhum item fora das posicoes pedidas.",
+    "resultado por nova leitura. Nao toca em nenhum item fora das posicoes pedidas. Uma porta que JA tem "
+    "action id nao se toca por omissao: para lhe corrigir a chave, 'trocar'=True troca o valor no proprio "
+    "lugar (mesmo tamanho, sem mexer no resto do mapa).",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -174,9 +176,14 @@ def tool_medir_mapa_otbm(
             "desc": "False (padrao) so relata; True grava o mapa.",
             "padrao": False,
         },
+        "trocar": {
+            "tipo": "BOOLEAN",
+            "desc": "False (padrao) recusa-se a tocar numa porta que ja tem action id. True troca a chave dessa porta no proprio lugar - a unica via para corrigir uma chave ja escrita, seja porque aponta para a quest errada, seja porque o portao passou a exigir outra storage.",
+            "padrao": False,
+        },
     },
 )
-def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", aplicar=False):
+def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", aplicar=False, trocar=False):
     emit_event("executing", function=f"Marcando portas no mapa: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -217,8 +224,8 @@ def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", a
         f"MAPA '{caminho_relativo}': action id {chave} em {len(achados)} porta(s).",
         "ANTES:",
     ]
-    linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(info)}" for x, y, z, info, _ in achados]
-    faltam = pedidas - {(x, y, z) for x, y, z, _, _ in achados}
+    linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(info)}" for x, y, z, info, _, _ in achados]
+    faltam = pedidas - {(x, y, z) for x, y, z, _, _, _ in achados}
     if faltam:
         linhas.append("  SEM PORTA aqui: " + "; ".join(f"{x},{y},{z}" for x, y, z in sorted(faltam)))
 
@@ -226,23 +233,32 @@ def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", a
     if trocadas:
         linhas.append(
             "  ATENCAO: "
-            + "; ".join(f"[{x}, {y}, {z}] ja tem action id {info.get('acao')}" for x, y, z, info, _ in trocadas)
+            + "; ".join(
+                f"[{x}, {y}, {z}] ja tem action id {info.get('acao')}" for x, y, z, info, _, _ in trocadas
+            )
         )
-        return "\n".join(linhas) + (
-            "\nNada foi gravado: porta que ja tem um action id nao se troca por cima (seria trocar a quest dela)."
-        )
+        if not trocar:
+            return "\n".join(linhas) + (
+                "\nNada foi gravado: porta que ja tem um action id nao se troca por cima (seria trocar a quest dela). "
+                "Se a chave nova for mesmo a certa, repita com trocar=True."
+            )
 
-    insercoes = [offset for _, _, _, info, offset in achados if info.get("acao") != chave]
-    if not insercoes:
+    insercoes = [offset for _, _, _, info, offset, _ in achados if info.get("acao") is None]
+    if not insercoes and not trocadas:
         return "\n".join(linhas) + "\nNada a fazer: as portas ja tem esse action id."
 
     if not aplicar:
         return "\n".join(linhas) + (
-            f"\nA GRAVAR: {len(insercoes)} porta(s) ganham o atributo de action id, {len(insercoes) * 3} byte(s) a mais. "
+            f"\nA GRAVAR: {len(insercoes)} porta(s) ganham o atributo de action id "
+            f"({len(insercoes) * 3} byte(s) a mais) e {len(trocadas)} porta(s) tem a chave trocada no proprio lugar. "
             "Repita com aplicar=True para gravar."
         )
 
-    novos = _com_action_id_na_porta(dados, insercoes, chave)
+    novos = _com_action_id_trocado(dados, trocadas, chave) if trocadas else dados
+    if isinstance(novos, str):
+        return "\n".join(linhas) + "\n" + novos
+    if insercoes:
+        novos = _com_action_id_na_porta(novos, insercoes, chave)
     copia = _guardar_copia_do_mapa(alvo, dados)
     with open(alvo, "wb") as arquivo:
         arquivo.write(novos)
@@ -254,7 +270,7 @@ def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", a
     linhas.append(f"GRAVADO: {len(novos)} bytes (era {len(dados)}). Original guardado em {copia}")
     linhas.append(f"CONFERIDO POR NOVA LEITURA: {len(lidas)} de {len(achados)} porta(s) com action id {chave}.")
     linhas.append("DEPOIS:")
-    linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(info)}" for x, y, z, info, _ in confirmados]
+    linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(info)}" for x, y, z, info, _, _ in confirmados]
     if len(lidas) != len(achados):
         linhas.append("ERRO: nem todas ficaram gravadas - reponha o original guardado acima e diga-me.")
     return "\n".join(linhas)
@@ -420,7 +436,7 @@ def _portas_com_offset(dados, alvos, posicoes):
                     props, fim_props = _ate_marcador(dados, ponteiro + 2)
                     info = _item(_sem_escape(props))
                     if info.get("id") in alvos:
-                        achados.append((x, y, z, info, fim_props))
+                        achados.append((x, y, z, info, fim_props, ponteiro + 2))
                     ponteiro = _fim_do_no(dados, ponteiro)
             indice = seguinte
     return achados
@@ -439,6 +455,28 @@ def _com_action_id_na_porta(dados, insercoes, chave):
         saida += acrescento
         anterior = offset
     saida += dados[anterior:]
+    return bytes(saida)
+
+
+def _com_action_id_trocado(dados, achados, chave):
+    if any(byte in (NODE_START, NODE_END, ESCAPE) for byte in struct.pack("<H", chave)):
+        return (
+            f"ERRO: o action id {chave} tem um byte que precisa de escape e a troca no proprio "
+            "lugar mudaria o tamanho do no. Nada foi gravado."
+        )
+    saida = bytearray(dados)
+    for x, y, z, info, fim, inicio in achados:
+        antigo = int(info.get("acao") or 0)
+        bruto = dados[inicio:fim]
+        par = bytes((ATTR_ACAO,)) + struct.pack("<H", antigo)
+        quantas = bruto.count(par)
+        if quantas != 1:
+            return (
+                f"ERRO: nas propriedades da porta [{x}, {y}, {z}] o par do action id {antigo} aparece "
+                f"{quantas} vez(es) - nao troco as cegas. Nada foi gravado."
+            )
+        posicao = inicio + bruto.index(par) + 1
+        saida[posicao : posicao + 2] = struct.pack("<H", chave)
     return bytes(saida)
 
 
@@ -764,14 +802,14 @@ def _linhas_das_portas(rotulo, alvos, caixa, achados, limite):
     if len(achados) >= limite:
         linhas.append(f"  (lista cortada em {limite} - passe 'regiao' ou suba 'limite')")
     contagem = {}
-    for _, _, _, item in achados:
+    for _, _, _, item, _, _ in achados:
         contagem[item.get("id")] = contagem.get(item.get("id"), 0) + 1
     if contagem:
         linhas.append("POR ID:")
         linhas += [f"  {identificador}: {quantos}" for identificador, quantos in sorted(contagem.items())]
     if achados:
         linhas.append("POSICOES:")
-        linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(item)}" for x, y, z, item in achados]
+        linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(item)}" for x, y, z, item, _, _ in achados]
     return linhas
 
 
