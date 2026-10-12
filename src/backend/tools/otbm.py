@@ -27,6 +27,8 @@ LIMITE_ITENS = 20
 LIMITE_PORTAS = 200
 TIPO_ITEM = 6
 IDS_PORTA = (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551)
+IDS_PORTA_NIVEL = (1227, 1229, 1245, 1247, 1259, 1261, 3540, 3549)
+VOCACOES_DA_PORTA = {1: "sorcerer", 2: "druid", 3: "paladin", 4: "knight"}
 
 _CACHE_DE_BYTES = {}
 _CACHE_DE_AREAS = {}
@@ -87,7 +89,7 @@ _CACHE_DE_AREAS = {}
         },
         "ids": {
             "tipo": "STRING",
-            "desc": "Para 'portas': os item ids a procurar, separados por virgula. Vazio usa os 8 ids de porta de quest (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551).",
+            "desc": "Para 'portas': os item ids a procurar, separados por virgula. Vazio usa as duas familias de porta: as 8 de quest (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551), em que o action id e a chave de storage da quest, e as 8 de nivel/vocacao (1227, 1229, 1245, 1247, 1259, 1261, 3540, 3549), em que o action id 1001-1999 e o nivel e o 2001-2008 a vocacao.",
             "padrao": "",
         },
         "regiao": {
@@ -164,7 +166,7 @@ def tool_medir_mapa_otbm(
         },
         "ids": {
             "tipo": "STRING",
-            "desc": "Item ids considerados porta, separados por virgula. Vazio usa os 8 ids de porta de quest (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551).",
+            "desc": "Item ids considerados porta, separados por virgula. Vazio usa as duas familias de porta: as 8 de quest (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551) e as 8 de nivel/vocacao (1227, 1229, 1245, 1247, 1259, 1261, 3540, 3549).",
             "padrao": "",
         },
         "aplicar": {
@@ -442,7 +444,7 @@ def _com_action_id_na_porta(dados, insercoes, chave):
 
 def _ids_pedidos(ids):
     if not str(ids or "").strip():
-        return list(IDS_PORTA)
+        return list(IDS_PORTA) + list(IDS_PORTA_NIVEL)
     lista = []
     for pedaco in str(ids).replace(";", ",").split(","):
         pedaco = pedaco.strip()
@@ -742,15 +744,22 @@ def _linhas_das_portas(rotulo, alvos, caixa, achados, limite):
     onde = "o mapa todo" if caixa is None else f"a caixa {caixa[0]}..{caixa[2]} x {caixa[1]}..{caixa[3]}"
     com_acao = [a for a in achados if a[3].get("acao")]
     sem_acao = [a for a in achados if not a[3].get("acao")]
+    sem_acao_quest = [a for a in sem_acao if a[3].get("id") in IDS_PORTA]
+    sem_acao_nivel = [a for a in sem_acao if a[3].get("id") in IDS_PORTA_NIVEL]
     linhas = [
         f"MAPA '{rotulo}': {len(achados)} item(ns) de {'/'.join(str(i) for i in alvos)} em {onde}.",
         f"  COM action id: {len(com_acao)}",
         f"  SEM action id: {len(sem_acao)}",
     ]
-    if sem_acao:
+    if sem_acao_quest:
         linhas.append(
             "  Porta de quest sem action id no mapa nao sela nem fecha apos a passagem: "
             "o script so sabe qual e a chave pelo action id."
+        )
+    if sem_acao_nivel:
+        linhas.append(
+            "  Gate of expertise sem action id nao pede nivel nem vocacao: abre a qualquer um "
+            "(o action id dessas portas e o nivel, 1001-1999, ou a vocacao, 2001-2008)."
         )
     if len(achados) >= limite:
         linhas.append(f"  (lista cortada em {limite} - passe 'regiao' ou suba 'limite')")
@@ -770,6 +779,9 @@ def _linha_do_item(info):
     partes = [f"item {info.get('id')}"]
     if "acao" in info:
         partes.append(f"action id {info['acao']}")
+        sentido = _sentido_da_porta(info)
+        if sentido:
+            partes.append(sentido)
     if "unico" in info:
         partes.append(f"unique id {info['unico']}")
     if "teleporte" in info:
@@ -778,6 +790,17 @@ def _linha_do_item(info):
     if "resto" in info:
         partes.append(f"resto {info['resto']}")
     return " | ".join(partes)
+
+
+def _sentido_da_porta(info):
+    acao = info.get("acao")
+    if info.get("id") not in IDS_PORTA_NIVEL or not acao:
+        return None
+    if 1001 <= acao <= 1999:
+        return f"pede nivel {acao - 1000}"
+    if 2001 <= acao <= 2008:
+        return f"so {VOCACOES_DA_PORTA.get(acao - 2000, 'vocation desconhecida')}"
+    return None
 
 
 def _teto(valor, maximo=1000, padrao=LIMITE_VAZIOS):
