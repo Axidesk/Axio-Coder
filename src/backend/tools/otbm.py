@@ -106,10 +106,25 @@ _CACHE_DE_AREAS = {}
             "desc": "Para 'spawns': o ficheiro de spawn (spawn.xml do servidor). Vazio usa o 'spawn.xml' que estiver ao lado do mapa.",
             "padrao": "",
         },
+        "detalhar_vazios": {
+            "tipo": "BOOLEAN",
+            "desc": "Para 'spawns': lista cada bloco SEM criatura (posicao, raio, e os blocos povoados num raio de 40 no mesmo andar ou +-1) - e o que separa um bloco de lixo, que nao tem caçada nenhuma por perto, de um sitio onde falta mesmo o bicho.",
+            "padrao": False,
+        },
     },
 )
 def tool_medir_mapa_otbm(
-    caminho_relativo, acao="ponto", x=0, y=0, z=0, limite=LIMITE_VAZIOS, pontos="", ids="", regiao="", spawn=""
+    caminho_relativo,
+    acao="ponto",
+    x=0,
+    y=0,
+    z=0,
+    limite=LIMITE_VAZIOS,
+    pontos="",
+    ids="",
+    regiao="",
+    spawn="",
+    detalhar_vazios=False,
 ):
     emit_event("executing", function=f"Medindo mapa OTBM: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
@@ -144,7 +159,7 @@ def tool_medir_mapa_otbm(
         if escolha == "portas":
             return _relato_portas(dados, caminho_relativo, ids, regiao, _teto(limite, 5000, LIMITE_PORTAS))
         if escolha == "spawns":
-            return _relato_spawns(caminho_relativo, alvo, spawn, _teto(limite))
+            return _relato_spawns(caminho_relativo, alvo, spawn, _teto(limite), detalhar_vazios)
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
     return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo', 'portas' ou 'spawns')."
@@ -400,7 +415,7 @@ def _relato_resumo(dados, rotulo):
     )
 
 
-def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite):
+def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
     if not str(caminho_spawn or "").strip():
         caminho_spawn = os.path.join(os.path.dirname(caminho_mapa), "spawn.xml")
     else:
@@ -430,6 +445,8 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite):
     monstros = npcs = 0
     fora = []
     quantos = {}
+    vazios = []
+    povoados = []
     for bloco in blocos:
         centro = (
             int(bloco.get("centerx") or 0),
@@ -438,6 +455,11 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite):
         )
         raio = int(bloco.get("radius") or 0)
         quantos[centro] = quantos.get(centro, 0) + 1
+        nomes_do_bloco = [c.get("name") or "?" for c in bloco if c.tag in ("monster", "npc")]
+        if nomes_do_bloco:
+            povoados.append((centro, nomes_do_bloco))
+        else:
+            vazios.append((centro, raio))
         for criatura in bloco:
             if criatura.tag == "monster":
                 monstros += 1
@@ -467,6 +489,28 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite):
             f"    [{x}, {y}, {z}] raio {raio}: {tag} '{nome}' em {dx:+d},{dy:+d}"
             for (x, y, z), raio, tag, nome, (dx, dy) in fora[:limite]
         ]
+    if detalhar and vazios:
+        linhas.append(
+            f"  BLOCOS SEM CRIATURA ({len(vazios)}) - posicao, raio, e os blocos povoados num raio de 40:"
+        )
+        for (vx, vy, vz), raio in vazios:
+            perto = []
+            for (px, py, pz), nomes_do_bloco in povoados:
+                distancia = max(abs(px - vx), abs(py - vy))
+                if distancia <= 40 and abs(pz - vz) <= 1:
+                    perto.append((distancia, (px, py, pz), nomes_do_bloco))
+            perto.sort()
+            if not perto:
+                linhas.append(
+                    f"    [{vx}, {vy}, {vz}] raio {raio}: NENHUM bloco povoado num raio de 40 - "
+                    "nenhuma caçada por perto, o mais provavel e lixo do ficheiro."
+                )
+                continue
+            amostra = "; ".join(
+                f"a {distancia} em {px},{py},{pz}: {', '.join(nomes_do_bloco[:4])}"
+                for distancia, (px, py, pz), nomes_do_bloco in perto[:3]
+            )
+            linhas.append(f"    [{vx}, {vy}, {vz}] raio {raio}: {len(perto)} vizinho(s) - {amostra}")
     return "\n".join(linhas)
 
 
