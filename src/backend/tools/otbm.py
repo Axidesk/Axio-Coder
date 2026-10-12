@@ -802,14 +802,14 @@ def _linhas_das_portas(rotulo, alvos, caixa, achados, limite):
     if len(achados) >= limite:
         linhas.append(f"  (lista cortada em {limite} - passe 'regiao' ou suba 'limite')")
     contagem = {}
-    for _, _, _, item, _, _ in achados:
+    for _, _, _, item in achados:
         contagem[item.get("id")] = contagem.get(item.get("id"), 0) + 1
     if contagem:
         linhas.append("POR ID:")
         linhas += [f"  {identificador}: {quantos}" for identificador, quantos in sorted(contagem.items())]
     if achados:
         linhas.append("POSICOES:")
-        linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(item)}" for x, y, z, item, _, _ in achados]
+        linhas += [f"  [{x}, {y}, {z}] {_linha_do_item(item)}" for x, y, z, item in achados]
     return linhas
 
 
