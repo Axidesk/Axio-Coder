@@ -11,7 +11,7 @@ import time
 from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, entradas_diretorio, resumo_entradas, normalizar_unicode, buscar_em_revisao, PASTAS_FORA_DA_BUSCA, EXT_FORA_DA_BUSCA
-from src.backend.services.busca_texto import EXTS_TEXTO, peso_da_pasta
+from src.backend.services.busca_texto import EXTS_TEXTO, ordem_da_varredura, peso_da_pasta
 
 LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
 LIMITE_EXCERTO = 200
@@ -297,6 +297,7 @@ def tool_pesquisar_no_projeto(termo: str, revisao: str = "", incluir_ignoradas: 
         if not incluir_ignoradas:
             terceiros_saltados.update(d for d in dirs if peso_da_pasta(d))
             dirs[:] = [d for d in dirs if not peso_da_pasta(d)]
+        dirs[:] = ordem_da_varredura(dirs)
 
         
         for name in files:

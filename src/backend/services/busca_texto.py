@@ -63,6 +63,9 @@ def _recorte_de_linha(linha, destaque, limite):
     return ("…" if inicio > 0 else "") + recorte + ("…" if inicio + limite < len(texto) else "")
 
 
+PASTAS_DE_CONSULTA = {'docs', 'gerados', 'chats'}
+
+
 def peso_da_pasta(nome):
     baixo = nome.lower()
     if baixo in PASTAS_DE_TERCEIROS or baixo.startswith(('boost', 'qt5', 'qt6', 'qt-', 'qt_')):
@@ -70,9 +73,24 @@ def peso_da_pasta(nome):
     return 0
 
 
+def ordem_da_varredura(dirnames):
+    """Codigo do projeto ativo primeiro, depois documentacao e material gerado, por fim
+    os clones de bibliotecas.
+
+    A varredura tem orcamento de segundos e para quando ele acaba: varrer os projetos
+    hospedados em docs/ antes do src/ do proprio projeto gastava o orcamento todo antes
+    de chegar ao codigo que se procurava.
+    """
+    def prioridade(nome):
+        if peso_da_pasta(nome):
+            return 2
+        return 1 if nome.lower() in PASTAS_DE_CONSULTA else 0
+    return sorted(dirnames, key=lambda d: (prioridade(d), d.lower()))
+
+
 def _pastas_em_ordem(dirnames):
     aceitas = [d for d in dirnames if d not in PASTAS_IGNORADAS and not d.startswith(".")]
-    return sorted(aceitas, key=lambda d: (peso_da_pasta(d), d.lower()))
+    return ordem_da_varredura(aceitas)
 
 
 def busca_no_texto(texto, termo, limite=LIMITE_OCORRENCIAS):

@@ -268,17 +268,24 @@ def resumo_entradas(caminho_alvo, incluir_ocultos=False):
 def entradas_diretorio(caminho_alvo, incluir_ocultos=False):
     return resumo_entradas(caminho_alvo, incluir_ocultos)[0]
 
+_RE_ESCAPE_U4 = re.compile(r'\\u([0-9a-fA-F]{4})')
+_RE_ESCAPE_U8 = re.compile(r'\\U([0-9a-fA-F]{8})')
+
+
+def _decodificar_escape(m):
+    try:
+        return chr(int(m.group(1), 16))
+    except (ValueError, OverflowError):
+        return m.group(0)
+
+
 def normalizar_unicode(texto: str) -> str:
     """Normaliza para NFC e decodifica escapes Unicode literais (ex: 'ú' -> 'u').
     Resolve falha de match quando o arquivo grava acentos como 'ú' literal
     ou em mistura NFC/NFD."""
-    def _decod(m):
-        try:
-            return chr(int(m.group(1), 16))
-        except (ValueError, OverflowError):
-            return m.group(0)
-    texto = re.sub(r'\\u([0-9a-fA-F]{4})', _decod, texto)
-    texto = re.sub(r'\\U([0-9a-fA-F]{8})', _decod, texto)
+    if '\\u' in texto or '\\U' in texto:
+        texto = _RE_ESCAPE_U4.sub(_decodificar_escape, texto)
+        texto = _RE_ESCAPE_U8.sub(_decodificar_escape, texto)
     return unicodedata.normalize('NFC', texto)
 
 def aplicar_snapshot(entrada, reverso):
