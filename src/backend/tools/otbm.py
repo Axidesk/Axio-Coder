@@ -108,7 +108,7 @@ _CACHE_DE_AREAS = {}
         },
         "detalhar_vazios": {
             "tipo": "BOOLEAN",
-            "desc": "Para 'spawns': lista cada bloco SEM criatura (posicao, raio, e os blocos povoados num raio de 40 no mesmo andar ou +-1) - e o que separa um bloco de lixo, que nao tem caçada nenhuma por perto, de um sitio onde falta mesmo o bicho.",
+            "desc": "Para 'spawns': le o mapa inteiro (cerca de um minuto num mapa de 10 milhoes de tiles) e detalha cada bloco SEM criatura (posicao, raio, e os blocos povoados num raio de 40 no mesmo andar ou +-1) - e o que separa um bloco de lixo de um sitio de caçada - e diz quais dos blocos do ficheiro estao em posicao SEM TILE, que o editor de mapa larga no proximo save.",
             "padrao": False,
         },
     },
@@ -159,7 +159,7 @@ def tool_medir_mapa_otbm(
         if escolha == "portas":
             return _relato_portas(dados, caminho_relativo, ids, regiao, _teto(limite, 5000, LIMITE_PORTAS))
         if escolha == "spawns":
-            return _relato_spawns(caminho_relativo, alvo, spawn, _teto(limite), detalhar_vazios)
+            return _relato_spawns(caminho_relativo, alvo, spawn, _teto(limite), detalhar_vazios, dados)
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
     return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo', 'portas' ou 'spawns')."
@@ -415,7 +415,20 @@ def _relato_resumo(dados, rotulo):
     )
 
 
-def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
+def _monstros_do_datapack(caminho_mapa):
+    caminho = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(caminho_mapa))), "monster", "monsters.xml"
+    )
+    if not os.path.isfile(caminho):
+        return set()
+    try:
+        raiz = ET.parse(caminho).getroot()
+    except (ET.ParseError, OSError):
+        return set()
+    return {(no.get("name") or "").lower() for no in raiz if no.tag == "monster"}
+
+
+def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, dados=None):
     if not str(caminho_spawn or "").strip():
         caminho_spawn = os.path.join(os.path.dirname(caminho_mapa), "spawn.xml")
     else:
@@ -443,6 +456,8 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
     blocos = raiz.findall("spawn")
     sem_criatura = len(re.findall(r"<spawn[^>]*/>", texto))
     monstros = npcs = 0
+    monstros_do_datapack = _monstros_do_datapack(caminho_mapa)
+    npcs_com_nome_de_monstro = []
     fora = []
     quantos = {}
     vazios = []
@@ -466,6 +481,8 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
                 monstros += 1
             elif criatura.tag == "npc":
                 npcs += 1
+                if (criatura.get("name") or "").lower() in monstros_do_datapack:
+                    npcs_com_nome_de_monstro.append(criatura.get("name") or "?")
             else:
                 continue
             deslocamento = (int(criatura.get("x") or 0), int(criatura.get("y") or 0))
@@ -493,6 +510,27 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
             f"    [{x}, {y}, {z}] raio {raio}: {tag} '{nome}' em {dx:+d},{dy:+d}"
             for (x, y, z), raio, tag, nome, (dx, dy) in fora[:limite]
         ]
+    if npcs_com_nome_de_monstro:
+        linhas.append(
+            f"  NPC COM NOME DE MONSTRO ({len(npcs_com_nome_de_monstro)}): {', '.join(sorted(set(npcs_com_nome_de_monstro)))}"
+        )
+        linhas.append(
+            "    o editor de mapa procura a criatura pelo NOME, encontra o monstro homonimo e grava-o como monstro - o NPC desaparece no proximo save."
+        )
+    if detalhar and dados is not None:
+        centros = {centro for centro, _ in vazios} | {centro for centro, _ in povoados}
+        if centros:
+            com_tile = set()
+            for tx, ty, tz, _, _, _ in _tiles(dados):
+                chave = (tx, ty, tz)
+                if chave in centros:
+                    com_tile.add(chave)
+            sem_tile = sorted(centros - com_tile)
+            if sem_tile:
+                linhas.append(
+                    f"  BLOCOS EM POSICAO SEM TILE ({len(sem_tile)}) - o editor larga-os no save, nao ha tile onde guardar o bloco:"
+                )
+                linhas += [f"    {x}, {y}, {z}" for x, y, z in sem_tile[:limite]]
     if detalhar and vazios:
         cascas = sum(1 for centro, _ in vazios if centro in nascem_em)
         linhas.append(
