@@ -447,6 +447,7 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
     quantos = {}
     vazios = []
     povoados = []
+    nascem_em = {}
     for bloco in blocos:
         centro = (
             int(bloco.get("centerx") or 0),
@@ -468,6 +469,9 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
             else:
                 continue
             deslocamento = (int(criatura.get("x") or 0), int(criatura.get("y") or 0))
+            nascem_em.setdefault(
+                (centro[0] + deslocamento[0], centro[1] + deslocamento[1], centro[2]), []
+            ).append(criatura.get("name") or "?")
             if abs(deslocamento[0]) > raio or abs(deslocamento[1]) > raio:
                 fora.append(
                     (centro, raio, criatura.tag, criatura.get("name") or "?", deslocamento)
@@ -490,9 +494,15 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
             for (x, y, z), raio, tag, nome, (dx, dy) in fora[:limite]
         ]
     if detalhar and vazios:
+        cascas = sum(1 for centro, _ in vazios if centro in nascem_em)
         linhas.append(
             f"  BLOCOS SEM CRIATURA ({len(vazios)}) - posicao, raio, e os blocos povoados num raio de 40:"
         )
+        if cascas:
+            linhas.append(
+                f"    ({cascas} deles sao CASCA: o centro e o tile onde nasce uma criatura de OUTRO"
+                " bloco - nao falta bicho nenhum ali)"
+            )
         for (vx, vy, vz), raio in vazios:
             perto = []
             for (px, py, pz), nomes_do_bloco in povoados:
@@ -510,7 +520,14 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False):
                 f"a {distancia} em {px},{py},{pz}: {', '.join(nomes_do_bloco[:4])}"
                 for distancia, (px, py, pz), nomes_do_bloco in perto[:3]
             )
-            linhas.append(f"    [{vx}, {vy}, {vz}] raio {raio}: {len(perto)} vizinho(s) - {amostra}")
+            marca = ""
+            if (vx, vy, vz) in nascem_em:
+                marca = (
+                    f" | CASCA: nasce {', '.join(nascem_em[(vx, vy, vz)][:4])} neste tile por OUTRO bloco"
+                )
+            linhas.append(
+                f"    [{vx}, {vy}, {vz}] raio {raio}: {len(perto)} vizinho(s) - {amostra}{marca}"
+            )
     return "\n".join(linhas)
 
 
