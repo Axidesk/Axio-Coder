@@ -11,7 +11,7 @@ import subprocess
 from src.backend.state import emit_event
 from src.backend.tools import cpp
 from src.backend.tools.registry import register
-from src.backend.services.file_service import resolver_caminho, conteudo_de_revisao
+from src.backend.services.file_service import resolver_caminho, conteudo_de_revisao, codificacao_do_ficheiro
 
 
 def _mapear_javascript(linhas):
@@ -114,7 +114,7 @@ def tool_mapear_codigo(caminho_relativo: str):
     try:
         mapa = []
         if caminho_relativo.endswith('.py'):
-            with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(caminho_absoluto, 'r', encoding=codificacao_do_ficheiro(caminho_absoluto)) as f:
                 conteudo = f.read()
             try:
                 arvore = ast.parse(conteudo)
@@ -130,7 +130,7 @@ def tool_mapear_codigo(caminho_relativo: str):
             except SyntaxError:
                 mapa.append("ERRO: Falha ao fazer parse do AST (erro de sintaxe no Python).")
         else:
-            with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(caminho_absoluto, 'r', encoding=codificacao_do_ficheiro(caminho_absoluto)) as f:
                 linhas = f.readlines()
             if caminho_relativo.endswith(('.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs')):
                 mapa = _mapear_javascript(linhas)
@@ -159,7 +159,7 @@ def _ler_um_arquivo(caminho_relativo):
     caminho_absoluto, erro_caminho = _resolver_arquivo_existente(caminho_relativo)
     if erro_caminho: return erro_caminho
     try:
-        with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(caminho_absoluto, 'r', encoding=codificacao_do_ficheiro(caminho_absoluto)) as f:
             conteudo = f.read()
             num_linhas = conteudo.count("\n") + 1
             if len(conteudo) > 25000 or num_linhas > 600:
@@ -282,7 +282,7 @@ def tool_ler_trecho_arquivo(caminho_relativo: str, linha_inicio: int = 1, linha_
         caminho_absoluto, erro_caminho = _resolver_arquivo_existente(caminho_relativo)
         if erro_caminho: return erro_caminho
         try:
-            with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(caminho_absoluto, 'r', encoding=codificacao_do_ficheiro(caminho_absoluto)) as f:
                 linhas = f.readlines()
         except Exception as e: return f"ERRO: {str(e)}"
     if trechos:
@@ -308,7 +308,7 @@ def tool_ler_assinaturas(caminho_relativo: str):
     caminho_absoluto, erro_caminho = _resolver_arquivo_existente(caminho_relativo)
     if erro_caminho: return erro_caminho
     try:
-        with open(caminho_absoluto, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(caminho_absoluto, 'r', encoding=codificacao_do_ficheiro(caminho_absoluto)) as f:
             linhas = f.readlines()
     except Exception as e:
         return f"ERRO: {str(e)}"

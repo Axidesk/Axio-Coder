@@ -195,6 +195,21 @@ def conteudo_de_revisao(caminho_relativo, revisao):
         return None, f"ERRO: '{rel}' nao existe na revisao {revisao} ({erro_git})."
     return texto, None
 
+def codificacao_do_ficheiro(caminho_absoluto):
+    """A codificacao em que o ficheiro esta gravado, para o ler sem descartar caracteres."""
+    try:
+        with open(caminho_absoluto, "rb") as f:
+            bruto = f.read()
+    except OSError:
+        return "utf-8"
+    for codificacao in ("utf-8", "cp1252"):
+        try:
+            bruto.decode(codificacao)
+            return codificacao
+        except UnicodeDecodeError:
+            continue
+    return "latin-1"
+
 def buscar_em_revisao(termo, revisao, raiz_projeto):
     """Procura `termo` (literal, NFC) nos ficheiros de texto de uma revisao git.
 
