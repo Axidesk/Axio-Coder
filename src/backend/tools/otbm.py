@@ -27,6 +27,7 @@ LADO_DA_AREA = 256
 LIMITE_VAZIOS = 200
 LIMITE_ITENS = 20
 LIMITE_PORTAS = 200
+LIMITE_CELULAS = 40000
 TIPO_ITEM = 6
 IDS_PORTA = (1223, 1225, 1241, 1243, 1255, 1257, 3542, 3551)
 IDS_PORTA_NIVEL = (1227, 1229, 1245, 1247, 1259, 1261, 3540, 3549)
@@ -53,7 +54,9 @@ _CACHE_DE_AREAS = {}
     "cada um - e como so o action id faz a porta selar e fechar depois de passar, a lista diz logo quais "
     "estao sem ele. 'spawns' le o ficheiro de spawn ao lado do mapa e conta os blocos, as criaturas, os "
     "blocos sem criatura nenhuma e as POSICOES REPETIDAS - que sao as que fazem o editor de mapa recusar a "
-    "segunda e avisar 'Duplicate spawn on position', deixando um bloco grande e vazio no ecra.",
+    "segunda e avisar 'Duplicate spawn on position', deixando um bloco grande e vazio no ecra. "
+    "'ponto' com 'regiao' desenha a REGIAO em GRADE, um sinal por tile - e a forma de olhar para a "
+    "vizinhanca de um ponto (a parede, a porta e o vao) sem escrever dezenas de coordenadas.",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -63,7 +66,7 @@ _CACHE_DE_AREAS = {}
         },
         "acao": {
             "tipo": "STRING",
-            "desc": "'ponto' (o tile de x,y,z), 'vazios' (tiles sem chao nem item), 'resumo' (contagens do mapa inteiro), 'portas' (itens de porta numa regiao, com o action id de cada um) ou 'spawns' (o ficheiro de spawn: blocos, criaturas e posicoes repetidas).",
+            "desc": "'ponto' (o tile de x,y,z; com 'regiao' desenha a regiao em grade), 'vazios' (tiles sem chao nem item), 'resumo' (contagens do mapa inteiro), 'portas' (itens de porta numa regiao, com o action id de cada um) ou 'spawns' (o ficheiro de spawn: blocos, criaturas e posicoes repetidas; com 'criatura' procura uma criatura pelo nome).",
             "padrao": "ponto",
         },
         "x": {
@@ -98,7 +101,7 @@ _CACHE_DE_AREAS = {}
         },
         "regiao": {
             "tipo": "STRING",
-            "desc": "Para 'portas': a caixa onde procurar, 'x1,y1,x2,y2' e opcionalmente o andar, 'x1,y1,x2,y2,z'. Vazio varre o mapa todo - sempre que possivel passe a caixa, que poupa a leitura das areas de fora.",
+            "desc": "A caixa 'x1,y1,x2,y2' com o andar opcional, 'x1,y1,x2,y2,z'. Em 'portas' e onde procurar - vazio varre o mapa todo. Em 'ponto' desenha a regiao EM GRADE, um sinal por tile, e exige o andar.",
             "padrao": "",
         },
         "spawn": {
@@ -110,6 +113,11 @@ _CACHE_DE_AREAS = {}
             "tipo": "BOOLEAN",
             "desc": "Para 'spawns': le o mapa inteiro (cerca de um minuto num mapa de 10 milhoes de tiles) e detalha cada bloco SEM criatura (posicao, raio, e os blocos povoados num raio de 40 no mesmo andar ou +-1) - e o que separa um bloco de lixo de um sitio de caçada - e diz quais dos blocos do ficheiro estao em posicao SEM TILE, que o editor de mapa larga no proximo save.",
             "padrao": False,
+        },
+        "criatura": {
+            "tipo": "STRING",
+            "desc": "Para 'spawns': um nome de criatura (ou parte dele, sem ligar a maiusculas) e a ferramenta lista cada sitio onde ela nasce - tile, bloco, raio e deslocamento. Acha o MONSTRO e o NPC de nome igual: 'demon skeleton' devolve os dois.",
+            "padrao": "",
         },
     },
 )
@@ -125,6 +133,7 @@ def tool_medir_mapa_otbm(
     regiao="",
     spawn="",
     detalhar_vazios=False,
+    criatura="",
 ):
     emit_event("executing", function=f"Medindo mapa OTBM: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
@@ -147,6 +156,9 @@ def tool_medir_mapa_otbm(
     escolha = str(acao or "ponto").strip().lower()
     try:
         if escolha in ("ponto", "pontos"):
+            caixa = _caixa_pedida(regiao)
+            if caixa is not None:
+                return _relato_regiao(dados, caminho_relativo, caixa)
             lista = _pontos_pedidos(pontos, x, y, z)
             if not lista:
                 return "ERRO: nenhuma coordenada valida em 'pontos' (escreve x,y,z por linha)."
@@ -159,7 +171,9 @@ def tool_medir_mapa_otbm(
         if escolha == "portas":
             return _relato_portas(dados, caminho_relativo, ids, regiao, _teto(limite, 5000, LIMITE_PORTAS))
         if escolha == "spawns":
-            return _relato_spawns(caminho_relativo, alvo, spawn, _teto(limite), detalhar_vazios, dados)
+            return _relato_spawns(
+                caminho_relativo, alvo, spawn, _teto(limite), detalhar_vazios, dados, criatura
+            )
     except ValueError as falha:
         return f"ERRO: o mapa '{caminho_relativo}' tem um no sem fecho ({falha})."
     return f"ERRO: acao desconhecida '{acao}' (usa 'ponto' ou 'pontos', 'vazios', 'resumo', 'portas' ou 'spawns')."
@@ -354,6 +368,72 @@ def _relato_ponto(dados, rotulo, x, y, z):
     )
 
 
+def _relato_regiao(dados, rotulo, caixa):
+    x0, y0, x1, y1, andares = caixa
+    if not andares or len(andares) != 1:
+        return (
+            "ERRO: para desenhar a regiao escreve x1,y1,x2,y2 e UM andar z "
+            "(ex: 32656,31674,32676,31678,15)."
+        )
+    z = next(iter(andares))
+    x0, x1 = min(x0, x1), max(x0, x1)
+    y0, y1 = min(y0, y1), max(y0, y1)
+    largura = x1 - x0 + 1
+    altura = y1 - y0 + 1
+    if largura * altura > LIMITE_CELULAS:
+        return (
+            f"ERRO: a regiao tem {largura}x{altura} = {largura * altura} tiles e o maximo e "
+            f"{LIMITE_CELULAS}; divide em regioes menores."
+        )
+    celulas = _celulas_da_regiao(dados, x0, y0, x1, y1, z)
+    linhas = [f"MAPA '{rotulo}': regiao x {x0}..{x1}, y {y0}..{y1}, z {z}"]
+    linhas.append("      " + "".join("|" if px % 10 == 0 else " " for px in range(x0, x1 + 1)))
+    for py in range(y0, y1 + 1):
+        linha = "".join(_sinal_da_celula(celulas.get((px, py))) for px in range(x0, x1 + 1))
+        linhas.append(f"{py} {linha}")
+    linhas.append(
+        "  '.' sem tile | '?' tile sem chao nem item | ',' so chao | '/' chao com atributos | "
+        "'*' chao com item | 'D' porta"
+    )
+    itens = {}
+    com_item = []
+    for (px, py), tile in sorted(celulas.items()):
+        for item in tile["itens"]:
+            identificador = item.get("id")
+            itens[identificador] = itens.get(identificador, 0) + 1
+            com_item.append((px, py, item))
+    if itens:
+        linhas.append("ITENS POR ID:")
+        linhas += [
+            f"  {identificador}: {quantos}"
+            for identificador, quantos in sorted(itens.items(), key=lambda par: (-par[1], par[0]))
+        ]
+        linhas.append("CELULAS COM ITEM:")
+        for px, py, item in com_item[:LIMITE_ITENS]:
+            linhas.append(f"  [{px}, {py}, {z}] {_linha_do_item(item)}")
+        if len(com_item) > LIMITE_ITENS:
+            linhas.append(f"  ... e mais {len(com_item) - LIMITE_ITENS}")
+    return "\n".join(linhas)
+
+
+def _celulas_da_regiao(dados, x0, y0, x1, y1, z):
+    celulas = {}
+    for base, inicio in _areas(dados):
+        if base[2] != z:
+            continue
+        if base[0] > x1 or base[0] + LADO_DA_AREA - 1 < x0:
+            continue
+        if base[1] > y1 or base[1] + LADO_DA_AREA - 1 < y0:
+            continue
+        indice = inicio
+        while dados[indice] == NODE_START:
+            tile = _tile(dados, indice, base)
+            if x0 <= tile["x"] <= x1 and y0 <= tile["y"] <= y1:
+                celulas[(tile["x"], tile["y"])] = tile
+            indice = tile["fim"]
+    return celulas
+
+
 def _relato_vazios(dados, rotulo, limite):
     total = 0
     caixa = [None, None, None, None]
@@ -428,7 +508,9 @@ def _monstros_do_datapack(caminho_mapa):
     return {(no.get("name") or "").lower() for no in raiz if no.tag == "monster"}
 
 
-def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, dados=None):
+def _relato_spawns(
+    rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, dados=None, criatura=""
+):
     if not str(caminho_spawn or "").strip():
         caminho_spawn = os.path.join(os.path.dirname(caminho_mapa), "spawn.xml")
     else:
@@ -453,6 +535,7 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, 
     if raiz.tag != "spawns":
         return f"ERRO: '{caminho_spawn}' tem <{raiz.tag}> na raiz; o TFS espera <spawns>."
 
+    alvo_criatura = str(criatura or "").strip().lower()
     blocos = raiz.findall("spawn")
     sem_criatura = len(re.findall(r"<spawn[^>]*/>", texto))
     monstros = npcs = 0
@@ -463,6 +546,7 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, 
     vazios = []
     povoados = []
     nascem_em = {}
+    achados = []
     for bloco in blocos:
         centro = (
             int(bloco.get("centerx") or 0),
@@ -476,23 +560,24 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, 
             povoados.append((centro, nomes_do_bloco))
         else:
             vazios.append((centro, raio))
-        for criatura in bloco:
-            if criatura.tag == "monster":
+        for elemento in bloco:
+            nome = elemento.get("name") or "?"
+            if elemento.tag == "monster":
                 monstros += 1
-            elif criatura.tag == "npc":
+            elif elemento.tag == "npc":
                 npcs += 1
-                if (criatura.get("name") or "").lower() in monstros_do_datapack:
-                    npcs_com_nome_de_monstro.append(criatura.get("name") or "?")
+                if nome.lower() in monstros_do_datapack:
+                    npcs_com_nome_de_monstro.append(nome)
             else:
                 continue
-            deslocamento = (int(criatura.get("x") or 0), int(criatura.get("y") or 0))
+            deslocamento = (int(elemento.get("x") or 0), int(elemento.get("y") or 0))
             nascem_em.setdefault(
                 (centro[0] + deslocamento[0], centro[1] + deslocamento[1], centro[2]), []
-            ).append(criatura.get("name") or "?")
+            ).append(nome)
+            if alvo_criatura and alvo_criatura in nome.lower():
+                achados.append((nome, elemento.tag, centro, raio, deslocamento))
             if abs(deslocamento[0]) > raio or abs(deslocamento[1]) > raio:
-                fora.append(
-                    (centro, raio, criatura.tag, criatura.get("name") or "?", deslocamento)
-                )
+                fora.append((centro, raio, elemento.tag, nome, deslocamento))
 
     repetidas = sorted(posicao for posicao, total in quantos.items() if total > 1)
     linhas = [
@@ -501,6 +586,8 @@ def _relato_spawns(rotulo, caminho_mapa, caminho_spawn, limite, detalhar=False, 
         f"  blocos sem criatura nenhuma: {sem_criatura}",
         f"  posicoes repetidas: {len(repetidas)}",
     ]
+    if alvo_criatura:
+        linhas += _linhas_da_criatura(alvo_criatura, achados, limite)
     if repetidas:
         linhas.append("  REPETIDAS (o editor recusa a segunda e avisa 'Duplicate spawn'):")
         linhas += [f"    {x}, {y}, {z} - {quantos[(x, y, z)]} blocos" for x, y, z in repetidas[:limite]]
@@ -958,6 +1045,21 @@ def _linhas_do_tile(rotulo, tile):
     return linhas
 
 
+def _linhas_da_criatura(alvo, achados, limite):
+    if not achados:
+        return [f"  CRIATURA '{alvo}': nenhuma nasce neste ficheiro."]
+    ninhos = {centro for _, _, centro, _, _ in achados}
+    linhas = [f"  CRIATURA '{alvo}': {len(achados)} nascem em {len(ninhos)} bloco(s)."]
+    for nome, tag, centro, raio, (dx, dy) in achados[:limite]:
+        linhas.append(
+            f"    {tag} '{nome}' nasce em {centro[0] + dx}, {centro[1] + dy}, {centro[2]} "
+            f"| bloco {centro[0]}, {centro[1]}, {centro[2]} raio {raio} desloc {dx:+d},{dy:+d}"
+        )
+    if len(achados) > limite:
+        linhas.append(f"    ... e mais {len(achados) - limite}")
+    return linhas
+
+
 def _linhas_das_portas(rotulo, alvos, caixa, achados, limite):
     onde = "o mapa todo" if caixa is None else f"a caixa {caixa[0]}..{caixa[2]} x {caixa[1]}..{caixa[3]}"
     com_acao = [a for a in achados if a[3].get("acao")]
@@ -1008,6 +1110,17 @@ def _linha_do_item(info):
     if "resto" in info:
         partes.append(f"resto {info['resto']}")
     return " | ".join(partes)
+
+
+def _sinal_da_celula(tile):
+    if tile is None:
+        return "."
+    itens = tile["itens"]
+    if any(item.get("id") in IDS_PORTA or item.get("id") in IDS_PORTA_NIVEL for item in itens):
+        return "D"
+    if tile["atributos"].get("chao") is None and tile["casa"] is None:
+        return "/" if itens else "?"
+    return "*" if itens else ","
 
 
 def _sentido_da_porta(info):

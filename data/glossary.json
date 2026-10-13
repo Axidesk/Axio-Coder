@@ -959,10 +959,10 @@
       "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
       "localizacao": {
         "arquivo": "src/backend/services/file_service.py",
-        "linha": 616,
+        "linha": 623,
         "conferido": [
-          1790905803.842,
-          33364
+          1791849409.175,
+          33519
         ]
       }
     },
@@ -2306,10 +2306,10 @@
       "descricao": "Busca da arvore de ficheiros: acha um trecho colado mesmo com indentacao, tabs, quebras de linha ou linhas coladas sem separador, porque compara com TODO o espaco em branco removido dos dois lados. Consumida pela rota /api/search_files (src/backend/routes/editor.py) e pelo #explorer-search-input (src/frontend/js/editor/workspace.js:performExplorerSearch).",
       "localizacao": {
         "arquivo": "src/backend/services/busca_texto.py",
-        "linha": 126,
+        "linha": 144,
         "conferido": [
-          1791639455.051,
-          6130
+          1791849251.395,
+          6757
         ]
       }
     },
@@ -3858,10 +3858,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 585,
+        "linha": 587,
         "conferido": [
-          1790965358.091,
-          39326
+          1791838355.062,
+          39460
         ]
       }
     },
@@ -3878,10 +3878,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 542,
+        "linha": 544,
         "conferido": [
-          1790965358.091,
-          39326
+          1791838355.062,
+          39460
         ]
       }
     },
@@ -3958,10 +3958,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 854,
+        "linha": 856,
         "conferido": [
-          1790965358.091,
-          39326
+          1791838355.062,
+          39460
         ]
       }
     },
@@ -3978,10 +3978,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 705,
+        "linha": 707,
         "conferido": [
-          1790965358.091,
-          39326
+          1791838355.062,
+          39460
         ]
       }
     },
@@ -3998,10 +3998,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 618,
+        "linha": 620,
         "conferido": [
-          1790965358.091,
-          39326
+          1791838355.062,
+          39460
         ]
       }
     },
@@ -6574,8 +6574,8 @@
         "arquivo": "src/backend/tools/browse.py",
         "linha": 151,
         "conferido": [
-          1791746660.307,
-          26523
+          1791849257.151,
+          26587
         ]
       }
     },
@@ -6897,6 +6897,30 @@
         "conferido": [
           1791768095.107,
           38123
+        ]
+      }
+    },
+    {
+      "termo": "gw",
+      "aliases": [
+        "comando gw",
+        "waypoint do gm",
+        "teleportar por coordenada",
+        "goto",
+        "ir pra posicao",
+        "teleporte do gm",
+        "comando de gm pra ir pra coordenada",
+        "/goto coordenada",
+        "comando pra ir direto pra posicao"
+      ],
+      "identificador": "gotoWaypoints / teleportTo / strToPosition",
+      "descricao": "Comandos de GM que teletransportam, em Solution/src/commands.cpp (a lista registada em ~80, as assinaturas em commands.h). /gw <nome> le um waypoint da tabela `waypoints` do banco; /goto <nome> aceita waypoint OU nome de criatura. Desde 2026-10-13 os dois aceitam tambem coordenada direta (x,y,z ou x y z), pelo parser strToPosition em tools.h/tools.cpp — sem passar pelo banco.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Solution/src/commands.cpp",
+        "linha": 129,
+        "conferido": [
+          1791847787.419,
+          63870
         ]
       }
     }
