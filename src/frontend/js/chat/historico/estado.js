@@ -54,6 +54,17 @@ import { state } from '../state.js';
             }))
         };
     }
+    function serializeGroupLeve(g) {
+        return {
+            id: g.id,
+            timestamp: g.timestamp || '',
+            commit: g.commit || '',
+            duration: g.duration || 0,
+            nFerramentas: (g.tools || []).length || g.nFerramentas || 0,
+            sessao: g.__session || '',
+            arquivos: (g.files || []).map(f => ({ name: f.name, deleted: !!f.deleted }))
+        };
+    }
     async function saveCurrentTurnSession() {
         if (!state.currentTurnLogs.length) return {};
         const payload = {
@@ -67,6 +78,10 @@ import { state } from '../state.js';
                 body: JSON.stringify(payload)
             });
             const dados = await resp.json();
+            if (dados && dados.filename) state.sessionLogArquivo = dados.filename;
+            if (state.sessionLogArquivo) {
+                state.currentTurnLogs.forEach(g => { g.__session = state.sessionLogArquivo; });
+            }
             _autosaveIntervalo = _intervaloDoAutosave(dados && dados.bytes);
         } catch (e) {
             console.error('Erro ao salvar log da sessão:', e);
@@ -125,5 +140,7 @@ export {
     saveCheckpointState,
     saveCurrentTurnSession,
     agendarAutosaveDoTurno,
-    pararAutosaveDoTurno
+    pararAutosaveDoTurno,
+    serializeGroup,
+    serializeGroupLeve
 };

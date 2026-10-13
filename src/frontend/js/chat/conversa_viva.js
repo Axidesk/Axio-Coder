@@ -6,9 +6,40 @@ const CLASSES_TRANSIENTES = ['conversa-saindo', 'conversa-busca-fora', 'conversa
 const ATRIBUTO_DE_ESCUTA = 'data-listener-attached';
 
 const rearranjos = [];
+const blocos = new Map();
 
 export function aoRestaurar(fn) {
     if (typeof fn === 'function') rearranjos.push(fn);
+}
+
+export function registrarBloco(chave, capturar, restaurar) {
+    if (typeof capturar === 'function' && typeof restaurar === 'function') {
+        blocos.set(chave, { capturar, restaurar });
+    }
+}
+
+function capturarBlocos(quantas) {
+    const guardados = {};
+    blocos.forEach((bloco, chave) => {
+        try {
+            const valor = bloco.capturar(quantas);
+            if (valor !== undefined) guardados[chave] = valor;
+        } catch (e) {
+            console.error('Falha ao capturar o bloco ' + chave + ':', e);
+        }
+    });
+    return guardados;
+}
+
+function restaurarBlocos(guardados) {
+    blocos.forEach((bloco, chave) => {
+        if (!guardados || !(chave in guardados)) return;
+        try {
+            bloco.restaurar(guardados[chave]);
+        } catch (e) {
+            console.error('Falha ao restaurar o bloco ' + chave + ':', e);
+        }
+    });
 }
 
 function paineis() {
@@ -45,7 +76,7 @@ export function guardarConversa() {
         if (!dados.some((dado) => dado.html)) return false;
         // painel vazio NAO apaga o que ja esta guardado: um bug que limpe a tela nao leva a conversa com ele.
         try {
-            sessionStorage.setItem(CHAVE, JSON.stringify(dados));
+            sessionStorage.setItem(CHAVE, JSON.stringify({ paineis: dados, blocos: capturarBlocos(quantas) }));
             return true;
         } catch (e) {
             // sem espaco: tenta de novo com menos rodadas guardadas
@@ -61,12 +92,14 @@ export function restaurarConversa() {
     } catch (e) {
         dados = null;
     }
-    if (!Array.isArray(dados) || !dados.length) return false;
+    const paineisGuardados = Array.isArray(dados) ? dados : ((dados && dados.paineis) || []);
+    const blocosGuardados = (dados && !Array.isArray(dados) && dados.blocos) || {};
+    if (!Array.isArray(paineisGuardados) || !paineisGuardados.length) return false;
     const partes = paineis();
     if (!partes.length) return false;
     const comConteudo = [];
     partes.forEach((par, indice) => {
-        const guardado = dados[indice];
+        const guardado = paineisGuardados[indice];
         if (!guardado || !guardado.html) return;
         par.inner.classList.add('conversa-restaurada');
         par.inner.innerHTML = guardado.html;
@@ -81,6 +114,7 @@ export function restaurarConversa() {
         comConteudo.forEach((item) => item.par.inner.classList.remove('conversa-restaurada'));
         assentarRolagem();
     }, 320);
+    restaurarBlocos(blocosGuardados);
     rearranjos.forEach((fn) => {
         try {
             fn();

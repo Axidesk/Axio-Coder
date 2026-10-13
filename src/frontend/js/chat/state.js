@@ -27,6 +27,7 @@ export const state = {
     codigoDoHistoricoNoEditor: false,
     vistaDocAtual: 'chat',
     sessionHistoryList: [],
+    sessionLogArquivo: '',
     sessionDetailCache: {},
     sessionIndiceEmCurso: null,
     versoesGit: null,

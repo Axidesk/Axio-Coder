@@ -3,9 +3,9 @@ import * as dom from './dom.js';
 import { renderImagePreviews } from './attach.js';
 import { atualizarBotoesUndoRedo, createChildBalloon, gerarSnippetHtml, restaurarPastaSelecionada, sincronizarArquivosEmTempoReal } from './files.js';
 import { repintarCol3Aberta } from './historico/acoes.js';
-import { createLogGroupCard, roundMetaHtml } from './historico/cards.js';
+import { createLogGroupCard, rebuildGroupFromSaved, roundMetaHtml } from './historico/cards.js';
 import { epochDeId } from './historico/checkpoint.js';
-import { fetchSessionHistoryData, saveCurrentTurnSession, agendarAutosaveDoTurno, pararAutosaveDoTurno } from './historico/estado.js';
+import { fetchSessionHistoryData, saveCurrentTurnSession, agendarAutosaveDoTurno, pararAutosaveDoTurno, serializeGroupLeve } from './historico/estado.js';
 import { prefetchSessionDetails, preloadSessionHistory } from './historico/painel.js';
 import { activateWorkspaceIcon, escrevendoNoChat, esconderChip, renderCurrentSessionLogs, resetSendButton, resetTurnUI, setLogsLoading, showAlert, showWorkspaceView } from './ui.js';
 import { escapeHtml } from './escape.js';
@@ -13,7 +13,7 @@ import { formatMessage, formatInlineText, formatInline } from './markdown.js';
 import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _formatExecutingStatus, _resumoNavegacao, _pararPlanoEmCurso, criarBlocoEtapas, pintarBlocoEtapas, etapaDePlano, marcarEtapaDoPlano } from './plan_cards.js';
 import { reavaliarBuscaChat } from './busca_chat.js';
 import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
-import { aoRestaurar, esquecerConversa, guardarConversa, reiniciarAInterface } from './conversa_viva.js';
+import { aoRestaurar, esquecerConversa, guardarConversa, reiniciarAInterface, registrarBloco } from './conversa_viva.js';
 
 const { alertPopup, alertPopupContent, btnSend, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, contextAcumuladaFill, contextInfoLimite, contextSessaoFill, contextUsage, contextUsageAcumulada, contextUsageFill, contextUsageLabel, contextUsageSessao, currentLogsList, currentLogsWrapper, inputText, lblExecuting, lblFolder, lblMetrics, lblStatus, terminalMode } = dom;
 
@@ -22,6 +22,8 @@ let currentPlanContainer = null;
 aoRestaurar(() => {
     [chatInnerLeft, chatInnerRight].forEach((painel) => attachCodeBlockListeners(painel));
 });
+
+registrarBloco('logs', capturarLogsDaLimite, restaurarLogsDaLimite);
 
 function corDeUsoContexto(pct, emExecucao) {
     if (emExecucao) return { cor: 'var(--azul-acao)', glow: 'var(--azul-glow)' };
@@ -270,6 +272,35 @@ function _initCurrentGroupBalloon(titleText, isAnalysis) {
         currentLogsWrapper.querySelectorAll('.log-card').forEach(el => el.classList.remove('log-card-active'));
     }
     card.classList.add('log-card-active');
+}
+
+function capturarLogsDaLimite(quantas) {
+    return (window.sessionLogsData || []).slice(-quantas).map(serializeGroupLeve);
+}
+
+function restaurarLogsDaLimite(guardados) {
+    if (!currentLogsWrapper || !Array.isArray(guardados) || !guardados.length) return;
+    window.sessionLogsData = [];
+    guardados.forEach((salvo) => {
+        if (!salvo || !salvo.id) return;
+        const grupo = rebuildGroupFromSaved({
+            id: salvo.id,
+            timestamp: salvo.timestamp,
+            commit: salvo.commit,
+            duration: salvo.duration,
+            nFerramentas: salvo.nFerramentas,
+            files: (salvo.arquivos || []).map((f) => ({ name: f.name, deleted: !!f.deleted }))
+        });
+        if (salvo.sessao) grupo.__saved = { id: salvo.id, __leve: true, __session: salvo.sessao };
+        const card = createLogGroupCard(grupo);
+        grupo.timeSpan.textContent = grupo.timestamp || '';
+        grupo.titleSpan.innerHTML = roundMetaHtml(grupo);
+        grupo.titleSpan.className = 'text-[11px] text-[var(--text-mutado)] truncate leading-tight pr-6';
+        currentLogsWrapper.insertBefore(card, currentLogsWrapper.firstChild);
+        window.sessionLogsData.push(grupo);
+    });
+    const primeiro = currentLogsWrapper.querySelector('.log-card');
+    if (primeiro) primeiro.classList.add('log-card-active');
 }
 
 

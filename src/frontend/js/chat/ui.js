@@ -416,9 +416,11 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         selectFirstSessionLogCard();
     }
     function resetWorkspaceUI(limparChat = true) {
-        window.sessionLogsData = [];
-        if (currentLogsWrapper) currentLogsWrapper.innerHTML = '';
-        state.currentTurnLogs = [];
+        if (limparChat) {
+            window.sessionLogsData = [];
+            if (currentLogsWrapper) currentLogsWrapper.innerHTML = '';
+            state.currentTurnLogs = [];
+        }
         state.currentTurnSummary = '';
         state.currentCheckpointId = null;
         state.checkpointRestoredAt = 0;

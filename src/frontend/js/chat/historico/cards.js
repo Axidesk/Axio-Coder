@@ -61,7 +61,7 @@ let cacheDoUltimoEnviadoValida = false;
         card.appendChild(timeSpan);
         card.appendChild(titleSpan);
         card.appendChild(spinner);
-        card.addEventListener('click', () => {
+        card.addEventListener('click', async () => {
             const vista = vistaDe('dock');
             const wasActive = card.classList.contains('log-card-active');
             const col2Open = !!vista.col2 && !vista.col2.classList.contains('panel-col-closed');
@@ -71,6 +71,14 @@ let cacheDoUltimoEnviadoValida = false;
             }
             document.querySelectorAll('.log-card').forEach(el => el.classList.remove('log-card-active'));
             card.classList.add('log-card-active');
+            if (group.__saved && group.__saved.__session && !group.__hidratado) {
+                try {
+                    await hidratarGroup(group);
+                    group.__hidratado = true;
+                } catch (e) {
+                    console.error('Falha ao carregar a rodada restaurada:', e);
+                }
+            }
             openFilesPanel(group, vista);
         });
         group.domElement = card;
