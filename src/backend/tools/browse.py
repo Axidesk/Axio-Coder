@@ -138,14 +138,14 @@ def tool_listar_arvore(caminho_relativo="", profundidade_max=4, max_entradas=400
 
 @register(
     "tool_localizar_arquivos",
-    "Acha um arquivo ou uma pasta pelo NOME, no projeto inteiro, sem navegar pasta a pasta: aceita um nome ('Tibia.url', 'Tibia.exe') ou varios padroes com curinga ('*.spr', 'world.otbm'), um por linha. Devolve o caminho relativo com tamanho e data, agrupado por padrao. Use isto SEMPRE que precisar do caminho exato de algo: adivinhar o caminho a partir da estrutura lida da 'nao existe' em arquivo que esta la, e dois arquivos com o mesmo nome (o cliente do jogo e o cliente do instalador) so se distinguem pela pasta onde vivem e pelo tamanho. Com no_sistema=true procura numa pasta DESTA MAQUINA, fora do projeto (o perfil do utilizador, Program Files) - e o caminho para achar os arquivos que um programa instalado guarda fora do projeto.",
+    "Acha um arquivo ou uma pasta pelo NOME, no projeto inteiro, sem navegar pasta a pasta: aceita um nome ('Tibia.url', 'Tibia.exe') ou varios padroes com curinga ('*.spr', 'world.otbm'), um por linha. Devolve o caminho relativo com tamanho e data, agrupado por padrao. Use isto SEMPRE que precisar do caminho exato de algo: adivinhar o caminho a partir da estrutura lida da 'nao existe' em arquivo que esta la, e dois arquivos com o mesmo nome (o cliente do jogo e o cliente do instalador) so se distinguem pela pasta onde vivem e pelo tamanho. Com no_sistema=true procura fora do projeto: por omissao no perfil do utilizador (%USERPROFILE%), ou na raiz indicada em 'pasta' - e o caminho para achar os arquivos que um programa instalado guarda fora do projeto.",
     {
         'nome': {"tipo": "STRING", "obrig": True, "padrao": "", "desc": "Um nome ou padrao, ou varios separados por quebra de linha (ex: 'Tibia.url\\n*.spr'). Sem curinga, casa por trecho do nome, sem distinguir maiusculas nem acentos."},
         'pasta': {"tipo": "STRING", "padrao": "", "desc": "Limita a procura a uma subpasta do projeto (ex: 'Tools/Compilador'). Com no_sistema=true, e um caminho absoluto desta maquina ou com variaveis de ambiente (%APPDATA%, %USERPROFILE%)."},
         'excluir': {"tipo": "STRING", "padrao": "", "desc": "Uma pasta por linha (ex: 'libs') para a varredura ignorar PELO NOME, em qualquer nivel da arvore."},
         'incluir_ignoradas': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura tambem dentro das pastas ignoradas por predefinicao (node_modules, .venv, .git, build, dist) - e o caminho para achar um arquivo dentro de uma dependencia instalada."},
         'limite': {"tipo": "INTEGER", "padrao": 60, "desc": "Teto de resultados por padrao (padrao 60)."},
-        'no_sistema': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura FORA do projeto, numa pasta desta maquina: 'pasta' passa a ser um caminho absoluto ou com variaveis de ambiente (ex: '%APPDATA%/Algum Programa', 'C:/Program Files/...'). E o caminho para achar a pasta de dados de um programa instalado (o editor de mapa, o XAMPP, o Visual Studio) e os arquivos que ele guarda no perfil do utilizador, sem sair a escrever um script. So LE nomes, tamanhos e datas."},
+        'no_sistema': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Procura FORA do projeto. Sem 'pasta', varre o PERFIL DO UTILIZADOR (%USERPROFILE%), que e onde os programas guardam os dados deles. Com 'pasta', varre essa raiz: caminho absoluto ou com variaveis de ambiente (ex: '%ProgramFiles%', 'C:/xampp', '%APPDATA%/Algum Programa'). E o caminho para achar a pasta de dados de um programa instalado (o editor de mapa, o XAMPP, o Visual Studio) e os arquivos que ele guarda no perfil do utilizador, sem sair a escrever um script. So LE nomes, tamanhos e datas."},
     },
 )
 def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", incluir_ignoradas: bool = False, limite: int = 60, no_sistema: bool = False):
@@ -450,6 +450,8 @@ def _excerto(linha, padrao):
 def _raiz_de_busca(pasta, no_sistema=False):
     raiz_projeto = estado["pasta_raiz"]
     if not pasta or not pasta.strip():
+        if no_sistema:
+            return os.path.expanduser("~"), ""
         return raiz_projeto, ""
     texto = pasta.strip().strip('"')
     if no_sistema:
