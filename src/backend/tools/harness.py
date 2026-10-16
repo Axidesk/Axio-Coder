@@ -23,7 +23,7 @@ import time
 from src.backend.config import APP_ROOT
 from src.backend.services import executaveis
 from src.backend.services.saida import linhas_com_termo, recortar_texto, repartir_teto
-from src.backend.state import emit_event, estado
+from src.backend.state import emit_event, estado, no_diretorio_do_axio
 from src.backend.tools.process import correr_como_card
 from src.backend.tools.registry import register
 
@@ -1813,12 +1813,14 @@ def _recortar_saida(texto, teto=0):
         return recortar_texto(texto, *repartir_teto(teto))
     return recortar_texto(texto)
 
-def _relatorio_execucao(proc, limite, linguagem, filtro="", teto=0):
+def _relatorio_execucao(proc, limite, linguagem, filtro="", teto=0, nota=""):
     veredito = "OK" if proc.returncode == 0 else f"FALHOU (codigo de saida {proc.returncode})"
     saida, cabeca = _filtrar_saida(proc.stdout, filtro, teto)
     partes = [f"TRECHO {linguagem}: {veredito} | limite {limite}s | ficheiro temporario apagado",
               "--- stdout ---",
               saida or "(vazio)"]
+    if nota:
+        partes.insert(1, nota)
     if cabeca:
         partes.insert(1, cabeca)
     aviso = _aviso_harness_velho()
@@ -1846,13 +1848,31 @@ def _rotulo_teste(trecho, padrao):
     return primeira[:100] or padrao
 
 def _interpretador_python():
-    return sys.executable
+    if no_diretorio_do_axio():
+        return sys.executable
+    return executaveis.python_do_projeto(estado.get("pasta_raiz") or "")
 
 def _interpretador_node():
     return shutil.which("node")
 
 def _interpretador_php():
     return executaveis.php()
+
+def _nota_interpretador(interpretador, raiz_projeto):
+    """Qual interpretador correu o trecho, dito na propria resposta.
+
+    Sem isto, uma sonda que corre no Python errado (sem as dependencias do projeto) parece
+    que correu bem ate rebentar num import - e a culpa cai no codigo testado.
+    """
+    if not interpretador:
+        return ""
+    alvo = os.path.abspath(interpretador)
+    if os.path.normcase(alvo) == os.path.normcase(os.path.abspath(sys.executable)):
+        return "interpretador: o do Axio"
+    raiz = os.path.abspath(raiz_projeto or "")
+    if raiz and os.path.normcase(alvo).startswith(os.path.normcase(raiz) + os.sep):
+        return "interpretador: " + os.path.relpath(alvo, raiz)
+    return "interpretador: " + alvo
 
 _TRECHOS = {
     "python": {
@@ -1924,11 +1944,12 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
                  "abria um servidor ou um loop sem fim, e esse o motivo; nada do projeto foi alterado.")
         parcial = _recortar_saida(resultado.stdout, teto)
         return f"{aviso}\n--- stdout (ate ao limite) ---\n{parcial}" if parcial.strip() else aviso
-    return _relatorio_execucao(resultado, limite, cfg["linguagem"], filtro, teto)
+    return _relatorio_execucao(resultado, limite, cfg["linguagem"], filtro, teto,
+                               _nota_interpretador(interpretador, raiz_projeto))
 
 @register(
     "tool_executar_python",
-    "Corre um trecho de codigo Python NUM PROCESSO NOVO (o mesmo interpretador que corre o Axio) e "
+    "Corre um trecho de codigo Python NUM PROCESSO NOVO (no venv do projeto aberto, quando ele tiver um; na pasta do Axio, no interpretador que corre o Axio) e "
     "devolve stdout, stderr e o codigo de saida. O trecho vai para um ficheiro temporario do sistema "
     "e e apagado no fim, por isso nada fica na pasta do projeto. E o caminho para PROVAR comportamento "
     "(um assert sobre a funcao real, um calculo, um resultado do despacho) em vez de criar scripts de "
@@ -1950,13 +1971,15 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
         "rotulo": {"tipo": "STRING", "desc": "Nome curto do que este trecho faz, para o card do terminal (ex: 'Bluesky: criar a app password'). Sem ele o card mostra a primeira linha com conteudo - e como quase todos os trechos comecam por imports iguais, probes distintos ficam com o mesmo nome e parecem o mesmo a repetir-se.", "padrao": ""},
         "filtro": {"tipo": "STRING", "desc": "Um ou mais termos, um por linha: volta so as linhas do stdout/stderr que contem algum deles, com a contagem do que casou. Use quando a saida for grande e so uma parte interessar (so os erros, so os nomes de uma pasta, so o que sobrou).", "padrao": ""},
         "teto_saida": {"tipo": "INTEGER", "desc": "Teto em caracteres para a saida devolvida (0 = o padrao, que corta entre as duas pontas). Passe o numero que o aviso de corte indicar quando precisar de ver o texto inteiro - ex: um censo, uma listagem longa.", "padrao": 0},
+        "interpretador": {"tipo": "STRING", "desc": "Caminho do python.exe a usar. Sem isto, o trecho corre no venv do PROJETO aberto quando ele tiver um (.venv/venv/env) e, na pasta do Axio, no interpretador que corre o Axio. Passe o caminho quando o projeto tiver mais do que um ambiente. O interpretador usado vem dito na resposta.", "padrao": ""},
     },
 )
-def tool_executar_python(codigo, timeout=60, rotulo="", filtro="", teto_saida=0):
+def tool_executar_python(codigo, timeout=60, rotulo="", filtro="", teto_saida=0, interpretador=""):
     trecho = (codigo or "").strip()
     if not trecho:
         return "ERRO: 'codigo' vazio. Informe o trecho Python a executar."
-    return _correr_trecho("python", trecho, timeout, rotulo, filtro=filtro, teto=teto_saida)
+    return _correr_trecho("python", trecho, timeout, rotulo, interpretador=interpretador,
+                          filtro=filtro, teto=teto_saida)
 
 @register(
     "tool_executar_js",

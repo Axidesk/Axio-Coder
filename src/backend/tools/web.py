@@ -3,7 +3,8 @@ import os
 import re
 from urllib.parse import urlparse
 
-from src.backend.state import caminho_estado_projeto, emit_event, estado
+from src.backend.config import caminho_data
+from src.backend.state import emit_event, estado
 from src.backend.tools.registry import register
 
 _tavily_client = None
@@ -226,12 +227,12 @@ def _extrair_cru(tavily_client, endereco):
 
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em .axio/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em data/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
         'dominios': {"tipo": "STRING", "desc": 'Domínios a privilegiar, separados por vírgula (ex: docs.python.org,mozilla.org). Use para refazer a busca quando as fontes vierem de blogs.', "padrao": ""},
-        'filtro': {"tipo": "STRING", "desc": 'Mostra só as linhas do conteúdo extraído que contêm algum destes termos (um por linha, sem distinguir maiúsculas). O texto integral fica em .axio/busca.txt — use o filtro para não encher o contexto com uma página inteira.', "padrao": ""},
+        'filtro': {"tipo": "STRING", "desc": 'Mostra só as linhas do conteúdo extraído que contêm algum destes termos (um por linha, sem distinguir maiúsculas). O texto integral fica em data/busca.txt — use o filtro para não encher o contexto com uma página inteira.', "padrao": ""},
     },
     disponivel="web",
 )
@@ -360,7 +361,7 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
                 else:
                     inicio = [linha for linha in linhas if linha.strip()][:15]
                     contexto += ("   O filtro NAO casou nenhuma linha, mas a pagina TEM conteudo. "
-                                 "O texto completo ficou em .axio/busca.txt (tool_ler_trecho_arquivo). "
+                                 "O texto completo ficou em data/busca.txt (tool_ler_trecho_arquivo). "
                                  "Comeco da pagina:\n")
                     contexto += "\n".join(inicio)[:12000] + "\n\n"
             else:
@@ -370,11 +371,13 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
 
         emit_event("tool_sources", urls=fontes)
         
-        debug_path = caminho_estado_projeto("busca.txt")
-        if debug_path:
+        debug_path = caminho_data("busca.txt")
+        try:
             os.makedirs(os.path.dirname(debug_path), exist_ok=True)
             with open(debug_path, "w", encoding="utf-8") as f:
                 f.write(contexto_debug)
+        except OSError:
+            debug_path = ""
         
         total = len(fontes)
         total_ilegiveis = len(fontes_ilegiveis)

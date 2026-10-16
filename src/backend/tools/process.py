@@ -10,7 +10,7 @@ import threading
 import time
 import webbrowser
 
-from src.backend.services import arvore_processos
+from src.backend.services import arvore_processos, executaveis
 from src.backend.services.process_manager import montar_env_processo, tokenizar_linha
 from src.backend.services.saida import recortar_linhas
 from src.backend.services.sugestoes import detectar_url_na_saida
@@ -186,6 +186,28 @@ def _normalizar_exe(token):
         exe = exe.removesuffix(sufixo)
     return exe
 
+def _alvo_do_python(partes):
+    """(modulo, script) de um comando python, saltando as flags do interpretador.
+
+    'python -u sonda.py' e o mesmo que 'python sonda.py': sem saltar o '-u' o script ficava
+    fora do lugar e a chamada era recusada como se fosse 'python' sem argumentos.
+    """
+    indice = 1
+    while indice < len(partes):
+        token = partes[indice]
+        if token == "-m" and indice + 1 < len(partes):
+            return partes[indice + 1], ""
+        if token in ("-c", "--command"):
+            return "", ""
+        if token in ("-X", "-W", "--check-hash-based-pycs") and indice + 1 < len(partes):
+            indice += 2
+            continue
+        if token.startswith("-"):
+            indice += 1
+            continue
+        return "", token
+    return "", ""
+
 def _subcomando_do_instalador(partes):
     """Primeiro argumento que nao e uma flag: nos instaladores da Qt o subcomando vem depois delas."""
     for token in partes[1:]:
@@ -194,14 +216,53 @@ def _subcomando_do_instalador(partes):
     return ""
 
 def _pasta_de_trabalho(cwd):
-    """Pasta onde o processo corre: a indicada, ou a do projeto aberto. Sem nenhuma, nao adivinha."""
-    alvo = (cwd or "").strip() or estado.get("pasta_raiz") or ""
+    """Pasta onde o processo corre: a indicada, ou a do projeto aberto. Sem nenhuma, nao adivinha.
+
+    Um caminho RELATIVO resolve-se na pasta do projeto aberto - nunca na pasta de onde o Axio
+    foi lancado. Sem isto, 'cwd=\".\"' punha o processo a correr dentro do proprio Axio e o
+    servidor do projeto so falhava 30s depois, num erro que nao dizia onde tinha corrido.
+    """
+    pedido = (cwd or "").strip()
+    raiz = (estado.get("pasta_raiz") or "").strip()
+    if pedido and not os.path.isabs(pedido):
+        alvo = os.path.join(raiz or os.getcwd(), pedido)
+    else:
+        alvo = pedido or raiz
     if not alvo:
         return "", ""
     alvo = os.path.abspath(alvo)
     if not os.path.isdir(alvo):
-        return "", f"ERRO: '{cwd}' nao e uma pasta - o comando nao corre num sitio que nao existe."
+        return "", (f"ERRO: o comando nao corre num sitio que nao existe. Resolvi '{pedido or cwd}' "
+                    f"para '{alvo}', que nao e uma pasta.")
     return alvo, ""
+
+def _resolver_venv_curto(comando, pasta):
+    """Troca 'venv:python' pelo interpretador do venv do projeto aberto.
+
+    O caminho do venv escrito a mao e longo e erra-se; e a allowlist recusava o .exe do venv
+    com argumentos. Com o atalho, escrever o interpretador do projeto deixa de ser um problema.
+    """
+    achado = re.match(r"""^\s*(?:"|')?venv:([^\s"']+)""", comando or "", re.IGNORECASE)
+    if not achado:
+        return comando
+    pedido = achado.group(1)
+    if not pedido.lower().startswith("python"):
+        return comando
+    caminho = executaveis.python_do_projeto(pasta or estado.get("pasta_raiz") or "")
+    if not caminho:
+        return comando
+    return '"' + caminho + '"' + (comando or "")[achado.end():]
+
+def _nota_do_ambiente(comando, pasta):
+    """Onde o processo corre e com que python - dito sempre, para um erro de pasta ou de
+    interpretador deixar de aparecer como uma avaria do comando."""
+    partes = tokenizar_linha(comando or "")
+    linha = f"[axio] pasta: {pasta}"
+    if partes and _normalizar_exe(partes[0]) in ALIASES_DE_PYTHON:
+        token = partes[0].strip("\"'")
+        escrito = token if ("\\" in token or "/" in token) else "o do PATH (venv do Axio a frente)"
+        linha += f" | python: {escrito}"
+    return linha
 
 
 def _exe_do_projeto(caminho, cwd=""):
@@ -277,14 +338,16 @@ def _validar_comando_processo(comando, cwd=""):
         )
 
     if exe in ALIASES_DE_PYTHON:
-        if len(partes) >= 3 and partes[1] == "-m" and partes[2] in MODULOS_PYTHON:
+        modulo, script = _alvo_do_python(partes)
+        if modulo in MODULOS_PYTHON:
             return True, ""
-        if len(partes) >= 2 and partes[1].endswith(".py"):
+        if script and script.endswith(".py"):
             return True, ""
         sugestao = ferramenta_nativa_do_comando(cmd)
         dica = f" Use: {sugestao}." if sugestao else ""
         return False, (f"Uso de '{exe}' não permitido. Permitido: {exe} -m <modulo> "
-                       f"(venv/pip/flask/uvicorn/pytest/ruff/mypy/...) ou {exe} script.py.{dica}")
+                       f"(venv/pip/flask/uvicorn/pytest/ruff/mypy/...), {exe} [-u] script.py, "
+                       f"ou 'venv:python script.py' para correr no venv do projeto aberto.{dica}")
 
     if exe in ("pip", "pip3"):
         if len(partes) >= 2 and partes[1] in ("install",) + PACOTES_DE_CONSULTA_PIP:
@@ -756,7 +819,9 @@ def _guardar_linha(pid, linha):
 def _abrir_quando_pronto(pid, porta):
     url = f"http://127.0.0.1:{porta}"
     if not _porta_responde(porta, timeout=30):
-        registrar_linha_processo(pid, f"[axio] servidor não respondeu em 30s; abra manualmente: {url}")
+        achada = _ultima_url_do_registo(pid)
+        dica = f" O processo escreveu este endereco: {achada}." if achada else ""
+        registrar_linha_processo(pid, f"[axio] esperei pela porta {porta} em 127.0.0.1 e ninguem respondeu em 30s.{dica}")
         return
     if _abrir_navegador(url):
         registrar_linha_processo(pid, f"[axio] navegador aberto em {url}")
@@ -794,6 +859,7 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
     pasta_de_trabalho, erro_pasta = _pasta_de_trabalho(cwd)
     if erro_pasta:
         return erro_pasta
+    comando = _resolver_venv_curto(comando, pasta_de_trabalho)
     try:
         timeout = int(timeout) if timeout is not None else 300
     except (TypeError, ValueError):
@@ -801,6 +867,7 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
     if timeout < 5:
         timeout = 5
 
+    nota_ambiente = _nota_do_ambiente(comando, pasta_de_trabalho)
     ok, motivo = _validar_comando_processo(comando, pasta_de_trabalho)
     if not ok:
         return f"ERRO: {motivo}"
@@ -817,14 +884,14 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
     elif eh_web and porta_env:
         nota_porta = f" (porta sugerida via env PORT/FLASK_RUN_PORT: {porta_env})"
 
-    emit_event("executing", function=f"Executando: {comando}")
+    emit_event("executing", function=f"Executando em {pasta_de_trabalho}: {comando}")
     try:
         extras = [p.strip().strip('"') for p in (caminhos_extra or "").split(";") if p.strip()]
         reg = iniciar_processo(comando, cwd=pasta_de_trabalho, porta_env=porta_env, modo=modo,
                                acompanhar=(modo == "segundo_plano"), caminhos_extra=extras,
                                ambiente=_variaveis_da_linha(ambiente))
     except OSError as e:
-        return f"ERRO: nao consegui iniciar o processo ({e})."
+        return f"ERRO: nao consegui iniciar o processo ({e}).\n{nota_ambiente}"
     pid = reg["id"]
     popen = reg["popen"]
     leitor = reg["_leitor"]
@@ -833,7 +900,8 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
         if modo == "segundo_plano":
             if _eh_servidor_http(comando) and porta_env:
                 threading.Thread(target=_abrir_quando_pronto, args=(pid, porta_env), daemon=True).start()
-            return f"PROCESSO INICIADO EM SEGUNDO PLANO (pid={pid}){nota_porta}. Acompanhe em /api/processos e encerre com /api/processo/{pid}/parar."
+            return (f"PROCESSO INICIADO EM SEGUNDO PLANO (pid={pid}){nota_porta}. "
+                    f"Acompanhe em /api/processos e encerre com /api/processo/{pid}/parar.\n{nota_ambiente}")
 
         if not _esperar_com_progresso(popen, pid, timeout):
             matar_arvore(popen)
@@ -847,8 +915,8 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
         saida = recortar_linhas(reg["log"])
         if reg["status"] == "ok":
             base = saida if saida.strip() else "SUCESSO: processo concluído sem saída."
-            return base + nota_porta
-        return f"ERRO (exit code {popen.returncode}):\n{saida}"
+            return f"{base}{nota_porta}\n{nota_ambiente}"
+        return f"ERRO (exit code {popen.returncode}):\n{saida}\n{nota_ambiente}"
     except Exception as e:
         reg["status"] = "erro"
         emit_event("process_finished", pid=pid, exit_code=None, status="erro")
@@ -1314,6 +1382,17 @@ def _ultima_linha_legivel(log):
         corte = texto[:_CAUDA_CURTA]
         espaco = corte.rfind(" ")
         return (corte[:espaco] if espaco > 20 else corte) + "..."
+    return ""
+
+_RE_URL_NA_SAIDA = re.compile(r"https?://[^\s\"'>\]]+")
+
+def _ultima_url_do_registo(pid):
+    """Ultimo endereco http que o processo escreveu - a porta que ele abriu de facto."""
+    reg = estado.get("processos", {}).get(pid) or {}
+    for linha in reversed(reg.get("log") or []):
+        achado = _RE_URL_NA_SAIDA.search(linha or "")
+        if achado:
+            return achado.group(0).rstrip(".,;)")
     return ""
 
 

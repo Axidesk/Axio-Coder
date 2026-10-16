@@ -531,17 +531,18 @@ def _ficha_de_pacote(pacote, pacotes, versoes):
                       if normalizar_pacote(nome) == alvo), "")
     info = pacotes.get(alvo) or {}
     if info:
-        return (f"- {info.get('gestor') or 'pip'}: instalada {instalada or info.get('atual')} -> "
-                f"ultima publicada {info.get('ultima')}{_trava_de_pacote(info)}")
+        return (f"- {pacote}: instalada {info.get('atual') or instalada} -> ultima publicada "
+                f"{info.get('ultima')} (medida no {_nome_do_registo(info.get('gestor'))})"
+                f"{_trava_de_pacote(info)}")
     if instalada:
         return f"- {instalada}: ja e a ultima versao publicada que o registo oferece"
     achados, erro = _consultar_registo(pacote)
     if not achados:
         return (f"- {pacote}: nao consta do ambiente instalado e os registos nao responderam "
                 f"({erro}). Confirme o nome antes de instalar qualquer coisa.")
-    partes = " | ".join(f"{gestor} {ultima}{_texto_do_exige(exige)}"
+    partes = " | ".join(f"no {_nome_do_registo(gestor)}: {ultima}{_texto_do_exige(exige)}"
                         for gestor, ultima, exige in achados)
-    return f"- {pacote}: NAO esta instalado. Ultima publicada: {partes}"
+    return f"- {pacote}: NAO esta instalado no ambiente. Ultima publicada {partes}"
 
 def _consultar_registo(pacote):
     """(achados, erro): o que cada registo oficial publica com esse nome, todos os que respondem.
@@ -591,6 +592,12 @@ def _exigencias_publicadas(nome, versao):
         return []
     return info.get("requires_dist") or []
 
+_NOMES_DE_REGISTO = {"pip": "PyPI", "npm": "npm"}
+
+def _nome_do_registo(gestor):
+    """Nome do registo oficial: sem ele a versao sai colada ao gestor e le-se como a versao DELE."""
+    return _NOMES_DE_REGISTO.get(str(gestor or "").strip().lower(), gestor or "registo")
+
 def _texto_do_exige(exige):
     """Sufixo com o que a versao publicada exige, quando o registo o declara."""
     if not exige:
@@ -609,8 +616,13 @@ def _texto_dependencias(dados, pacote=""):
     pacotes = dados.get("pacotes") or {}
     versoes = dados.get("versoes") or {}
     linhas = ["=== DEPENDENCIAS DO PROJETO (PyPI + npm) ==="]
-    for nome in _nomes_pedidos(pacote):
+    pedidos = _nomes_pedidos(pacote)
+    for nome in pedidos:
         linhas.append(_ficha_de_pacote(nome, pacotes, versoes))
+    if pedidos:
+        linhas.append(f"(consulta de {len(pedidos)} pacote(s): o inventario completo sai na chamada "
+                      "sem 'pacote')")
+        return "\n".join(linhas)
     desatualizados = sorted(pacotes.items())
     travados = [(nome, info) for nome, info in desatualizados if info.get("preso")]
     livres = [(nome, info) for nome, info in desatualizados if not info.get("preso")]

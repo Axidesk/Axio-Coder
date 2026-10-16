@@ -132,6 +132,19 @@ def _formatar_plano_pendente():
         "Se o pedido atual do usuario nao tiver relacao com este plano, ignore-o e atenda o pedido atual.\n"
     )
 
+_DIAS_DA_SEMANA = (
+    "segunda-feira", "terca-feira", "quarta-feira", "quinta-feira",
+    "sexta-feira", "sabado", "domingo",
+)
+
+def _relogio_do_prompt():
+    agora = time.localtime()
+    return "%s %s (%s)" % (
+        time.strftime("%Y-%m-%d", agora),
+        time.strftime("%H:%M:%S", agora),
+        _DIAS_DA_SEMANA[agora.tm_wday],
+    )
+
 def _emitir_status_da_ferramenta(nome_func, args):
     """Emite no status o que a ferramenta despachada esta a fazer."""
     if nome_func == "tool_executar_comando":
@@ -508,7 +521,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
             decorrido_s = int(time.time() - tempo_inicio_rodada)
             aviso_relogio = (
                 f"[SISTEMA-RELÓGIO] Chamada de API nº {contador_chamadas_api} desta rodada | "
-                f"Hora atual: {time.strftime('%H:%M:%S')} | Tempo decorrido desde o início da tarefa: "
+                f"Data e hora: {_relogio_do_prompt()} | Tempo decorrido desde o início da tarefa: "
                 f"{decorrido_s // 60}min {decorrido_s % 60}s. "
                 "Se já tentou a MESMA estratégia 2+ vezes sem progresso, PARE de insistir: "
                 "troque de abordagem, use tool_buscar_web ou seja honesto com o usuário. "

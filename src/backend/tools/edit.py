@@ -102,6 +102,51 @@ def _linha_mais_parecida(linhas, procurada):
     return " Nao ha nenhuma linha parecida com a ancora neste ficheiro - confirme o FICHEIRO."
 
 
+def _linhas_da_ancora(conteudo, antigo):
+    """Numeros (1 a contar do inicio) das linhas onde a ancora casa, ignorando espacos no fim."""
+    linhas = conteudo.split("\n")
+    linhas_ancora = [linha.rstrip() for linha in antigo.split("\n")]
+    if not any(linhas_ancora):
+        return []
+    achadas = []
+    for i in range(len(linhas) - len(linhas_ancora) + 1):
+        if all(linhas[i + j].rstrip() == linhas_ancora[j] for j in range(len(linhas_ancora))):
+            achadas.append(i + 1)
+    return achadas
+
+def _onde_estao(conteudo, antigo):
+    """As linhas de cada ocorrencia da ancora - a ancora ambigua deixa de ser um misterio."""
+    achadas = _linhas_da_ancora(conteudo, antigo)
+    if not achadas:
+        return ""
+    return (" Estao nas linhas " + ", ".join(str(n) for n in achadas[:12])
+            + (" (e mais)" if len(achadas) > 12 else "") + ".")
+
+def _linhas_vizinhas(conteudo, antigo):
+    """O ficheiro a volta da linha mais parecida com a ancora: e a ancora que erra, nao o caminho."""
+    linhas = conteudo.split("\n")
+    procurada = (antigo.split("\n")[0] if antigo else "").strip()
+    if not procurada:
+        return ""
+    melhor, indice = 0.0, -1
+    for i, linha in enumerate(linhas):
+        ponto = difflib.SequenceMatcher(None, linha.strip(), procurada).ratio()
+        if ponto > melhor:
+            melhor, indice = ponto, i
+    if indice < 0 or melhor < 0.35:
+        return ""
+    inicio = max(0, indice - 2)
+    fim = min(len(linhas), indice + 3)
+    corpo = "\n".join(f"  {n + 1}: {linhas[n]}" for n in range(inicio, fim))
+    return f"\nO ficheiro por volta da linha {indice + 1} (a mais parecida com a ancora):\n{corpo}"
+
+def _quantos_prontos(prontos):
+    """Diz que os blocos anteriores ja tinham casado - sem isto o trabalho era recalculado a mao."""
+    if not prontos:
+        return ""
+    return (f" Os {prontos} bloco(s) anteriores deste ficheiro JA tinham casado - corrija so o que "
+            "falta e repita o lote inteiro (nada foi gravado).")
+
 def _intervalo_tolerando_espacos(conteudo, antigo):
     """O intervalo onde a ancora casa ignorando espacos no fim das linhas.
 
@@ -204,12 +249,17 @@ def tool_substituir_texto(caminho_relativo: str, texto_antigo: str, texto_novo: 
         if ocorrencias == 0:
             intervalo = _intervalo_tolerando_espacos(conteudo_nfc, texto_antigo_nfc)
             if intervalo is None:
-                return ("ERRO: O 'texto_antigo' não foi encontrado." + _diagnostico_ancora(conteudo_nfc, texto_antigo_nfc))
+                return ("ERRO: O 'texto_antigo' não foi encontrado."
+                        + _diagnostico_ancora(conteudo_nfc, texto_antigo_nfc)
+                        + _linhas_vizinhas(conteudo_nfc, texto_antigo_nfc))
             novo_conteudo = conteudo_nfc[:intervalo[0]] + texto_novo_nfc + conteudo_nfc[intervalo[1]:]
             aviso = gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, f"Modificado: {caminho_relativo}")
             return (f"SUCESSO: Trecho substituído em '{caminho_relativo}' "
                     f"(a âncora casou ignorando espaços no fim das linhas).{aviso}")
-        elif ocorrencias > 1: return f"ERRO: O 'texto_antigo' ocorre {ocorrencias} vezes no arquivo. A âncora é ambígua. Forneça um trecho maior ou mais específico para garantir que apenas o local correto seja alterado."
+        elif ocorrencias > 1:
+            return (f"ERRO: O 'texto_antigo' ocorre {ocorrencias} vezes no arquivo. A âncora é ambígua. "
+                    "Forneça um trecho maior ou mais específico para garantir que apenas o local correto seja alterado."
+                    + _onde_estao(conteudo_nfc, texto_antigo_nfc))
         
         novo_conteudo = conteudo_nfc.replace(texto_antigo_nfc, texto_novo_nfc, 1)
         aviso = gravar_edicao_com_diff(caminho_relativo, caminho_absoluto, conteudo, novo_conteudo, f"Modificado: {caminho_relativo}")
@@ -221,6 +271,7 @@ _MARCA_ANTIGO = "<<<<<<< ANTIGO"
 _MARCA_SEPARADOR = "======="
 _MARCA_NOVO = ">>>>>>> NOVO"
 _MARCA_ESCOPO = "@"
+_ESCOPO_DE_TODOS = ("*", "todos", "all", "-")
 
 
 def _dividir_lote(texto):
@@ -235,11 +286,18 @@ def _dividir_lote(texto):
                 return None, f"ERRO: o bloco {len(itens) + 1} nao foi fechado com '>>>>>>> NOVO'."
             antigo = []
         elif antigo is None:
+            if not marca:
+                continue
             if marca.startswith(_MARCA_ESCOPO):
-                escopo = marca[len(_MARCA_ESCOPO):].strip()
-                if not escopo:
+                escrito = marca[len(_MARCA_ESCOPO):].strip()
+                if escrito in _ESCOPO_DE_TODOS:
+                    escopo = None
+                elif escrito:
+                    escopo = escrito
+                else:
                     return None, (f"ERRO: a linha '@' do bloco {len(itens) + 1} nao diz o ficheiro "
-                                  "- escreva '@ <caminho>' ou tire a linha para o bloco valer em todos.")
+                                  "- escreva '@ <caminho>', '@ *' para voltar a valer em todos os "
+                                  "arquivos, ou tire a linha.")
             elif marca:
                 return None, (f"ERRO: texto fora de um bloco: '{marca[:60]}'. Cada alteracao comeca com a linha "
                               f"'{_MARCA_ANTIGO}' ou com '@ <caminho>'.")
@@ -252,7 +310,7 @@ def _dividir_lote(texto):
                 return None, (f"ERRO: o bloco {len(itens) + 1} fechou sem o separador '======='. "
                               "Para APAGAR o trecho antigo, escreva na mesma a linha '=======' e deixe o lado novo vazio.")
             itens.append((escopo, "\n".join(antigo), "\n".join(novo)))
-            antigo = novo = escopo = None
+            antigo = novo = None
         else:
             (antigo if novo is None else novo).append(linha)
     if antigo is not None:
@@ -277,17 +335,22 @@ def _aplicar_lote(conteudo_nfc, itens, caminho=None):
         antigo = normalizar_unicode(antigo)
         novo = normalizar_unicode(novo)
         if not antigo:
-            return None, f"ERRO: o bloco {indice} tem o trecho antigo vazio.", usados
+            return None, (f"ERRO: o bloco {indice} tem o trecho antigo vazio."
+                          + _quantos_prontos(usados - 1)), usados
         ocorrencias = atual.count(antigo)
         if ocorrencias > 1:
-            return None, f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro (ancora ambigua) - nada foi gravado.", usados
+            return None, (f"ERRO: o trecho do bloco {indice} ocorre {ocorrencias} vezes no ficheiro "
+                          "(ancora ambigua) - nada foi gravado."
+                          + _onde_estao(atual, antigo) + _quantos_prontos(usados - 1)), usados
         if ocorrencias == 1:
             atual = atual.replace(antigo, novo, 1)
             continue
         intervalo = _intervalo_tolerando_espacos(atual, antigo)
         if intervalo is None:
             return None, (f"ERRO: o trecho do bloco {indice} nao foi encontrado (nada foi gravado)."
-                          + _diagnostico_ancora(atual, antigo)), usados
+                          + _diagnostico_ancora(atual, antigo)
+                          + _linhas_vizinhas(atual, antigo)
+                          + _quantos_prontos(usados - 1)), usados
         atual = atual[:intervalo[0]] + novo + atual[intervalo[1]:]
     if not usados:
         return conteudo_nfc, None, 0
@@ -378,7 +441,7 @@ _PARAMS_LOTE = {
 
 @register(
     "tool_substituir_lote",
-    'Aplica VARIAS substituicoes numa so gravacao (um diff e um passo de desfazer por arquivo) - use quando as alteracoes ja foram decididas em conjunto. Cada alteracao vai num bloco, com quebras de linha REAIS: uma linha "<<<<<<< ANTIGO", o trecho exato como esta agora, uma linha "=======", o trecho novo (vazio para apagar) e uma linha ">>>>>>> NOVO"; repita o bloco quantas vezes precisar. Cada trecho antigo tem de ser UNICO no ficheiro e os blocos sao aplicados por ordem; se UM bloco falhar, NADA e gravado NESSE arquivo. Para APAGAR uma linha inteira, inclua a quebra de linha no fim do trecho antigo (senao fica uma linha vazia no lugar). VARIOS ARQUIVOS: escreva um caminho por linha em "caminho_relativo" e o mesmo conjunto de blocos passa a valer para todos; um bloco com a linha "@ <caminho>" imediatamente acima do "<<<<<<< ANTIGO" vale SO para esse arquivo (os restantes aplicam-se a cada arquivo que tenha o trecho). Os arquivos sao tratados um a um - o que falhar fica intacto e nao trava os outros - e o relatorio diz o que mudou em cada um.',
+    'Aplica VARIAS substituicoes numa so gravacao (um diff e um passo de desfazer por arquivo) - use quando as alteracoes ja foram decididas em conjunto. Cada alteracao vai num bloco, com quebras de linha REAIS: uma linha "<<<<<<< ANTIGO", o trecho exato como esta agora, uma linha "=======", o trecho novo (vazio para apagar) e uma linha ">>>>>>> NOVO"; repita o bloco quantas vezes precisar. Cada trecho antigo tem de ser UNICO no ficheiro e os blocos sao aplicados por ordem; se UM bloco falhar, NADA e gravado NESSE arquivo - e o erro diz quantos blocos JA tinham casado, para nao recalcular tudo. Para APAGAR uma linha inteira, inclua a quebra de linha no fim do trecho antigo (senao fica uma linha vazia no lugar). VARIOS ARQUIVOS: escreva um caminho por linha em "caminho_relativo". A linha "@ <caminho>" ABRE UMA SECCAO: todos os blocos a partir dai, ate ao proximo "@", sao daquele arquivo - uma so linha "@ painel.js" serve para os cinco blocos dele. A linha "@ *" (ou "@ todos") fecha a seccao e faz os blocos seguintes valerem em todos os arquivos que tenham o trecho. Os arquivos sao tratados um a um - o que falhar fica intacto e nao trava os outros - e o relatorio diz o que mudou em cada um.',
     _PARAMS_LOTE,
     disponivel="edicao",
 )

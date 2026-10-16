@@ -461,15 +461,23 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
 def _base_do_repositorio(caminho):
     """Pasta de onde partir para achar o repositorio: a pedida, ou a do projeto aberto - sem pasta, recusa.
 
-    Sem pasta indicada a resposta certa e dizer que nao se sabe: cair para a raiz do proprio Axio faria
-    uma sessao aberta sem projeto publicar no repositorio errado.
+    Um caminho RELATIVO resolve-se na pasta do PROJETO aberto, nunca na pasta de onde o Axio corre:
+    'caminho=\".\"' caia no repositorio do proprio Axio, e material do projeto do utilizador podia
+    entrar la dentro sem ninguem notar. Sem pasta indicada a resposta certa e dizer que nao se sabe:
+    cair para a raiz do proprio Axio faria uma sessao sem projeto publicar no repositorio errado.
     """
-    if caminho:
-        return caminho, ""
-    raiz = estado.get("pasta_raiz")
+    raiz = estado.get("pasta_raiz") or ""
+    pedido = str(caminho or "").strip()
+    if pedido:
+        alvo = os.path.abspath(pedido if os.path.isabs(pedido) else os.path.join(raiz or os.getcwd(), pedido))
+        if not os.path.isdir(alvo):
+            return "", (f"ERRO: '{pedido}' nao e uma pasta - resolvi para '{alvo}', que nao existe. "
+                        "Indique a pasta do projeto.")
+        return alvo, ""
     if not raiz:
         return "", ("ERRO: nao ha pasta de projeto aberta e nenhum caminho foi indicado. Esta ferramenta nao "
-                    "adivinha o repositorio (publicaria no errado) - indique o 'caminho' do projeto.")
+                    "adivinha o repositorio (publicaria no errado) - indique o 'caminho' do projeto. Se a "
+                    "pasta aberta ainda nao tem repositorio, quem o cria e tool_publicar_git com criar=True.")
     return raiz, ""
 
 

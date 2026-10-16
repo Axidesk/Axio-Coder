@@ -3,6 +3,7 @@
 import glob
 import os
 import shutil
+import sys
 import time
 
 try:
@@ -45,6 +46,27 @@ def achar(nome):
 def php():
     """Caminho do php.exe: a variavel PHP_EXE manda sobre a busca."""
     return os.environ.get("PHP_EXE", "").strip() or achar("php")
+
+PASTAS_DE_VENV = (".venv", "venv", "env", ".env")
+
+def python_do_projeto(raiz_projeto):
+    """Interpretador do venv do PROJETO aberto; sem venv proprio, o que corre o Axio.
+
+    Um projeto Python com o seu proprio venv nao tem as dependencias dele no interpretador
+    do Axio: correr um trecho com o interpretador errado rebenta em ModuleNotFoundError e a
+    prova sai falsa. Aqui a escolha e pelo projeto; quem chama diz na resposta qual correu,
+    porque uma sonda no Python errado nao pode passar por boa.
+    """
+    pedido = str(raiz_projeto or "").strip()
+    if pedido:
+        raiz = os.path.abspath(pedido)
+        if os.path.isdir(raiz):
+            interior = os.path.join("Scripts", "python.exe") if os.name == "nt" else os.path.join("bin", "python")
+            for pasta in PASTAS_DE_VENV:
+                alvo = os.path.join(raiz, pasta, interior)
+                if os.path.isfile(alvo):
+                    return alvo
+    return sys.executable
 
 def _pela_escada(pedido):
     if os.path.isfile(pedido):
