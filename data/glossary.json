@@ -804,10 +804,10 @@
       "descricao": "Contrato duro: comando irreversivel (git reset --hard, del /s, drop table) e recusado antes de tudo, e cada ferramenta com equivalente nativo e recusada com a dica da ferramenta. Fora isso vale uma lista fixa de executaveis (compiladores, gestores de pacotes, linters, git, midia, rede/sistema) MAIS qualquer .exe que viva DENTRO da pasta do projeto aberto - e o programa que o proprio projeto compilou, e poder arranca-lo e o que permite ler o arranque dele. Um caminho absoluto com espacos continua a ter de vir entre aspas, senao o tokenizador parte-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 263,
+        "linha": 324,
         "conferido": [
-          1791249807.512,
-          65349
+          1792189670.361,
+          68919
         ]
       }
     },
@@ -959,10 +959,10 @@
       "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
       "localizacao": {
         "arquivo": "src/backend/services/file_service.py",
-        "linha": 623,
+        "linha": 638,
         "conferido": [
-          1791849409.175,
-          33519
+          1791918920.41,
+          34007
         ]
       }
     },
@@ -1171,10 +1171,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1955,
+        "linha": 1977,
         "conferido": [
-          1791643354.3,
-          97679
+          1792189617.816,
+          99196
         ]
       }
     },
@@ -2246,8 +2246,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1470,
         "conferido": [
-          1791643354.3,
-          97679
+          1792189617.816,
+          99196
         ]
       }
     },
@@ -2327,10 +2327,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 423,
+        "linha": 486,
         "conferido": [
-          1791249807.512,
-          65349
+          1792189670.361,
+          68919
         ]
       }
     },
@@ -3126,10 +3126,10 @@
       "descricao": "Le a API de uma dependencia JA INSTALADA, do codigo dela no disco, em vez do conhecimento do modelo (regra 28). Num pacote npm devolve o ficheiro de declaracoes - o campo types/typings, ou um index.d.ts na raiz, ou o primeiro .d.ts encontrado ate 3 niveis (o dxf-viewer guarda o dele em src/) - e, sem declaracoes, o README. Num modulo Python devolve os nomes publicos de topo por AST, incluindo as REEXPORTACOES (`Flask = app.Flask`), que e o que quase todos os pacotes fazem no __init__.py. Aceita 'filtro' para trazer so as linhas com um termo. Nasceu a 2026-09-21 de um atrito medido: descobrir as opcoes do dxf-viewer custou seis leituras a mao dentro de node_modules.",
       "localizacao": {
         "arquivo": "src/backend/tools/pacotes.py",
-        "linha": 974,
+        "linha": 986,
         "conferido": [
-          1791580917.63,
-          44245
+          1792189905.116,
+          44824
         ]
       }
     },
@@ -3228,10 +3228,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 678,
+        "linha": 709,
         "conferido": [
-          1791637381.935,
-          43593
+          1791917894.144,
+          45089
         ]
       }
     },
@@ -3672,10 +3672,10 @@
       "descricao": "Etiqueta cada fonte da busca por confianca (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG) usando a tabela DOMINIOS_OFICIAIS/DOMINIOS_FRACOS; sem fonte oficial entre as encontradas, avisa e manda refazer a busca com 'dominios' (um filtro que privilegia o dominio da documentacao oficial).",
       "localizacao": {
         "arquivo": "src/backend/tools/web.py",
-        "linha": 78,
+        "linha": 79,
         "conferido": [
-          1791744436.156,
-          19623
+          1792189921.733,
+          19675
         ]
       }
     },
@@ -3858,10 +3858,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 587,
+        "linha": 595,
         "conferido": [
-          1791838355.062,
-          39460
+          1792189864.428,
+          40158
         ]
       }
     },
@@ -3878,10 +3878,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 544,
+        "linha": 552,
         "conferido": [
-          1791838355.062,
-          39460
+          1792189864.428,
+          40158
         ]
       }
     },
@@ -3958,10 +3958,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 856,
+        "linha": 864,
         "conferido": [
-          1791838355.062,
-          39460
+          1792189864.428,
+          40158
         ]
       }
     },
@@ -3978,10 +3978,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 707,
+        "linha": 715,
         "conferido": [
-          1791838355.062,
-          39460
+          1792189864.428,
+          40158
         ]
       }
     },
@@ -3998,10 +3998,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 620,
+        "linha": 628,
         "conferido": [
-          1791838355.062,
-          39460
+          1792189864.428,
+          40158
         ]
       }
     },
@@ -4352,10 +4352,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 504,
+        "linha": 512,
         "conferido": [
-          1790795032.063,
-          32761
+          1791917955.39,
+          33115
         ]
       }
     },
@@ -4413,10 +4413,10 @@
       "descricao": "Botao que vive NO CARD da pilha (2026-10): cards.js:_injectMarcas cria-o ao lado do marcador do ponto sempre que git_panel.js:podeRestaurar(grupo) deixa (commit OU __session), e o CSS troca-o pelo marcador quando o card esta selecionado - por isso ele aparece APENAS no card selecionado. A troca e PURA CSS em style.css: .history-round-restore-icon nasce display:none, .history-round-card.history-round-selected esconde o .history-round-saved-icon e mostra o restaurar. Nao ha repintura por JS na selecao. O clique faz stopPropagation (para nao cair no clique do card, que seleciona/abre) e chama a API registada em cards.js:registrarRestauroDaTarefa, ligada em renderer.js a git_panel.js:restaurarTarefa(grupo) - que escolhe o MOTOR: com commit -> requestGitRestore (previa + modal), sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o #btn-git-restore-history do cabecalho da coluna 1, REMOVIDO a 2026-10; com ele sairam sincronizarBotaoRestauro (git_panel.js), btnGitRestoreHistory (dom.js) e o registo registrarSincronizacaoDeRestauro (acoes.js). O registo novo existe pelo ciclo de imports: git_panel importa cards, logo cards nao pode importar git_panel. MEDIDO (tool_medir_pintura, CSS real): card fechado pinta o marcador 14x14 e o restaurar 0x0; selecionado, o marcador vai a 0x0 e o restaurar pinta 14x14 na MESMA posicao - o icone nao salta.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 233,
+        "linha": 241,
         "conferido": [
-          1790795032.063,
-          32761
+          1791917955.39,
+          33115
         ]
       }
     },
@@ -4671,10 +4671,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 451,
+        "linha": 514,
         "conferido": [
-          1791249807.512,
-          65349
+          1792189670.361,
+          68919
         ]
       }
     },
@@ -4901,10 +4901,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 638,
+        "linha": 646,
         "conferido": [
-          1790795032.063,
-          32761
+          1791917955.39,
+          33115
         ]
       }
     },
@@ -4956,10 +4956,10 @@
       "descricao": "REGRA (2026-10, ampliada): o card mostra o AVIAO sempre que o commit esta fora do por_subir (cards.js:enviadaParaOServidor) OU foi registado num envio manual (marcas_envio.js porCommit) - deixou de ser so o ultimo ponto enviado. Todos os restantes (so no PC) mostram o bookmark com o popup \"Salvo localmente\", sem parenteses: o hash e o \"por enviar\" sairam do popup. E assim que as anteriores ja enviadas continuam com o aviao e as novas nascem com o bookmark.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 233,
+        "linha": 241,
         "conferido": [
-          1790795032.063,
-          32761
+          1791917955.39,
+          33115
         ]
       }
     },
@@ -4976,10 +4976,10 @@
       "descricao": "Popup de sim/nao reutilizavel, ao lado do showAlert do qual herda o desenho (#confirm-popup no index.html, aberto por opacity). ui.js:showConfirm(mensagem, rotulo, aoConfirmar) escreve a pergunta, o texto do botao de confirmar e guarda o callback; ui.js:confirmarEscolha corre o callback DEPOIS de fechar (nunca durante, para o popup nao ficar preso se o callback falhar) e ui.js:fecharConfirmPopup limpa a escolha pendente. Os botoes sao ligados em renderer.js junto dos outros modais e #confirm-popup entrou na lista de hit(clickedOnModal) do clique-fora. Quem o usa hoje: git_panel.js:pintarBotaoEnvio, com a pergunta montada a partir de descricaoDoEnvio (a MESMA do tooltip do aviao) e o botao 'Enviar'. NAO confundir com #fs-confirm-popup (editor.js:openFsConfirm), que e do sistema de ficheiros e tem o botao fixo 'Excluir' - sao dois dialogos de confirmacao no projeto, candidatos a fusao num so.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/ui.js",
-        "linha": 469,
+        "linha": 471,
         "conferido": [
-          1791639217.15,
-          22682
+          1791917887.912,
+          22732
         ]
       }
     },
@@ -5338,10 +5338,10 @@
       "descricao": "Calcula o \"Tarefa N - \" que aparece antes da mensagem no Por subir e no historico mais antigo: casa o hash com o log da sessao e le o numero do dia (nomeDoTurno), e corta o prefixo do resumo quando o commit ja o traz escrito a mao. Nada disto esta gravado no git - a mensagem do commit so tem o texto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 444,
+        "linha": 452,
         "conferido": [
-          1790795032.063,
-          32761
+          1791917955.39,
+          33115
         ]
       }
     },
@@ -6574,8 +6574,8 @@
         "arquivo": "src/backend/tools/browse.py",
         "linha": 151,
         "conferido": [
-          1791849257.151,
-          26587
+          1791917163.272,
+          26772
         ]
       }
     },
@@ -6673,10 +6673,10 @@
       "descricao": "Tira a linha do resumo do que fica a vista no chat e guarda-a para o contexto da rodada seguinte.",
       "localizacao": {
         "arquivo": "src/backend/ai/loop.py",
-        "linha": 293,
+        "linha": 306,
         "conferido": [
-          1791650778.251,
-          32398
+          1792189542.092,
+          32752
         ]
       }
     },
@@ -6922,6 +6922,44 @@
           1791847787.419,
           63870
         ]
+      }
+    },
+    {
+      "termo": "cards do log",
+      "aliases": [
+        "cards dos logs",
+        "cards do log da sessao",
+        "cards da sessao",
+        "cards que somem no reinicio"
+      ],
+      "identificador": "#current-logs-wrapper",
+      "descricao": "Os cards de cada rodada dentro do painel Log da Sessao; o mais recente fica no topo. Reconstruidos por restaurarLogsDaLimite (messages.js) a partir do que o snapshot guarda.",
+      "localizacao": {
+        "arquivo": "src/frontend/index.html",
+        "linha": 456,
+        "conferido": [
+          1790889975.026,
+          83616
+        ]
+      }
+    },
+    {
+      "termo": "ver a pagina no celular",
+      "aliases": [
+        "versao celular",
+        "versao mobile",
+        "como fica no celular",
+        "largura de celular",
+        "media query",
+        "responsivo",
+        "otimizado pra celular",
+        "versao pc e celular"
+      ],
+      "identificador": "tool_observar_preview (parametro largura) / tool_operar_preview (parametro largura)",
+      "descricao": "Poe a pagina na largura pedida (390 = celular, 360 = telefone pequeno, 768 = tablet) antes de medir, para a media query disparar de verdade, e mede o que o browser faz a essa largura. A emulacao e desfeita no fim do pedido.",
+      "localizacao": {
+        "arquivo": "src/backend/tools/preview.py",
+        "linha": 1057
       }
     }
   ]

@@ -17,12 +17,22 @@ from urllib.parse import quote
 
 from src.backend.services import cofre, ponte_preview
 from src.backend.services.file_service import resolver_caminho_arquivo
-from src.backend.services.imagem import codificar_para_envio, dimensoes_da_imagem
+from src.backend.services.imagem import codificar_para_envio, dimensoes_da_imagem, uniformidade_da_imagem
 from src.backend.state import emit_event
 from src.backend.tools.projeto_comum import caminho_relativo
 from src.backend.tools.registry import register
 
-ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "canvas", "quadros", "print")
+ACOES_DE_OBSERVACAO = ("estado", "consola", "rede", "elemento", "mapa", "avaliar", "estilo", "canvas", "quadros", "print", "carregar", "mostrar")
+ACOES_DE_ESPERA = ("esperar",)
+CAMPOS_DO_ALVO_NA_LINHA = {
+    "clicar": "seletor",
+    "escrever": "seletor",
+    "teclar": "tecla",
+    "carregar": "alvo",
+    "ficheiro": "alvo",
+    "roda": "ponto",
+    "arrastar": "ponto",
+}
 CARACTERES_DE_LUZ = " .:-=+*#%@"
 ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
 LIMITE_PASSOS_ROTEIRO = 12
@@ -145,6 +155,57 @@ def _pontos_do_texto(pontos):
     return lista, ""
 
 
+def _passos_das_linhas(escrito):
+    """Um gesto por linha - o formato que se dita sem pensar: 'clicar #btn-x'.
+
+    A forma natural de escrever um roteiro a mao e uma linha por gesto, e nao uma
+    lista JSON. As duas valem, porque a mesma palavra 'roteiro' pede formatos
+    diferentes em ferramentas diferentes. O texto de um campo vai depois de '|'.
+    """
+    linhas = []
+    for numero, linha in enumerate(escrito.splitlines(), 1):
+        texto = linha.strip()
+        if not texto:
+            continue
+        partes = texto.split("|", 1)
+        cabeca = partes[0].strip()
+        resto = partes[1].strip() if len(partes) > 1 else ""
+        pedacos = cabeca.split(None, 1)
+        acao = pedacos[0].strip().lower()
+        alvo = pedacos[1].strip() if len(pedacos) > 1 else ""
+        if acao in ACOES_DE_ESPERA:
+            try:
+                milissegundos = int(float(alvo or 0))
+            except ValueError:
+                return None, (
+                    f"na linha {numero}, 'esperar' precisa dos milissegundos (ex: 'esperar 500');"
+                    f" '{alvo}' nao e um numero"
+                )
+            linhas.append({"acao": "esperar", "espera": max(0, min(ESPERA_MAX_PASSO, milissegundos))})
+            continue
+        if acao not in ACOES_DE_OPERACAO or acao == "roteiro":
+            aceitas = [a for a in ACOES_DE_OPERACAO if a != "roteiro"] + list(ACOES_DE_ESPERA)
+            return None, (
+                f"na linha {numero}, '{pedacos[0]}' nao e uma acao; use uma de: {', '.join(aceitas)}"
+            )
+        passo = {"acao": acao, "espera": 0}
+        if alvo:
+            campo = CAMPOS_DO_ALVO_NA_LINHA.get(acao)
+            if campo is None:
+                return None, (
+                    f"na linha {numero}, '{acao}' nao le um alvo; escreva so a acao na linha"
+                )
+            passo[campo] = alvo
+        if resto:
+            if acao not in ("escrever", "roda", "carregar"):
+                return None, f"na linha {numero}, '{acao}' nao usa texto depois do '|'"
+            passo["texto"] = resto
+        linhas.append(passo)
+    if not linhas:
+        return None, "os 'passos' por linhas ficaram vazios"
+    return linhas, ""
+
+
 def _passos_do_roteiro(passos):
     """Lista de gestos validada - cada passo e o mesmo que uma chamada isolada.
 
@@ -160,14 +221,20 @@ def _passos_do_roteiro(passos):
                 "indique 'passos' com a lista JSON dos gestos, por exemplo: "
                 '[{"acao":"clicar","seletor":"#btn-x"},{"acao":"escrever","seletor":"#campo","texto":"oi"}]'
             )
-        try:
-            bruto = json.loads(escrito)
-        except Exception as exc:
-            return None, (
-                f"'passos' nao e JSON valido ({exc}); cada gesto e um objeto com 'acao' e os seus"
-                " argumentos, dentro de uma lista, por exemplo: "
-                '[{"acao":"clicar","seletor":"#btn-x"},{"acao":"escrever","seletor":"#campo","texto":"oi"}]'
-            )
+        if escrito.startswith("[") or escrito.startswith("{"):
+            try:
+                bruto = json.loads(escrito)
+            except Exception as exc:
+                return None, (
+                    f"'passos' parece uma lista JSON mas nao e valida ({exc}); cada gesto e um objeto"
+                    " com 'acao' e os seus argumentos, dentro de uma lista, por exemplo: "
+                    '[{"acao":"clicar","seletor":"#btn-x"},{"acao":"escrever","seletor":"#campo","texto":"oi"}]'
+                    " - ou escreva um gesto por linha ('clicar #btn-x')."
+                )
+        else:
+            bruto, falha = _passos_das_linhas(escrito)
+            if falha:
+                return None, falha
     if not isinstance(bruto, list) or not bruto:
         return None, "'passos' tem de ser uma lista com pelo menos um gesto"
     if len(bruto) > LIMITE_PASSOS_ROTEIRO:
@@ -182,10 +249,20 @@ def _passos_do_roteiro(passos):
         acao = str(passo.get("acao") or "").strip().lower()
         if acao == "roteiro":
             return None, f"o passo {indice} nao pode ser um roteiro dentro de outro roteiro"
+        if acao in ACOES_DE_ESPERA:
+            try:
+                milissegundos = int(float(str(passo.get("espera") or passo.get("texto") or 0)))
+            except (TypeError, ValueError):
+                return None, (
+                    f"o passo {indice} e um 'esperar' sem tempo; escreva os milissegundos em 'espera'"
+                    f" (ex: {{\"acao\":\"esperar\",\"espera\":500}})"
+                )
+            limpos.append({"acao": "esperar", "espera": max(0, min(ESPERA_MAX_PASSO, milissegundos))})
+            continue
         if acao not in ACOES_DE_OPERACAO:
+            aceitas = [a for a in ACOES_DE_OPERACAO if a != "roteiro"] + list(ACOES_DE_ESPERA)
             return None, (
-                f"o passo {indice} tem acao '{passo.get('acao')}'; use uma de: "
-                + ", ".join(a for a in ACOES_DE_OPERACAO if a != "roteiro")
+                f"o passo {indice} tem acao '{passo.get('acao')}'; use uma de: " + ", ".join(aceitas)
             )
         try:
             espera = max(0, min(ESPERA_MAX_PASSO, int(passo.get("espera") or 0)))
@@ -238,7 +315,7 @@ def _argumento_ignorado(pedido, valores):
     return ""
 
 
-def _correr_roteiro(passos, tela="preview"):
+def _correr_roteiro(passos, tela="preview", medida=None):
     """Corre os gestos em serie pela mesma ferramenta de um gesto isolado.
 
     Nao ha caminho alternativo: cada passo entra por tool_operar_preview, logo
@@ -249,6 +326,10 @@ def _correr_roteiro(passos, tela="preview"):
     """
     linhas = []
     for indice, passo in enumerate(passos, 1):
+        if passo["acao"] == "esperar":
+            time.sleep(passo["espera"] / 1000.0)
+            linhas.append(f"[{indice}] esperar {passo['espera']} ms")
+            continue
         if passo.get("espera"):
             time.sleep(passo["espera"] / 1000.0)
         resultado = tool_operar_preview(
@@ -260,6 +341,9 @@ def _correr_roteiro(passos, tela="preview"):
             texto=str(passo.get("texto") or ""),
             limpar=bool(passo.get("limpar")),
             tecla=str(passo.get("tecla") or ""),
+            largura=int((medida or {}).get("largura") or 0),
+            altura=int((medida or {}).get("altura") or 0),
+            mobile=bool((medida or {}).get("mobile")),
         )
         alvo = _alvo_do_passo(passo)
         linhas.append(f"[{indice}] {passo['acao']} {alvo}\n    {resultado}")
@@ -373,6 +457,32 @@ def _texto_do_efeito(efeito):
             provas.append(
                 f"campo com {alvo_depois.get('valor')} caractere(s) (antes {alvo_antes.get('valor')})"
             )
+        detalhe_antes = alvo_antes.get("detalhe") or {}
+        detalhe_depois = alvo_depois.get("detalhe") or {}
+        if (detalhe_antes.get("aberto") != detalhe_depois.get("aberto")
+                and (detalhe_antes.get("aberto") is not None or detalhe_depois.get("aberto") is not None)):
+            provas.append(
+                f"o alvo passou a aria-expanded='{detalhe_depois.get('aberto')}'"
+                f" (era '{detalhe_antes.get('aberto')}')"
+            )
+        if detalhe_antes.get("escondido") != detalhe_depois.get("escondido"):
+            provas.append(
+                f"o alvo mudou de {detalhe_antes.get('escondido')} para {detalhe_depois.get('escondido')}"
+            )
+        if depois.get("altura") and antes.get("altura") != depois.get("altura"):
+            provas.append(f"altura da pagina {antes.get('altura')} -> {depois.get('altura')} px")
+        irmaos_antes = antes.get("irmaos") or []
+        irmaos_depois = depois.get("irmaos") or []
+        mudados = 0
+        for posicao in range(min(len(irmaos_antes), len(irmaos_depois))):
+            um = irmaos_antes[posicao]
+            outro = irmaos_depois[posicao]
+            if (um.get("classe"), um.get("aberto"), um.get("tamanho"), um.get("escondido")) != (
+                outro.get("classe"), outro.get("aberto"), outro.get("tamanho"), outro.get("escondido")
+            ):
+                mudados += 1
+        if mudados:
+            provas.append(f"{mudados} irmao(s) do alvo mudaram de estado")
     if provas:
         linha = "A pagina reagiu: " + "; ".join(provas) + "."
     elif not depois:
@@ -380,21 +490,25 @@ def _texto_do_efeito(efeito):
             "O gesto foi feito, mas nao consegui medir a pagina depois dele (ela pode ter"
             " deixado de responder ou navegado) - nao sei se mudou."
         )
-    elif (depois.get("alvo") or {}).get("valor") is not None:
-        linha = (
-            "Nada detetavel mudou na pagina, e o campo continua com"
-            f" {(depois.get('alvo') or {}).get('valor')} caractere(s)."
-        )
     elif depois:
+        valor_alvo = (depois.get("alvo") or {}).get("valor")
+        do_campo = (
+            f" e o campo continua com {valor_alvo} caractere(s)" if valor_alvo is not None else ""
+        )
         linha = (
-            f"Nada detetavel mudou na pagina ({depois.get('total')} elementos,"
-            f" {depois.get('sem_caixa')} sem caixa)."
+            "O alvo foi olhado depois do gesto e continua IGUAL - classes, tamanho, valor,"
+            " aria-expanded e os irmaos dele, nada mudou"
+            f"{do_campo} - logo a pagina nao reagiu ({depois.get('total')} elementos,"
+            f" {depois.get('sem_caixa')} sem caixa). Nao repeti o gesto por conta propria:"
+            " um clique que grava nao pode ser disparado duas vezes as escuras. Se o botao"
+            " trabalha devagar, repita com repetir=true; se nao mudou nada mesmo, veja a"
+            " consola e a rede desta resposta."
         )
     else:
-        linha = "Nada detetavel mudou na pagina."
+        linha = "Nada detetavel mudou na pagina (nao consegui olhar para ela depois do gesto)."
     if efeito.get("repetido"):
-        linha += (" O gesto foi repetido uma vez: a 1a tentativa nao mexeu na pagina"
-                  " (alvo a meio de uma re-renderizacao) e a repeticao resolveu.")
+        linha += (" O gesto foi repetido a seu pedido (repetir=true) e a segunda tentativa"
+                  " mexeu na pagina.")
     novas = efeito.get("consola") or []
     if novas:
         mostra = "; ".join(
@@ -723,10 +837,12 @@ def texto_dos_quadros(dados):
     return "\n".join(linhas)
 
 
-def _print_do_preview(seletor, regiao, tela="preview"):
+def _print_do_preview(seletor, regiao, tela="preview", largura=0, altura=0, mobile=False):
     ponte_preview = _Ponte(tela)
     nome = "da janela do Axio" if tela == "janela" else "do preview"
-    dados, erro = ponte_preview.pedir("print", seletor=seletor, regiao=regiao)
+    dados, erro = ponte_preview.pedir(
+        "print", seletor=seletor, regiao=regiao, largura=largura, altura=altura, mobile=mobile
+    )
     if erro:
         return f"ERRO: {erro}."
     if not dados.get("ok"):
@@ -740,11 +856,28 @@ def _print_do_preview(seletor, regiao, tela="preview"):
     aviso = ""
     if entregue and tuple(entregue) != tuple(dimensoes):
         aviso = f" A API reduz a imagem a ~800x800 equivalentes, por isso chegou com {entregue[0]}x{entregue[1]} px."
+    uniforme = uniformidade_da_imagem(bruto)
+    if uniforme and uniforme.get("uniforme"):
+        cor = uniforme.get("cor") or [0, 0, 0]
+        fatia = round(100 * float(uniforme.get("fatia") or 0), 1)
+        aviso += (
+            f" AVISO: a captura saiu QUASE TODA da mesma cor - {fatia}% dos pixeis sao"
+            f" rgb({cor[0]},{cor[1]},{cor[2]}). Se aquela regiao tinha conteudo, isto e o instrumento"
+            " a falhar, e nao um resultado: vista em segundo plano, regiao fora do que foi pintado,"
+            " ou a pagina ainda a pintar. Confirme com acao='estado', traga a vista a frente com"
+            " acao='mostrar' e repita - ou fotografe o ecra do sistema com tool_capturar_print."
+        )
+    referencia = dados.get("referencia")
+    onde_conta = ""
+    if referencia == "pagina":
+        onde_conta = " A regiao foi contada pela PAGINA inteira, e nao pelo que esta no ecra."
+    nota = str(dados.get("nota") or "").strip()
     return {
         "texto": _com_alvo(
-            f"Print {nome}{alvo}: {dimensoes[0]}x{dimensoes[1]} px."
+            f"Print {nome}{alvo}: {dimensoes[0]}x{dimensoes[1]} px.{onde_conta}"
             " A imagem segue com esta resposta - olhe para ela antes de concluir."
-            f"{aviso}",
+            f"{aviso}"
+            + (f" {nota}" if nota else ""),
             dados,
             print_em_segundo_plano=True,
         ),
@@ -769,17 +902,38 @@ def _identidade_do_preview(dados):
     return "Aba que respondeu: " + " - ".join(partes) + "."
 
 
-def _com_alvo(texto, dados, print_em_segundo_plano=False):
-    """Antepoe a identidade da aba e os avisos que so fazem sentido com ela.
+def _texto_do_viewport(dados):
+    """A largura em que a medicao foi feita - nunca deixar confundir com a janela real."""
+    medida = (dados or {}).get("viewport") or {}
+    if not medida.get("largura"):
+        return ""
+    como = (
+        "emulacao de telemovel (o viewport meta da pagina e respeitado)"
+        if medida.get("mobile")
+        else "disposicao forcada a essa largura (e o que faz as media queries dispararem)"
+    )
+    return (
+        f"MEDIDO A {medida.get('largura')}x{medida.get('altura')} px - {como}."
+        " A janela do preview continua no tamanho normal: as medidas sao as desta largura."
+    )
 
-    As duas mentiras que isto mata: ler uma ABA MORTA (chrome-error://) a pensar que e a
-    pagina carregada, e concluir de um print PRETO tirado a uma vista em segundo plano (o
-    Chromium estrangula o desenho de uma vista escondida).
+
+def _com_alvo(texto, dados, print_em_segundo_plano=False):
+    """Antepoe a identidade da aba, a largura emulada e os avisos que so fazem sentido com ela.
+
+    As mentiras que isto mata: ler uma ABA MORTA (chrome-error://) a pensar que e a
+    pagina carregada, concluir de um print PRETO tirado a uma vista em segundo plano (o
+    Chromium estrangula o desenho de uma vista escondida), e tomar uma medicao a 390 px
+    por uma medicao da janela.
     """
-    identidade = _identidade_do_preview(dados)
-    if not identidade:
-        return texto
     alvo = (dados or {}).get("alvo") or {}
+    linhas = []
+    identidade = _identidade_do_preview(dados)
+    if identidade:
+        linhas.append(identidade)
+    vista = _texto_do_viewport(dados)
+    if vista:
+        linhas.append(vista)
     avisos = []
     if str(alvo.get("url") or "").startswith("chrome-error"):
         avisos.append(
@@ -793,7 +947,10 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
             " de uma vista escondida, logo um canvas/WebGL pode sair PRETO. Se a imagem vier preta,"
             " traga a vista a frente com acao='mostrar' e repita."
         )
-    return "\n".join([identidade] + avisos + [texto])
+    aviso = str((dados or {}).get("aviso") or "").strip()
+    if aviso:
+        avisos.append(aviso)
+    return "\n".join(linhas + avisos + [texto])
 
 
 @register(
@@ -871,13 +1028,42 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
             "enum": ["preview", "janela"],
             "desc": "ONDE olhar: 'preview' (a pagina aberta no visualizador, por omissao) ou 'janela' (a propria interface do Axio - o mesmo mapa, consola, JS, estilo e print, mas no Chromium que desenha a aplicacao). Use 'janela' para medir a fluidez dos efeitos, ler os erros de JS do proprio Axio ou conferir um elemento do ecra.",
         },
+        "largura": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "LARGURA EM PIXEIS em que a pagina e disposta antes de medir (emulacao de viewport pelo CDP) - e o caminho para provar o CSS de telemovel: 390 para um telefone moderno, 360 para um pequeno, 768 para um tablet. Sem isto mede-se a largura real da janela. Vale em 'elemento', 'mapa', 'estilo', 'avaliar', 'canvas', 'quadros', 'print' e nos gestos. A medicao e desfeita no fim do pedido (a janela volta ao tamanho normal).",
+        },
+        "altura": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "Altura em pixeis da emulacao de viewport (por omissao 844, a de um telefone). So tem efeito com 'largura'.",
+        },
+        "mobile": {
+            "tipo": "BOOLEAN", "obrig": False, "padrao": False,
+            "desc": "Com 'largura': true emula um TELEMOVEL a serio (respeita o viewport meta da pagina - uma pagina sem meta fica com 980 px de layout, como num telefone). false (por omissao) forca a disposicao exatamente na largura pedida, que e o que faz disparar as media queries.",
+        },
+        "espera": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "Em 'avaliar': milissegundos a aguardar ANTES de correr a expressao (ate 10000). Use quando a pagina acabou de ser carregada ou de reagir a um clique e o elemento ainda nao existe.",
+        },
+        "tempo": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "Em 'avaliar': segundos de paciencia antes de desistir (por omissao 8, teto 45). Suba-o para uma expressao que percorre uma pagina grande ou espera pedidos; quando estoura, a resposta diz o que a pagina estava a fazer, em vez de culpar um leitor que nao existe.",
+        },
+        "alvo": {
+            "tipo": "STRING", "obrig": False, "padrao": "",
+            "desc": "Em 'carregar': o endereco a abrir no preview (http://..., localhost:8099, ou um caminho do projeto). Em 'mostrar': nada. Estas duas acoes existem aqui e em tool_operar_preview - sao as mesmas.",
+        },
     },
 )
-def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0, tela="preview"):
+def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0, tela="preview", largura=0, altura=0, mobile=False, espera=0, tempo=0, alvo=""):
     ponte_preview = _Ponte(tela)
     pedido = str(acao or "estado").strip().lower()
     if pedido not in ACOES_DE_OBSERVACAO:
         return f"ERRO: acao desconhecida '{acao}'. Use uma de: {', '.join(ACOES_DE_OBSERVACAO)}."
+    medida = {"largura": int(largura or 0), "altura": int(altura or 0), "mobile": bool(mobile)}
+    if pedido in ("carregar", "mostrar"):
+        return tool_operar_preview(acao=pedido, alvo=alvo or texto, tela=tela)
+    if pedido == "print" and medida["largura"]:
+        emit_event("executing", function=f"Imprimindo o preview a {medida['largura']} px de largura")
     if pedido == "consola":
         emit_event("executing", function="Lendo a consola do preview")
     elif pedido == "rede":
@@ -914,7 +1100,9 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
     if pedido == "elemento":
         if not (seletor.strip() or texto.strip()):
             return "ERRO: indique 'seletor' (CSS) ou 'texto' (o que esta escrito no elemento)."
-        dados, erro = ponte_preview.pedir("elemento", seletor=seletor, texto=texto, limite=limite)
+        dados, erro = ponte_preview.pedir(
+            "elemento", seletor=seletor, texto=texto, limite=limite, **medida
+        )
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
@@ -922,7 +1110,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         return _com_alvo(_texto_dos_elementos(dados), dados)
 
     if pedido == "mapa":
-        dados, erro = ponte_preview.pedir("mapa", limite=limite)
+        dados, erro = ponte_preview.pedir("mapa", limite=limite, **medida)
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
@@ -930,7 +1118,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         return _com_alvo(_texto_do_mapa(dados), dados)
 
     if pedido == "estilo":
-        dados, erro = ponte_preview.pedir("estilo", seletor=seletor, limite=limite)
+        dados, erro = ponte_preview.pedir("estilo", seletor=seletor, limite=limite, **medida)
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
@@ -943,11 +1131,18 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         total = max(0, min(int(durante or 0), 8000))
         if total:
             emit_event("executing", function=f"Amostrando a pagina por {total} ms")
-        dados, erro = ponte_preview.pedir("avaliar", js=js, durante=total, intervalo=intervalo)
+        dados, erro = ponte_preview.pedir(
+            "avaliar", js=js, durante=total, intervalo=intervalo,
+            espera=max(0, min(int(espera or 0), 10000)), tempo=int(tempo or 0), **medida
+        )
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
-            return f"ERRO: {dados.get('erro') or 'a expressao falhou'}."
+            partes = [f"ERRO: {dados.get('erro') or 'a expressao falhou'}."]
+            aviso = str(dados.get("aviso") or "").strip()
+            if aviso:
+                partes.append(aviso)
+            return "\n".join(partes)
         resultado = dados.get("resultado")
         if total and isinstance(resultado, list):
             texto = _texto_das_amostras(js, total, resultado)
@@ -963,7 +1158,7 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         )
 
     if pedido == "canvas":
-        dados, erro = ponte_preview.pedir("canvas", seletor=seletor, grelha=grelha)
+        dados, erro = ponte_preview.pedir("canvas", seletor=seletor, grelha=grelha, **medida)
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
@@ -971,14 +1166,14 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         return _quadro_do_canvas(dados)
 
     if pedido == "quadros":
-        dados, erro = ponte_preview.pedir("quadros", durante=int(durante or 0))
+        dados, erro = ponte_preview.pedir("quadros", durante=int(durante or 0), **medida)
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'a pagina nao desenhou nada'}."
         return _com_alvo(texto_dos_quadros(dados), dados)
 
-    return _print_do_preview(seletor, regiao, tela)
+    return _print_do_preview(seletor, regiao, tela, largura, altura, mobile)
 
 
 def _quadro_do_canvas(dados):
@@ -1060,7 +1255,23 @@ def _quadro_do_canvas(dados):
         },
         "passos": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Em 'roteiro': a lista JSON dos gestos, na ordem, cada um com 'acao' e os seus argumentos. Ex: [{\"acao\":\"clicar\",\"seletor\":\"#btn-x\"},{\"acao\":\"escrever\",\"seletor\":\"#campo\",\"texto\":\"oi\",\"limpar\":true},{\"acao\":\"teclar\",\"tecla\":\"Enter\"}]. Corre tudo numa so chamada e para no primeiro gesto que falhar. Cada passo aceita 'espera' em milissegundos (ate 5000), aguardada ANTES do gesto: use quando o passo anterior abre ou fecha algo com animacao, para o gesto seguinte agir na pagina ja parada.",
+            "desc": "Em 'roteiro': os gestos, na ordem. DOIS formatos, os dois validos: (a) lista JSON, cada gesto um objeto - [{\"acao\":\"clicar\",\"seletor\":\"#btn-x\"},{\"acao\":\"escrever\",\"seletor\":\"#campo\",\"texto\":\"oi\",\"limpar\":true},{\"acao\":\"teclar\",\"tecla\":\"Enter\"}]; (b) um gesto POR LINHA, com o alvo a seguir a acao - 'clicar #btn-x', 'escrever #campo | oi', 'teclar Enter', 'esperar 500', 'recarregar'. Vale a acao 'esperar' com os milissegundos. Corre tudo numa so chamada e para no primeiro gesto que falhar. Cada passo aceita tambem 'espera' em milissegundos (ate 5000), aguardada ANTES do gesto: use quando o passo anterior abre ou fecha algo com animacao, para o gesto seguinte agir na pagina ja parada.",
+        },
+        "largura": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "LARGURA EM PIXEIS em que a pagina e disposta antes do gesto (emulacao de viewport pelo CDP): use 390 para agir e medir como num telemovel. Sem isto, a largura real da janela. Vale em 'clicar', 'escrever', 'teclar', 'arrastar' e 'roda'; a emulacao e desfeita no fim do pedido.",
+        },
+        "altura": {
+            "tipo": "INTEGER", "obrig": False, "padrao": 0,
+            "desc": "Altura em pixeis da emulacao de viewport (por omissao 844, a de um telefone). So tem efeito com 'largura'.",
+        },
+        "mobile": {
+            "tipo": "BOOLEAN", "obrig": False, "padrao": False,
+            "desc": "Com 'largura': true emula um TELEMOVEL a serio (respeita o viewport meta); false (por omissao) forca a disposicao exatamente na largura pedida.",
+        },
+        "repetir": {
+            "tipo": "BOOLEAN", "obrig": False, "padrao": False,
+            "desc": "Em 'clicar': por omissao UM gesto e UM evento - se nada mudar, a ferramenta espera de novo e diz que nao mudou, sem repetir o clique (um botao que grava nao pode ser disparado duas vezes as escuras). Com repetir=true, e disparado uma segunda vez quando a primeira nao provocou mudanca observavel - use so quando souber que o botao nao grava nada.",
         },
         "tela": {
             "tipo": "STRING", "obrig": False, "padrao": "preview",
@@ -1069,12 +1280,13 @@ def _quadro_do_canvas(dados):
         },
     },
 )
-def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar=False, tecla="", passos="", tela="preview"):
+def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar=False, tecla="", passos="", tela="preview", largura=0, altura=0, mobile=False, repetir=False):
     ponte_preview = _Ponte(tela)
     pedido = str(acao or "").strip().lower()
     if pedido not in ACOES_DE_OPERACAO:
         return f"ERRO: acao desconhecida '{acao}'. Use uma de: {', '.join(ACOES_DE_OPERACAO)}."
     emit_event("executing", function=f"Agindo no preview: {pedido}")
+    medida = {"largura": int(largura or 0), "altura": int(altura or 0), "mobile": bool(mobile)}
 
     ignorado = _argumento_ignorado(pedido, {
         "seletor": seletor, "ponto": ponto, "alvo": alvo,
@@ -1091,18 +1303,35 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
             destino = _origem_do_servidor() + destino
         elif not _e_endereco(destino):
             convertido, motivo = _endereco_do_ficheiro(destino)
-            if motivo:
-                return f"ERRO: {motivo}."
             if convertido:
                 destino = convertido
+            elif destino.startswith("/") and not destino.startswith("//"):
+                destino = _origem_do_servidor() + destino
+            elif motivo:
+                return f"ERRO: {motivo}."
         dados, erro = ponte_preview.pedir("carregar", alvo=destino)
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'nao foi possivel carregar'}."
         aviso = _renovar_pagina_local(destino)
-        return (f"Preview a carregar {dados.get('alvo') or destino}.{aviso} "
-                "Use acao='estado' para confirmar que ficou.")
+        ficou = str(dados.get("alvo") or destino)
+        for _ in range(20):
+            estado, falha_estado = ponte_preview.pedir("estado")
+            if falha_estado:
+                break
+            if not estado.get("carregando"):
+                ficou = str(estado.get("url") or ficou)
+                break
+            time.sleep(0.15)
+        nota = ""
+        if ficou.rstrip("/") != str(dados.get("alvo") or destino).rstrip("/"):
+            nota = (
+                f" ATENCAO: pedi {dados.get('alvo') or destino} e a barra do preview ficou em"
+                f" {ficou} - a pagina navegou ou recusou a navegacao. E o que ficou que conta."
+            )
+        return (f"Preview carregado: {ficou}.{aviso}{nota} "
+                "Use acao='estado' para confirmar.")
 
     if pedido == "mostrar":
         dados, erro = ponte_preview.pedir("mostrar")
@@ -1117,19 +1346,37 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         if not dados.get("ok"):
             return f"ERRO: {dados.get('erro') or 'nao foi possivel recarregar o preview'}."
         estado = "ja carregada" if dados.get("pronto") else "ainda a carregar"
-        return (f"Preview recarregado sem cache ({dados.get('url') or 'pagina atual'}, {estado}). "
-                "Se acabou de editar frontend, e este o codigo novo: use acao='consola' para "
-                "ver os erros dele.")
+        linha = (f"Preview recarregado sem cache ({dados.get('url') or 'pagina atual'}, {estado}). "
+                 "Se acabou de editar frontend, e este o codigo novo: use acao='consola' para "
+                 "ver os erros dele.")
+        modulos = dados.get("modulos")
+        if isinstance(modulos, list) and modulos:
+            do_cache = [m.get("ficheiro") for m in modulos if m.get("do_cache")]
+            if do_cache:
+                linha += (
+                    f" ATENCAO: {len(do_cache)} ficheiro(s) de codigo vieram da CACHE"
+                    f" ({', '.join(str(n) for n in do_cache[:6])}) - se editei um destes, o que se"
+                    " mede agora ainda pode ser a versao antiga."
+                )
+            else:
+                linha += (
+                    f" {len(modulos)} ficheiro(s) de codigo revalidados, nenhum veio da cache."
+                )
+        return linha
 
     if pedido == "clicar":
         if seletor.strip():
-            dados, erro = ponte_preview.pedir("clicar", seletor=seletor)
+            dados, erro = ponte_preview.pedir(
+                "clicar", seletor=seletor, repetir=bool(repetir), **medida
+            )
             onde = seletor
         else:
             posicao, falha = _ponto_do_texto(ponto)
             if falha:
                 return f"ERRO: {falha}."
-            dados, erro = ponte_preview.pedir("clicar", x=posicao[0], y=posicao[1])
+            dados, erro = ponte_preview.pedir(
+                "clicar", x=posicao[0], y=posicao[1], repetir=bool(repetir), **medida
+            )
             onde = ponto
         if erro:
             return f"ERRO: {erro}."
@@ -1141,7 +1388,7 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         lista, falha = _pontos_do_texto(ponto)
         if falha:
             return f"ERRO: {falha}."
-        dados, erro = ponte_preview.pedir("arrastar", pontos=[list(par) for par in lista])
+        dados, erro = ponte_preview.pedir("arrastar", pontos=[list(par) for par in lista], **medida)
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
@@ -1164,10 +1411,10 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
                 return (f"ERRO: em 'roda', 'texto' e quanto rolar em pixeis (negativo aproxima,"
                         f" positivo afasta); '{texto}' nao e um numero.")
         if posicao:
-            dados, erro = ponte_preview.pedir("roda", x=posicao[0], y=posicao[1], delta=delta)
+            dados, erro = ponte_preview.pedir("roda", x=posicao[0], y=posicao[1], delta=delta, **medida)
             onde = ponto
         elif seletor.strip():
-            dados, erro = ponte_preview.pedir("roda", seletor=seletor, delta=delta)
+            dados, erro = ponte_preview.pedir("roda", seletor=seletor, delta=delta, **medida)
             onde = seletor
         else:
             return "ERRO: indique 'ponto' (x,y) ou 'seletor' no sitio onde a roda deve girar."
@@ -1190,7 +1437,9 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         texto, erro_cofre = cofre.resolver_ou_erro(texto)
         if erro_cofre:
             return f"ERRO: {erro_cofre}."
-        dados, erro = ponte_preview.pedir("escrever", seletor=seletor, texto=texto, limpar=bool(limpar))
+        dados, erro = ponte_preview.pedir(
+            "escrever", seletor=seletor, texto=texto, limpar=bool(limpar), **medida
+        )
         if erro:
             return f"ERRO: {erro}."
         if not dados.get("ok"):
@@ -1207,7 +1456,7 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         if falha:
             return f"ERRO: {falha}."
         emit_event("executing", function=f"Correndo roteiro de {len(lista)} gesto(s)")
-        return _correr_roteiro(lista, tela)
+        return _correr_roteiro(lista, tela, medida)
 
     if pedido == "ficheiro":
         caminho = (alvo or texto).strip()
@@ -1228,7 +1477,7 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         return (f"Ficheiro colocado no campo da pagina: {destino}{via}. "
                 "O campo ja recebeu o evento de mudanca; confirme pelo efeito no ecra.")
 
-    dados, erro = ponte_preview.pedir("teclar", tecla=tecla)
+    dados, erro = ponte_preview.pedir("teclar", tecla=tecla, **medida)
     if erro:
         return f"ERRO: {erro}."
     if not dados.get("ok"):

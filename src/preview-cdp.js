@@ -8,6 +8,10 @@ const TETO_CONSOLA = 400;
 const TETO_REDE = 200;
 const TETO_PEDIDOS = 500;
 const TEMPO_COMANDO_MS = 8000;
+const TEMPO_COMANDO_MAX_MS = 45000;
+const LARGURA_MAXIMA_MS = 4000;
+const ALTURA_MAXIMA_MS = 6000;
+const ESPERA_MAXIMA_AVALIAR_MS = 10000;
 const TETO_TEXTO_ENTRADA = 2000;
 const PAUSA_CURSOR_MS = 150;
 const ESPERA_VISTA_MS = 450;
@@ -36,6 +40,7 @@ let consolaDescartada = 0;
 let rede = [];
 let redeDescartada = 0;
 let geracaoRegistos = 0;
+let ultimaNavegacao = 0;
 const pedidos = new Map();
 const vigiados = new WeakSet();
 const escolhedores = new Map();
@@ -43,6 +48,7 @@ const escolhedores = new Map();
 const SEM_PAGINA = new Set(['estado', 'consola', 'rede', 'carregar', 'mostrar']);
 const SO_PREVIEW = new Set(['carregar', 'mostrar']);
 const ACOES_QUE_AGEM = new Set(['carregar', 'mostrar', 'clicar', 'escrever', 'teclar', 'arrastar', 'roda', 'recarregar', 'ficheiro']);
+const ACOES_QUE_MEDEM_A_PAGINA = new Set(['avaliar', 'estilo', 'elemento', 'mapa', 'print', 'canvas', 'quadros', 'clicar', 'escrever', 'teclar', 'arrastar', 'roda']);
 
 const TECLAS = {
   Enter: { key: 'Enter', code: 'Enter', vk: 13, texto: '\r' },
@@ -420,34 +426,111 @@ const SNIPPET_CURSOR = `(function (p) {
 })`;
 
 const SNIPPET_ASSINATURA = `(function (p) {
+  function retrato(el) {
+    var classe = el.getAttribute ? el.getAttribute('class') : '';
+    var caixa = el.getBoundingClientRect();
+    var escondido = '';
+    try {
+      var cs = getComputedStyle(el);
+      escondido = cs.display + '/' + cs.visibility + '/' + cs.height;
+    } catch (e) {}
+    var valor = null;
+    if ('value' in el) {
+      valor = String(el.value == null ? '' : el.value).length;
+    } else if (el.getAttribute && el.getAttribute('aria-expanded') != null) {
+      valor = el.getAttribute('aria-expanded');
+    }
+    return {
+      classe: String(classe == null ? '' : classe).trim(),
+      oculto: (el.hasAttribute && (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true')) || false,
+      aberto: el.getAttribute ? el.getAttribute('aria-expanded') : null,
+      escondido: escondido,
+      tamanho: Math.round(caixa.width) + 'x' + Math.round(caixa.height),
+      valor: valor
+    };
+  }
   var alvo = null;
   var existe = false;
-  var classes = '';
-  var tamanho = '';
-  var valor = null;
+  var meu = null;
   if (p.seletor) {
     try { alvo = document.querySelector(p.seletor); } catch (e) { alvo = null; }
     existe = !!alvo;
-    if (alvo) {
-      var classe = alvo.getAttribute('class');
-      classes = String(classe == null ? '' : classe).trim();
-      var caixa = alvo.getBoundingClientRect();
-      tamanho = Math.round(caixa.width) + 'x' + Math.round(caixa.height);
-      if ('value' in alvo) valor = String(alvo.value == null ? '' : alvo.value).length;
+    if (alvo) meu = retrato(alvo);
+  }
+  var irmaos = [];
+  if (alvo && alvo.parentElement) {
+    var filhos = alvo.parentElement.children;
+    for (var i = 0; i < filhos.length && i < 8; i++) {
+      if (filhos[i] !== alvo) irmaos.push(retrato(filhos[i]));
     }
   }
+  var doc = document.documentElement;
+  var corpo = document.body || doc;
+  var folhas = document.styleSheets ? document.styleSheets.length : 0;
+  var regras = 0;
+  try {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      regras += document.styleSheets[s].cssRules ? document.styleSheets[s].cssRules.length : 0;
+    }
+  } catch (e) {}
   var todos = document.getElementsByTagName('*');
   var semCaixa = 0;
-  for (var i = 0; i < todos.length; i++) {
-    if (todos[i].getClientRects().length === 0) semCaixa++;
+  for (var j = 0; j < todos.length; j++) {
+    if (todos[j].getClientRects().length === 0) semCaixa++;
   }
   return {
     url: String(location.href),
     titulo: String(document.title || ''),
     total: todos.length,
     sem_caixa: semCaixa,
-    alvo: p.seletor ? { existe: existe, classes: classes, tamanho: tamanho, valor: valor } : null
+    altura: Math.round(Math.max(doc.scrollHeight, corpo.scrollHeight)),
+    folhas: folhas,
+    regras: regras,
+    alvo: p.seletor ? {
+      existe: existe,
+      classes: meu ? meu.classe : '',
+      tamanho: meu ? meu.tamanho : '',
+      valor: meu ? meu.valor : null,
+      detalhe: meu
+    } : null,
+    irmaos: irmaos
   };
+})`;
+
+const SNIPPET_ENQUADRA = `(function (p) {
+  var alvo = null;
+  var erro = '';
+  if (p.seletor) {
+    try { alvo = document.querySelector(p.seletor); } catch (e) { erro = String((e && e.message) || e); }
+    if (!alvo && !erro) erro = 'Nenhum elemento encontrado para ' + p.seletor;
+    if (alvo) {
+      try { alvo.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' }); } catch (e) {}
+    }
+  }
+  var doc = document.documentElement;
+  var corpo = document.body || doc;
+  var pagina = {
+    largura: Math.max(doc.scrollWidth, corpo.scrollWidth),
+    altura: Math.max(doc.scrollHeight, corpo.scrollHeight),
+    vista_largura: window.innerWidth,
+    vista_altura: window.innerHeight,
+    scroll_x: Math.round(window.scrollX),
+    scroll_y: Math.round(window.scrollY)
+  };
+  var caixa = null;
+  if (alvo) {
+    var r = alvo.getBoundingClientRect();
+    caixa = {
+      x: Math.round(r.left),
+      y: Math.round(r.top),
+      largura: Math.max(1, Math.round(r.width)),
+      altura: Math.max(1, Math.round(r.height)),
+      documento_x: Math.round(r.left + window.scrollX),
+      documento_y: Math.round(r.top + window.scrollY),
+      cabe_na_vista: r.top >= -1 && r.bottom <= window.innerHeight + 1 && r.width <= window.innerWidth + 1
+    };
+  }
+  return { ok: !erro, erro: erro, caixa: caixa, pagina: pagina };
 })`;
 
 const JS_RESUMO_ESTILO = `
@@ -1043,7 +1126,9 @@ function aoMensagemDoDepurador(depurador, metodo, params, wc) {
     });
     return;
   }
-  if (metodo === 'Network.loadingFailed') {
+  if (metodo === 'Network.loadingFinished' || metodo === 'Network.loadingFailed') {
+    pedidos.delete(String(params.requestId || ''));
+    if (metodo === 'Network.loadingFinished') return;
     if (params.canceled) return;
     const dono = pedidos.get(String(params.requestId || '')) || {};
     registarRede({
@@ -1108,8 +1193,8 @@ function prepararDepurador(view, leve) {
       linha: 0,
       quando: Date.now()
     }));
-    wc.on('did-navigate', () => { limparRegistos(); reinjetarInspecaoAposNavegar(view); });
-    wc.on('did-navigate-in-page', () => { limparRegistos(); reinjetarInspecaoAposNavegar(view); });
+    wc.on('did-navigate', () => { ultimaNavegacao = Date.now(); limparRegistos(); reinjetarInspecaoAposNavegar(view); });
+    wc.on('did-navigate-in-page', () => { ultimaNavegacao = Date.now(); limparRegistos(); reinjetarInspecaoAposNavegar(view); });
   }
   const dominios = leve
     ? ['Runtime.enable', 'Log.enable']
@@ -1121,14 +1206,19 @@ function prepararDepurador(view, leve) {
   return true;
 }
 
-function enviarComando(depurador, metodo, params) {
+function enviarComando(depurador, metodo, params, tempoMs) {
+  const limite = Math.max(1000, Math.min(Number(tempoMs) || TEMPO_COMANDO_MS, TEMPO_COMANDO_MAX_MS));
   return new Promise((resolve, reject) => {
     let terminado = false;
     const relogio = setTimeout(() => {
       if (terminado) return;
       terminado = true;
-      reject(new Error('a pagina nao respondeu em ' + Math.round(TEMPO_COMANDO_MS / 1000) + 's: isso e a linha principal ocupada com codigo sincrono (um leitor a converter - tipicamente o IFC em WASM) e nao uma avaria do depurador. Enquanto nao responder, nenhum gesto nem troca de aba desta pagina acontece: recarregue o preview ou navegue para outra pagina para a libertar.'));
-    }, TEMPO_COMANDO_MS);
+      reject(new Error('a pagina nao respondeu em ' + Math.round(limite / 1000) + 's ao comando '
+        + metodo + ': a linha principal esta ocupada (codigo sincrono a correr) ou a janela esta bloqueada.'
+        + ' Enquanto nao responder, nenhum gesto nem troca de aba desta pagina acontece. Se a pagina'
+        + ' estiver mesmo a trabalhar, repita com tempo maior (ate '
+        + Math.round(TEMPO_COMANDO_MAX_MS / 1000) + 's).'));
+    }, limite);
     depurador.sendCommand(metodo, params || {})
       .then((resposta) => {
         if (terminado) return;
@@ -1211,6 +1301,145 @@ async function caixaDoPedido(depurador, params) {
     return { caixa: null, centro: { x: x, y: y }, onde: x + ',' + y };
   }
   return { caixa: null, centro: null, onde: '' };
+}
+
+function viewportPedido(params) {
+  const largura = Math.round(Number(params.largura) || 0);
+  if (!(largura > 0)) return null;
+  const altura = Math.round(Number(params.altura) || 0);
+  return {
+    largura: Math.max(120, Math.min(largura, LARGURA_MAXIMA_MS)),
+    altura: Math.max(120, Math.min(altura > 0 ? altura : 844, ALTURA_MAXIMA_MS))
+  };
+}
+
+async function aplicarViewport(depurador, params) {
+  const medida = viewportPedido(params);
+  if (!medida) return null;
+  await enviarComando(depurador, 'Emulation.setDeviceMetricsOverride', {
+    width: medida.largura,
+    height: medida.altura,
+    deviceScaleFactor: Math.max(0.1, Math.min(Number(params.escala) || 1, 4)),
+    mobile: !!params.mobile,
+    screenWidth: medida.largura,
+    screenHeight: medida.altura,
+    dontSetVisibleSize: true
+  });
+  return medida;
+}
+
+async function limparViewport(depurador) {
+  await enviarComando(depurador, 'Emulation.clearDeviceMetricsOverride').catch(() => {});
+}
+
+async function ligarViewport(view, naJanela, acao, params) {
+  if (!view || naJanela) return null;
+  if (!ACOES_QUE_MEDEM_A_PAGINA.has(acao)) return null;
+  const medida = viewportPedido(params);
+  if (!medida) return null;
+  const depurador = depuradorDe(view);
+  if (!depurador) return null;
+  try {
+    await aplicarViewport(depurador, params);
+  } catch (e) {
+    return null;
+  }
+  return {
+    depurador: depurador,
+    largura: medida.largura,
+    altura: medida.altura,
+    mobile: !!params.mobile
+  };
+}
+
+async function desligarViewport(emulacao) {
+  if (!emulacao) return;
+  await limparViewport(emulacao.depurador);
+}
+
+async function retratoDaPagina(depurador, seletor, tempoMs) {
+  const expressao = "(function (p) {"
+    + " var d = document; var doc = d.documentElement; var corpo = d.body || doc;"
+    + " var regras = 0; var folhas = d.styleSheets ? d.styleSheets.length : 0;"
+    + " try { for (var i = 0; i < d.styleSheets.length; i++) { regras += d.styleSheets[i].cssRules ? d.styleSheets[i].cssRules.length : 0; } } catch (e) {}"
+    + " var alvo = null;"
+    + " if (p.seletor) { try { alvo = d.querySelector(p.seletor); } catch (e) { alvo = null; } }"
+    + " return { ready_state: String(d.readyState), url: String(location.href), titulo: String(d.title || ''),"
+    + " folhas: folhas, regras: regras, altura: Math.round(Math.max(doc.scrollHeight, corpo.scrollHeight)),"
+    + " alvo_existe: p.seletor ? !!alvo : null };"
+    + "})(" + JSON.stringify({ seletor: String(seletor || '') }) + ")";
+  let dados = null;
+  try {
+    const resposta = await enviarComando(depurador, 'Runtime.evaluate', {
+      expression: expressao,
+      returnByValue: true,
+      awaitPromise: false,
+      userGesture: false
+    }, tempoMs || 2500);
+    if (resposta && !resposta.exceptionDetails && resposta.result && resposta.result.value) {
+      dados = resposta.result.value;
+    }
+  } catch (e) {
+    dados = null;
+  }
+  return Object.assign({
+    respondeu: !!dados,
+    ready_state: '',
+    url: '',
+    titulo: '',
+    folhas: 0,
+    regras: 0,
+    altura: 0,
+    alvo_existe: null
+  }, dados || {}, {
+    pedidos_abertos: pedidos.size,
+    desde_navegacao_ms: ultimaNavegacao ? Date.now() - ultimaNavegacao : null
+  });
+}
+
+function descreverRetrato(retrato) {
+  if (!retrato) return 'sem leitura da pagina.';
+  if (!retrato.respondeu) {
+    return 'a pagina nao respondeu nem a uma leitura simples da propria estrutura:'
+      + ' a linha principal esta bloqueada por codigo sincrono.';
+  }
+  const partes = ['readyState=' + (retrato.ready_state || '?')];
+  if (retrato.pedidos_abertos) partes.push(retrato.pedidos_abertos + ' pedido(s) em curso');
+  if (retrato.desde_navegacao_ms !== null) {
+    partes.push('ultima navegacao ha ' + retrato.desde_navegacao_ms + ' ms');
+  }
+  if (retrato.folhas && !retrato.regras) {
+    partes.push(retrato.folhas + ' folha(s) de estilo sem regras legiveis');
+  }
+  return partes.join(', ') + '.';
+}
+
+function resultadoVazio(valor) {
+  if (Array.isArray(valor)) return valor.length === 0;
+  if (valor && typeof valor === 'object') return Object.keys(valor).length === 0;
+  return false;
+}
+
+function avisoDoRetrato(retrato, contexto) {
+  if (!retrato) return '';
+  const partes = [];
+  if (retrato.folhas > 0 && retrato.regras === 0) {
+    partes.push('a pagina tem ' + retrato.folhas + ' folha(s) de estilo e ZERO regras legiveis:'
+      + ' o CSS pode nao ter carregado (procure 404 em acao=\'rede\') e a geometria que medir aqui NAO e a do produto.');
+  }
+  if (retrato.ready_state && retrato.ready_state !== 'complete') {
+    partes.push('a pagina ainda esta a carregar (readyState=' + retrato.ready_state + ')'
+      + (retrato.pedidos_abertos ? ' com ' + retrato.pedidos_abertos + ' pedido(s) em curso' : '') + '.');
+  }
+  if (contexto && contexto.vazio && retrato.pedidos_abertos > 0) {
+    partes.push('o resultado veio VAZIO e havia ' + retrato.pedidos_abertos
+      + ' pedido(s) em curso - o mais provavel e a pagina ainda nao ter o que procurou, e nao que nao exista.');
+  }
+  if (contexto && contexto.erro && retrato.desde_navegacao_ms !== null && retrato.desde_navegacao_ms < 1500) {
+    partes.push('a expressao falhou ' + retrato.desde_navegacao_ms + ' ms depois de uma navegacao:'
+      + ' o erro pode ser do MOMENTO (a pagina ainda a montar), e nao da expressao.');
+  }
+  return partes.length ? 'AVISO: ' + partes.join(' ') : '';
 }
 
 function mensagemTapado(alvo, topo) {
@@ -1362,19 +1591,55 @@ async function acaoAvaliar(view, params) {
   if (!js) return { ok: false, erro: 'Sem expressao para avaliar.' };
   const depurador = depuradorDe(view);
   if (!depurador) return { ok: false, erro: 'A pagina do preview nao esta a falar com o depurador.' };
-  const resposta = await enviarComando(depurador, 'Runtime.evaluate', {
-    expression: expressaoDeAmostras(js, params) || js,
-    returnByValue: true,
-    awaitPromise: true,
-    userGesture: true
-  });
+  const espera = Math.max(0, Math.min(Number(params.espera) || 0, ESPERA_MAXIMA_AVALIAR_MS));
+  if (espera) await aguardar(espera);
+  const tempo = Number(params.tempo) > 0 ? Math.round(Number(params.tempo) * 1000) : TEMPO_COMANDO_MS;
+  let resposta;
+  try {
+    resposta = await enviarComando(depurador, 'Runtime.evaluate', {
+      expression: expressaoDeAmostras(js, params) || js,
+      returnByValue: true,
+      awaitPromise: true,
+      userGesture: true
+    }, tempo);
+  } catch (e) {
+    const texto = (e && e.message) ? e.message : String(e);
+    const retrato = await retratoDaPagina(depurador, '');
+    if (/navigat|target.*clos/i.test(texto)) {
+      return {
+        ok: false,
+        navegou: true,
+        erro: 'A expressao correu e a PAGINA NAVEGOU a meio da avaliacao: o resultado perdeu-se com'
+          + ' a pagina antiga (o pedido em si nao falhou).',
+        pagina: retrato,
+        aviso: 'A pagina esta agora em ' + (retrato.url || '(sem endereco)')
+          + '. Para ler o estado depois de navegar, avalie outra vez - ja na pagina nova.'
+      };
+    }
+    return {
+      ok: false,
+      erro: texto,
+      pagina: retrato,
+      aviso: 'Estado da pagina no momento da falha: ' + descreverRetrato(retrato)
+    };
+  }
   if (resposta && resposta.exceptionDetails) {
-    return { ok: false, erro: descreverExcecao(resposta.exceptionDetails) };
+    const retrato = await retratoDaPagina(depurador, '');
+    const aviso = avisoDoRetrato(retrato, { erro: true });
+    const saida = { ok: false, erro: descreverExcecao(resposta.exceptionDetails), pagina: retrato };
+    if (aviso) saida.aviso = aviso;
+    return saida;
   }
   const resultado = (resposta && resposta.result) || {};
-  if (resultado.type === 'undefined') return { ok: true, resultado: null, tipo: 'undefined' };
-  if ('value' in resultado) return { ok: true, resultado: resultado.value, tipo: resultado.type };
-  return { ok: true, resultado: resultado.description != null ? resultado.description : null, tipo: resultado.type };
+  const valor = 'value' in resultado
+    ? resultado.value
+    : (resultado.description != null ? resultado.description : null);
+  const retrato = await retratoDaPagina(depurador, '');
+  const aviso = avisoDoRetrato(retrato, { vazio: resultadoVazio(valor) });
+  const saida = { ok: true, pagina: retrato };
+  if (aviso) saida.aviso = aviso;
+  if (resultado.type === 'undefined') return Object.assign(saida, { resultado: null, tipo: 'undefined' });
+  return Object.assign(saida, { resultado: valor, tipo: resultado.type });
 }
 
 async function acaoEstilo(view, params) {
@@ -1391,6 +1656,10 @@ async function acaoEstilo(view, params) {
     return { ok: false, erro: 'A pagina nao devolveu o estilo (ainda a carregar?).' };
   }
   if (dados.erro) return { ok: false, erro: dados.erro };
+  const retrato = await retratoDaPagina(depurador, String(params.seletor || ''), 2500);
+  const aviso = avisoDoRetrato(retrato, {});
+  dados.pagina = retrato;
+  if (aviso) dados.aviso = aviso;
   return dados;
 }
 
@@ -1474,13 +1743,49 @@ async function prepararAlvo(view, params) {
   return { depurador: depurador, alvo: alvo };
 }
 
+async function enquadrarAlvo(depurador, seletor) {
+  const expressao = SNIPPET_ENQUADRA + '(' + JSON.stringify({ seletor: seletor }) + ')';
+  const resposta = await avaliarNaPagina(depurador, expressao).catch(() => null);
+  return resposta && !resposta.erro && resposta.valor && typeof resposta.valor === 'object' ? resposta.valor : null;
+}
+
 async function acaoPrint(view, params) {
   const pronto = await prepararAlvo(view, params);
   if (pronto.erro) return { ok: false, erro: pronto.erro };
   const depurador = pronto.depurador;
   const alvo = pronto.alvo;
-  const pedido = { format: 'png', captureBeyondViewport: false };
-  if (alvo.caixa) {
+  const seletor = String(params.seletor || '').trim();
+  const pedido = { format: 'png', fromSurface: true };
+  let referencia = 'vista';
+  let nota = '';
+  if (seletor) {
+    const antes = await enquadrarAlvo(depurador, seletor);
+    if (!antes || !antes.ok || !antes.caixa) {
+      return {
+        ok: false,
+        erro: (antes && antes.erro) || 'Nao consegui enquadrar o elemento antes de imprimir.'
+      };
+    }
+    await aguardar(140);
+    const depois = await enquadrarAlvo(depurador, seletor);
+    const caixa = (depois && depois.caixa) || antes.caixa;
+    if (caixa.cabe_na_vista) {
+      pedido.clip = { x: caixa.x, y: caixa.y, width: caixa.largura, height: caixa.altura, scale: 1 };
+      pedido.captureBeyondViewport = false;
+    } else {
+      pedido.clip = {
+        x: caixa.documento_x,
+        y: caixa.documento_y,
+        width: caixa.largura,
+        height: caixa.altura,
+        scale: 1
+      };
+      pedido.captureBeyondViewport = true;
+      referencia = 'pagina';
+      nota = 'O elemento e maior do que a area visivel: a captura foi feita pelas coordenadas da pagina'
+        + ' inteira, e nao pelo que esta no ecra.';
+    }
+  } else if (alvo.caixa) {
     pedido.clip = {
       x: alvo.caixa.x,
       y: alvo.caixa.y,
@@ -1488,10 +1793,23 @@ async function acaoPrint(view, params) {
       height: alvo.caixa.altura,
       scale: 1
     };
+    pedido.captureBeyondViewport = false;
+  } else {
+    pedido.captureBeyondViewport = true;
+    referencia = 'pagina';
+    nota = 'Sem alvo indicado: a captura e da PAGINA INTEIRA (a altura toda, e nao so o que esta no ecra).';
   }
   const resposta = await enviarComando(depurador, 'Page.captureScreenshot', pedido);
   if (!resposta || !resposta.data) return { ok: false, erro: 'A pagina nao devolveu imagem.' };
-  return { ok: true, base64: resposta.data, mime: 'image/png', regiao: alvo.caixa, onde: alvo.onde };
+  return {
+    ok: true,
+    base64: resposta.data,
+    mime: 'image/png',
+    regiao: pedido.clip || null,
+    referencia: referencia,
+    nota: nota,
+    onde: alvo.onde
+  };
 }
 
 async function injetarInspecao(view, ligado) {
@@ -1681,10 +1999,12 @@ async function acaoClicar(view, params) {
   if (seletor && semReacao(efeito)) {
     await aguardar(ESPERA_REPETICAO_MS);
     efeito = await efeitoDoGesto(depurador, marca, seletor);
-    if (semReacao(efeito)) {
+    if (semReacao(efeito) && params.repetir === true) {
       await dispararClique(depurador, x, y, botao);
       efeito = await efeitoDoGesto(depurador, marca, seletor);
       efeito.repetido = true;
+    } else if (semReacao(efeito)) {
+      efeito.esperou = true;
     }
   }
   return {
@@ -1857,10 +2177,32 @@ async function acaoTeclar(view, params) {
   return { ok: true, tecla: nome, efeito: await efeitoDoGesto(depurador, marca, '') };
 }
 
+async function modulosDaPagina(depurador) {
+  const resposta = await avaliarNaPagina(depurador,
+    "(function () {"
+    + " var saida = [];"
+    + " var registos = performance.getEntriesByType('resource') || [];"
+    + " for (var i = 0; i < registos.length; i++) {"
+    + "  var nome = String(registos[i].name || '');"
+    + "  if (!/\\.(js|mjs|css)(\\?|#|$)/i.test(nome)) continue;"
+    + "  saida.push({"
+    + "   ficheiro: nome.split('/').pop(),"
+    + "   do_cache: registos[i].transferSize === 0 && registos[i].decodedBodySize > 0,"
+    + "   bytes: registos[i].decodedBodySize || 0"
+    + "  });"
+    + " }"
+    + " return saida;"
+    + "})()"
+  ).catch(() => null);
+  if (!resposta || resposta.erro || !Array.isArray(resposta.valor)) return null;
+  return resposta.valor;
+}
+
 async function acaoRecarregar(view) {
   const depurador = depuradorDe(view);
   if (!depurador) return { ok: false, erro: 'A pagina do preview nao esta a falar com o depurador.' };
   const url = view.webContents.getURL();
+  await enviarComando(depurador, 'Network.setCacheDisabled', { cacheDisabled: true }).catch(() => {});
   await enviarComando(depurador, 'Page.reload', { ignoreCache: true });
   const limite = Date.now() + ESPERA_RECARGA_MS;
   let pronto = false;
@@ -1877,7 +2219,10 @@ async function acaoRecarregar(view) {
       break;
     }
   }
-  return { ok: true, url: url, pronto: pronto };
+  await aguardar(160);
+  const modulos = await modulosDaPagina(depurador);
+  await enviarComando(depurador, 'Network.setCacheDisabled', { cacheDisabled: false }).catch(() => {});
+  return { ok: true, url: url, pronto: pronto, modulos: modulos };
 }
 
 async function acaoFicheiro(view, params) {
@@ -2001,12 +2346,26 @@ async function executar(dados) {
       try { aoUsar(acao, ACOES_QUE_AGEM.has(acao)); } catch (e) {}
     }
     if (naJanela && view) prepararDepurador(view, acao !== 'ficheiro');
-    const resultado = await escolhida(view, params);
-    if (resultado && typeof resultado === 'object' && !resultado.alvo) {
-      resultado.alvo = identidadeDaView(view);
-      if (naJanela && resultado.alvo) resultado.alvo.aba = 'janela do Axio';
+    const emulacao = await ligarViewport(view, naJanela, acao, params);
+    try {
+      const resultado = await escolhida(view, params);
+      if (resultado && typeof resultado === 'object') {
+        if (!resultado.alvo) {
+          resultado.alvo = identidadeDaView(view);
+          if (naJanela && resultado.alvo) resultado.alvo.aba = 'janela do Axio';
+        }
+        if (emulacao) {
+          resultado.viewport = {
+            largura: emulacao.largura,
+            altura: emulacao.altura,
+            mobile: emulacao.mobile
+          };
+        }
+      }
+      return resultado;
+    } finally {
+      await desligarViewport(emulacao);
     }
-    return resultado;
   } catch (e) {
     return { ok: false, erro: 'Falha na acao ' + acao + ': ' + (e && e.message ? e.message : String(e)) };
   }

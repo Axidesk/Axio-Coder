@@ -33,6 +33,8 @@ SOBREPOSICAO_TILE = 32
 MAX_PEDACOS = 16
 LIMITE_IMAGEM_REDE = 12 * 1024 * 1024
 LIMITE_VISTAS = 400
+LIMITE_DE_COR_UNIFORME = 12
+FRACAO_UNIFORME = 0.985
 DPI_PDF = 110
 
 FORMATOS_ACEITOS = ("image/jpeg", "image/png", "image/gif", "image/webp")
@@ -147,6 +149,40 @@ def dimensoes_da_imagem(bruto):
             return imagem.size
     except Exception:
         return None
+
+
+def uniformidade_da_imagem(bruto, lado=128):
+    """(uniforme, cor dominante, fatia) de bytes de imagem, por amostragem.
+
+    Separa a captura que NAO presta (tudo preto, tudo de uma cor) da imagem com
+    conteudo - uma imagem uniforme nao e um resultado, e o instrumento a passar por
+    prova. A grelha e lida por VIZINHO MAIS PROXIMO, sem misturar: uma media esbateria
+    justamente o que interessa (um ecra escuro com texto sairia liso e seria dado como
+    captura falhada). Conta a fatia de pixeis que fica perto da cor dominante.
+    Medido a 128: um print liso da 1.0000; uma janela escura real do projeto da 0.9377;
+    um formulario claro da 0.9692 - o limiar fica em 0.985, onde so cai o que e mesmo
+    todo da mesma cor.
+    """
+    try:
+        with Image.open(io.BytesIO(bruto)) as imagem:
+            pequena = imagem.convert("RGB").resize((lado, lado), Image.Resampling.NEAREST)
+            cru = pequena.tobytes()
+    except Exception:
+        return None
+    if not cru or len(cru) % 3:
+        return None
+    pixeis = [cru[i:i + 3] for i in range(0, len(cru), 3)]
+    dominante = [sorted(p[i] for p in pixeis)[len(pixeis) // 2] for i in range(3)]
+    perto = sum(
+        1 for p in pixeis
+        if all(abs(p[i] - dominante[i]) <= LIMITE_DE_COR_UNIFORME for i in range(3))
+    )
+    fracao = perto / len(pixeis)
+    return {
+        "uniforme": fracao >= FRACAO_UNIFORME,
+        "cor": dominante,
+        "fatia": round(fracao, 4),
+    }
 
 
 def pagina_do_pdf_em_png(alvo, pagina, dpi=DPI_PDF):

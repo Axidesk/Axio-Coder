@@ -31,8 +31,9 @@ import shutil
 import tempfile
 import subprocess
 
+from src.backend.services.file_service import resolver_caminho_arquivo
 from src.backend.tools.registry import register
-from src.backend.state import emit_event
+from src.backend.state import emit_event, estado
 
 _AQUI = os.path.dirname(os.path.abspath(__file__))
 _RAIZ_AXIO = os.path.abspath(os.path.join(_AQUI, "..", "..", ".."))
@@ -56,20 +57,62 @@ def _css_do_frontend():
     return [f for f in ficheiros if os.path.exists(f)]
 
 
+def _caminho_da_folha(href, pasta):
+    """Caminho no disco de uma folha ligada por href; (None, tentados) quando nao existe.
+
+    Um href absoluto ('/recursos/css/x.css') e uma ROTA do servidor do projeto, e nao um
+    caminho do disco: a mesma folha pode viver em '<projeto>/recursos/...' ou em
+    '<projeto>/<pasta da pagina>/css/...'. Em vez de adivinhar um mapeamento que muda de
+    projeto para projeto, tenta as hipoteses de layout mais comuns e - quando nenhuma
+    serve - devolve ONDE procurou, para o caminho poder ser dado a mao em 'css'.
+    """
+    limpo = href.split("?")[0].split("#")[0]
+    raiz = estado.get("pasta_raiz") or ""
+    tentados = []
+    hipoteses = [os.path.normpath(os.path.join(pasta, limpo))]
+    if limpo.startswith("/"):
+        partes = [p for p in limpo.split("/") if p]
+        if raiz and partes:
+            hipoteses.append(os.path.normpath(os.path.join(raiz, *partes)))
+        if partes:
+            hipoteses.append(os.path.normpath(os.path.join(pasta, *partes)))
+        if len(partes) > 1:
+            if raiz:
+                hipoteses.append(os.path.normpath(os.path.join(raiz, *partes[1:])))
+            hipoteses.append(os.path.normpath(os.path.join(pasta, *partes[1:])))
+    for caminho in hipoteses:
+        if not caminho or caminho in tentados:
+            continue
+        tentados.append(caminho)
+        if os.path.isfile(caminho):
+            return caminho, tentados
+    return None, tentados
+
+
 def _html_do_ficheiro(bruto, pasta):
-    """O corpo de um HTML sem os scripts, mais os CSS que ele liga (caminhos do disco)."""
+    """O corpo de um HTML sem os scripts, mais os CSS que ele liga (caminhos do disco).
+
+    Devolve tambem as folhas que NAO foram encontradas: uma folha que nao carregou nao
+    pode passar em silencio - a medicao sairia com a geometria errada e com cara de prova
+    (foi assim que uma medicao deu "tudo empilhado numa coluna" quando o defeito eram
+    dois 404).
+    """
     corpo = _CORPO.search(bruto)
     sem_scripts = _SCRIPT.sub("", corpo.group(1) if corpo else bruto)
     if corpo:
         sem_scripts += "".join(_ESTILO_INTERNO.findall(bruto))
     ligados = []
+    faltas = []
     for href in _LINK_CSS.findall(bruto):
         if href.startswith(("http:", "https:", "//", "data:")):
             continue
-        caminho = os.path.normpath(os.path.join(pasta, href.split("?")[0]))
-        if os.path.exists(caminho):
-            ligados.append(caminho)
-    return sem_scripts, ligados
+        caminho, tentados = _caminho_da_folha(href, pasta)
+        if caminho:
+            if caminho not in ligados:
+                ligados.append(caminho)
+        else:
+            faltas.append((href, tentados))
+    return sem_scripts, ligados, faltas
 
 
 _ATRIBUTO_CLASS = re.compile(r'class\s*=\s*"([^"]*)"')
@@ -355,14 +398,22 @@ def tool_medir_pintura(html="", estilo="", css="", cor="", fundo="1e1e1e",
         return "ERRO: Pillow nao instalado no ambiente do Axio (pip install pillow)."
     base = ""
     ligados = []
+    folhas_em_falta = []
     if ficheiro:
-        if not os.path.exists(ficheiro):
-            return f"ERRO: ficheiro nao encontrado: {ficheiro}"
-        with open(ficheiro, encoding="utf-8", errors="replace") as f:
+        caminho, falha = resolver_caminho_arquivo(ficheiro)
+        if falha or not caminho or not os.path.isfile(caminho):
+            return (
+                f"ERRO: ficheiro nao encontrado: '{ficheiro}'."
+                + (f" {falha}" if falha else "")
+                + (f" Procurei em: {caminho}." if caminho else "")
+                + " O caminho e relativo a RAIZ DO PROJETO aberto (ex: 'frontend/index.html')."
+            )
+        with open(caminho, encoding="utf-8", errors="replace") as f:
             bruto = f.read()
-        pasta = os.path.dirname(os.path.abspath(ficheiro))
-        html, ligados = _html_do_ficheiro(bruto, pasta)
+        pasta = os.path.dirname(caminho)
+        html, ligados, folhas_em_falta = _html_do_ficheiro(bruto, pasta)
         base = _url(pasta) + "/"
+        ficheiro = caminho
     if not (html or "").strip():
         return "ERRO: sem markup para medir - passe 'html' ou 'ficheiro'."
     pedidos = [f.strip() for f in (css or "").split(",") if f.strip()]
@@ -397,6 +448,17 @@ def tool_medir_pintura(html="", estilo="", css="", cor="", fundo="1e1e1e",
         linhas = ["PINTURA MEDIDA: imagem %dx%d | CSS: %s" % (W, H, ", ".join(os.path.basename(f) for f in ficheiros) or "nenhum")]
         if ficheiro:
             linhas.append("MARKUP lido de %s (scripts da pagina removidos)" % ficheiro)
+        if folhas_em_falta:
+            linhas.append(
+                "AVISO: %d folha(s) de estilo que a pagina liga NAO foram encontradas no disco -"
+                " a medicao saiu SEM elas, logo a geometria e as cores nao sao as do produto:"
+                % len(folhas_em_falta)
+            )
+            for href, tentados in folhas_em_falta:
+                linhas.append("       %s" % href)
+                linhas.append("         procurei em: %s"
+                              % (", ".join(tentados) if tentados else "(nenhum caminho)"))
+            linhas.append("       Se a folha vive noutra pasta, passe-a em 'css' com o caminho do disco.")
         tw = os.path.join(tmp, "tw.txt")
         if os.path.exists(tw):
             with open(tw, encoding="utf-8") as f:

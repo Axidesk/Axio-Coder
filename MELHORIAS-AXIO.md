@@ -484,6 +484,9 @@ Ao aplicar isto, comecar por: (1) data no relogio, (2) largura de viewport na ob
 (3) interpretador pelo venv do projeto, (4) recarregar modulos ES antes de medir. Estes quatro fecham a
 maior parte das reincidencias.
 
+**ESTA LISTA ESTA FECHADA** (1a leva a 2026-10-16, 2a a 2026-10-17): ver as duas seccoes APLICADO no
+fim deste ficheiro. Nao ha item pendente.
+
 ---
 
 ## APLICADO a 2026-10-16 (1a leva, na pasta do Axio)
@@ -523,3 +526,51 @@ maior parte das reincidencias.
 - #4 dica de `criar=True` na mensagem do `estado_git` sem repositorio (o `_base_do_repositorio` ja a
   escreve; falta o caminho que le o repo).
 - #18/#19/#27 `medir_pintura`: achar ficheiro criado na sessao e mapear `/recursos/` do projeto.
+
+---
+
+## APLICADO a 2026-10-17 (2a leva: o preview inteiro)
+
+**Feito e provado:**
+
+- **#28/#31/#37/#41 medir na largura de um celular** - `tool_observar_preview` e `tool_operar_preview`
+  aceitam `largura`/`altura` (e `mobile`): `Emulation.setDeviceMetricsOverride` com
+  `dontSetVisibleSize`, aplicado so durante o pedido e limpo no fim (a janela nao e mexida). Provado
+  num Chromium a serio (Edge headless + CDP): a 390 px o `matchMedia('(max-width:600px)')` passou a
+  true, o `innerWidth` foi de 756 para 390, o pseudo-elemento mudou de conteudo e a cor mudou - e ao
+  limpar voltou tudo a 756.
+- **#8/#12/#20/#25/#40/#42 print** - o alvo e rolado para a vista e reenquadrado antes da captura; o
+  que nao cabe na janela e capturado pelas coordenadas da PAGINA (`captureBeyondViewport`); sem alvo,
+  o print e da pagina inteira. Medido: uma regiao a y=1200 de uma pagina cujo ecra tem 844 px de altura
+  saiu desenhada (era exactamente o caso que saia preto). E a captura que sai uniforme passa a ser
+  denunciada em Python (`uniformidade_da_imagem`, 0.985 da fatia sobre a cor dominante; print liso da
+  1.0000, janela escura real do projeto da 0.9377) em vez de entregue como prova.
+- **#23/#32/#34/#43 avaliar** - `espera` (ms antes de correr) e `tempo` (segundos antes de desistir, ate
+  45); o diagnostico deixou de culpar um leitor que nao existe e passa a dizer `readyState`, pedidos em
+  curso e tempo desde a ultima navegacao. Resultado vazio com pedidos em curso, e erro a menos de 1,5 s
+  de uma navegacao, saem com aviso explicito.
+- **#29 folha que nao carregou** - `estilo` e `avaliar` avisam quando a pagina tem folhas de estilo e
+  ZERO regras legiveis: o caso em que a medicao esta irrepreensivel e a conclusao e inventada.
+- **#11/#30/#35/#44 gesto** - UM gesto = UM evento: a repeticao automatica do clique saiu (so com
+  `repetir=true`), mas a segunda LEITURA fica, para um botao lento ser visto a reagir. A assinatura do
+  efeito passou a incluir `aria-expanded`, `hidden`, display/visibility, a altura da pagina e o estado
+  dos IRMAOS - o acordeao que so troca classes dentro de um `content-visibility:hidden` deixou de passar
+  por "nada mudou". O texto diz que o alvo foi olhado, em vez de convidar a repetir.
+- **#21 recarregar sem medir codigo velho** - a recarga desliga a cache HTTP durante o reload e diz
+  quantos ficheiros de codigo vieram da cache (pelo `transferSize`), para nunca medir a versao antiga.
+- **#6/#9/#13/#24/#38/#39/#45 acoes partilhadas** - `carregar` e `mostrar` existem nas DUAS ferramentas;
+  `roteiro` aceita lista JSON E um gesto por linha ('clicar #btn-x', 'escrever #campo | oi',
+  'esperar 500'); a acao `esperar` passou a ser valida tambem no JSON; `carregar` com '/contato' resolve
+  no servidor do preview e diz a URL FINAL (nao a intencao); um `avaliar` que navega a meio e reportado
+  como "o codigo correu e a pagina navegou", com o endereco novo, em vez de erro seco.
+- **#18/#19/#27 medir_pintura** - o `ficheiro` resolve contra a raiz do PROJETO
+  (`resolver_caminho_arquivo`) e o erro diz o caminho absoluto tentado; as folhas ligadas por ROTA
+  ('/css/dock.css') passam a ser encontradas por hipoteses de layout e as que nao existem saem no
+  relatorio com os caminhos tentados. Medido no `src/frontend/index.html`: antes carregava 0 folhas,
+  agora 10 de 12 (as duas que faltam, /monaco/... e /xterm/..., sao servidas de node_modules).
+- **#4 estado_git** - ja estava feito: a mensagem sem repositorio ensina o `criar=True`. Provado com
+  uma pasta temporaria.
+
+**O que continua em aberto:** nada do caderno. Os itens #49 e #50 (landing sem texto explicativo;
+produto nasce com o conjunto de paginas) nao sao codigo - sao regra de trabalho e vivem nas
+preferencias (`landing-saas` e `responsivo`).
