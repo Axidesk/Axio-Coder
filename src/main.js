@@ -488,8 +488,16 @@ function viewDoTipo(tipo) {
   return view;
 }
 
+const vistasVisiveis = new Set();
+
 function previewVivo() {
-  return viewDoTipo(previewAtiva);
+  const ativa = viewDoTipo(previewAtiva);
+  if (ativa && vistasVisiveis.has(ativa)) return ativa;
+  for (const chave of TIPOS_DE_VIEW) {
+    const view = viewDoTipo(chave);
+    if (view && vistasVisiveis.has(view)) return view;
+  }
+  return ativa;
 }
 
 function descartarPreviewView(tipo) {
@@ -498,6 +506,7 @@ function descartarPreviewView(tipo) {
     const view = previewViews[chave];
     if (!view) continue;
     previewViews[chave] = null;
+    vistasVisiveis.delete(view);
     if (previewAtiva === chave) previewAtiva = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
       try {
@@ -549,6 +558,8 @@ function aplicarVisibilidadeDaView(view, visivel) {
   if (!view || view.webContents.isDestroyed()) return;
   view.setVisible(!!visivel);
   view.webContents.setBackgroundThrottling(!visivel);
+  if (visivel) vistasVisiveis.add(view);
+  else vistasVisiveis.delete(view);
 }
 
 function mostrarSoAVista(tipo) {
