@@ -175,6 +175,7 @@ REDE_E_SISTEMA = (
     "curl", "wget", "ping", "netstat", "tasklist", "taskkill", "sqlite3",
     "mysql", "mysqldump",
     "tar", "unzip", "zip", "7z",
+    "cloudflared", "ngrok",
 )
 
 PACOTES_DE_CONSULTA_PIP = ("list", "freeze", "show", "check", "download", "wheel")
