@@ -1853,19 +1853,6 @@ async function acaoPrint(view, params) {
   const vista = await medidaDisposta(depurador).catch(() => null);
   const densidade = await densidadeDaVista(depurador);
 
-  const recorteNaVista = () => {
-    if (!caixa) return null;
-    const x = Math.max(0, Math.round(caixa.x * densidade));
-    const y = Math.max(0, Math.round(caixa.y * densidade));
-    const limiteLargura = vista && vista.largura
-      ? Math.round(vista.largura * densidade) : x + Math.round(caixa.largura * densidade);
-    const limiteAltura = vista && vista.altura
-      ? Math.round(vista.altura * densidade) : y + Math.round(caixa.altura * densidade);
-    const largura = Math.round(Math.min(caixa.largura * densidade, limiteLargura - x));
-    const altura = Math.round(Math.min(caixa.altura * densidade, limiteAltura - y));
-    if (!(largura > 8) || !(altura > 8)) return null;
-    return { x: x, y: y, width: largura, height: altura, scale: 1 };
-  };
 
   const capturar = async (pedido) => {
     const resposta = await enviarComando(depurador, 'Page.captureScreenshot', pedido)
@@ -1873,52 +1860,37 @@ async function acaoPrint(view, params) {
     return resposta && resposta.data ? resposta.data : null;
   };
 
-  const pedido = { format: 'png', fromSurface: true };
-  const alternativa = { format: 'png', fromSurface: true };
+  let dados = null;
+  let regiao = null;
 
   if (caixa) {
-    const recorte = recorteNaVista();
-    pedido.captureBeyondViewport = false;
-    if (recorte) pedido.clip = recorte;
-    alternativa.captureBeyondViewport = true;
-    alternativa.clip = {
-      x: Math.round(caixa.documento_x * densidade),
-      y: Math.round(caixa.documento_y * densidade),
-      width: Math.round(caixa.largura * densidade),
-      height: Math.round(caixa.altura * densidade),
-      scale: 1
-    };
-    if (densidade !== 1) {
-      nota = (nota ? nota + ' ' : '')
-        + 'A interface esta com zoom: o recorte foi multiplicado por ' + densidade
-        + ' para o conteudo preencher a imagem.';
+    const tela = await capturar({ format: 'png', fromSurface: true, captureBeyondViewport: false });
+    if (!tela) return { ok: false, erro: 'A pagina nao devolveu imagem.' };
+    const corte = recortarCaptura(tela, caixa, vista);
+    if (corte.erro) {
+      return { ok: false, erro: 'A captura saiu, mas nao consegui recortar a area pedida: ' + corte.erro };
     }
-    if (!caixa.cabe_na_vista && recorte && recorte.height + 4 < Math.round(caixa.altura)) {
+    dados = corte.base64;
+    regiao = { x: caixa.x, y: caixa.y, largura: corte.largura, altura: corte.altura };
+    referencia = 'vista';
+    if (Math.abs(corte.escala - 1) > 0.01) {
+      nota = (nota ? nota + ' ' : '') + 'A tela desenha a ' + corte.escala.toFixed(2)
+        + 'x: o recorte foi multiplicado por esse valor para o conteudo encher a imagem.';
+    }
+    const apanhado = Math.round(corte.altura / corte.escala);
+    if (apanhado + 4 < Math.round(caixa.altura)) {
       nota = 'O elemento e maior do que a area visivel: capturei a parte que cabe no ecra ('
-        + recorte.height + ' de ' + Math.round(caixa.altura) + ' px).';
+        + apanhado + ' de ' + Math.round(caixa.altura) + ' px).';
     }
   } else {
-    pedido.captureBeyondViewport = true;
+    dados = await capturar({ format: 'png', fromSurface: true, captureBeyondViewport: true });
     referencia = 'pagina';
     nota = 'Sem alvo indicado: a captura e da PAGINA INTEIRA (a altura toda, e nao so o que esta no ecra).';
   }
 
-  let dados = await capturar(pedido);
-  const primeiraVazia = dados ? uniformidadeDaCaptura(dados) : null;
-
-  if (dados && primeiraVazia === true && caixa) {
-    const segundo = await capturar(alternativa);
-    const segundaVazia = segundo ? uniformidadeDaCaptura(segundo) : null;
-    if (segundo && segundaVazia === false) {
-      dados = segundo;
-      pedido.clip = alternativa.clip;
-      pedido.captureBeyondViewport = alternativa.captureBeyondViewport;
-      referencia = 'pagina';
-      nota = 'A captura pela area visivel saiu vazia; esta veio das coordenadas da pagina inteira.';
-    } else if (segundo && segundaVazia !== false) {
-      nota = (nota ? nota + ' ' : '') + 'As duas capturas sairam quase de uma cor so:'
-        + ' confirme com acao=estado e traga a vista a frente com acao=mostrar.';
-    }
+  if (dados && uniformidadeDaCaptura(dados) === true) {
+    nota = (nota ? nota + ' ' : '') + 'A imagem saiu praticamente de uma cor so:'
+      + ' confirme com acao=estado e traga a vista a frente com acao=mostrar.';
   }
 
   if (!dados) return { ok: false, erro: 'A pagina nao devolveu imagem.' };
@@ -1926,7 +1898,7 @@ async function acaoPrint(view, params) {
     ok: true,
     base64: dados,
     mime: 'image/png',
-    regiao: pedido.clip || null,
+    regiao: regiao,
     referencia: referencia,
     nota: nota,
     onde: alvo.onde
@@ -1955,6 +1927,32 @@ function uniformidadeDaCaptura(base64) {
     return (iguais / total) > 0.99;
   } catch (e) {
     return null;
+  }
+}
+
+function recortarCaptura(base64, caixa, vista) {
+  try {
+    const { nativeImage } = require('electron');
+    const imagem = nativeImage.createFromBuffer(Buffer.from(base64, 'base64'));
+    const tamanho = imagem.getSize();
+    if (!tamanho || !tamanho.width || !tamanho.height) return { erro: 'a imagem veio sem tamanho' };
+    const escala = vista && vista.largura ? tamanho.width / vista.largura : 1;
+    const x = Math.max(0, Math.round(caixa.x * escala));
+    const y = Math.max(0, Math.round(caixa.y * escala));
+    const largura = Math.min(Math.round(caixa.largura * escala), tamanho.width - x);
+    const altura = Math.min(Math.round(caixa.altura * escala), tamanho.height - y);
+    if (!(largura > 4) || !(altura > 4)) {
+      return { erro: 'a area pedida esta fora do que a tela desenhou' };
+    }
+    const recortada = imagem.crop({ x: x, y: y, width: largura, height: altura });
+    return {
+      base64: recortada.toPNG().toString('base64'),
+      largura: largura,
+      altura: altura,
+      escala: escala
+    };
+  } catch (e) {
+    return { erro: String((e && e.message) || e) };
   }
 }
 
