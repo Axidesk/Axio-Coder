@@ -1,203 +1,274 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>document.documentElement.classList.add('js')</script>
-<title>Vela — as contas do seu negócio em ordem</title>
-<meta name="description" content="A Vela junta o que entrou, o que saiu e o que ainda vai vencer num lugar só. Feita para quem toca o negócio sozinho.">
+<title>Prisma — cada deploy, visível em segundos</title>
+<meta name="description" content="O Prisma mostra o seu produto a respirar em tempo real: deploys, erros, latência e usuários numa tela só.">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
-<a class="pular" href="#conteudo">Ir para o conteúdo</a>
 
-<header class="topo">
-  <div class="envolto topo-linha">
-    <a class="marca" href="index.html" aria-label="Vela, página inicial">
-      <svg class="marca-icone" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3.2c2.9 3.4 4.6 5.7 4.6 8.3a4.6 4.6 0 1 1-9.2 0c0-2.6 1.7-4.9 4.6-8.3Z"/>
-        <path d="M12 15.4v5.4"/>
-      </svg>
-      <span>Vela</span>
+<div id="progresso" aria-hidden="true"></div>
+<canvas id="ceu" aria-hidden="true"></canvas>
+<div id="brilho" aria-hidden="true"></div>
+<div class="curso" aria-hidden="true"></div>
+
+<header class="topo" id="topo">
+  <div class="envelope">
+    <a class="marca" href="index.html">
+      <span class="marca-sinal" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 18V7l12 10V6"/></svg>
+      </span>
+      Prisma
     </a>
-    <button class="menu-botao" id="menu-botao" aria-expanded="false" aria-controls="nav" aria-label="Abrir menu">
-      <span></span><span></span>
-    </button>
-    <nav class="nav" id="nav" aria-label="Principal">
-      <div class="nav-interno">
-        <a href="#como-funciona">Como funciona</a>
-        <a href="#planos">Planos</a>
-        <a href="contato.html">Contato</a>
-        <a href="entrar.html">Entrar</a>
-        <a class="botao botao-principal" href="contato.html">Começar grátis</a>
-      </div>
+    <nav>
+      <a href="#produto">Produto</a>
+      <a href="#recursos">Recursos</a>
+      <a href="#planos">Planos</a>
+      <a href="contato.html">Contato</a>
     </nav>
+    <div class="topo-acoes">
+      <a class="botao botao-fantasma" href="entrar.html">Entrar</a>
+      <a class="botao botao-cheio" href="#planos" data-magnetico>Começar grátis</a>
+    </div>
   </div>
 </header>
 
-<main id="conteudo">
+<main>
 
-  <section class="heroi envolto">
-    <p class="selo">Para quem toca o negócio sozinho</p>
-    <h1>Suas contas em ordem <em>antes do café</em>.</h1>
-    <p class="linha-fina">A Vela junta o que entrou, o que saiu e o que ainda vai vencer num lugar só.
-      Sem planilha, sem susto no fim do mês.</p>
-    <div class="acoes">
-      <a class="botao botao-principal botao-grande" href="contato.html">Começar grátis</a>
-      <a class="botao botao-fantasma botao-grande" href="#como-funciona">Ver como funciona</a>
-    </div>
-    <p class="nota">30 dias grátis. Sem cartão.</p>
+  <section class="heroi">
+    <div class="envelope">
+      <a class="olho" href="#produto">
+        <span class="olho-ponto" aria-hidden="true"></span>
+        Prisma 3.0 — trilha ao vivo de cada requisição
+      </a>
 
-    <figure class="vitrine">
-      <div class="vitrine-cartao">
-        <div class="vitrine-topo">
-          <span class="vitrine-ponto"></span>
-          <span class="vitrine-ponto"></span>
-          <span class="vitrine-ponto"></span>
-          <span class="vitrine-titulo">Resumo de outubro</span>
+      <h1>Cada deploy,<br><em>visível em segundos</em>.</h1>
+
+      <p class="linha-fina">
+        Seu produto inteiro numa tela que responde ao toque. Sem montar painel, sem caçar log,
+        sem esperar o relatório de amanhã chegar.
+      </p>
+
+      <div class="heroi-botoes">
+        <a class="botao botao-cheio" href="#planos" data-magnetico>Começar grátis</a>
+        <a class="botao botao-vazio" href="#produto" data-magnetico>Ver funcionando</a>
+      </div>
+
+      <p class="heroi-prova">Sem cartão. O primeiro painel fica de pé em dois minutos.</p>
+
+      <div class="janela" id="janela">
+        <div class="janela-topo">
+          <div class="janela-bolinhas" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="janela-endereco">app.prisma.dev/ao-vivo</div>
         </div>
-        <div class="vitrine-corpo">
-          <div>
-            <div class="vitrine-saldo">
-              <span class="vitrine-rotulo">Sobrou no mês</span>
-              <strong>R$ 12.480,00</strong>
-              <span class="vitrine-alta">+18% sobre setembro</span>
+        <div class="janela-corpo">
+          <div class="janela-lado">
+            <div class="janela-item on"><i></i>Visão geral</div>
+            <div class="janela-item"><i></i>Deploys</div>
+            <div class="janela-item"><i></i>Erros</div>
+            <div class="janela-item"><i></i>Latência</div>
+            <div class="janela-item"><i></i>Usuários</div>
+          </div>
+          <div class="janela-painel">
+            <div class="janela-metricas">
+              <div class="metrica">
+                <small>Requisições</small>
+                <b data-contar="128400" data-sufixo="">0</b>
+                <span>+12,6% hoje</span>
+              </div>
+              <div class="metrica">
+                <small>p95</small>
+                <b data-contar="184" data-sufixo=" ms">0</b>
+                <span>−38% esta semana</span>
+              </div>
+              <div class="metrica">
+                <small>Erros</small>
+                <b data-contar="0.03" data-sufixo="%" data-decimal="2">0%</b>
+                <span>−71% esta semana</span>
+              </div>
             </div>
-            <div class="vitrine-barras" aria-hidden="true">
-              <span style="--h: 44%"></span>
-              <span style="--h: 62%"></span>
-              <span style="--h: 38%"></span>
-              <span style="--h: 74%"></span>
-              <span style="--h: 96%"></span>
+            <svg class="grafico" viewBox="0 0 620 128" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="degradeLinha" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#7c5cff"/>
+                  <stop offset="1" stop-color="#22d3ee"/>
+                </linearGradient>
+                <linearGradient id="degradeArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#7c5cff" stop-opacity="0.28"/>
+                  <stop offset="1" stop-color="#7c5cff" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0 104 L52 92 L104 98 L156 74 L208 80 L260 52 L312 61 L364 40 L416 48 L468 26 L520 33 L572 14 L620 20 L620 128 L0 128 Z" fill="url(#degradeArea)"/>
+              <path class="grafico-linha" d="M0 104 L52 92 L104 98 L156 74 L208 80 L260 52 L312 61 L364 40 L416 48 L468 26 L520 33 L572 14 L620 20"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faixa" aria-label="Times que usam o Prisma">
+    <p class="faixa-titulo">Times que já enxergam o próprio produto</p>
+    <div class="faixa-trilho" aria-hidden="true">
+      <span class="faixa-nome">Nortada</span>
+      <span class="faixa-nome">Cobre&amp;Lima</span>
+      <span class="faixa-nome">Vetor</span>
+      <span class="faixa-nome">Malharia Aurora</span>
+      <span class="faixa-nome">Trilha</span>
+      <span class="faixa-nome">Oficina 9</span>
+      <span class="faixa-nome">Nortada</span>
+      <span class="faixa-nome">Cobre&amp;Lima</span>
+      <span class="faixa-nome">Vetor</span>
+      <span class="faixa-nome">Malharia Aurora</span>
+      <span class="faixa-nome">Trilha</span>
+      <span class="faixa-nome">Oficina 9</span>
+    </div>
+  </section>
+
+  <section class="numeros" data-surge>
+    <div class="envelope">
+      <div class="numeros-grade">
+        <div class="numero">
+          <b data-contar="38" data-sufixo="%">0%</b>
+          <span>de retenção a mais no primeiro mês — porque o problema aparece antes do cliente reclamar.</span>
+        </div>
+        <div class="numero">
+          <b data-contar="180" data-sufixo=" ms">0 ms</b>
+          <span>é quanto tempo o Prisma leva para transformar um evento em pixel na sua tela.</span>
+        </div>
+        <div class="numero">
+          <b data-contar="99.99" data-sufixo="%" data-decimal="2">0%</b>
+          <span>de disponibilidade nos últimos doze meses, com a trilha guardada por trinta dias.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="palco" id="produto">
+    <div class="palco-fixo">
+      <div class="envelope">
+        <div class="secao-cabecalho" data-surge>
+          <h2>O produto inteiro numa tela que responde ao seu toque.</h2>
+          <p>Aponte, abra, compare. A trilha acompanha o cursor por toda a interface.</p>
+        </div>
+
+        <div class="palco-cartao">
+          <h3>Um deploy às 14h32, e você sabe em 14h32.</h3>
+          <p>
+            Nada de três abas e um dashboard que atualiza sozinho de madrugada. O que acontece
+            no seu servidor aparece aqui enquanto ainda está acontecendo.
+          </p>
+          <div class="palco-linhas">
+            <div class="palco-linha">
+              <span class="palco-icone">↑</span>
+              <span>deploy <strong>api-v2.14</strong> publicado</span>
+              <em>há 2 s</em>
+            </div>
+            <div class="palco-linha">
+              <span class="palco-icone">✓</span>
+              <span>tempo de resposta voltou a <strong>184 ms</strong></span>
+              <em>há 40 s</em>
+            </div>
+            <div class="palco-linha">
+              <span class="palco-icone">!</span>
+              <span>fluxo de cadastro caiu <strong>4%</strong> em São Paulo</span>
+              <em>há 6 min</em>
             </div>
           </div>
-          <ul class="vitrine-lista">
-            <li><span class="marca-cor"></span> A receber <strong>R$ 3.200</strong></li>
-            <li><span class="marca-cor sai"></span> A pagar <strong>R$ 1.145</strong></li>
-            <li><span class="marca-cor"></span> Vence hoje <strong>R$ 480</strong></li>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="recursos" id="recursos">
+    <div class="envelope">
+      <div class="secao-cabecalho" data-surge>
+        <h2>Feito para quem precisa decidir agora.</h2>
+        <p>Três coisas que deixam de ser trabalho manual no primeiro dia.</p>
+      </div>
+
+      <div class="recursos-grade">
+        <article class="cartao" data-tilt data-surge>
+          <span class="cartao-icone" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 4-7 5 5"/><path d="M3 21h18"/></svg>
+          </span>
+          <h3>Trilha que se explica sozinha</h3>
+          <p>Cada requisição conta a própria história: quem chamou, quanto demorou e onde tropeçou.</p>
+        </article>
+
+        <article class="cartao" data-tilt data-surge>
+          <span class="cartao-icone" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <h3>Alerta no segundo, não no dia seguinte</h3>
+          <p>Você escolhe o que importa. O resto fica quieto — e o telefone também.</p>
+        </article>
+
+        <article class="cartao" data-tilt data-surge>
+          <span class="cartao-icone" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h13"/></svg>
+          </span>
+          <h3>Um painel que o time entende</h3>
+          <p>Sem curso, sem manual. Quem entra pela primeira vez acha o que procura em dois cliques.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="planos" id="planos">
+    <div class="envelope">
+      <div class="secao-cabecalho" data-surge>
+        <h2>Comece pequeno. Cresça sem trocar de casa.</h2>
+        <p>Os três planos usam o mesmo produto. O que muda é o quanto dele você precisa hoje.</p>
+      </div>
+
+      <div class="planos-grade">
+        <div class="plano" data-surge>
+          <span class="plano-nome">Solo</span>
+          <div class="plano-preco">R$ 0 <small>/ mês</small></div>
+          <ul class="plano-lista">
+            <li>Um projeto</li>
+            <li>Sete dias de trilha</li>
+            <li>Um alerta por e-mail</li>
           </ul>
+          <a class="botao botao-vazio" href="entrar.html">Criar conta</a>
         </div>
-      </div>
-    </figure>
-  </section>
 
-  <section class="secao envolto" aria-labelledby="titulo-recursos">
-    <div class="secao-topo" data-animar>
-      <p class="sobrancelha">O que a Vela resolve</p>
-      <h2 id="titulo-recursos">O que hoje vive na sua cabeça</h2>
-      <p class="sub">Três coisas que você já faz de cabeça — e que a Vela faz sozinha, sem você abrir nada.</p>
-    </div>
-    <div class="cartoes">
-      <article class="cartao" data-animar>
-        <div class="cartao-icone">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V8m5 10V5m5 13v-7m5 7V9"/></svg>
+        <div class="plano destaque" data-surge>
+          <span class="plano-nome">Time</span>
+          <div class="plano-preco">R$ 89 <small>/ mês</small></div>
+          <ul class="plano-lista">
+            <li>Projetos ilimitados</li>
+            <li>Trinta dias de trilha</li>
+            <li>Alertas no celular</li>
+            <li>Cinco pessoas no time</li>
+          </ul>
+          <a class="botao botao-cheio" href="entrar.html" data-magnetico>Começar agora</a>
         </div>
-        <h3>Tudo num lugar só</h3>
-        <p>Contas a pagar, a receber e o que já entrou. Você abre e vê o retrato do mês em segundos.</p>
-      </article>
-      <article class="cartao" data-animar>
-        <div class="cartao-icone">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg>
-        </div>
-        <h3>Aviso antes de vencer</h3>
-        <p>Um lembrete chega no seu celular dois dias antes. Nada mais vence sem você saber.</p>
-      </article>
-      <article class="cartao" data-animar>
-        <div class="cartao-icone">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15l4-4 3 3 5-6 4 4"/><path d="M4 20h16"/></svg>
-        </div>
-        <h3>Fechamento sem drama</h3>
-        <p>No último dia do mês, o resumo já está pronto: quanto entrou, quanto saiu e quanto sobrou.</p>
-      </article>
-    </div>
-  </section>
 
-  <section class="secao envolto" id="como-funciona" aria-labelledby="titulo-como">
-    <div class="secao-topo" data-animar>
-      <p class="sobrancelha">Como funciona</p>
-      <h2 id="titulo-como">Do zero ao primeiro resumo em três minutos</h2>
-    </div>
-    <div class="passos">
-      <div class="passo" data-animar>
-        <span class="passo-numero">01</span>
-        <h3>Conte o que você faz</h3>
-        <p>Seu tipo de negócio define as categorias que já vêm prontas. Nada de montar planilha do zero.</p>
-      </div>
-      <div class="passo" data-animar>
-        <span class="passo-numero">02</span>
-        <h3>Lance em 5 segundos</h3>
-        <p>Valor, data e pronto. Pelo celular, no meio do dia, enquanto o cliente ainda está na sua frente.</p>
-      </div>
-      <div class="passo" data-animar>
-        <span class="passo-numero">03</span>
-        <h3>Receba o resumo</h3>
-        <p>Toda sexta de manhã chega o retrato da semana. Você decide com número na mão, não com achismo.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="secao envolto" id="planos" aria-labelledby="titulo-planos">
-    <div class="secao-topo" data-animar>
-      <p class="sobrancelha">Planos</p>
-      <h2 id="titulo-planos">Um preço que não pesa</h2>
-      <p class="sub">Os dois começam iguais: 30 dias grátis, sem cartão e sem fidelidade.</p>
-    </div>
-    <div class="tabela-rolagem" data-animar>
-      <div class="tabela" role="table" aria-label="Comparação entre os planos Solo e Time">
-        <div class="tabela-linha tabela-cabecalho" role="row">
-          <span role="columnheader">O que vem</span>
-          <span role="columnheader">Solo</span>
-          <span role="columnheader">Time</span>
-        </div>
-        <div class="tabela-linha" role="row">
-          <span role="cell">Lançamentos por mês</span>
-          <span role="cell">Ilimitados</span>
-          <span role="cell">Ilimitados</span>
-        </div>
-        <div class="tabela-linha" role="row">
-          <span role="cell">Lembrete de vencimento</span>
-          <span role="cell">Inclui</span>
-          <span role="cell">Inclui</span>
-        </div>
-        <div class="tabela-linha" role="row">
-          <span role="cell">Resumo semanal no celular</span>
-          <span role="cell">Inclui</span>
-          <span role="cell">Inclui</span>
-        </div>
-        <div class="tabela-linha" role="row">
-          <span role="cell">Pessoas com acesso</span>
-          <span role="cell">1</span>
-          <span role="cell">Até 5</span>
-        </div>
-        <div class="tabela-linha" role="row">
-          <span role="cell">Fechamento com o contador</span>
-          <span role="cell" class="riscado">Não</span>
-          <span role="cell">Inclui</span>
-        </div>
-        <div class="tabela-linha" role="row">
-          <span role="cell">Preço por mês</span>
-          <span role="cell">R$ 29</span>
-          <span role="cell">R$ 79</span>
+        <div class="plano" data-surge>
+          <span class="plano-nome">Empresa</span>
+          <div class="plano-preco">R$ 240 <small>/ mês</small></div>
+          <ul class="plano-lista">
+            <li>Trilha de um ano</li>
+            <li>Permissões por papel</li>
+            <li>Ambiente dedicado</li>
+            <li>Apoio direto com engenharia</li>
+          </ul>
+          <a class="botao botao-vazio" href="contato.html">Falar com vendas</a>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="secao envolto" aria-label="Depoimento">
-    <figure class="depoimento" data-animar>
-      <blockquote>“Eu fechava o mês no domingo à noite, com medo de ter esquecido alguma coisa.
-        Agora eu abro a Vela na sexta e já sei.”</blockquote>
-      <figcaption><strong>Marina Alves</strong> — confeitaria, Belo Horizonte</figcaption>
-    </figure>
-  </section>
-
-  <section class="chamada envolto">
-    <div class="chamada-caixa" data-animar>
-      <h2>Comece hoje, feche o mês tranquilo</h2>
-      <p>Leva três minutos para configurar. Não pedimos cartão e você cancela com dois cliques.</p>
-      <div class="acoes">
-        <a class="botao botao-branco botao-grande" href="contato.html">Começar grátis</a>
-        <a class="botao botao-claro botao-grande" href="entrar.html">Já tenho conta</a>
+  <section class="chamada">
+    <div class="envelope">
+      <div class="chamada-caixa" data-surge>
+        <h2>Seu produto já está falando. Falta ouvir.</h2>
+        <p>Coloque o Prisma de pé em dois minutos e veja a primeira requisição chegar ao vivo.</p>
+        <a class="botao botao-cheio" href="entrar.html" data-magnetico>Começar grátis</a>
       </div>
     </div>
   </section>
@@ -205,61 +276,68 @@
 </main>
 
 <footer class="rodape">
-  <div class="envolto">
+  <div class="envelope">
     <div class="rodape-grade">
       <div class="rodape-marca">
         <a class="marca" href="index.html">
-          <svg class="marca-icone" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3.2c2.9 3.4 4.6 5.7 4.6 8.3a4.6 4.6 0 1 1-9.2 0c0-2.6 1.7-4.9 4.6-8.3Z"/>
-            <path d="M12 15.4v5.4"/>
-          </svg>
-          <span>Vela</span>
+          <span class="marca-sinal" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 18V7l12 10V6"/></svg>
+          </span>
+          Prisma
         </a>
-        <p>As contas do seu negócio em ordem, sem planilha e sem susto no fim do mês.</p>
-        <div class="sociais">
-          <a href="#" aria-label="Instagram">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="3.4"/><path d="M17 7.2h.01"/></svg>
-          </a>
-          <a href="#" aria-label="LinkedIn">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 10.5V16M8 8.2v.01M12 16v-3.2a1.9 1.9 0 0 1 3.8 0V16"/></svg>
-          </a>
-          <a href="#" aria-label="YouTube">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M11 10l4 2-4 2z"/></svg>
-          </a>
+        <p>O que acontece no seu produto, aparecendo na sua tela enquanto ainda está acontecendo.</p>
+        <div class="rodape-redes">
+          <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2-6-2m12 4v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1-.3-3.4 1.3a11.6 11.6 0 0 0-6 0C6.8 1.8 5.8 2.1 5.8 2.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4.4 8.5c0 4.6 2.7 5.7 5.5 6-.4.4-.6.9-.6 1.5V21"/></svg></a>
+          <a href="#" aria-label="Bluesky"><svg viewBox="0 0 24 24"><path d="M7 4c2 1.5 4 4 5 6 1-2 3-4.5 5-6 1.5-1.1 3-.6 3 1.4 0 1.2-.6 4.6-1 5.6-.8 2.1-2.4 2.5-4 2.2 2.2.4 3.6 1.4 2 3.4-2.3 3-4.5-1.2-5-2.6-.5 1.4-2.7 5.6-5 2.6-1.6-2-.2-3 2-3.4-1.6.3-3.2-.1-4-2.2-.4-1-1-4.4-1-5.6 0-2 1.5-2.5 3-1.4Z"/></svg></a>
         </div>
       </div>
+
       <div class="rodape-coluna">
         <h4>Produto</h4>
-        <a href="#como-funciona">Como funciona</a>
-        <a href="#planos">Planos</a>
-        <a href="entrar.html">Entrar</a>
+        <ul>
+          <li><a href="#produto">Visão geral</a></li>
+          <li><a href="#recursos">Recursos</a></li>
+          <li><a href="#planos">Planos</a></li>
+          <li><a href="#">Novidades</a></li>
+        </ul>
       </div>
+
       <div class="rodape-coluna">
         <h4>Empresa</h4>
-        <a href="#">Sobre a Vela</a>
-        <a href="#">Blog</a>
-        <a href="#">Trabalhe com a gente</a>
+        <ul>
+          <li><a href="#">Sobre</a></li>
+          <li><a href="contato.html">Contato</a></li>
+          <li><a href="#">Carreiras</a></li>
+          <li><a href="#">Imprensa</a></li>
+        </ul>
       </div>
+
       <div class="rodape-coluna">
         <h4>Ajuda</h4>
-        <a href="contato.html">Falar com a gente</a>
-        <a href="#">Central de ajuda</a>
-        <a href="#">Status</a>
+        <ul>
+          <li><a href="#">Documentação</a></li>
+          <li><a href="#">Status</a></li>
+          <li><a href="contato.html">Suporte</a></li>
+        </ul>
       </div>
+
       <div class="rodape-coluna">
         <h4>Legal</h4>
-        <a href="#">Termos de uso</a>
-        <a href="#">Privacidade</a>
-        <a href="#">Cookies</a>
+        <ul>
+          <li><a href="#">Privacidade</a></li>
+          <li><a href="#">Termos</a></li>
+          <li><a href="#">Cookies</a></li>
+        </ul>
       </div>
     </div>
+
     <div class="rodape-base">
-      <span>© 2026 Vela Tecnologia Ltda · NIF 515 204 880 · Lisboa</span>
-      <span>Todos os direitos reservados · Página de demonstração</span>
+      <span>© 2026 Prisma Tecnologia, Lda. · NIF 514 882 301 · Lisboa</span>
+      <span>Todos os direitos reservados.</span>
     </div>
   </div>
 </footer>
 
-<script src="pagina.js"></script>
+<script type="module" src="pagina.js"></script>
 </body>
 </html>

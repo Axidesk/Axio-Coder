@@ -204,7 +204,13 @@ def _validar_css(conteudo):
     parser, erro = _parser_css()
     if erro:
         return erro
-    return _validar_com_tree_sitter(conteudo, parser)
+    relato = _validar_com_tree_sitter(conteudo, parser)
+    if not relato:
+        return relato
+    sem_ancora = re.sub(r"url\(\s*#", "url(_", conteudo)
+    if sem_ancora != conteudo and not _validar_com_tree_sitter(sem_ancora, parser):
+        return None
+    return relato
 
 def _parser_rust():
     try:

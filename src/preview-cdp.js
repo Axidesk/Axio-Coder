@@ -1796,6 +1796,15 @@ async function enquadrarAlvo(depurador, seletor) {
   return resposta && !resposta.erro && resposta.valor && typeof resposta.valor === 'object' ? resposta.valor : null;
 }
 
+async function densidadeDaVista(depurador) {
+  const resposta = await enviarComando(depurador, 'Runtime.evaluate', {
+    expression: 'window.devicePixelRatio || 1',
+    returnByValue: true
+  }).catch(() => null);
+  const valor = resposta && resposta.result ? Number(resposta.result.value) : 1;
+  return Number.isFinite(valor) && valor > 0 ? valor : 1;
+}
+
 async function acaoPrint(view, params) {
   const pronto = await prepararAlvo(view, params);
   if (pronto.erro) return { ok: false, erro: pronto.erro };
@@ -1821,16 +1830,39 @@ async function acaoPrint(view, params) {
     caixa = alvo.caixa;
   }
 
+  if (caixa && caixa.documento_x === undefined) {
+    const rolagem = await avaliarNaPagina(depurador,
+      "JSON.stringify({ x: window.scrollX, y: window.scrollY })"
+    ).catch(() => null);
+    let desvioX = 0;
+    let desvioY = 0;
+    if (rolagem && typeof rolagem.valor === 'string') {
+      try {
+        const lido = JSON.parse(rolagem.valor);
+        desvioX = Number(lido.x) || 0;
+        desvioY = Number(lido.y) || 0;
+      } catch (erro) {
+        desvioX = 0;
+        desvioY = 0;
+      }
+    }
+    caixa.documento_x = caixa.x + desvioX;
+    caixa.documento_y = caixa.y + desvioY;
+  }
+
   const vista = await medidaDisposta(depurador).catch(() => null);
+  const densidade = await densidadeDaVista(depurador);
 
   const recorteNaVista = () => {
     if (!caixa) return null;
-    const x = Math.max(0, Math.round(caixa.x));
-    const y = Math.max(0, Math.round(caixa.y));
-    const limiteLargura = vista && vista.largura ? vista.largura : x + caixa.largura;
-    const limiteAltura = vista && vista.altura ? vista.altura : y + caixa.altura;
-    const largura = Math.round(Math.min(caixa.largura, limiteLargura - x));
-    const altura = Math.round(Math.min(caixa.altura, limiteAltura - y));
+    const x = Math.max(0, Math.round(caixa.x * densidade));
+    const y = Math.max(0, Math.round(caixa.y * densidade));
+    const limiteLargura = vista && vista.largura
+      ? Math.round(vista.largura * densidade) : x + Math.round(caixa.largura * densidade);
+    const limiteAltura = vista && vista.altura
+      ? Math.round(vista.altura * densidade) : y + Math.round(caixa.altura * densidade);
+    const largura = Math.round(Math.min(caixa.largura * densidade, limiteLargura - x));
+    const altura = Math.round(Math.min(caixa.altura * densidade, limiteAltura - y));
     if (!(largura > 8) || !(altura > 8)) return null;
     return { x: x, y: y, width: largura, height: altura, scale: 1 };
   };
@@ -1850,12 +1882,17 @@ async function acaoPrint(view, params) {
     if (recorte) pedido.clip = recorte;
     alternativa.captureBeyondViewport = true;
     alternativa.clip = {
-      x: Math.round(caixa.documento_x),
-      y: Math.round(caixa.documento_y),
-      width: Math.round(caixa.largura),
-      height: Math.round(caixa.altura),
+      x: Math.round(caixa.documento_x * densidade),
+      y: Math.round(caixa.documento_y * densidade),
+      width: Math.round(caixa.largura * densidade),
+      height: Math.round(caixa.altura * densidade),
       scale: 1
     };
+    if (densidade !== 1) {
+      nota = (nota ? nota + ' ' : '')
+        + 'A interface esta com zoom: o recorte foi multiplicado por ' + densidade
+        + ' para o conteudo preencher a imagem.';
+    }
     if (!caixa.cabe_na_vista && recorte && recorte.height + 4 < Math.round(caixa.altura)) {
       nota = 'O elemento e maior do que a area visivel: capturei a parte que cabe no ecra ('
         + recorte.height + ' de ' + Math.round(caixa.altura) + ' px).';
