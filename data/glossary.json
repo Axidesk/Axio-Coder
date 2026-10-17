@@ -2559,10 +2559,10 @@
       "descricao": "Servidor HTTP efemero que o processo principal do Electron abre em 127.0.0.1 no arranque (src/preview-cdp.js:iniciarPonte), com token aleatorio por sessao e so a aceitar pedidos de casa e so por POST. E o unico caminho pelo qual as minhas ferramentas (que vivem no Flask) alcancam o Chrome DevTools Protocol do preview: o Python nao fala IPC. A porta e o token chegam ao Flask por AXIO_PONTE_PORTA/AXIO_PONTE_TOKEN, injetados no ambiente do spawn (src/main.js:startFlask) - por isso um Flask nascido antes desta mudanca nao tem ponte nenhuma, e as ferramentas avisam para fechar e reabrir o Axio. Sem ponte: mensagem honesta, nunca falha silenciosa.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 2406,
+        "linha": 2521,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -2579,10 +2579,10 @@
       "descricao": "O que a pagina do preview escreveu na consola, devolvido como DADO (nivel, origem, ficheiro:linha) e nao como imagem - e a primeira coisa a olhar quando um botao da pagina nao responde. Dona do buffer: a lista `consola` de src/preview-cdp.js, alimentada pelo evento `Runtime.consoleAPICalled` (e por `Runtime.exceptionThrown` e pelo `Log.entryAdded`, que apanha os 404 de recursos - a classe exacta do \"html nu\"). Ligada por preview-cdp.js:prepararDepurador no nascimento da view, esvaziada a cada navegacao. A ferramenta que a le e tool_observar_preview com acao='consola' (filtra por 'nivel' e limpa com o proprio pedido).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1569,
+        "linha": 1585,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -2593,10 +2593,10 @@
       "descricao": "Clique e escrita a serio na pagina do preview, pelo Chrome DevTools Protocol - o clique vai por Input.dispatchMouseEvent (mover, premir, largar, no centro do elemento) e o texto por Input.insertText, por isso funciona com React, Vue e ouvintes nativos. O seletor e RE-RESOLVIDO no instante do gesto (preview-cdp.js:caixaDoPedido) e, antes de disparar, um hit-test (funcao tapa, dentro do SNIPPET_ALVOS) pergunta quem esta no topo no ponto do gesto: se for OUTRO elemento, RECUSA e diz quem tapa; se o centro cair fora da janela, RECUSA tambem. O gesto devolve o proprio EFEITO (assinatura da pagina, erros novos da consola, pedidos falhados, estado do alvo). Ferramenta: tool_operar_preview em src/backend/tools/preview.py (acoes carregar, mostrar, clicar, escrever, teclar).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1978,
+        "linha": 2093,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -2614,10 +2614,10 @@
       "descricao": "O que a pagina do preview tentou carregar e falhou, devolvido como DADO (estado, URL, tipo, motivo) e nao como imagem - e o que explica uma pagina que aparece sem estilo ou sem os scripts. Dona do buffer: a lista `rede` de src/preview-cdp.js, alimentada por Network.responseReceived (so status >= 400: aviso para 4xx, erro para 5xx) e por Network.loadingFailed com canceled=false; o url/tipo das falhas vem do mapa `pedidos` (requestId -> url/type), alimentado por Network.requestWillBeSent. Ligada por preview-cdp.js:prepararDepurador (Network.enable) e esvaziada a cada navegacao por limparRegistos, junto com a consola. A ferramenta que a le e tool_observar_preview com acao='rede' (filtra por 'nivel' tal como a consola).",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1575,
+        "linha": 1591,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -2634,10 +2634,10 @@
       "descricao": "Circulo de 14px com anel verde --oliva que aparece na PAGINA do preview, no ponto exato onde eu vou clicar ou escrever, para o utilizador ver o gesto a acontecer - o papel que no Codex cabe ao cursor do rato. E um div fixo injetado por Runtime.evaluate (id __axio_cursor, pointer-events none, z-index maximo) com estilos INLINE (nunca um <style>, que uma CSP restritiva bloquearia): aparece antes do gesto com uma pausa de PAUSA_CURSOR_MS (150ms), encolhe no clique e desvanece num setTimeout de 240ms. So corre quando cursorAVista(view) e verdadeiro (o preview a frente) - com o preview atras de outra vista o gesto nao ganha atraso nenhum e nada e injetado. Vive em preview-cdp.js:desenharCursor, usado por acaoClicar e acaoEscrever.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 1887,
+        "linha": 2002,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -2674,10 +2674,10 @@
       "descricao": "Recarga da pagina do preview pelo CDP com ignoreCache: true, para eu testar codigo frontend recem-editado sem risco de estar a medir uma versao velha. Distinta do botao de recarregar da barra (main.js:recarregarPreview), que usa a cache como qualquer navegador. A janela principal continua a correr o JS antigo ate o utilizador fazer Ctrl+R; o preview apanha o novo sozinho.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 2232,
+        "linha": 2347,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -2715,8 +2715,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 579,
         "conferido": [
-          1792201466.518,
-          78186
+          1792202287.857,
+          78251
         ]
       }
     },
@@ -2736,8 +2736,8 @@
         "arquivo": "src/backend/tools/preview.py",
         "linha": 318,
         "conferido": [
-          1792201466.518,
-          78186
+          1792202287.857,
+          78251
         ]
       }
     },
@@ -3779,8 +3779,8 @@
         "arquivo": "src/preview-cdp.js",
         "linha": 594,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -3798,8 +3798,8 @@
         "arquivo": "src/preview-cdp.js",
         "linha": 830,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -4109,10 +4109,10 @@
       "descricao": "tool_operar_preview(acao='ficheiro', alvo='<caminho>') poe um ficheiro do disco num campo de ficheiro da pagina SEM abrir a janela nativa do Windows (DOM.setFileInputFiles, por backendNodeId se a propria pagina ja abriu o escolhedor, ou pelo objectId do campo). O campo recebe o ficheiro e o evento de mudanca, logo React/Vue reagem. O caminho resolve-se por resolver_caminho_arquivo (relativo a raiz do projeto ou absoluto). A alternativa para dialogos nativos de OUTROS programas e tool_operar_janela (UI Automation: escrever no campo \"Nome do ficheiro\" e invocar \"Abrir\"). Os dialogos da propria pagina (alert/confirm/beforeunload) fecham-se sozinhos e ficam registados na consola do preview.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 2259,
+        "linha": 2374,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -4180,10 +4180,10 @@
       "descricao": "O gesto que um canvas exige e que um clique nao substitui: press no primeiro ponto, movimentos interpolados (fatias de ~24 px, teto de 60 por segmento e 400 no total) com o botao premido, e release onde o rato parou. 'ponto' leva dois ou mais pontos ('x1,y1 x2,y2 ...'), o mesmo formato da ferramenta das janelas nativas. Nasceu da queixa do utilizador a 2026-10 ('interage com o canvas pra gente testar'): sem ele o agente nao tinha como desenhar, panoramizar ou puxar nada dentro de uma pagina.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 2047,
+        "linha": 2162,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -4200,10 +4200,10 @@
       "descricao": "Roda do rato por cima de um ponto da pagina (ou do centro de um 'seletor'), o gesto do zoom de um mapa ou de um desenho: manda um 'mouseWheel' pelo CDP com deltaY em pixeis (negativo aproxima, positivo afasta; sem valor, -240). O canvas do visualizador DXF tem um ouvinte de 'wheel' proprio (src/frontend/js/viewer/leitores/dxf.js:aoRoda:114), logo so uma roda a serio o move.",
       "localizacao": {
         "arquivo": "src/preview-cdp.js",
-        "linha": 2081,
+        "linha": 2196,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -4697,8 +4697,8 @@
         "arquivo": "src/preview-cdp.js",
         "linha": 663,
         "conferido": [
-          1792201420.605,
-          95452
+          1792202903.739,
+          100008
         ]
       }
     },
@@ -5417,10 +5417,10 @@
       "descricao": "A ponte do preview ganhou um SEGUNDO ALVO: tela='janela' aponta as MESMAS acoes a PROPRIA interface do Axio (mainWindow.webContents) em vez da pagina do visualizador - com isso o mapa, a consola, a rede, o estilo, o print, o avaliar e o quadros passam a funcionar na janela, sem ferramenta nova. A acao 'quadros' mede o desenho a serio por requestAnimationFrame e devolve quadros, fps, intervalo medio/mediano, p95, pior e quantos passaram dos 32 ms: e o que transforma 'parece lento' em numero. O alvo escolhe-se no parametro 'tela' das duas ferramentas; sem ele tudo continua no preview, como antes.",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 1101,
+        "linha": 1102,
         "conferido": [
-          1792201466.518,
-          78186
+          1792202287.857,
+          78251
         ]
       }
     },
@@ -6959,10 +6959,10 @@
       "descricao": "Poe a pagina na largura pedida (390 = celular, 360 = telefone pequeno, 768 = tablet) antes de medir, para a media query disparar de verdade, e mede o que o browser faz a essa largura. A emulacao e desfeita no fim do pedido.",
       "localizacao": {
         "arquivo": "src/backend/tools/preview.py",
-        "linha": 1101,
+        "linha": 1102,
         "conferido": [
-          1792201466.518,
-          78186
+          1792202287.857,
+          78251
         ]
       }
     }
