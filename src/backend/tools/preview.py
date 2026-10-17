@@ -914,10 +914,18 @@ def _texto_do_viewport(dados):
         if medida.get("mobile")
         else "disposicao forcada a essa largura (e o que faz as media queries dispararem)"
     )
-    return (
+    linha = (
         f"MEDIDO A {medida.get('largura')}x{medida.get('altura')} px - {como}."
         " A janela do preview continua no tamanho normal: as medidas sao as desta largura."
     )
+    pedida = int(medida.get("pedida") or 0)
+    if pedida and pedida != int(medida.get("largura") or 0):
+        return (
+            f"ATENCAO: pedi {pedida} px de largura e a pagina ficou com"
+            f" {medida.get('largura')} px - ela nao declara o viewport meta, logo o layout"
+            " NAO esta na largura pedida.\n" + linha
+        )
+    return linha
 
 
 def _com_alvo(texto, dados, print_em_segundo_plano=False):
@@ -953,6 +961,36 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
     if aviso:
         avisos.append(aviso)
     return "\n".join(linhas + avisos + [texto])
+
+
+def _seletores_em_lote(seletores):
+    """Uma linha por seletor, sem repetir e sem vazios."""
+    vistos = []
+    for linha in str(seletores or "").splitlines():
+        limpo = linha.strip()
+        if limpo and limpo not in vistos:
+            vistos.append(limpo)
+    return vistos
+
+
+def _em_lote(pedido, alvos, limite, medida):
+    """O mesmo pedido a varios seletores, um bloco por alvo, numa so chamada."""
+    blocos = []
+    primeiro = {}
+    for indice, alvo in enumerate(alvos, 1):
+        dados, erro = ponte_preview.pedir(pedido, seletor=alvo, limite=limite, **medida)
+        if erro:
+            blocos.append(f"[{indice}] {alvo}\n  ERRO: {erro}.")
+            continue
+        if not dados.get("ok"):
+            blocos.append(f"[{indice}] {alvo}\n  ERRO: {dados.get('erro') or 'a pagina nao respondeu'}.")
+            continue
+        if not primeiro:
+            primeiro = dados
+        texto = _texto_do_estilo(dados) if pedido == "estilo" else _texto_dos_elementos(dados)
+        blocos.append(f"[{indice}] {alvo}\n" + texto)
+    cabeca = f"{len(alvos)} alvos numa so chamada ('{pedido}'), um bloco por seletor."
+    return _com_alvo(cabeca + "\n\n" + "\n\n".join(blocos), primeiro)
 
 
 @register(
@@ -992,6 +1030,10 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
         "seletor": {
             "tipo": "STRING", "obrig": False, "padrao": "",
             "desc": "Seletor CSS do alvo ('#btn-send', '.editor-tab'). Em 'elemento' devolve todos os que casam; em 'print' recorta a imagem ao primeiro; em 'estilo' devolve o desenho dele (com o pai e os filhos) - vazio devolve o desenho da pagina inteira; em 'canvas' escolhe o canvas (vazio le o maior da pagina).",
+        },
+        "seletores": {
+            "tipo": "STRING", "obrig": False, "padrao": "",
+            "desc": "VARIOS seletores numa so chamada, um por linha, em 'estilo' e 'elemento': devolve um bloco por alvo em vez de uma chamada por elemento - o caminho para medir uma lista de pecas (as linhas de uma tabela, os campos de um formulario) sem gastar uma chamada por peca. Ignorado nas outras acoes.",
         },
         "texto": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -1056,7 +1098,7 @@ def _com_alvo(texto, dados, print_em_segundo_plano=False):
         },
     },
 )
-def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0, tela="preview", largura=0, altura=0, mobile=False, espera=0, tempo=0, alvo=""):
+def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="", durante=0, intervalo=0, nivel="", limite=0, grelha=0, tela="preview", largura=0, altura=0, mobile=False, espera=0, tempo=0, alvo="", seletores=""):
     ponte_preview = _Ponte(tela)
     pedido = str(acao or "estado").strip().lower()
     if pedido not in ACOES_DE_OBSERVACAO:
@@ -1098,6 +1140,10 @@ def tool_observar_preview(acao="estado", seletor="", texto="", regiao="", js="",
         if erro:
             return f"ERRO: {erro}."
         return _com_alvo(_texto_da_rede(dados), dados)
+
+    alvos = _seletores_em_lote(seletores)
+    if alvos and pedido in ("estilo", "elemento"):
+        return _em_lote(pedido, alvos, limite, medida)
 
     if pedido == "elemento":
         if not (seletor.strip() or texto.strip()):

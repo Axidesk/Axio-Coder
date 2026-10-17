@@ -1313,19 +1313,37 @@ function viewportPedido(params) {
   };
 }
 
-async function aplicarViewport(depurador, params) {
+async function aplicarViewport(depurador, params, fator) {
   const medida = viewportPedido(params);
   if (!medida) return null;
+  const bruto = Number(fator);
+  const zoom = (bruto > 0.05 && bruto <= 10) ? bruto : 1;
+  const largura = Math.max(120, Math.round(medida.largura * zoom));
+  const altura = Math.max(120, Math.round(medida.altura * zoom));
   await enviarComando(depurador, 'Emulation.setDeviceMetricsOverride', {
-    width: medida.largura,
-    height: medida.altura,
+    width: largura,
+    height: altura,
     deviceScaleFactor: Math.max(0.1, Math.min(Number(params.escala) || 1, 4)),
     mobile: !!params.mobile,
-    screenWidth: medida.largura,
-    screenHeight: medida.altura,
+    screenWidth: largura,
+    screenHeight: altura,
     dontSetVisibleSize: true
   });
   return medida;
+}
+
+async function medidaDisposta(depurador) {
+  const resposta = await avaliarNaPagina(depurador,
+    "JSON.stringify({ l: window.innerWidth, a: window.innerHeight })"
+  ).catch(() => null);
+  if (!resposta || resposta.erro || typeof resposta.valor !== 'string') return null;
+  try {
+    const dados = JSON.parse(resposta.valor);
+    if (!(Number(dados.l) > 0)) return null;
+    return { largura: Math.round(Number(dados.l)), altura: Math.round(Number(dados.a) || 0) };
+  } catch (e) {
+    return null;
+  }
 }
 
 async function limparViewport(depurador) {
@@ -1340,14 +1358,16 @@ async function ligarViewport(view, naJanela, acao, params) {
   const depurador = depuradorDe(view);
   if (!depurador) return null;
   try {
-    await aplicarViewport(depurador, params);
+    await aplicarViewport(depurador, params, zoomDaView(view));
   } catch (e) {
     return null;
   }
+  const disposta = await medidaDisposta(depurador);
   return {
     depurador: depurador,
-    largura: medida.largura,
-    altura: medida.altura,
+    largura: disposta ? disposta.largura : medida.largura,
+    altura: disposta ? disposta.altura : medida.altura,
+    pedida: medida.largura,
     mobile: !!params.mobile
   };
 }
@@ -1505,6 +1525,17 @@ function visibilidadeDe(view) {
   if (typeof view.getVisible === 'function') return view.getVisible();
   if (typeof view.isVisible === 'function') return view.isVisible() && !view.isMinimized();
   return null;
+}
+
+function zoomDaView(view) {
+  const wc = view && view.webContents;
+  if (!wc || typeof wc.getZoomFactor !== 'function') return 1;
+  try {
+    const fator = Number(wc.getZoomFactor());
+    return (fator > 0.05 && fator <= 10) ? fator : 1;
+  } catch (e) {
+    return 1;
+  }
 }
 
 function acaoEstado(view) {
@@ -2358,6 +2389,7 @@ async function executar(dados) {
           resultado.viewport = {
             largura: emulacao.largura,
             altura: emulacao.altura,
+            pedida: emulacao.pedida,
             mobile: emulacao.mobile
           };
         }
