@@ -9,8 +9,8 @@ const TETO_REDE = 200;
 const TETO_PEDIDOS = 500;
 const TEMPO_COMANDO_MS = 8000;
 const TEMPO_COMANDO_MAX_MS = 45000;
-const LARGURA_MAXIMA_MS = 4000;
-const ALTURA_MAXIMA_MS = 6000;
+const LARGURA_MAXIMA_PX = 4000;
+const ALTURA_MAXIMA_PX = 6000;
 const ESPERA_MAXIMA_AVALIAR_MS = 10000;
 const TETO_TEXTO_ENTRADA = 2000;
 const PAUSA_CURSOR_MS = 150;
@@ -1308,8 +1308,8 @@ function viewportPedido(params) {
   if (!(largura > 0)) return null;
   const altura = Math.round(Number(params.altura) || 0);
   return {
-    largura: Math.max(120, Math.min(largura, LARGURA_MAXIMA_MS)),
-    altura: Math.max(120, Math.min(altura > 0 ? altura : 844, ALTURA_MAXIMA_MS))
+    largura: Math.max(120, Math.min(largura, LARGURA_MAXIMA_PX)),
+    altura: Math.max(120, Math.min(altura > 0 ? altura : 844, ALTURA_MAXIMA_PX))
   };
 }
 

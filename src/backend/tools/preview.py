@@ -529,9 +529,11 @@ def _texto_do_efeito(efeito):
 
 
 def _com_efeito(base, dados):
-    """A frase da acao seguida do efeito que ela provocou na pagina."""
+    """A largura emulada, a frase da acao e o efeito que ela provocou na pagina."""
+    vista = _texto_do_viewport(dados)
     efeito = _texto_do_efeito(dados.get("efeito"))
-    return f"{base} {efeito}" if efeito else base
+    corpo = f"{base} {efeito}" if efeito else base
+    return f"{vista}\n{corpo}" if vista else corpo
 
 
 def _texto_dos_elementos(dados):
