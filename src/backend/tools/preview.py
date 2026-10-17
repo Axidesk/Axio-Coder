@@ -922,8 +922,9 @@ def _texto_do_viewport(dados):
     if pedida and pedida != int(medida.get("largura") or 0):
         return (
             f"ATENCAO: pedi {pedida} px de largura e a pagina ficou com"
-            f" {medida.get('largura')} px - ela nao declara o viewport meta, logo o layout"
-            " NAO esta na largura pedida.\n" + linha
+            f" {medida.get('largura')} px - ou ela nao declara o viewport meta, ou nao"
+            " foi possivel compensar o zoom da interface: o layout NAO esta na largura"
+            " pedida.\n" + linha
         )
     return linha
 

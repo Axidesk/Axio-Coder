@@ -1283,6 +1283,9 @@ async function caixaDoPedido(depurador, params) {
     };
   }
   const regiao = String(params.regiao || '').trim();
+  if (/^(tudo|toda|pagina|tela|janela|full)$/i.test(regiao)) {
+    return { caixa: null, centro: null, onde: regiao };
+  }
   if (regiao) {
     const partes = regiao.split(',').map((p) => Number(String(p).trim()));
     if (partes.length !== 4 || partes.some((n) => !Number.isFinite(n))) {
@@ -1357,17 +1360,30 @@ async function ligarViewport(view, naJanela, acao, params) {
   if (!medida) return null;
   const depurador = depuradorDe(view);
   if (!depurador) return null;
-  try {
-    await aplicarViewport(depurador, params, zoomDaView(view));
-  } catch (e) {
-    return null;
+
+  let fator = zoomDaView(view);
+  let disposta = null;
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    try {
+      await aplicarViewport(depurador, params, fator);
+    } catch (e) {
+      return null;
+    }
+    disposta = await medidaDisposta(depurador);
+    if (!disposta) break;
+    if (Math.abs(medida.largura - disposta.largura) <= 2) break;
+    const correcao = fator * (medida.largura / disposta.largura);
+    if (!(correcao > 0.05 && correcao <= 10)) break;
+    if (Math.abs(correcao - fator) < 0.005) break;
+    fator = correcao;
   }
-  const disposta = await medidaDisposta(depurador);
+
   return {
     depurador: depurador,
     largura: disposta ? disposta.largura : medida.largura,
     altura: disposta ? disposta.altura : medida.altura,
     pedida: medida.largura,
+    exata: disposta ? Math.abs(disposta.largura - medida.largura) <= 2 : false,
     mobile: !!params.mobile
   };
 }
@@ -1786,9 +1802,10 @@ async function acaoPrint(view, params) {
   const depurador = pronto.depurador;
   const alvo = pronto.alvo;
   const seletor = String(params.seletor || '').trim();
-  const pedido = { format: 'png', fromSurface: true };
+  let caixa = null;
   let referencia = 'vista';
   let nota = '';
+
   if (seletor) {
     const antes = await enquadrarAlvo(depurador, seletor);
     if (!antes || !antes.ok || !antes.caixa) {
@@ -1799,48 +1816,109 @@ async function acaoPrint(view, params) {
     }
     await aguardar(140);
     const depois = await enquadrarAlvo(depurador, seletor);
-    const caixa = (depois && depois.caixa) || antes.caixa;
-    if (caixa.cabe_na_vista) {
-      pedido.clip = { x: caixa.x, y: caixa.y, width: caixa.largura, height: caixa.altura, scale: 1 };
-      pedido.captureBeyondViewport = false;
-    } else {
-      pedido.clip = {
-        x: caixa.documento_x,
-        y: caixa.documento_y,
-        width: caixa.largura,
-        height: caixa.altura,
-        scale: 1
-      };
-      pedido.captureBeyondViewport = true;
-      referencia = 'pagina';
-      nota = 'O elemento e maior do que a area visivel: a captura foi feita pelas coordenadas da pagina'
-        + ' inteira, e nao pelo que esta no ecra.';
-    }
+    caixa = (depois && depois.caixa) || antes.caixa;
   } else if (alvo.caixa) {
-    pedido.clip = {
-      x: alvo.caixa.x,
-      y: alvo.caixa.y,
-      width: alvo.caixa.largura,
-      height: alvo.caixa.altura,
+    caixa = alvo.caixa;
+  }
+
+  const vista = await medidaDisposta(depurador).catch(() => null);
+
+  const recorteNaVista = () => {
+    if (!caixa) return null;
+    const x = Math.max(0, Math.round(caixa.x));
+    const y = Math.max(0, Math.round(caixa.y));
+    const limiteLargura = vista && vista.largura ? vista.largura : x + caixa.largura;
+    const limiteAltura = vista && vista.altura ? vista.altura : y + caixa.altura;
+    const largura = Math.round(Math.min(caixa.largura, limiteLargura - x));
+    const altura = Math.round(Math.min(caixa.altura, limiteAltura - y));
+    if (!(largura > 8) || !(altura > 8)) return null;
+    return { x: x, y: y, width: largura, height: altura, scale: 1 };
+  };
+
+  const capturar = async (pedido) => {
+    const resposta = await enviarComando(depurador, 'Page.captureScreenshot', pedido)
+      .catch(() => null);
+    return resposta && resposta.data ? resposta.data : null;
+  };
+
+  const pedido = { format: 'png', fromSurface: true };
+  const alternativa = { format: 'png', fromSurface: true };
+
+  if (caixa) {
+    const recorte = recorteNaVista();
+    pedido.captureBeyondViewport = false;
+    if (recorte) pedido.clip = recorte;
+    alternativa.captureBeyondViewport = true;
+    alternativa.clip = {
+      x: Math.round(caixa.documento_x),
+      y: Math.round(caixa.documento_y),
+      width: Math.round(caixa.largura),
+      height: Math.round(caixa.altura),
       scale: 1
     };
-    pedido.captureBeyondViewport = false;
+    if (!caixa.cabe_na_vista && recorte && recorte.height + 4 < Math.round(caixa.altura)) {
+      nota = 'O elemento e maior do que a area visivel: capturei a parte que cabe no ecra ('
+        + recorte.height + ' de ' + Math.round(caixa.altura) + ' px).';
+    }
   } else {
     pedido.captureBeyondViewport = true;
     referencia = 'pagina';
     nota = 'Sem alvo indicado: a captura e da PAGINA INTEIRA (a altura toda, e nao so o que esta no ecra).';
   }
-  const resposta = await enviarComando(depurador, 'Page.captureScreenshot', pedido);
-  if (!resposta || !resposta.data) return { ok: false, erro: 'A pagina nao devolveu imagem.' };
+
+  let dados = await capturar(pedido);
+  const primeiraVazia = dados ? uniformidadeDaCaptura(dados) : null;
+
+  if (dados && primeiraVazia === true && caixa) {
+    const segundo = await capturar(alternativa);
+    const segundaVazia = segundo ? uniformidadeDaCaptura(segundo) : null;
+    if (segundo && segundaVazia === false) {
+      dados = segundo;
+      pedido.clip = alternativa.clip;
+      pedido.captureBeyondViewport = alternativa.captureBeyondViewport;
+      referencia = 'pagina';
+      nota = 'A captura pela area visivel saiu vazia; esta veio das coordenadas da pagina inteira.';
+    } else if (segundo && segundaVazia !== false) {
+      nota = (nota ? nota + ' ' : '') + 'As duas capturas sairam quase de uma cor so:'
+        + ' confirme com acao=estado e traga a vista a frente com acao=mostrar.';
+    }
+  }
+
+  if (!dados) return { ok: false, erro: 'A pagina nao devolveu imagem.' };
   return {
     ok: true,
-    base64: resposta.data,
+    base64: dados,
     mime: 'image/png',
     regiao: pedido.clip || null,
     referencia: referencia,
     nota: nota,
     onde: alvo.onde
   };
+}
+
+function uniformidadeDaCaptura(base64) {
+  try {
+    const { nativeImage } = require('electron');
+    const imagem = nativeImage.createFromBuffer(Buffer.from(base64, 'base64'));
+    const tamanho = imagem.getSize();
+    if (!tamanho || !tamanho.width || !tamanho.height) return null;
+    const pequena = imagem.resize({ width: Math.min(tamanho.width, 64), quality: 'good' });
+    const bytes = pequena.toBitmap();
+    if (!bytes || bytes.length < 8) return null;
+    let primeira = null;
+    let iguais = 0;
+    let total = 0;
+    for (let i = 0; i + 3 < bytes.length; i += 4) {
+      const cor = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+      if (primeira === null) primeira = cor;
+      total++;
+      if (cor === primeira) iguais++;
+    }
+    if (!total) return null;
+    return (iguais / total) > 0.99;
+  } catch (e) {
+    return null;
+  }
 }
 
 async function injetarInspecao(view, ligado) {
