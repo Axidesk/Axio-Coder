@@ -65,6 +65,10 @@ data/vertex_credentials.json
 # Cofre de credenciais do utilizador (janela de Configuracoes -> Cofre)
 data/cofre.json
 
+# Agendamento do despertador: estado local desta maquina (a nota que o agente
+# escreveu para si proprio), nao faz parte do codigo
+data/despertador.json
+
 # Cache dos modelos convertidos do visualizador (IFC -> Fragments)
 data/cache_modelos/
 
