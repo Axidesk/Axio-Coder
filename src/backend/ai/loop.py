@@ -31,6 +31,7 @@ from src.backend.tools import (
     cpp,
     cpp_auditoria,
     depurador_auditoria,
+    despertador,
     edit,
     environment,
     espera,

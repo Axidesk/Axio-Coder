@@ -1883,9 +1883,13 @@ async function acaoPrint(view, params) {
         + apanhado + ' de ' + Math.round(caixa.altura) + ' px).';
     }
   } else {
-    dados = await capturar({ format: 'png', fromSurface: true, captureBeyondViewport: true });
-    referencia = 'pagina';
-    nota = 'Sem alvo indicado: a captura e da PAGINA INTEIRA (a altura toda, e nao so o que esta no ecra).';
+    const paginaInteira = String(params.regiao || '').trim().toLowerCase() === 'pagina';
+    dados = await capturar({ format: 'png', fromSurface: true, captureBeyondViewport: paginaInteira });
+    referencia = paginaInteira ? 'pagina' : 'janela';
+    nota = paginaInteira
+      ? 'Sem alvo indicado: a captura e da PAGINA INTEIRA (a altura toda, e nao so o que esta no ecra).'
+      : 'Sem alvo indicado: a captura e da JANELA - so o que esta no ecra, sem a faixa vazia que a pagina '
+        + 'continua para la do viewport. Para a pagina inteira, repita com regiao="pagina".';
   }
 
   if (dados && uniformidadeDaCaptura(dados) === true) {
@@ -2278,18 +2282,32 @@ async function acaoEscrever(view, params) {
   return { ok: true, escrito: texto.length, onde: seletor, cursor: aVista, conferencia: conferencia, efeito: await efeitoDoGesto(depurador, marca, seletor) };
 }
 
-async function premirTecla(depurador, nome) {
+function baseDaTecla(nome) {
   const espec = TECLAS[nome];
-  const base = {
-    key: espec.key,
-    code: espec.code,
-    windowsVirtualKeyCode: espec.vk,
-    nativeVirtualKeyCode: espec.vk
+  return {
+    espec,
+    base: {
+      key: espec.key,
+      code: espec.code,
+      windowsVirtualKeyCode: espec.vk,
+      nativeVirtualKeyCode: espec.vk
+    }
   };
+}
+
+async function premirTecla(depurador, nome, manter) {
+  const { espec, base } = baseDaTecla(nome);
   await enviarComando(depurador, 'Input.dispatchKeyEvent', Object.assign({ type: 'rawKeyDown' }, base));
-  if (espec.texto) {
+  if (espec.texto && !manter) {
     await enviarComando(depurador, 'Input.dispatchKeyEvent', Object.assign({ type: 'char' }, base, { text: espec.texto, unmodifiedText: espec.texto }));
   }
+  if (manter) return true;
+  await enviarComando(depurador, 'Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, base));
+  return true;
+}
+
+async function soltarTecla(depurador, nome) {
+  const { base } = baseDaTecla(nome);
   await enviarComando(depurador, 'Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, base));
   return true;
 }
@@ -2317,7 +2335,27 @@ async function acaoTeclar(view, params) {
     return { ok: false, erro: 'Tecla nao suportada: ' + pedido + '. Disponiveis: ' + Object.keys(TECLAS).join(', ') + '.' };
   }
   const marca = await marcarGesto(depurador, '');
-  await premirTecla(depurador, nome);
+  const manter = params.manter === true || params.manter === '1' || params.manter === 'true';
+  await premirTecla(depurador, nome, manter);
+  return {
+    ok: true,
+    tecla: nome,
+    mantida: manter,
+    efeito: manter ? {} : await efeitoDoGesto(depurador, marca, '')
+  };
+}
+
+async function acaoLargar(view, params) {
+  await esperarAVista(view, ESPERA_VISTA_MS);
+  const depurador = depuradorDe(view);
+  if (!depurador) return { ok: false, erro: 'A pagina do preview nao esta a falar com o depurador.' };
+  const pedido = String(params.tecla || '').trim();
+  const nome = Object.keys(TECLAS).find((t) => t.toLowerCase() === pedido.toLowerCase());
+  if (!nome) {
+    return { ok: false, erro: 'Tecla nao suportada: ' + pedido + '. Disponiveis: ' + Object.keys(TECLAS).join(', ') + '.' };
+  }
+  const marca = await marcarGesto(depurador, '');
+  await soltarTecla(depurador, nome);
   return { ok: true, tecla: nome, efeito: await efeitoDoGesto(depurador, marca, '') };
 }
 
@@ -2415,6 +2453,7 @@ const ACOES = {
   roda: (view, params) => acaoRoda(view, params),
   escrever: (view, params) => acaoEscrever(view, params),
   teclar: (view, params) => acaoTeclar(view, params),
+  largar: (view, params) => acaoLargar(view, params),
   recarregar: (view) => acaoRecarregar(view),
   ficheiro: (view, params) => acaoFicheiro(view, params)
 };

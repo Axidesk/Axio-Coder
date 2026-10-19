@@ -551,6 +551,62 @@
     word-break: break-word;
     max-width: 100%;
 }
+.despertador-barra {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: 10px;
+    padding: 2px 4px 2px 10px;
+    border-radius: 9999px;
+    background: var(--bg-selecao);
+    color: var(--text-suave);
+    font-size: 0.72rem;
+    font-style: normal;
+    line-height: 1.6;
+    vertical-align: middle;
+    animation: despertador-entra var(--dur-5) var(--ease-fluid) both;
+}
+.despertador-barra[hidden] {
+    display: none;
+}
+.despertador-ponto {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--oliva);
+    animation: despertador-pulsa 2.4s ease-in-out infinite;
+}
+.despertador-cancelar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-suave);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.despertador-cancelar:hover {
+    background: var(--border-suave);
+    color: var(--text-branco);
+}
+@keyframes despertador-entra {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes despertador-pulsa {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .despertador-barra, .despertador-ponto { animation: none; }
+}
+
 .status-link {
     color: var(--oliva);
     cursor: pointer;

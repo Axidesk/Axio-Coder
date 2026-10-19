@@ -216,6 +216,9 @@ def _subcomando_do_instalador(partes):
             return token.lower()
     return ""
 
+_SAIDA_COM_OPCAO = re.compile(r"(?:^|\s)(?:-o|--output|--out)\s+(\"[^\"]+\"|'[^']+'|\S+)")
+_SAIDA_COM_REDIRECAO = re.compile(r"(?:^|\s)\d?>>?\s*(\"[^\"]+\"|'[^']+'|[^\s&|]+)")
+
 def _pasta_de_trabalho(cwd):
     """Pasta onde o processo corre: a indicada, ou a do projeto aberto. Sem nenhuma, nao adivinha.
 
@@ -236,6 +239,33 @@ def _pasta_de_trabalho(cwd):
         return "", (f"ERRO: o comando nao corre num sitio que nao existe. Resolvi '{pedido or cwd}' "
                     f"para '{alvo}', que nao e uma pasta.")
     return alvo, ""
+
+def _criar_pastas_de_saida(comando, pasta):
+    """Cria as pastas onde o comando vai ESCREVER, antes de ele arrancar.
+
+    Medido a 2026-10-18: 'curl -o _baixar/arquivo.zip' arrancou e so falhou com
+    'Failed to open the file: No such file or directory' porque a pasta do destino
+    nao existia - o curl nao cria pastas. A chamada gastou-se inteira para descobrir
+    isso. Aqui as pastas de '-o', '--output' e '>' sao criadas antes do arranque.
+    """
+    criadas = []
+    for padrao in (_SAIDA_COM_OPCAO, _SAIDA_COM_REDIRECAO):
+        for encontro in padrao.finditer(comando or ""):
+            alvo = encontro.group(1).strip().strip('"').strip("'")
+            if not alvo or alvo.startswith("&") or alvo.startswith("-"):
+                continue
+            if "^" in alvo or "%" in alvo or "$(" in alvo:
+                continue
+            caminho = alvo if os.path.isabs(alvo) else os.path.join(pasta, alvo)
+            pasta_do_alvo = os.path.dirname(os.path.abspath(caminho))
+            if not pasta_do_alvo or os.path.isdir(pasta_do_alvo):
+                continue
+            try:
+                os.makedirs(pasta_do_alvo, exist_ok=True)
+                criadas.append(pasta_do_alvo)
+            except OSError:
+                continue
+    return criadas
 
 def _resolver_venv_curto(comando, pasta):
     """Troca 'venv:python' pelo interpretador do venv do projeto aberto.
@@ -868,10 +898,14 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
     if timeout < 5:
         timeout = 5
 
+    pastas_criadas = _criar_pastas_de_saida(comando, pasta_de_trabalho)
     nota_ambiente = _nota_do_ambiente(comando, pasta_de_trabalho)
     ok, motivo = _validar_comando_processo(comando, pasta_de_trabalho)
     if not ok:
         return f"ERRO: {motivo}"
+    if pastas_criadas:
+        nota_ambiente += (" Pastas de destino que nao existiam e foram criadas: "
+                          + ", ".join(pastas_criadas) + ".")
 
     comando, porta_ajustada = _ajustar_porta_comando(comando)
     eh_web = _eh_comando_web(comando)

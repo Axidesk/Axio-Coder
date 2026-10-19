@@ -132,6 +132,31 @@ def _motivo_da_falha(resultado):
         )
     return "a API respondeu sem resultados e sem motivo declarado"
 
+_BLOCOS_DE_NAVEGACAO = (
+    ("Skip to content", "Repository files navigation"),
+    ("Skip to content", "File metadata and controls"),
+    ("Skip to content", "Footer"),
+)
+
+def _sem_navegacao_do_repositorio(conteudo):
+    """Tira o menu do GitHub que vem agarrado ao README de qualquer repositorio.
+
+    Medido a 2026-10-18: o README do GaussianSplats3D chegou precedido de metade da
+    navegacao da pagina, e o conteudo util ficou escondido no meio disso. O corte so
+    acontece quando o bloco e grande: numa pagina que apenas MENCIONE o texto, nada
+    e removido.
+    """
+    texto = conteudo or ""
+    for inicio, fim in _BLOCOS_DE_NAVEGACAO:
+        abertura = texto.find(inicio)
+        if abertura < 0:
+            continue
+        fecho = texto.find(fim, abertura)
+        if fecho < 0 or fecho - abertura < 1500:
+            continue
+        texto = texto[:abertura] + texto[fecho:]
+    return texto
+
 def _conteudo_ilegivel(conteudo):
     """Detecta se o conteúdo extraído está ilegível/garbled (ex: Shiki, JS toggles).
     Retorna (bool, str): (é_ilegivel, motivo)"""
@@ -327,6 +352,9 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             return "ERRO: Forneça 'query' ou 'url_especifica'."
 
         if not resultado or not resultado.get('results'):
+            if url_especifica:
+                abertas = [u.strip() for u in url_especifica.splitlines() if u.strip()]
+                estado["urls_navegadas_turno"].update(abertas)
             if falha:
                 return f"Nenhum resultado encontrado na web. A extracao direta falhou — {falha}"
             return "Nenhum resultado encontrado na web."
@@ -339,7 +367,7 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
         for idx, res in enumerate(resultado.get('results', []), 1):
             url = res.get('url', '')
             fontes.append(url)
-            conteudo = res.get('raw_content', '') or res.get('content', '')
+            conteudo = _sem_navegacao_do_repositorio(res.get('raw_content', '') or res.get('content', ''))
             
             ilegivel, motivo = _conteudo_ilegivel(conteudo)
             

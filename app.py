@@ -25,6 +25,7 @@ from src.backend.memory.vector import preaquecer_mempalace
 from src.backend.services.persistencia import limpar_temporarios_orfaos
 from src.backend.services.arranque import registar_arranque
 from src.backend.services.envio_automatico import iniciar_vigia_do_envio
+from src.backend.services.despertador import iniciar_vigia as iniciar_vigia_do_despertador
 from src.backend.services.session import pasta_session_logs_em
 from src.backend.services.settings import migrar_automatico_padrao
 from src.backend.tools.registry import carregar_ferramentas_em_segundo_plano
@@ -39,6 +40,7 @@ from src.backend.routes.settings import settings_bp
 from src.backend.routes.cofre import cofre_bp
 from src.backend.routes.projeto import projeto_bp
 from src.backend.routes.viewer import viewer_bp
+from src.backend.routes.despertador import despertador_bp
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
@@ -60,6 +62,7 @@ app.register_blueprint(settings_bp)
 app.register_blueprint(cofre_bp)
 app.register_blueprint(projeto_bp)
 app.register_blueprint(viewer_bp)
+app.register_blueprint(despertador_bp)
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -73,6 +76,7 @@ if __name__ == '__main__':
     migrar_automatico_padrao()
     preaquecer_mempalace()
     iniciar_vigia_do_envio()
+    iniciar_vigia_do_despertador()
     carregar_ferramentas_em_segundo_plano(PORTA_DO_SERVIDOR)
     _aquecer_cudnn(PORTA_DO_SERVIDOR)
     socketio.run(app, port=PORTA_DO_SERVIDOR, debug=False, allow_unsafe_werkzeug=True)

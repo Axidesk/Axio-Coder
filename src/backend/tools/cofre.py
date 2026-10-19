@@ -13,7 +13,7 @@ from src.backend.tools.registry import register
 
 @register(
     "tool_gerenciar_cofre",
-    "Le e escreve o cofre de credenciais do utilizador (data/cofre.json): identidade, email, contas de sites e chaves de API. "
+    "Le e escreve o cofre de credenciais do utilizador (data/cofre.json): identidade, cartoes de pagamento, email, contas de sites e chaves de API. "
     "O cofre e o que me deixa trabalhar sem interromper o utilizador - abrir uma conta num site, gerar uma chave, entrar num "
     "email para ler o codigo de confirmacao. Acoes: 'listar' devolve tudo o que existe com os valores sensiveis MASCARADOS "
     "(comprimento a vista, conteudo nao); 'escrever' cria ou atualiza uma entrada (campos no formato 'nome=valor', um por "
@@ -45,8 +45,8 @@ from src.backend.tools.registry import register
         },
         "categoria": {
             "tipo": "STRING",
-            "desc": "identidade | email | site | servidor",
-            "enum": ["identidade", "email", "site", "servidor"],
+            "desc": "identidade | pagamento | email | site | servidor",
+            "enum": ["identidade", "pagamento", "email", "site", "servidor"],
             "padrao": "",
         },
         "campos": {

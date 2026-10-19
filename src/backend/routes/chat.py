@@ -152,6 +152,7 @@ def chat():
         if not tem_studio and not tem_vertex:
             return jsonify({"error": "Defina a chave do modelo nas Configurações."}), 400
 
+    estado["ultimo_modelo"] = {"use_deepseek": bool(use_deepseek), "ai_model": ai_model}
     threading.Thread(target=_correr_loop, args=(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model), daemon=True).start()
     return jsonify({"status": "processing", "turn_id": turn_id})
 

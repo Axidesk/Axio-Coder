@@ -384,6 +384,16 @@ def _print_de_janela(janela, regiao):
 )
 def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_com="", cima="",
                     regiao="", ampliar=1):
+    caminhos = [
+        linha.strip()
+        for linha in str(caminho_relativo or "").replace(";", "\n").splitlines()
+        if linha.strip()
+    ]
+    if len(caminhos) > 1:
+        return _juntar_imagens([
+            (caminho, tool_ver_imagem(caminho, pagina, vista, focar, comparar_com, cima, regiao, ampliar))
+            for caminho in caminhos
+        ])
     emit_event("executing", function=f"Abrindo: {caminho_relativo}")
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
@@ -450,6 +460,34 @@ def tool_ver_imagem(caminho_relativo, pagina=1, vista="3q", focar="", comparar_c
     else:
         resultado["imagens"] = imagens
     return resultado
+
+
+def _juntar_imagens(resultados):
+    """Junta as imagens de varios ficheiros numa entrega so, para comparar de uma vez."""
+    imagens = []
+    textos = []
+    for caminho, resultado in resultados:
+        if isinstance(resultado, str):
+            textos.append(f"{caminho}: {resultado}")
+            continue
+        textos.append(str(resultado.get("texto", "")).strip())
+        if resultado.get("imagens"):
+            imagens.extend(resultado["imagens"])
+        elif resultado.get("imagem"):
+            imagens.append(resultado["imagem"])
+    if not imagens:
+        return "\n".join(textos)
+    entrega = {
+        "texto": (
+            f"{len(resultados)} ficheiro(s) entregues em {len(imagens)} imagem(ns), na ordem em que "
+            "foram pedidos.\n" + "\n".join(textos) + "\nOlhe para TODAS antes de concluir."
+        )
+    }
+    if len(imagens) == 1:
+        entrega["imagem"] = imagens[0]
+    else:
+        entrega["imagens"] = imagens
+    return entrega
 
 
 @register(

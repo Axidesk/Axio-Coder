@@ -14,6 +14,7 @@ import { createPlanStepCard, _createStackCard, _setStepIcon, _collapseStep, _for
 import { reavaliarBuscaChat } from './busca_chat.js';
 import { alimentarRaciocinio } from '../editor/preview_raciocinio.js';
 import { aoRestaurar, esquecerConversa, guardarConversa, reiniciarAInterface, registrarBloco } from './conversa_viva.js';
+import { iniciarDespertador, tratarDespertador } from './despertador.js';
 
 const { alertPopup, alertPopupContent, btnSend, chatContainerLeft, chatContainerRight, chatInnerLeft, chatInnerRight, contextAcumuladaFill, contextInfoLimite, contextSessaoFill, contextUsage, contextUsageAcumulada, contextUsageFill, contextUsageLabel, contextUsageSessao, currentLogsList, currentLogsWrapper, inputText, lblExecuting, lblFolder, lblMetrics, lblStatus, terminalMode } = dom;
 
@@ -177,6 +178,7 @@ function startSSE() {
     }
     state.eventSource = new EventSource('/api/stream');
     resetEstadoDoTurno();
+    iniciarDespertador();
     state.eventSource.onmessage = async function(event) {
         if (!event.data || event.data.trim() === '') return;
         let data;
@@ -806,6 +808,7 @@ const HANDLERS = {
     cancel: tratar_cancel,
     done: tratar_done,
     error: tratar_error,
+    despertador: tratarDespertador,
 };
 
 function resetEstadoDoTurno() {

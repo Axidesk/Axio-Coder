@@ -41,6 +41,12 @@ CATEGORIAS = {
         "dica": "Quem voce e. E daqui que eu tiro nome, email e telefone para preencher formularios de cadastro sem perguntar.",
         "campos": ("nome", "email", "telefone", "documento", "nascimento", "morada"),
     },
+    "pagamento": {
+        "rotulo": "Cartões",
+        "dica": "Os dados de um cartão, para pagar contas e assinaturas. O número e o CVV ficam mascarados como qualquer segredo, e eu uso-os sem os ver quando preencho um formulário de pagamento.",
+        "campos": ("titular", "numero", "validade", "cvv", "bandeira", "pais"),
+        "opcionais": ("pais",),
+    },
     "email": {
         "rotulo": "Email",
         "dica": "A sua caixa de entrada. Guardo aqui endereco, senha da conta e a app password do IMAP - e por ela que eu leio o codigo de confirmacao de um cadastro sem interromper o trabalho. A app password e um segredo a parte: so se le uma vez, no momento em que nasce.",
@@ -61,7 +67,7 @@ CATEGORIAS = {
     },
 }
 
-CAMPOS_SENSIVEIS = ("senha", "password", "valor", "token", "secret", "chave", "api_key")
+CAMPOS_SENSIVEIS = ("senha", "password", "valor", "token", "secret", "chave", "api_key", "numero", "cvv")
 
 ROTULOS_DE_CAMPO = {
     "nome": "Nome",
@@ -71,6 +77,12 @@ ROTULOS_DE_CAMPO = {
     "documento": "Documento",
     "nascimento": "Nascimento",
     "morada": "Morada",
+    "titular": "Titular",
+    "numero": "Número do cartão",
+    "validade": "Validade (MM/AA)",
+    "cvv": "CVV",
+    "bandeira": "Bandeira",
+    "pais": "País",
     "servidor_imap": "Servidor IMAP",
     "senha_imap": "Senha IMAP (app password)",
     "email_de_busca": "Email de busca",
@@ -105,6 +117,7 @@ def categorias():
             "dica": dados["dica"],
             "campos": list(dados["campos"]),
             "rotulos": {**ROTULOS_DE_CAMPO, **(dados.get("rotulos") or {})},
+            "sensiveis": [nome for nome in dados["campos"] if e_sensivel(nome)],
         }
         for chave, dados in CATEGORIAS.items()
     }

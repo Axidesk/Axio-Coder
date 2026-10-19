@@ -2,7 +2,7 @@ import * as dom from './dom.js';
 import { showAlert } from './ui.js';
 import { SVG_OLHO, SVG_OLHO_RISCADO } from './icones.js';
 
-const ORDEM = ['identidade', 'email', 'site', 'servidor'];
+const ORDEM = ['identidade', 'pagamento', 'email', 'site', 'servidor'];
 const ESPERA_DO_ARMADO = 4000;
 const ID_DA_DICA = 'cofre-info-';
 
@@ -174,9 +174,11 @@ function _cartao(entrada, categoria, estado) {
         rotulo.textContent = (meta.rotulos || {})[nomeDoCampo] || nomeDoCampo;
         const campo = document.createElement('input');
         campo.className = 'settings-input';
-        campo.type = 'text';
+        const sensivel = (meta.sensiveis || []).includes(nomeDoCampo);
+        campo.type = sensivel && !revelar ? 'password' : 'text';
         campo.autocomplete = 'off';
         campo.dataset.campo = nomeDoCampo;
+        if (sensivel) campo.dataset.sensivel = '1';
         const digitado = estado.valores[nomeDoCampo];
         const guardado = campos[nomeDoCampo];
         campo.value = estado.editando && digitado != null
@@ -246,6 +248,12 @@ async function _alternarValores() {
     _pintarOlhinho();
     if (!(await _buscarDoServidor())) return;
     _pintarValores();
+    const corpo = dom.cofreCorpo;
+    if (corpo) {
+        corpo.querySelectorAll('input[data-sensivel="1"]').forEach((campo) => {
+            campo.type = revelar ? 'text' : 'password';
+        });
+    }
 }
 
 function _pintarValores() {
@@ -261,6 +269,7 @@ function _pintarValores() {
 function _pintarValoresDoCartao(cartao, campos) {
     cartao.querySelectorAll('input[data-campo]').forEach((campo) => {
         const nome = campo.dataset.campo;
+        if (campo.dataset.sensivel === '1') campo.type = revelar ? 'text' : 'password';
         if (nome in campos) campo.value = campos[nome] == null ? '' : String(campos[nome]);
     });
 }

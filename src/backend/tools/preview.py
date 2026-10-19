@@ -28,13 +28,15 @@ CAMPOS_DO_ALVO_NA_LINHA = {
     "clicar": "seletor",
     "escrever": "seletor",
     "teclar": "tecla",
+    "largar": "tecla",
+    "imprimir": "seletor",
     "carregar": "alvo",
     "ficheiro": "alvo",
     "roda": "ponto",
     "arrastar": "ponto",
 }
 CARACTERES_DE_LUZ = " .:-=+*#%@"
-ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "roteiro", "recarregar", "ficheiro")
+ACOES_DE_OPERACAO = ("carregar", "mostrar", "clicar", "arrastar", "roda", "escrever", "teclar", "largar", "roteiro", "recarregar", "ficheiro", "imprimir")
 LIMITE_PASSOS_ROTEIRO = 12
 ESPERA_MAX_PASSO = 5000
 EXTENSOES_DE_PAGINA = (".html", ".htm")
@@ -325,10 +327,18 @@ def _correr_roteiro(passos, tela="preview", medida=None):
     sobre uma pagina que ja nao esta no estado previsto.
     """
     linhas = []
+    capturada = None
     for indice, passo in enumerate(passos, 1):
         if passo["acao"] == "esperar":
             time.sleep(passo["espera"] / 1000.0)
             linhas.append(f"[{indice}] esperar {passo['espera']} ms")
+            continue
+        if passo["acao"] == "imprimir":
+            foto = tool_observar_preview(acao="print", seletor=str(passo.get("seletor") or ""),
+                                         tela=tela)
+            if "imagem" in foto:
+                capturada = foto["imagem"]
+            linhas.append(f"[{indice}] imprimir {passo.get('seletor') or 'janela'}")
             continue
         if passo.get("espera"):
             time.sleep(passo["espera"] / 1000.0)
@@ -357,7 +367,7 @@ def _correr_roteiro(passos, tela="preview", medida=None):
             else:
                 linhas.append(f"PARADO no passo {indice} do roteiro (era o ultimo).")
             break
-    return "\n".join(linhas)
+    return "\n".join(linhas), capturada
 
 
 def _texto_do_estado(dados):
@@ -1322,6 +1332,10 @@ def _quadro_do_canvas(dados):
             "tipo": "BOOLEAN", "obrig": False, "padrao": False,
             "desc": "Em 'clicar': por omissao UM gesto e UM evento - se nada mudar, a ferramenta espera de novo e diz que nao mudou, sem repetir o clique (um botao que grava nao pode ser disparado duas vezes as escuras). Com repetir=true, e disparado uma segunda vez quando a primeira nao provocou mudanca observavel - use so quando souber que o botao nao grava nada.",
         },
+        "manter": {
+            "tipo": "BOOLEAN", "obrig": False, "padrao": False,
+            "desc": "Em 'teclar': true prime a tecla e DEIXA-A PREMIDA (manda o keydown e nao o keyup). E o unico caminho para testar o controlo de um jogo ou de um canvas, que le a tecla enquanto ela esta em baixo: manter=true, medir o efeito, e depois acao='largar' com a mesma tecla.",
+        },
         "tela": {
             "tipo": "STRING", "obrig": False, "padrao": "preview",
             "enum": ["preview", "janela"],
@@ -1329,7 +1343,7 @@ def _quadro_do_canvas(dados):
         },
     },
 )
-def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar=False, tecla="", passos="", tela="preview", largura=0, altura=0, mobile=False, repetir=False):
+def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar=False, tecla="", passos="", tela="preview", largura=0, altura=0, mobile=False, repetir=False, manter=False):
     ponte_preview = _Ponte(tela)
     pedido = str(acao or "").strip().lower()
     if pedido not in ACOES_DE_OPERACAO:
@@ -1505,7 +1519,11 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         if falha:
             return f"ERRO: {falha}."
         emit_event("executing", function=f"Correndo roteiro de {len(lista)} gesto(s)")
-        return _correr_roteiro(lista, tela, medida)
+        texto, imagem = _correr_roteiro(lista, tela, medida)
+        if not imagem:
+            return texto
+        return {"texto": texto + "\nA captura do passo 'imprimir' segue com esta resposta.",
+                "imagem": imagem}
 
     if pedido == "ficheiro":
         caminho = (alvo or texto).strip()
@@ -1526,9 +1544,27 @@ def tool_operar_preview(acao="", seletor="", ponto="", alvo="", texto="", limpar
         return (f"Ficheiro colocado no campo da pagina: {destino}{via}. "
                 "O campo ja recebeu o evento de mudanca; confirme pelo efeito no ecra.")
 
-    dados, erro = ponte_preview.pedir("teclar", tecla=tecla, **medida)
+    if pedido == "imprimir":
+        return _print_do_preview(seletor, "", tela, largura, altura, mobile)
+
+    if pedido == "largar":
+        dados, erro = ponte_preview.pedir("largar", tecla=tecla, **medida)
+        if erro:
+            return f"ERRO: {erro}."
+        if not dados.get("ok"):
+            return f"ERRO: {dados.get('erro') or 'a tecla nao pode ser largada'}."
+        return _com_efeito(f"Tecla {dados.get('tecla')} largada.", dados)
+
+    dados, erro = ponte_preview.pedir("teclar", tecla=tecla, manter=bool(manter), **medida)
     if erro:
         return f"ERRO: {erro}."
     if not dados.get("ok"):
         return f"ERRO: {dados.get('erro') or 'a tecla falhou'}."
+    if dados.get("mantida"):
+        return _com_efeito(
+            f"Tecla {dados.get('tecla')} premida e MANTIDA (o keyup nao foi enviado). "
+            "O alvo continua a receber a tecla enquanto ela estiver assim: meca o que queria "
+            f"e largue com acao='largar' e tecla='{dados.get('tecla')}'.",
+            dados,
+        )
     return _com_efeito(f"Tecla {dados.get('tecla')} premida na pagina.", dados)
