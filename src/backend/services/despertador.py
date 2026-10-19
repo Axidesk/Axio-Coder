@@ -201,6 +201,8 @@ def retrato():
         "quando": gatilho.get("quando", ""),
         "gatilho": gatilho,
         "disparado_em": agendamento.get("disparado_em", ""),
+        "cancelado_em": agendamento.get("cancelado_em", ""),
+        "motivo": agendamento.get("motivo", ""),
     }
 
 

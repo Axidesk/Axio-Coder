@@ -104,5 +104,14 @@ def _texto_do_retrato(dados):
             f"Nota: {dados.get('nota', '')}"
         )
     if estado_atual == "cancelado":
-        return f"O ultimo despertador foi cancelado as {dados.get('cancelado_em', '')}."
+        cancelado_em = dados.get("cancelado_em", "")
+        disparado_em = dados.get("disparado_em", "")
+        quando = " as " + cancelado_em if cancelado_em else ""
+        if disparado_em:
+            return (
+                "O despertador ja tinha DISPARADO as " + disparado_em +
+                " e foi cancelado depois" + quando +
+                f". Motivo: {dados.get('motivo') or 'nao registado'}."
+            )
+        return "O ultimo despertador foi cancelado" + quando + "."
     return f"Estado do despertador: {estado_atual} ({datetime.now().strftime('%H:%M')})."
