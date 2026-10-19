@@ -14,6 +14,7 @@ o programa estava fechado dispara no primeiro ciclo.
 import ctypes
 import json
 import os
+import re
 import threading
 import time
 from ctypes import wintypes
@@ -125,11 +126,19 @@ def _humano(segundos):
 
 
 def _processo_vivo(pid):
+    """Estar no registo NAO e estar vivo: o popen tem a ultima palavra."""
     pid = str(pid or "").strip()
     if not pid:
         return False
-    if pid in (estado.get("processos") or {}):
-        return True
+    registo = (estado.get("processos") or {}).get(pid)
+    if registo is not None:
+        popen = registo.get("popen")
+        if popen is None:
+            return True
+        try:
+            return popen.poll() is None
+        except Exception:
+            return False
     try:
         numero = int(pid)
     except ValueError:
@@ -162,21 +171,111 @@ def _descricao(gatilho):
             return "ja venceu"
         return f"daqui a {_humano(restante)} (as {when})"
     if tipo == "processo":
-        return f"quando o processo {gatilho.get('pid')} terminar"
+        texto = f"quando o processo {gatilho.get('pid')} terminar"
+        if gatilho.get("sinal"):
+            texto += f" - ou ANTES disso, se aparecer '{gatilho['sinal']}' na saida"
+        if gatilho.get("limite_ts"):
+            texto += f" (no maximo {_humano(max(0, gatilho['limite_ts'] - _agora()))})"
+        return texto
     if tipo == "ficheiro":
-        return f"quando {gatilho.get('caminho')} aparecer"
+        texto = f"quando {gatilho.get('caminho')} aparecer"
+        if gatilho.get("limite_ts"):
+            texto += f" (no maximo {_humano(max(0, gatilho['limite_ts'] - _agora()))})"
+        return texto
     return "sem gatilho"
 
 
-def _cumprido(gatilho):
+def _log_do_processo(pid):
+    """(linhas, situacao, tem_registo). Sem registo, a saida perdeu-se com a sessao anterior."""
+    registo = (estado.get("processos") or {}).get(str(pid or "").strip())
+    if not registo:
+        return [], "", False
+    situacao = str(registo.get("status") or "")
+    if situacao in ("", "rodando"):
+        popen = registo.get("popen")
+        codigo = getattr(popen, "returncode", None) if popen is not None else None
+        if codigo == 0:
+            situacao = "ok"
+        elif codigo is not None:
+            situacao = "erro"
+    return list(registo.get("log") or []), situacao, True
+
+
+def _sinal_no_log(linhas, padrao):
+    """A linha mais recente que casa com o padrao, ou '' se nenhuma casar."""
+    if not padrao:
+        return ""
+    try:
+        expressao = re.compile(padrao, re.IGNORECASE)
+    except re.error:
+        expressao = re.compile(re.escape(padrao), re.IGNORECASE)
+    for linha in reversed(linhas[-400:]):
+        texto = str(linha)
+        if expressao.search(texto):
+            return texto
+    return ""
+
+
+def _resultado_do_processo(linhas, situacao, tem_registo):
+    rotulo = {
+        "ok": "terminou SEM erro (codigo 0)",
+        "erro": "terminou COM erro",
+    }.get(situacao, "terminou (codigo desconhecido)")
+    cauda = [str(linha) for linha in linhas[-6:]]
+    if cauda:
+        return rotulo + ". Ultimas linhas:\n" + "\n".join("  " + linha for linha in cauda)
+    if tem_registo:
+        return rotulo + ", sem nenhuma linha escrita na saida."
+    return rotulo + " e a saida perdeu-se (o processo nao e desta sessao)."
+
+
+def _verificar(gatilho):
+    """Diz se e por que motivo e hora de acordar. motivo: condicao | sinal | prazo."""
     tipo = gatilho.get("tipo")
+    teto = float(gatilho.get("limite_ts") or 0)
     if tipo == "tempo":
-        return _agora() >= _alvo_de(gatilho)
-    if tipo == "processo":
-        return not _processo_vivo(gatilho.get("pid"))
+        if _agora() >= _alvo_de(gatilho):
+            return {"acordou": True, "motivo": "condicao", "detalhe": "o instante marcado chegou"}
+        return {"acordou": False}
     if tipo == "ficheiro":
-        return os.path.exists(str(gatilho.get("caminho") or ""))
-    return False
+        caminho = str(gatilho.get("caminho") or "")
+        if os.path.exists(caminho):
+            return {"acordou": True, "motivo": "condicao", "detalhe": caminho + " apareceu"}
+        if teto and _agora() >= teto:
+            return {"acordou": True, "motivo": "prazo", "detalhe": caminho + " AINDA nao apareceu"}
+        return {"acordou": False}
+    if tipo == "processo":
+        pid = gatilho.get("pid")
+        linhas, situacao, tem_registo = _log_do_processo(pid)
+        achado = _sinal_no_log(linhas, gatilho.get("sinal"))
+        vivo = _processo_vivo(pid)
+        if achado and vivo:
+            return {"acordou": True, "motivo": "sinal", "detalhe": achado}
+        if not vivo:
+            return {"acordou": True, "motivo": "condicao",
+                    "detalhe": _resultado_do_processo(linhas, situacao, tem_registo)}
+        if teto and _agora() >= teto:
+            return {"acordou": True, "motivo": "prazo", "detalhe": "o processo " + str(pid) + " ainda corre"}
+        return {"acordou": False}
+    return {"acordou": False}
+
+
+def _nota_com_verdade(nota, veredito):
+    """Junta a nota escrita ANTES ao que se passou de facto: acordar com a suposicao errada custa uma rodada."""
+    motivo = (veredito or {}).get("motivo", "condicao")
+    detalhe = str((veredito or {}).get("detalhe") or "").strip()
+    if motivo == "sinal":
+        cabeca = ("ACORDASTE MAIS CEDO: apareceu na saida do processo o sinal que pediste para vigiar, "
+                  "e o processo AINDA CORRE. Nao esperes pelo fim: ve o que se passou e corrige.")
+    elif motivo == "prazo":
+        cabeca = ("O PRAZO ESGOTOU sem a condicao se cumprir. Nao repitas a mesma espera: "
+                  "investiga porque nao aconteceu.")
+    else:
+        cabeca = "A CONDICAO DO ACORDAR CUMPRIU-SE."
+    partes = [nota or "", "", "[O QUE ACONTECEU DE FACTO]", cabeca]
+    if detalhe:
+        partes.extend(["", detalhe])
+    return "\n".join(partes).strip()
 
 
 def retrato():
@@ -203,16 +302,21 @@ def retrato():
         "disparado_em": agendamento.get("disparado_em", ""),
         "cancelado_em": agendamento.get("cancelado_em", ""),
         "motivo": agendamento.get("motivo", ""),
+        "motivo_do_disparo": agendamento.get("motivo_do_disparo", ""),
+        "detalhe_do_disparo": agendamento.get("detalhe_do_disparo", ""),
     }
 
 
-def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", nota=""):
+def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", nota="",
+            sinal="", prazo=""):
     """Arma o despertador e devolve o retrato do que ficou marcado."""
     agora = _agora()
     quando = (quando or "").strip()
     depois_de = (depois_de or "").strip()
     quando_processo = str(quando_processo or "").strip()
     quando_ficheiro = (quando_ficheiro or "").strip()
+    sinal = (sinal or "").strip()
+    prazo = (prazo or "").strip()
 
     escolhidos = [nome for nome, valor in (
         ("quando", quando), ("depois_de", depois_de),
@@ -222,6 +326,8 @@ def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", not
         return {"erro": "diga quando acordar: quando='HH:MM', depois_de='30m', quando_processo=<pid> ou quando_ficheiro=<caminho>"}
     if len(escolhidos) > 1:
         return {"erro": f"escolha UM gatilho, recebi {len(escolhidos)}: {', '.join(escolhidos)}"}
+    if sinal and not quando_processo:
+        return {"erro": "sinal vigia a saida de UM processo: diga tambem quando_processo=<pid>."}
 
     if depois_de:
         segundos = _duracao_de(depois_de)
@@ -243,6 +349,17 @@ def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", not
         caminho = os.path.abspath(quando_ficheiro)
         gatilho = {"tipo": "ficheiro", "caminho": caminho}
 
+    if prazo:
+        segundos_de_prazo = _duracao_de(prazo)
+        if segundos_de_prazo is None or segundos_de_prazo <= 0:
+            return {"erro": f"nao entendi o prazo '{prazo}'. Use '45s', '30m', '6h'."}
+        if gatilho.get("tipo") == "tempo":
+            return {"erro": "prazo nao se aplica a um gatilho de tempo - esse instante ja e o teto."}
+        gatilho["limite_ts"] = agora + segundos_de_prazo
+
+    if sinal:
+        gatilho["sinal"] = sinal
+
     if gatilho.get("tipo") == "tempo":
         gatilho["quando"] = datetime.fromtimestamp(gatilho["alvo_ts"]).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -259,6 +376,11 @@ def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", not
         _gravar(agendamento)
     _garantir_vigia()
     pronto = retrato()
+    if sinal and quando_processo not in (estado.get("processos") or {}):
+        pronto["aviso"] = (
+            f"o pid {quando_processo} nao esta entre os processos desta sessao: o fim continua a ser "
+            "detetado, mas o 'sinal' nao tem saida para vigiar."
+        )
     emit_event("despertador", estado="armado", descricao=pronto.get("descricao", ""),
                nota=nota, falta=pronto.get("falta", 0))
     return pronto
@@ -319,16 +441,22 @@ def _arrancar_rodada(nota, turn_id, tentativa=0):
     return True
 
 
-def _disparar(agendamento):
+def _disparar(agendamento, veredito=None):
+    veredito = veredito or {}
     agendamento["estado"] = "disparado"
     agendamento["disparado_em"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    agendamento["motivo_do_disparo"] = veredito.get("motivo", "condicao")
+    agendamento["detalhe_do_disparo"] = veredito.get("detalhe", "")
     with _trava:
         _gravar(agendamento)
     gatilho = agendamento.get("gatilho") or {}
     turn_id = str(int(time.time() * 1000))
-    emit_event("despertador", estado="disparado", descricao=_descricao(gatilho),
-               nota=agendamento.get("nota", ""), falta=0, proximo_turno=turn_id)
-    _arrancar_rodada(agendamento.get("nota", ""), turn_id)
+    nota = _nota_com_verdade(agendamento.get("nota", ""), veredito)
+    detalhe = str(veredito.get("detalhe") or "").strip()
+    descricao = detalhe.splitlines()[0] if detalhe else _descricao(gatilho)
+    emit_event("despertador", estado="disparado", descricao=descricao,
+               nota=nota, falta=0, proximo_turno=turn_id)
+    _arrancar_rodada(nota, turn_id)
 
 
 def _vigiar():
@@ -338,8 +466,9 @@ def _vigiar():
             agendamento = _ler()
             if not agendamento or agendamento.get("estado") != "armado":
                 continue
-            if _cumprido(agendamento.get("gatilho") or {}):
-                _disparar(agendamento)
+            veredito = _verificar(agendamento.get("gatilho") or {})
+            if veredito.get("acordou"):
+                _disparar(agendamento, veredito)
         except Exception:
             continue
 
@@ -356,6 +485,8 @@ def iniciar_vigia():
     """Arranca a vigia no arranque do backend e dispara o que venceu com o programa fechado."""
     _garantir_vigia()
     agendamento = _ler()
-    if agendamento.get("estado") == "armado" and _cumprido(agendamento.get("gatilho") or {}):
-        _disparar(agendamento)
+    if agendamento.get("estado") == "armado":
+        veredito = _verificar(agendamento.get("gatilho") or {})
+        if veredito.get("acordou"):
+            _disparar(agendamento, veredito)
     return True

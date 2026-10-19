@@ -19,10 +19,16 @@ from src.backend.tools.registry import register
     "uma instalacao. Escolha UM gatilho: 'depois_de' (intervalo: '90' minutos, '45s', '30m', '2h', "
     "'1h30'), 'quando' (instante: 'HH:MM' ou 'AAAA-MM-DD HH:MM') ou 'quando_processo' (o pid que "
     "tool_executar_processo devolveu - acorda quando ele terminar) ou 'quando_ficheiro' (acorda "
-    "quando o caminho aparecer). A 'nota' e o que eu proprio vou ler ao acordar: escreva-a como "
-    "uma instrucao a mim mesmo, com o que ja esta feito e o que falta (ex: 'O download do boost "
-    "acabou em _baixar/boost.zip: descompactar e compilar'). acao='estado' mostra o agendamento "
-    "em vigor, 'cancelar' desarma o que estiver marcado. O agendamento sobrevive a fechar o Axio.",
+    "quando o caminho aparecer). PARA UMA OPERACAO QUE ESTA A CORRER, ARME NO PROCESSO E NAO NO "
+    "RELOGIO: 'depois_de' nao sabe se ela falhou, 'quando_processo' acorda assim que ela morre - "
+    "com o codigo de saida e as ultimas linhas ja na nota. 'sinal' vigia a saida do processo e "
+    "acorda MAIS CEDO, mesmo com ele vivo (ex: 'ERRO|Fatal|Traceback'): e o que evita dormir 10 "
+    "horas sobre um download que rebentou aos 10 minutos. 'prazo' e o teto: acorda mesmo sem a "
+    "condicao se cumprir, para nao dormir sobre um processo pendurado. A 'nota' e o que eu "
+    "proprio vou ler ao acordar: escreva-a como uma instrucao a mim mesmo, com o que ja esta "
+    "feito e o que falta (ex: 'O download do boost acabou em _baixar/boost.zip: descompactar e "
+    "compilar'). acao='estado' mostra o agendamento em vigor, 'cancelar' desarma o que estiver "
+    "marcado. O agendamento sobrevive a fechar o Axio.",
     {
         "acao": {
             "tipo": "STRING",
@@ -50,6 +56,18 @@ from src.backend.tools.registry import register
             "desc": "Caminho que ainda nao existe: acorda quando ele aparecer.",
             "padrao": "",
         },
+        "sinal": {
+            "tipo": "STRING",
+            "desc": "Texto ou expressao a vigiar na saida do processo de 'quando_processo': acorda MAIS "
+                    "CEDO, com ele ainda a correr, quando a linha aparecer (ex: 'ERRO|Fatal|Traceback').",
+            "padrao": "",
+        },
+        "prazo": {
+            "tipo": "STRING",
+            "desc": "Teto de espera: acorda mesmo sem a condicao se cumprir ('30m', '6h'). Serve para "
+                    "nao dormir sobre um processo pendurado.",
+            "padrao": "",
+        },
         "nota": {
             "tipo": "STRING",
             "desc": "A instrucao que eu vou ler ao acordar: o que estava a esperar, o que ja esta feito e o que fazer a seguir.",
@@ -58,7 +76,7 @@ from src.backend.tools.registry import register
     },
 )
 def tool_agendar_despertar(acao="agendar", depois_de="", quando="", quando_processo="",
-                           quando_ficheiro="", nota=""):
+                           quando_ficheiro="", nota="", sinal="", prazo=""):
     acao = (acao or "agendar").strip().lower()
     if acao == "estado":
         return _texto_do_retrato(despertador.retrato())
@@ -73,15 +91,20 @@ def tool_agendar_despertar(acao="agendar", depois_de="", quando="", quando_proce
         quando_processo=quando_processo,
         quando_ficheiro=quando_ficheiro,
         nota=nota,
+        sinal=sinal,
+        prazo=prazo,
     )
     if resultado.get("erro"):
         return "ERRO: " + resultado["erro"]
-    return (
+    texto = (
         "Despertador armado: " + resultado.get("descricao", "") + ".\n"
         f"Nota que vou ler ao acordar: {resultado.get('nota', '')}\n"
         "A rodada pode encerrar agora - eu volto sozinho no momento marcado. "
         "O utilizador pode cancelar pelo botao na barra de status."
     )
+    if resultado.get("aviso"):
+        texto += "\nAVISO: " + resultado["aviso"]
+    return texto
 
 
 def _texto_do_retrato(dados):
