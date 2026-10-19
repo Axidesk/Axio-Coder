@@ -79,6 +79,8 @@ async function sendMessage() {
             return;
         }
 
+        if (inputText && inputText.disabled) return;
+
         let text = inputText.value.trim();
 
         if (text.length > 500 && !text.includes(' ')) {

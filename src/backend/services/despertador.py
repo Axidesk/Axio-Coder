@@ -26,6 +26,7 @@ from src.backend.state import estado, emit_event
 NOME_ARQUIVO = "despertador.json"
 _INTERVALO = 2.0
 _trava = threading.Lock()
+_trava_turno = threading.Lock()
 _vigia_ligada = False
 
 _FORMATOS = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M")
@@ -285,26 +286,35 @@ def confirmar_entrega():
     return {"ok": True}
 
 
-def _arrancar_rodada(nota, tentativa=0):
+def _arrancar_rodada(nota, turn_id, tentativa=0):
     from src.backend.routes.chat import _correr_loop  # import-local: evita ciclo routes.chat <-> services
 
     if not estado.get("pasta_raiz"):
         emit_event("status", message="Despertador: nenhuma pasta aberta - a nota fica guardada.")
-        return
-    if estado.get("turno_ocupado"):
+        return False
+    with _trava_turno:
+        ocupado = bool(estado.get("turno_ocupado"))
+        if not ocupado:
+            estado["turno_ocupado"] = True
+    if ocupado:
         if tentativa >= 300:
             emit_event("status", message="Despertador: o turno anterior nunca acabou.")
-            return
+            return False
         time.sleep(2)
-        return _arrancar_rodada(nota, tentativa + 1)
+        return _arrancar_rodada(nota, turn_id, tentativa + 1)
     modelo = estado.get("ultimo_modelo") or {}
-    threading.Thread(
-        target=_correr_loop,
-        args=(nota, "auto", [], bool(modelo.get("use_deepseek")),
-              str(int(time.time() * 1000)), modelo.get("ai_model") or "gemini"),
-        daemon=True,
-        name="despertador-rodada",
-    ).start()
+    try:
+        threading.Thread(
+            target=_correr_loop,
+            args=(nota, "auto", [], bool(modelo.get("use_deepseek")),
+                  turn_id, modelo.get("ai_model") or "gemini"),
+            daemon=True,
+            name="despertador-rodada",
+        ).start()
+    except Exception:
+        estado["turno_ocupado"] = False
+        raise
+    return True
 
 
 def _disparar(agendamento):
@@ -313,9 +323,10 @@ def _disparar(agendamento):
     with _trava:
         _gravar(agendamento)
     gatilho = agendamento.get("gatilho") or {}
+    turn_id = str(int(time.time() * 1000))
     emit_event("despertador", estado="disparado", descricao=_descricao(gatilho),
-               nota=agendamento.get("nota", ""), falta=0)
-    _arrancar_rodada(agendamento.get("nota", ""))
+               nota=agendamento.get("nota", ""), falta=0, proximo_turno=turn_id)
+    _arrancar_rodada(agendamento.get("nota", ""), turn_id)
 
 
 def _vigiar():

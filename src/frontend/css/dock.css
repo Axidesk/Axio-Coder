@@ -569,6 +569,10 @@
 .despertador-barra[hidden] {
     display: none;
 }
+#input-text:disabled {
+    color: var(--text-suave);
+    cursor: not-allowed;
+}
 .despertador-ponto {
     width: 6px;
     height: 6px;

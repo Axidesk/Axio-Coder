@@ -265,7 +265,20 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         window.currentGroupBalloon = null;
     }
 
+    let _travaDespertador = false;
+
+    function travarPorDespertador(ligado) {
+        _travaDespertador = !!ligado;
+        if (!inputText) return;
+        inputText.disabled = _travaDespertador;
+        inputText.placeholder = _travaDespertador
+            ? 'Aguardando o despertar — cancele para escrever'
+            : 'Digite seu comando aqui';
+        if (_travaDespertador) inputText.blur();
+    }
+
     function bloquearChat(ativo, opcoes) {
+        if (!ativo && _travaDespertador) return;
         const cfg = opcoes || {};
         if (inputText) {
             inputText.disabled = !!ativo;
@@ -506,6 +519,7 @@ export {
     mostrarIconTooltip,
     esconderIconTooltip,
     bloquearChat,
+    travarPorDespertador,
     toggleWorkspaceView,
     showWorkspaceView,
     escrevendoNoChat,

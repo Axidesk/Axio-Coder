@@ -1,8 +1,10 @@
 import * as dom from './dom.js';
-import { showAlert } from './ui.js';
+import { showAlert, travarPorDespertador } from './ui.js';
+import { state } from './state.js';
 
 let _alvo = 0;
 let _relogio = null;
+let _rascunho = null;
 
 function _elementos() {
     return {
@@ -30,7 +32,7 @@ function _pintarContagem() {
     const restante = _alvo - Date.now() / 1000;
     texto.textContent = restante > 0
         ? `agendado para ${_humano(restante)}`
-        : 'a acordar…';
+        : 'a acordar\u2026';
 }
 
 function _pararRelogio() {
@@ -59,26 +61,46 @@ function _esconder() {
     if (barra) barra.hidden = true;
 }
 
-function _guardarNotaNoCampo(nota) {
-    if (!dom.inputText || !nota) return;
-    if ((dom.inputText.value || '').trim()) return;
-    dom.inputText.value = nota;
+function _travar(nota) {
+    travarPorDespertador(true);
+    if (!dom.inputText) return;
+    if (_rascunho === null) _rascunho = dom.inputText.value || '';
+    dom.inputText.value = nota || '';
     dom.inputText.dispatchEvent(new Event('input'));
+}
+
+function _soltar() {
+    travarPorDespertador(false);
+    if (!dom.inputText || _rascunho === null) return;
+    const rascunho = _rascunho;
+    _rascunho = null;
+    dom.inputText.value = rascunho;
+    dom.inputText.dispatchEvent(new Event('input'));
+}
+
+function _adotarTurno(turnId) {
+    if (!turnId) return;
+    state.currentTurnId = turnId;
+    state.isGenerating = true;
+    window.currentRoundStartedAt = Date.now();
 }
 
 export function tratarDespertador(data) {
     const estado = String(data.estado || '');
     if (estado === 'armado') {
         _mostrar(data.descricao, Number(data.falta) || 0);
+        _travar(data.nota || '');
         return;
     }
     if (estado === 'disparado') {
+        _soltar();
         _mostrar('acordei agora', 0);
-        _guardarNotaNoCampo(data.nota || '');
+        _adotarTurno(data.proximo_turno || '');
         fetch('/api/despertador/entregue', { method: 'POST' }).catch(() => {});
         return;
     }
     if (estado === 'cancelado' || estado === 'entregue') {
+        _soltar();
         _esconder();
     }
 }
@@ -90,16 +112,19 @@ async function _carregar() {
         if (!dados || !dados.ok) return;
         if (dados.armado) {
             _mostrar(dados.descricao, Number(dados.falta) || 0);
+            _travar(dados.nota || '');
             return;
         }
         if (dados.estado === 'disparado') {
+            _soltar();
             _mostrar('acordei agora', 0);
-            _guardarNotaNoCampo(dados.nota || '');
             fetch('/api/despertador/entregue', { method: 'POST' }).catch(() => {});
             return;
         }
+        _soltar();
         _esconder();
     } catch (erro) {
+        _soltar();
         _esconder();
     }
 }
@@ -112,6 +137,7 @@ async function _cancelar() {
             showAlert('Nao consegui cancelar o despertar.');
             return;
         }
+        _soltar();
         _esconder();
     } catch (erro) {
         showAlert('Servidor indisponivel para cancelar o despertar: ' + erro.message);
