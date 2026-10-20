@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 from urllib.parse import urlparse
 
 from src.backend.config import caminho_data
@@ -45,6 +46,21 @@ def _get_tavily_client():
     return _tavily_client
 
 _NOMES_DOS_PROVEDORES = {"tavily": "Tavily", "deepseek": "DeepSeek"}
+_FALHAS_RECENTES = {}
+_VALIDADE_DA_FALHA = 6 * 3600
+_SINAIS_DE_BLOQUEIO = (
+    "usage limit", "quota", "exceeds your plan", "insufficient balance",
+    "unauthorized", "invalid api key", "401", "402", "403", "429", "432",
+)
+
+def _falha_definitiva(erro):
+    """A falha que nao vale a pena repetir na proxima busca: cota gasta, chave recusada."""
+    texto = str(erro or "").lower()
+    return any(sinal in texto for sinal in _SINAIS_DE_BLOQUEIO)
+
+def _em_falha(provedor):
+    quando = _FALHAS_RECENTES.get(provedor)
+    return bool(quando and time.time() - quando < _VALIDADE_DA_FALHA)
 
 def busca_configurada():
     """Existe pelo menos um provedor de busca pronto a usar."""
@@ -60,8 +76,8 @@ def _ordem_dos_provedores():
         prontos.append("deepseek")
     preferido = provedor_de_busca()
     if preferido in prontos:
-        return [preferido] + [p for p in prontos if p != preferido]
-    return prontos
+        prontos = [preferido] + [p for p in prontos if p != preferido]
+    return [p for p in prontos if not _em_falha(p)] + [p for p in prontos if _em_falha(p)]
 
 def _nomes_dos_provedores(lista):
     return ", ".join(_NOMES_DOS_PROVEDORES.get(p, p) for p in lista if p)
@@ -353,6 +369,8 @@ def _pesquisar(query, dominios):
                 }
         except Exception as erro:
             falhas.append((provedor, str(erro)))
+            if _falha_definitiva(erro):
+                _FALHAS_RECENTES[provedor] = time.time()
             continue
         if resultado.get("results"):
             return resultado, [provedor], falhas
