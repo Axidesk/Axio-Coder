@@ -365,7 +365,8 @@ def _texto_das_falhas(falhas):
     for provedor, motivo in falhas:
         linhas.append(f"  {_NOMES_DOS_PROVEDORES.get(provedor, provedor)}: {motivo}")
     linhas.append(
-        "Se o Tavily ficou sem cota, escolha a busca da DeepSeek em Configuracoes -> APIs -> Busca na web."
+        "Se um dos provedores ficou sem cota ou com a chave recusada, troque o outro em "
+        "Configuracoes -> APIs -> Busca na web."
     )
     return "\n".join(linhas)
 
