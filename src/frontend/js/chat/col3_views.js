@@ -112,12 +112,18 @@ import { formatMessage } from './markdown.js';
             return posA - posB;
         });
     }
+    function ferramentasEmVista() {
+        if (state.currentViewingTools && state.currentViewingTools.length > 0) return state.currentViewingTools;
+        const grupo = window.currentActiveLogGroup;
+        return (grupo && Array.isArray(grupo.tools)) ? grupo.tools : [];
+    }
     function renderTools(vista = vistaDe('dock')) {
+        const ferramentas = ferramentasEmVista();
         let toolsHtml = '<div class="space-y-4">';
-        if (!state.currentViewingTools || state.currentViewingTools.length === 0) {
+        if (ferramentas.length === 0) {
             toolsHtml += '<div class="text-[var(--text-mutado)] italic">Nenhuma ferramenta associada a este turno.</div>';
         } else {
-            state.currentViewingTools.forEach(t => {
+            ferramentas.forEach(t => {
                 toolsHtml += `<div class="flex flex-col gap-1.5">`;
                 toolsHtml += `<div class="text-[var(--oliva)] font-bold text-sm tracking-wide">FERRAMENTA: ${t.name}</div>`;
                 if (t.args && Object.keys(t.args).length > 0) {
@@ -155,4 +161,4 @@ import { formatMessage } from './markdown.js';
         setCodeViewContent(toolsHtml, false, vista);
     }
 
-export { renderThoughts, applyThoughtClamp, renderQuestions, renderTools, sortToolArgsKeys };
+export { renderThoughts, applyThoughtClamp, renderQuestions, renderTools, sortToolArgsKeys, ferramentasEmVista };

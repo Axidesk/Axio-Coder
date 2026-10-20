@@ -353,7 +353,7 @@ def _pesquisar_tavily(query, dominios):
     return cliente.extract(urls=urls, extract_depth="advanced") or {"results": []}
 
 
-def _pesquisar(query, dominios):
+def _pesquisar(query, dominios, ler=False):
     falhas = []
     for provedor in _ordem_dos_provedores():
         nome = _NOMES_DOS_PROVEDORES.get(provedor, provedor)
@@ -364,7 +364,7 @@ def _pesquisar(query, dominios):
             else:
                 resultado = {
                     "results": busca_deepseek.pesquisar(
-                        query, count=5, dominios=_lista_de_dominios(dominios)
+                        query, count=5, dominios=_lista_de_dominios(dominios), ler=ler
                     )
                 }
         except Exception as erro:
@@ -373,6 +373,9 @@ def _pesquisar(query, dominios):
                 _FALHAS_RECENTES[provedor] = time.time()
             continue
         if resultado.get("results"):
+            urls = [r.get("url") for r in resultado["results"][:6] if r.get("url")]
+            if urls:
+                emit_event("status", message=f"Navegando: {', '.join(urls)}")
             return resultado, [provedor], falhas
         falhas.append((provedor, "nenhum resultado"))
     return {"results": []}, [], falhas
@@ -402,16 +405,17 @@ def _nivel_do_resultado(res):
 
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Na busca da DeepSeek o resultado vem em resumos: para o texto completo de uma página, peça-a em 'url_especifica' (o Fetch devolve Markdown). O conteúdo bruto fica em data/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
         'dominios': {"tipo": "STRING", "desc": 'Domínios a privilegiar, separados por vírgula (ex: docs.python.org,mozilla.org). Use para refazer a busca quando as fontes vierem de blogs.', "padrao": ""},
         'filtro': {"tipo": "STRING", "desc": 'Mostra só as linhas do conteúdo extraído que contêm algum destes termos (um por linha, sem distinguir maiúsculas). O texto integral fica em data/busca.txt — use o filtro para não encher o contexto com uma página inteira.', "padrao": ""},
+        'ler': {"tipo": "BOOLEAN", "desc": 'Traz o TEXTO das páginas junto com a lista, na MESMA chamada (na DeepSeek é o mesmo pedido com need_content). Sem ele volta só o resumo de ~700 caracteres e ler a página custaria um segundo pedido por URL. Use quando precisar mesmo do conteúdo; para só escolher onde clicar, deixe desligado.', "padrao": False},
     },
     disponivel="web",
 )
-def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
+def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=False):
     """Busca na web pelo provedor escolhido e extrai paginas por URL."""
     if not busca_configurada():
         return ("ERRO: navegacao web desativada. Ative a chave do DeepSeek ou da Tavily em "
@@ -435,7 +439,7 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             emit_event("status", message=f"Navegando: {', '.join(pedidas)[:120]}")
             resultado, origem_servida, _ = _extrair_paginas(pedidas)
         elif query:
-            resultado, origem_servida, falhas = _pesquisar(query, dominios)
+            resultado, origem_servida, falhas = _pesquisar(query, dominios, ler=ler)
             if not resultado.get("results") and falhas:
                 return _texto_das_falhas(falhas)
             if falhas:
@@ -553,8 +557,11 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
         
         if termos:
             resumo += f"=== CONTEÚDO FILTRADO por {', '.join(termos)} (o integral está no log) ===\n" + contexto
+        elif ler:
+            resumo += "=== TEXTO DAS FONTES (até 12000 chars por fonte) ===\n" + contexto
         else:
-            resumo += "=== CONTEÚDO EXTRAÍDO (primeiros 30000 chars por fonte) ===\n" + contexto
+            resumo += ("=== RESUMO DAS FONTES (sem o texto completo) ===\n"
+                       "Para ler uma página inteira repita a busca com ler=true, numa única chamada.\n") + contexto
         
         return resumo
         
