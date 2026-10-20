@@ -27,7 +27,7 @@ Chaves de cada parametro:
 
 Disponibilidade ('disponivel'):
   sempre | edicao (todas as de edicao: modo != 'guided') | semi (so no modo
-  semi-automatico) | web (exige Tavily configurada e DeepSeek).
+  semi-automatico) | web (exige um provedor de busca configurado e DeepSeek).
 
 Adicionar uma ferramenta passou a ser: 1 funcao no modulo dela + este decorador
 acima dela.

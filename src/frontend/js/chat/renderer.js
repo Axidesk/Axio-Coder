@@ -100,7 +100,7 @@ import { atualizarHintInspect, avancarItemInspect, desativarInspect, esconderIns
 import { closeCol3, closeHistory, closeHistoryPanel, closeLogDock, closePanelCol, isHistoryOpen, isLogDockOpen, openLogDock, openLogDockInWorkspace, syncCopyButtons, syncDocTopBar, toggleLogColumn } from './layout.js';
 import { renderThoughts, renderTools, sendMessage, showQuestionPanel, sortToolArgsKeys, startSSE } from './messages.js';
 import { restaurarConversa } from './conversa_viva.js';
-import { aplicarEstadoReveal, aplicarEstadoToggleDeepseek, aplicarEstadoToggleGemini, aplicarEstadoToggleNav, aplicarEstadoToggleVertex, atualizarBotaoLimparVertex, closeSettingsModal, limparErroDeepseek, limparErroGemini, mostrarErroDeepseek, mostrarErroGemini, mostrarErroTavily, openSettingsModal, salvarConfiguracoes, validarChaveDeepseek, validarChaveStudio, validarChaveTavily } from './settings.js';
+import { aplicarEstadoReveal, aplicarEstadoToggleDeepseek, aplicarEstadoToggleGemini, aplicarEstadoToggleNav, aplicarEstadoToggleVertex, aplicarProvedorDeBusca, atualizarBotaoLimparVertex, closeSettingsModal, limparErroDeepseek, limparErroGemini, mostrarErroDeepseek, mostrarErroGemini, mostrarErroTavily, openSettingsModal, salvarConfiguracoes, validarChaveDeepseek, validarChaveStudio, validarChaveTavily } from './settings.js';
 import { applyGlossaryChip, clearContextMemory, closeClearContextPopup, confirmarEscolha, contextPopupVisivel, esconderChip, esconderIconTooltip, fecharConfirmPopup, loadGlossary, mostrarIconTooltip, openClearContextPopup, posicionarContextUsageUI, posicionarIconTooltip, recolherContextPopup, renderCurrentSessionLogs, resizeChatInput, showAlert, showGlossaryChip, syncMenuIcons, syncWorkspaceTopBar, toggleWorkspaceView } from './ui.js';
 import { copiarTexto } from './clipboard.js';
 import { abrirProjetoInfo, fecharProjetoInfo, projetoInfoAberto } from './projeto.js';
@@ -820,6 +820,12 @@ import './busca_chat.js';
         }
         aplicarEstadoToggleNav(ativar);
         await salvarConfiguracoes({ alertar: false });
+    });
+    document.querySelectorAll('.busca-pill').forEach((botao) => {
+        botao.addEventListener('click', async () => {
+            aplicarProvedorDeBusca(botao.dataset.provedor);
+            await salvarConfiguracoes({ alertar: false });
+        });
     });
     if (btnSwitchModel) btnSwitchModel.addEventListener('click', async () => {
         aplicarEstadoToggleVertex(!state.settingsVertexMode);

@@ -4,6 +4,7 @@ import re
 from urllib.parse import urlparse
 
 from src.backend.config import caminho_data
+from src.backend.services import busca_deepseek
 from src.backend.state import emit_event, estado
 from src.backend.tools.registry import register
 
@@ -42,6 +43,29 @@ def _get_tavily_client():
     _tavily_client = TavilyClient(api_key=api_key)
     _tavily_client_key = api_key
     return _tavily_client
+
+_NOMES_DOS_PROVEDORES = {"tavily": "Tavily", "deepseek": "DeepSeek"}
+
+def busca_configurada():
+    """Existe pelo menos um provedor de busca pronto a usar."""
+    return tavily_configurada() or busca_deepseek.configurada()
+
+def _ordem_dos_provedores():
+    """Provedores a tentar, com o preferido em primeiro e o outro como rede."""
+    from src.backend.services.settings import provedor_de_busca
+    prontos = []
+    if tavily_configurada():
+        prontos.append("tavily")
+    if busca_deepseek.configurada():
+        prontos.append("deepseek")
+    preferido = provedor_de_busca()
+    if preferido in prontos:
+        return [preferido] + [p for p in prontos if p != preferido]
+    return prontos
+
+def _nomes_dos_provedores(lista):
+    return ", ".join(_NOMES_DOS_PROVEDORES.get(p, p) for p in lista if p)
+
 DOMINIOS_OFICIAIS = (
     "developer.mozilla.org", "docs.python.org", "nodejs.org", "pypi.org", "npmjs.com",
     "learn.microsoft.com", "developer.apple.com", "developer.android.com", "w3.org",
@@ -250,9 +274,116 @@ def _extrair_cru(tavily_client, endereco):
     return {"results": achados}
 
 
+def _extrair_tavily(endereco):
+    cliente = _get_tavily_client()
+    if not cliente:
+        raise RuntimeError("cliente Tavily nao inicializado")
+    resultado = cliente.extract(urls=[endereco], extract_depth="advanced")
+    achados = (resultado or {}).get("results") or []
+    if achados:
+        return achados[0]
+    cru = _extrair_cru(cliente, endereco)
+    achados = (cru or {}).get("results") or []
+    if achados:
+        return achados[0]
+    raise RuntimeError(_motivo_da_falha(resultado))
+
+
+def _extrair_uma(endereco):
+    ultimo = ""
+    for provedor in _ordem_dos_provedores():
+        try:
+            if provedor == "tavily":
+                item = _extrair_tavily(endereco)
+            else:
+                item = busca_deepseek.extrair(endereco)
+        except Exception as erro:
+            ultimo = str(erro)
+            continue
+        if item and item.get("content"):
+            return item, provedor, ""
+        ultimo = "o extrator nao devolveu conteudo"
+    return None, "", ultimo or "nenhum provedor de busca configurado"
+
+
+def _extrair_paginas(enderecos):
+    itens, falhados, origens = [], [], []
+    for endereco in enderecos:
+        item, provedor, erro = _extrair_uma(endereco)
+        if item:
+            itens.append(item)
+            if provedor and provedor not in origens:
+                origens.append(provedor)
+        else:
+            falhados.append({"url": endereco, "error": erro})
+    return {"results": itens, "failed_results": falhados}, origens, falhados
+
+
+def _pesquisar_tavily(query, dominios):
+    cliente = _get_tavily_client()
+    if not cliente:
+        raise RuntimeError("cliente Tavily nao inicializado")
+    opcoes = {"query": query, "max_results": 3, "search_depth": "advanced"}
+    preferidos = _lista_de_dominios(dominios)
+    if preferidos:
+        opcoes["include_domains"] = preferidos
+        opcoes["include_domains_mode"] = "prefer"
+        emit_event("status", message=f"Navegando: privilegiando {', '.join(preferidos)}")
+    busca = cliente.search(**opcoes)
+    urls = [r["url"] for r in busca.get("results", []) if r.get("url")]
+    if not urls:
+        return {"results": []}
+    emit_event("status", message=f"Navegando: {', '.join(urls)}")
+    return cliente.extract(urls=urls, extract_depth="advanced") or {"results": []}
+
+
+def _pesquisar(query, dominios):
+    falhas = []
+    for provedor in _ordem_dos_provedores():
+        nome = _NOMES_DOS_PROVEDORES.get(provedor, provedor)
+        emit_event("status", message=f"Navegando: pesquisando '{query[:60]}' pelo {nome}")
+        try:
+            if provedor == "tavily":
+                resultado = _pesquisar_tavily(query, dominios)
+            else:
+                resultado = {
+                    "results": busca_deepseek.pesquisar(
+                        query, count=5, dominios=_lista_de_dominios(dominios)
+                    )
+                }
+        except Exception as erro:
+            falhas.append((provedor, str(erro)))
+            continue
+        if resultado.get("results"):
+            return resultado, [provedor], falhas
+        falhas.append((provedor, "nenhum resultado"))
+    return {"results": []}, [], falhas
+
+
+def _texto_das_falhas(falhas):
+    linhas = ["Nenhum resultado encontrado na web."]
+    for provedor, motivo in falhas:
+        linhas.append(f"  {_NOMES_DOS_PROVEDORES.get(provedor, provedor)}: {motivo}")
+    linhas.append(
+        "Se o Tavily ficou sem cota, escolha a busca da DeepSeek em Configuracoes -> APIs -> Busca na web."
+    )
+    return "\n".join(linhas)
+
+
+def _termos(filtro):
+    return [p.strip().lower() for linha in (filtro or "").splitlines() for p in linha.split("|") if p.strip()]
+
+
+def _nivel_do_resultado(res):
+    autoridade = res.get("authority")
+    if isinstance(autoridade, int) and autoridade >= 3:
+        return "oficial"
+    return _nivel_da_fonte(res.get("url", ""))
+
+
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. O conteúdo bruto fica em data/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Na busca da DeepSeek o resultado vem em resumos: para o texto completo de uma página, peça-a em 'url_especifica' (o Fetch devolve Markdown). O conteúdo bruto fica em data/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
@@ -262,13 +393,10 @@ def _extrair_cru(tavily_client, endereco):
     disponivel="web",
 )
 def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
-    """Busca na web usando Tavily. Usa workflow 2 passos: Search → Extract (advanced) para maior fidelidade."""
-    if not tavily_configurada():
-        return "ERRO: navegação web desativada. Ative o globo em Configurações → APIs (ao lado do DeepSeek) e informe a chave Tavily."
-    
-    tavily_client = _get_tavily_client()
-    if not tavily_client:
-        return "ERRO: Cliente Tavily não inicializado."
+    """Busca na web pelo provedor escolhido e extrai paginas por URL."""
+    if not busca_configurada():
+        return ("ERRO: navegacao web desativada. Ative a chave do DeepSeek ou da Tavily em "
+                "Configuracoes -> APIs e escolha o provedor em 'Busca na web'.")
 
     pedidos = [linha.strip() for linha in query.splitlines() if linha.strip()]
     if len(pedidos) > 1 and not url_especifica:
@@ -278,76 +406,26 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             partes.append(tool_buscar_web(query=termo, dominios=dominios, filtro=filtro))
         return "\n\n".join(partes)
 
-    termos = [p.strip().lower() for linha in filtro.splitlines() for p in linha.split("|") if p.strip()]
+    termos = _termos(filtro)
 
     try:
-        falha = ""
-        aviso_extracao = ""
+        origem_servida = []
+        aviso_do_provedor = ""
         if url_especifica:
             pedidas = [linha.strip() for linha in url_especifica.splitlines() if linha.strip()]
             emit_event("status", message=f"Navegando: {', '.join(pedidas)[:120]}")
-            if len(pedidas) > 1:
-                juntos, falhados = [], []
-                for endereco in pedidas:
-                    try:
-                        peca = tavily_client.extract(urls=[endereco], extract_depth="advanced")
-                    except Exception:
-                        peca = None
-                    achou = (peca or {}).get('results') or []
-                    if not achou:
-                        peca = _extrair_cru(tavily_client, endereco)
-                        achou = (peca or {}).get('results') or []
-                    if achou:
-                        juntos.extend(achou)
-                    else:
-                        falhados.append({"url": endereco, "error": _motivo_da_falha(peca)})
-                resultado = {"results": juntos, "failed_results": falhados}
-            else:
-                resultado = tavily_client.extract(
-                    urls=pedidas,
-                    extract_depth="advanced"
-                )
-            if (not resultado or not resultado.get('results')) and len(pedidas) == 1:
-                anterior = resultado
-                falha = _motivo_da_falha(anterior)
-                cru = _extrair_cru(tavily_client, pedidas[0])
-                if cru:
-                    resultado = cru
-                    aviso_extracao = f"  ℹ️ a pagina normal nao veio; o conteudo veio pela versao CRUA (?action=raw) de {pedidas[0]}\n"
-                else:
-                    resultado = anterior
-                    emit_event("status", message=f"Navegando: procurando {pedidas[0][:60]}")
-                    busca = tavily_client.search(
-                        query=pedidas[0], max_results=3, search_depth="advanced"
-                    )
-                    urls = [r['url'] for r in busca.get('results', []) if r.get('url')]
-                    if urls:
-                        resultado = tavily_client.extract(urls=urls, extract_depth="advanced")
-            devolvidas = {item.get('url', '') for item in (resultado or {}).get('results', [])}
-            faltaram = [endereco for endereco in pedidas if endereco not in devolvidas]
-            if faltaram:
-                motivos = {falhou.get('url'): falhou.get('error', '') for falhou in (resultado or {}).get('failed_results', [])}
-                aviso_extracao = "".join(
-                    f"  ⚠️ NÃO EXTRAÍDA: {endereco} — {motivos.get(endereco) or 'o extrator não devolveu conteudo'}\n"
-                    for endereco in faltaram)
+            resultado, origem_servida, _ = _extrair_paginas(pedidas)
         elif query:
-            emit_event("status", message=f"Navegando: pesquisando '{query[:60]}'...")
-            opcoes = {"query": query, "max_results": 3, "search_depth": "advanced"}
-            preferidos = _lista_de_dominios(dominios)
-            if preferidos:
-                opcoes["include_domains"] = preferidos
-                opcoes["include_domains_mode"] = "prefer"
-                emit_event("status", message=f"Navegando: privilegiando {', '.join(preferidos)}")
-            search_resp = tavily_client.search(**opcoes)
-            urls = [r['url'] for r in search_resp.get('results', []) if r.get('url')]
-            if not urls:
-                return "Nenhum resultado encontrado na web."
-            
-            emit_event("status", message=f"Navegando: {', '.join(urls)}")
-            resultado = tavily_client.extract(
-                urls=urls,
-                extract_depth="advanced"
-            )
+            resultado, origem_servida, falhas = _pesquisar(query, dominios)
+            if not resultado.get("results") and falhas:
+                return _texto_das_falhas(falhas)
+            if falhas:
+                motivos = "; ".join(
+                    f"{_NOMES_DOS_PROVEDORES.get(p, p)}: {m}" for p, m in falhas
+                )
+                aviso_do_provedor = (
+                    f"⚠️ {motivos} — usei {_nomes_dos_provedores(origem_servida)}.\n"
+                )
         else:
             return "ERRO: Forneça 'query' ou 'url_especifica'."
 
@@ -355,8 +433,6 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             if url_especifica:
                 abertas = [u.strip() for u in url_especifica.splitlines() if u.strip()]
                 estado["urls_navegadas_turno"].update(abertas)
-            if falha:
-                return f"Nenhum resultado encontrado na web. A extracao direta falhou — {falha}"
             return "Nenhum resultado encontrado na web."
 
         contexto = ""
@@ -375,7 +451,7 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
             if ilegivel:
                 contexto_debug += f"⚠️ CONTEÚDO ILEGÍVEL DETECTADO: {motivo}\n"
                 fontes_ilegiveis.append((idx, url, motivo))
-            contexto_debug += f"{conteudo}\n\n"
+            contexto_debug += f"{res.get('debug_content') or conteudo}\n\n"
             
             contexto += f"--- FONTE {idx}: {url} ---\n"
             if ilegivel:
@@ -415,10 +491,14 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
         if total_ilegiveis > 0:
             resumo += f" — ⚠️ {total_ilegiveis} ILEGÍVEL(is)"
         resumo += ":\n"
-        
-        niveis = [_nivel_da_fonte(url) for url in fontes]
+        if origem_servida:
+            resumo += f"🔎 provedor: {_nomes_dos_provedores(origem_servida)}\n"
+        if aviso_do_provedor:
+            resumo += aviso_do_provedor
 
-        for i, url in enumerate(fontes, 1):
+        niveis = [_nivel_do_resultado(res) for res in resultado.get("results", [])]
+
+        for i, (res, url) in enumerate(zip(resultado.get("results", []), fontes), 1):
             status_fonte = ""
             for fi, fu, fm in fontes_ilegiveis:
                 if fi == i:
@@ -426,12 +506,21 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro=""):
                     break
             etiqueta = ETIQUETAS_DE_FONTE.get(niveis[i - 1], "")
             marca = f" — {etiqueta}" if etiqueta else ""
+            autoridade = res.get("authority")
+            if isinstance(autoridade, int) and autoridade >= 0:
+                marca += f" (autoridade {autoridade}/4)"
+            data = res.get("date") or ""
+            if data:
+                marca += f" · {data[:10]}"
             resumo += f"  [{i}] {url}{marca}{status_fonte}\n"
 
         resumo += _aviso_de_fontes(niveis)
 
-        if aviso_extracao:
-            resumo += "\n⚠️ PÁGINA(S) PEDIDA(S) QUE NÃO VIERAM:\n" + aviso_extracao
+        falhados = resultado.get("failed_results") or []
+        if falhados:
+            resumo += "\n⚠️ PÁGINA(S) NÃO EXTRAÍDA(S):\n"
+            for falhou in falhados:
+                resumo += f"  ⚠️ {falhou.get('url', '?')} — {falhou.get('error') or 'o extrator nao devolveu conteudo'}\n"
 
         resumo += f"\n📄 Log COMPLETO salvo em '{debug_path or 'busca.txt'}'.\n"
         

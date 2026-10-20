@@ -18,6 +18,7 @@ DEFAULT_SETTINGS = {
         "enabled": False,
     },
     "tavily": {"api_key": "", "enabled": False},
+    "busca": {"provedor": "auto"},
     "projeto": {"ultima_pasta": ""},
     "interface": {"zoom": 1},
     "git": {"automatico": True, "automatico_escolhido": False},
@@ -77,6 +78,20 @@ def migrar_automatico_padrao():
 def asan_ligado():
     """Liga o build instrumentado (AddressSanitizer) ao depurar C++."""
     return bool((load_settings().get("depurador") or {}).get("asan"))
+
+PROVEDORES_DE_BUSCA = ("auto", "tavily", "deepseek")
+
+def provedor_de_busca():
+    """Provedor da busca na web: tavily, deepseek ou auto (Tavily primeiro)."""
+    valor = str((load_settings().get("busca") or {}).get("provedor") or "auto").strip().lower()
+    return valor if valor in PROVEDORES_DE_BUSCA else "auto"
+
+def definir_provedor_de_busca(valor):
+    valor = str(valor or "auto").strip().lower()
+    if valor not in PROVEDORES_DE_BUSCA:
+        raise ValueError(f"provedor de busca invalido: {valor!r}")
+    atualizar_settings({"busca": {"provedor": valor}})
+    return valor
 
 def save_settings(dados):
     dados = _deep_merge(load_settings(), dados or {})

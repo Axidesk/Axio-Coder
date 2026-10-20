@@ -70,6 +70,7 @@ export const state = {
     settingsVertexJsonData: null,
     settingsDeepseekEnabled: false,
     settingsGeminiEnabled: false,
+    settingsBuscaProvedor: 'auto',
     attachedImages: [],
     imageCounter: 1,
     historyPreloadTimer: null,

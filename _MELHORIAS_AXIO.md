@@ -4,33 +4,6 @@ Caderno pedido pelo Rodrigo a 2026-10-18. Cada item é atrito real medido nesta 
 não ideia de gosto. O Axio também tem o seu próprio registo automático em
 `CODER/coder/.axio/melhorias_pendentes.json`; este ficheiro é a versão legível.
 
-## APLICADOS a 2026-10-20 (na pasta do Axio)
-
-- **1** — `tool_executar_processo` cria as pastas de destino de `-o`/`--output`/`>` antes
-  de arrancar, e diz quais criou (`tools/process.py:_criar_pastas_de_saida`). Só `-o` e
-  redirecionamento; o `2>&1` não é confundido com um ficheiro.
-- **3** — a URL passada em `url_especifica` fica registada como navegada mesmo quando a
-  extração falha, para o planejador poder citá-la (`tools/web.py`).
-- **4** — `tool_buscar_web` corta o menu do GitHub (`Skip to content` … `Repository files
-  navigation`) antes de devolver o conteúdo, só quando o bloco passa de 1500 caracteres.
-- **9** — o `roteiro` aceita o passo `imprimir [seletor]` e devolve a captura com a resposta.
-- **16** — `tool_ver_imagem` aceita vários caminhos (linha ou `;`), com as imagens juntas.
-- **20** — `print` sem alvo fotografa a JANELA; a página inteira só com `regiao="pagina"`.
-- **21** — `teclar` com `manter=true` deixa a tecla premida e a ação `largar` envia o keyup:
-  é o caminho para testar controlo de jogo ou canvas.
-- **22** — despertador completo (`tool_agendar_despertar`, `/api/despertador`, faixa na
-  barra de status com contagem e botão cancelar, nota no campo de mensagem, sobrevive a
-  fechar o Axio).
-- **23** — categoria `pagamento` no cofre (Cartões, logo abaixo de Identidade), com o
-  número e o CVV mascarados também nos campos de edição.
-
-### Falta ainda
-
-- **6** — avisar quando o documento não está `crossOriginIsolated`. Exige mexer na ponte
-  (o `estado` hoje não fala com a página) e provar com uma página que use
-  `SharedArrayBuffer`; fica para quando houver esse caso outra vez.
-- **2, 5, 7, 8, 10, 12, 13, 14, 15, 17, 18, 19** — continuam em aberto, como estavam.
-
 ## 1. `tool_executar_processo` não avisa que a pasta de destino não existe
 `curl -o _baixar/arquivo.zip` falhou com `Failed to open the file: No such file or directory`
 depois de arrancar o processo, gastando uma chamada inteira. O curl não cria pastas.
@@ -188,25 +161,3 @@ enviar o `keyup`, dentro de um `avaliar` com promessa.
 `largar` (o `keyup`); e um `gestos` que aceite sequências temporizadas
 (`descer W; esperar 1000; ler ...; soltar W`), que é o que qualquer teste de controlo pede.
 
-## 22. Não existe forma de o agente se auto-agendar (despertador)
-Pedido explícito do Rodrigo a 2026-10-19: quando uma operação longa corre (download de 20 GB,
-treino, aluguer de GPU), eu fico preso a sondar o estado em chamadas repetidas — e cada
-chamada reenvia o contexto inteiro. Falta uma ferramenta que diga "acorda-me daqui a N
-minutos" (ou "acorda-me quando este processo terminar, ou quando este ficheiro aparecer") e
-que encerre a rodada A SEGUIR, voltando sozinha no momento programado.
-**Cura:** `tool_agendar_despertar(quando|depois_de|quando_processo=pid|quando_ficheiro=...,
-nota=...)` que grava a intenção no estado da sessão e faz o agendador do Axio retomar a
-tarefa com a nota como primeira mensagem. Vale ouro em qualquer projeto longo, não só neste.
-Nota: parcialmente coberto hoje por uma única chamada longa
-(`tool_listar_processos(esperar=N)`), que custa UM contexto em vez de N — mas essa espera
-morre se a resposta da API expirar, e não sobrevive a fechar o Axio.
-
-## 23. O cofre não tem onde guardar dados de cartão
-A 2026-10-19 o Rodrigo pôs o número do cartão no campo `email`, o CVV em `telefone` e a
-validade em `documento`, porque o cartão de identidade só tem esses campos. Isso não é
-desleixo dele: não existe categoria de pagamento e os campos são fixos por categoria, logo
-não há nome para "número", "validade" e "cvv".
-**Cura:** uma categoria `pagamento` com os campos `titular`, `numero`, `validade`, `cvv`,
-`bandeira` (e opcionalmente `pais`), mascarando o número como os outros segredos. Enquanto
-não existir, a solução usada foi criar uma entrada de identidade com campos extra
-(`cartao_visa_debito`), que a interface mostra por baixo dos fixos.

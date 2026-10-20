@@ -464,6 +464,36 @@ body.inspect-mode * {
     font-size: 0.72rem;
     color: var(--vermelho-vivo);
 }
+
+.busca-bloco {
+    margin-top: 18px;
+}
+
+.busca-provedor {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.busca-pill {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-suave);
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--dur-3) var(--ease-fluid), color var(--dur-3) var(--ease-fluid);
+}
+.busca-pill:hover {
+    background: var(--bg-hover-suave);
+    color: var(--text-claro);
+}
+.busca-pill.on {
+    background: var(--bg-selecao);
+    color: var(--text-branco);
+}
 .settings-folder-btn {
     flex-shrink: 0;
     width: 40px;

@@ -735,6 +735,18 @@
                         </div>
                         <div id="deepseek-error" class="settings-input-error hidden">Digite uma chave API válida.</div>
                         <div id="tavily-error" class="settings-input-error hidden">Digite uma chave API válida.</div>
+                        <div class="busca-bloco">
+                            <div class="settings-label-row">
+                                <span class="settings-label">Busca na web</span>
+                                <span class="settings-info" data-info-target="info-busca" title="Qual provedor responde a pesquisa">i</span>
+                            </div>
+                            <div class="settings-info-text" id="info-busca"><div class="settings-info-text-inner">O <strong>Automático</strong> usa o Tavily primeiro e passa para a busca da DeepSeek quando a cota acaba.<br><br>O <strong>Tavily</strong> devolve páginas inteiras e tem 1.000 buscas grátis por mês.<br><br>A <strong>DeepSeek</strong> gasta a mesma chave do modelo: US$ 0,75 por mil buscas, resumos mais gordos e aceita operadores como <code>site:</code>, <code>after:</code> e <code>lang:</code>.</div></div>
+                            <div id="busca-provedor" class="busca-provedor" role="radiogroup" aria-label="Provedor da busca na web">
+                                <button type="button" class="busca-pill" data-provedor="auto" role="radio" aria-checked="false" title="Tavily primeiro; DeepSeek quando a cota acabar">Automático</button>
+                                <button type="button" class="busca-pill" data-provedor="tavily" role="radio" aria-checked="false" title="Páginas inteiras, 1.000 buscas grátis por mês">Tavily</button>
+                                <button type="button" class="busca-pill" data-provedor="deepseek" role="radio" aria-checked="false" title="US$ 0,75 por mil buscas, na mesma chave do modelo">DeepSeek</button>
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <div class="settings-label-row">

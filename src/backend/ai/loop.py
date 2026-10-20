@@ -19,7 +19,7 @@ from src.backend.ai.base import chamar_api_com_retry, mensagem_amigavel_de_erro
 from src.backend.services.imagem import partes_da_imagem
 from src.backend.ai.instructions import build_system_instructions
 from src.backend.tools.bootstrap import tool_gerenciar_bootstrap
-from src.backend.tools.web import tavily_configurada
+from src.backend.tools.web import busca_configurada
 from src.backend.tools.code_index import disparar_indexacao_background
 from src.backend.tools import (
     binarios,
@@ -349,7 +349,7 @@ def _montar_bloco_continuidade():
 def _montar_config_do_turno(instrucao, modo, use_deepseek, ai_model):
     """Declaracoes das ferramentas disponiveis + config de geracao do turno."""
     ferramentas_base = build_function_declarations(
-        types, modo=modo, use_deepseek=use_deepseek, web_ok=tavily_configurada(), ai_model=ai_model
+        types, modo=modo, use_deepseek=use_deepseek, web_ok=busca_configurada(), ai_model=ai_model
     )
     if use_deepseek:
         lista_tools = [types.Tool(function_declarations=ferramentas_base)]
@@ -467,7 +467,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
 
     contexto_continuidade, bloco_continuidade = _montar_bloco_continuidade()
 
-    instrucao = build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_continuidade, contexto_projeto, contexto_codigo, contexto_edicoes, tem_web_search=tavily_configurada(), use_deepseek=use_deepseek, mensagem_usuario=prompt_usuario, ai_model=ai_model)
+    instrucao = build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_continuidade, contexto_projeto, contexto_codigo, contexto_edicoes, tem_web_search=busca_configurada(), use_deepseek=use_deepseek, mensagem_usuario=prompt_usuario, ai_model=ai_model)
 
     ferramentas_base, config = _montar_config_do_turno(instrucao, modo, use_deepseek, ai_model)
     

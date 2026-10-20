@@ -36,6 +36,7 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
             const ds = dados.deepseek || {};
             const gem = dados.gemini || {};
             const tv = dados.tavily || {};
+            const busca = dados.busca || {};
             if (dom.inputDeepseekKey) dom.inputDeepseekKey.value = ds.api_key || '';
             state.settingsDeepseekEnabled = !!ds.enabled || !!(ds.api_key || '').trim();
             state.settingsVertexMode = gem.mode === 'vertex';
@@ -46,6 +47,7 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
             if (dom.inputGeminiKey) dom.inputGeminiKey.value = state.settingsStudioApiKey || '';
             if (dom.inputVertexKey) dom.inputVertexKey.value = state.settingsVertexJsonName || '';
             if (dom.inputTavilyKey) dom.inputTavilyKey.value = tv.api_key || '';
+            aplicarProvedorDeBusca(busca.provedor || 'auto');
             state.settingsNavMode = false;
             atualizarCardGemini();
             aplicarEstadoToggleVertex(state.settingsVertexMode);
@@ -116,6 +118,14 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
         }
         atualizarIndicadorGlobo();
     }
+    export function aplicarProvedorDeBusca(valor) {
+        state.settingsBuscaProvedor = ['auto', 'tavily', 'deepseek'].includes(valor) ? valor : 'auto';
+        document.querySelectorAll('.busca-pill').forEach((botao) => {
+            const ativo = botao.dataset.provedor === state.settingsBuscaProvedor;
+            botao.classList.toggle('on', ativo);
+            botao.setAttribute('aria-checked', ativo ? 'true' : 'false');
+        });
+    }
     export function aplicarEstadoToggleGemini(ativo) {
         state.settingsGeminiEnabled = !!ativo;
         if (dom.btnGeminiToggle) {
@@ -156,7 +166,8 @@ const { btnRevealKeys, inputDeepseekKey, inputGeminiKey, inputTavilyKey } = dom;
         const payload = {
             deepseek: { api_key: deepseekKey, enabled: state.settingsDeepseekEnabled },
             gemini: geminiPayload,
-            tavily: { api_key: tavilyKey, enabled: state.settingsDeepseekEnabled && !!tavilyKey }
+            tavily: { api_key: tavilyKey, enabled: !!tavilyKey },
+            busca: { provedor: state.settingsBuscaProvedor }
         };
         try {
             const resp = await fetch('/api/settings', {
