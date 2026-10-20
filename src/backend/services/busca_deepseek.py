@@ -66,6 +66,30 @@ def _consulta_com_dominios(query, dominios):
     return query + " " + " OR ".join(f"site:{dominio}" for dominio in dominios)
 
 
+_DATA_SEM_MES = re.compile(r"\b(after|before):(\d{4})(?![\d-])")
+
+
+def _normalizar_datas(query):
+    """O after:2026 e lido como 'depois de 2026 inteiro' e devolve zero resultados."""
+    def troca(achado):
+        operador, ano = achado.group(1), achado.group(2)
+        return f"{operador}:{ano}-01-01" if operador == "after" else f"{operador}:{ano}-12-31"
+
+    return _DATA_SEM_MES.sub(troca, query)
+
+
+_CJK = re.compile(r"[぀-ヿ㐀-䶿一-鿿가-힯]")
+
+
+def _na_frente_as_latinas(itens, query):
+    """Uma query em alfabeto latino nao quer a pagina em chines a ocupar um dos cinco lugares."""
+    if _CJK.search(query or ""):
+        return itens
+    latinas = [item for item in itens if not _CJK.search(item.get("title") or "")]
+    outras = [item for item in itens if _CJK.search(item.get("title") or "")]
+    return latinas + outras
+
+
 _IDIOMAS_PREFERIDOS = ("en", "pt-br", "pt", "es", "fr", "de", "it")
 _SEGMENTO_DE_IDIOMA = re.compile(r"^/([a-z]{2}(?:-[a-z]{2,4})?)(?=/|$)", re.I)
 
@@ -123,14 +147,17 @@ def _resultado(item):
 
 def pesquisar(query, count=5, dominios=None):
     """Search da DeepSeek, devolvendo os resultados no formato dos da Tavily."""
+    alvo = max(1, min(int(count or 5), 50))
+    consulta = _normalizar_datas(_consulta_com_dominios(query, dominios or []))
     corpo = {
-        "query": _consulta_com_dominios(query, dominios or []),
-        "count": max(1, min(int(count or 5), 50)),
+        "query": consulta,
+        "count": min(alvo + 3, 50),
         "need_content": False,
     }
     dados = _pedido("/v1/tools/search", corpo, TEMPO_DE_BUSCA)
     itens = [_resultado(item) for item in (dados.get("results") or []) if item.get("url")]
-    return _sem_variantes_de_idioma(itens)
+    itens = _na_frente_as_latinas(_sem_variantes_de_idioma(itens), consulta)
+    return itens[:alvo]
 
 
 def extrair(url):
