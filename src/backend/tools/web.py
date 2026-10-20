@@ -405,6 +405,7 @@ def _nivel_do_resultado(res):
 
 LIMITE_DO_MENU = 90
 LIMITE_DAS_OUTRAS = 30
+LIMITE_DO_COMPLEMENTO = 12000
 
 
 def _linhas_do_mapa(indice, endereco, dados, gravadas=None, falhadas=None, completo=False):
@@ -469,9 +470,87 @@ def _linhas_do_mapa(indice, endereco, dados, gravadas=None, falhadas=None, compl
     return linhas
 
 
+def _corpo_sem_menu(dados):
+    """Texto da pagina sem as linhas que sao rotulos do menu."""
+    rotulos = {item["texto"].strip().lower() for item in (dados.get("ligacoes") or [])}
+    rotulos.update(rotulo.strip().lower() for rotulo in (dados.get("rotulos") or []))
+    linhas = [linha for linha in (dados.get("texto") or "").splitlines()
+              if linha.strip().lower() not in rotulos]
+    corpo = "\n".join(linhas)
+    return corpo if len(corpo) >= 200 else (dados.get("texto") or "")
+
+
+def _tabelas_perdidas(markdown, tabelas):
+    alvo = (markdown or "").lower()
+    perdidas = []
+    for tabela in tabelas:
+        celulas = [celula for linha in tabela for celula in linha if len(celula) >= 3]
+        if celulas and any(celula.lower() not in alvo for celula in celulas):
+            perdidas.append(tabela)
+    return perdidas
+
+
+_FIM_DO_CORPO = ("all rights reserved", "manage cookies", "cookie preferences",
+                 "copyright by", "todos os direitos reservados")
+
+LIMITE_DO_PARAGRAFO = 300
+
+
+def _linhas_do_complemento(dados, markdown, termos=None):
+    """Tabelas e texto do HTML cru que o conversor de markdown perdeu."""
+    tabelas = dados.get("tabelas") or []
+    perdidas = _tabelas_perdidas(markdown, tabelas)
+    corpo = _corpo_sem_menu(dados)
+    falta_texto = len(corpo) > len(markdown or "") * 1.4 and len(corpo) - len(markdown or "") > 400
+    if not perdidas and not falta_texto:
+        return []
+
+    def serve(linha):
+        return not termos or any(termo in linha.lower() for termo in termos)
+
+    linhas = []
+    ja_ditas = set()
+    if perdidas:
+        linhas.append(f"TABELAS COMPLETAS ({len(perdidas)} de {len(tabelas)} que o conversor perdeu):")
+        for tabela in perdidas:
+            for linha in tabela:
+                texto = " | ".join(celula for celula in linha if celula)
+                if not texto or not serve(texto):
+                    continue
+                linhas.append(f"  {texto}")
+                ja_ditas.add(texto.lower().replace(" | ", " "))
+
+    if falta_texto:
+        corpo_util = []
+        for linha in corpo.splitlines():
+            baixa = linha.lower()
+            if any(marca in baixa for marca in _FIM_DO_CORPO):
+                break
+            if len(linha) > LIMITE_DO_PARAGRAFO:
+                continue
+            if baixa in ja_ditas or not serve(linha):
+                continue
+            corpo_util.append(linha)
+        if corpo_util:
+            linhas.append(f"TEXTO DO CORPO: o markdown trouxe {len(markdown or '')} chars, a pagina tem {len(corpo)}.")
+            usado, cortado = 0, False
+            for linha in corpo_util:
+                if usado + len(linha) > LIMITE_DO_COMPLEMENTO:
+                    cortado = True
+                    break
+                linhas.append(f"  {linha}")
+                usado += len(linha) + 1
+            if cortado:
+                linhas.append(f"  [+{len(corpo) - usado} chars nao mostrados - o texto integral esta em data/busca.txt]")
+
+    if len(linhas) <= 1:
+        return []
+    return ["--- O QUE O MARKDOWN NAO TROUXE (lido do HTML cru) ---"] + linhas
+
+
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. O mapa traz ainda as SECOES do indice da pagina, o MENU daquela secao (todas as ligacoes irmas, e uma por pasta do resto do site) e as IMAGENS: com 'imagens'=True elas são baixadas e ficam prontas para tool_ver_imagem. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. O mapa traz ainda as SECOES do indice da pagina, o MENU daquela secao (todas as ligacoes irmas, e uma por pasta do resto do site) e as IMAGENS: com 'imagens'=True elas são baixadas e ficam prontas para tool_ver_imagem. O markdown vem do conversor do provedor e perde conteúdo em páginas antigas (tabelas HTML, células com imagem): quando isso acontece a resposta acrescenta o bloco 'O QUE O MARKDOWN NAO TROUXE' com as tabelas e o corpo lidos do HTML cru, sem um segundo pedido. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
@@ -533,6 +612,8 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
         contexto_debug = ""
         fontes = []
         fontes_ilegiveis = []
+        leituras = {}
+        complementadas = []
         
         for idx, res in enumerate(resultado.get('results', []), 1):
             url = res.get('url', '')
@@ -571,13 +652,23 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
                                  f"tool_ler_trecho_arquivo.]\n\n")
                 else:
                     contexto += f"{conteudo}\n\n"
+
+            if url_especifica:
+                dados = paginas_web.mapa(url)
+                leituras[idx] = dados
+                complemento = _linhas_do_complemento(dados, conteudo, termos)
+                if complemento:
+                    complementadas.append(url)
+                    bloco = "\n".join(complemento) + "\n\n"
+                    contexto += bloco
+                    contexto_debug += bloco
         
         navegacao = ""
         if url_especifica and not termos:
             linhas_do_mapa = []
             for idx, res in enumerate(resultado.get("results", []), 1):
                 endereco = res.get("url", "")
-                dados = paginas_web.mapa(endereco)
+                dados = leituras.get(idx) or paginas_web.mapa(endereco)
                 gravadas, falhadas = [], []
                 if imagens and dados.get("imagens"):
                     emit_event("status", message=f"Navegando: baixando as imagens de {endereco[:70]}")
@@ -618,6 +709,9 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
             resumo += aviso_do_provedor
         if nota_do_filtro:
             resumo += f"🌐 {nota_do_filtro}\n"
+        if complementadas:
+            resumo += (f"📊 {len(complementadas)} pagina(s) com markdown incompleto - "
+                       f"as tabelas e o texto que faltavam foram lidos do HTML cru abaixo.\n")
 
         niveis = [_nivel_do_resultado(res) for res in resultado.get("results", [])]
 

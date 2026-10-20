@@ -1,4 +1,5 @@
 import hashlib
+import html as html_lib
 import os
 import re
 from urllib.parse import urljoin, urlparse
@@ -18,6 +19,19 @@ _TITULO = re.compile(r'<h([1-6])\b[^>]*\bid="([^"]+)"[^>]*>(.*?)</h\1>', re.S | 
 _IMAGEM = re.compile(r"<img\b[^>]*>", re.I)
 _ATRIBUTO = re.compile(r'\b([\w-]+)\s*=\s*"([^"]*)"')
 _TAGS = re.compile(r'<[^>]+>')
+_COMENTARIO = re.compile(r"<!--.*?-->", re.S)
+_RUIDO = re.compile(r"<(script|style|noscript|svg|canvas|template)\b.*?</\1\s*>", re.S | re.I)
+_BLOCO = re.compile(
+    r"</?(p|div|br|tr|li|h[1-6]|table|thead|tbody|section|article|header|footer|ul|ol|dl|dd|dt)\b[^>]*>",
+    re.I,
+)
+_BLOCO_DE_NAVEGACAO = re.compile(
+    r"<(ul|nav|aside|div)\b[^>]*\b(?:class|id)\s*=\s*\"[^\"]*(menu|nav|sidebar|breadcrumb)[^\"]*\"[^>]*>",
+    re.I,
+)
+_TABELA = re.compile(r"<table\b.*?</table\s*>", re.S | re.I)
+_LINHA_DA_TABELA = re.compile(r"<tr\b.*?</tr\s*>", re.S | re.I)
+_CELULA = re.compile(r"<t[dh]\b[^>]*>(.*?)</t[dh]\s*>", re.S | re.I)
 _SEM_TEXTO = frozenset(("none", "null", "here", "click here", "link", "aqui", "saiba mais", "veja mais"))
 
 
@@ -94,7 +108,7 @@ def _imagens(html, url):
         origem = atributos.get("src") or atributos.get("data-src") or ""
         if not origem:
             continue
-        destino = urljoin(url, origem).split("?")[0]
+        destino = urljoin(url, html_lib.unescape(origem)).split("?")[0]
         partes = urlparse(destino)
         if partes.scheme not in ("http", "https"):
             continue
@@ -112,6 +126,16 @@ def _imagens(html, url):
     return achadas
 
 
+def _rotulos(html):
+    """Todo texto de ligacao da pagina - tambem os de fora - para tirar o menu do corpo."""
+    rotulos = []
+    for casamento in _ANCORA.finditer(html):
+        texto = _limpar_texto(casamento.group(2))
+        if texto and len(texto) <= 90:
+            rotulos.append(texto)
+    return rotulos
+
+
 def _ligacoes(html, url):
     alvo = urlparse(url)
     vistos, textos, achadas = set(), set(), []
@@ -119,7 +143,7 @@ def _ligacoes(html, url):
         texto = _limpar_texto(casamento.group(2))
         if not texto or len(texto) > 90 or texto.lower() in textos or texto.lower() in _SEM_TEXTO:
             continue
-        destino = urljoin(url, casamento.group(1)).split("#")[0]
+        destino = urljoin(url, html_lib.unescape(casamento.group(1))).split("#")[0]
         partes = urlparse(destino)
         if partes.scheme not in ("http", "https") or partes.netloc != alvo.netloc:
             continue
@@ -137,15 +161,84 @@ def _ligacoes(html, url):
     return achadas
 
 
+def _texto_da_celula(bruto):
+    base = " ".join(html_lib.unescape(_TAGS.sub(" ", bruto)).split())
+    if base:
+        return base
+    alternativas = []
+    for tag in _IMAGEM.finditer(bruto):
+        atributos = _atributos(tag.group(0))
+        rotulo = " ".join((atributos.get("alt") or atributos.get("title") or "").split())
+        if rotulo and rotulo not in alternativas:
+            alternativas.append(rotulo)
+    return " ".join(alternativas)
+
+
+def tabelas(html):
+    """Tabelas do HTML cru: o conversor de markdown descarta celulas com imagem."""
+    achadas = []
+    for bruto in _TABELA.findall(_COMENTARIO.sub(" ", html)):
+        linhas = []
+        for linha_bruta in _LINHA_DA_TABELA.findall(bruto):
+            celulas = [_texto_da_celula(celula) for celula in _CELULA.findall(linha_bruta)]
+            if any(celulas):
+                linhas.append(celulas)
+        if sum(1 for linha in linhas for celula in linha if celula) >= 2:
+            achadas.append(linhas)
+    return achadas
+
+
+def _fim_do_bloco(html, inicio, tag):
+    padrao = re.compile(rf"</?{tag}\b[^>]*>", re.I)
+    profundidade = 1
+    for casamento in padrao.finditer(html, inicio):
+        if casamento.group(0).startswith("</"):
+            profundidade -= 1
+            if profundidade == 0:
+                return casamento.end()
+        else:
+            profundidade += 1
+    return -1
+
+
+def _sem_navegacao(html):
+    """Tira os blocos de menu/sidebar: o que sobra e o miolo da pagina."""
+    cortes = []
+    for casamento in _BLOCO_DE_NAVEGACAO.finditer(html):
+        if any(inicio <= casamento.start() < fim for inicio, fim in cortes):
+            continue
+        fim = _fim_do_bloco(html, casamento.end(), casamento.group(1).lower())
+        if fim != -1:
+            cortes.append((casamento.start(), fim))
+    for inicio, fim in reversed(cortes):
+        html = html[:inicio] + " " + html[fim:]
+    return html
+
+
+def texto(html):
+    """Texto visivel da pagina, linha a linha, sem scripts, estilos e menus."""
+    sem_ruido = _RUIDO.sub(" ", _COMENTARIO.sub(" ", _sem_navegacao(html)))
+    linhas = []
+    for linha in _BLOCO.sub("\n", sem_ruido).splitlines():
+        juntada = " ".join(html_lib.unescape(_TAGS.sub(" ", linha)).split())
+        if juntada:
+            linhas.append(juntada)
+    return "\n".join(linhas)
+
+
 def mapa(url):
-    """Menu, secoes e imagens da pagina, de um so pedido."""
+    """Menu, secoes, imagens, texto e tabelas da pagina, de um so pedido."""
     html, erro = _baixar(url)
     if erro:
-        return {"ligacoes": [], "secoes": [], "imagens": [], "erro": erro}
+        return {"ligacoes": [], "secoes": [], "imagens": [], "texto": "", "tabelas": [],
+                "rotulos": [], "erro": erro}
     return {
         "ligacoes": _ligacoes(html, url),
         "secoes": _secoes(html),
         "imagens": _imagens(html, url),
+        "texto": texto(html),
+        "tabelas": tabelas(html),
+        "rotulos": _rotulos(html),
         "erro": "",
     }
 
