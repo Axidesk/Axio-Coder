@@ -1,3 +1,4 @@
+import html as html_lib
 import json
 import os
 import re
@@ -493,7 +494,17 @@ def _tabelas_perdidas(markdown, tabelas):
 _FIM_DO_CORPO = ("all rights reserved", "manage cookies", "cookie preferences",
                  "copyright by", "todos os direitos reservados")
 
+_RUIDO_DO_CORPO = ("internet explorer", "netscape", "javascript is disabled",
+                   "your browser", "supported browser", "outdated browser",
+                   "enable javascript")
+
 LIMITE_DO_PARAGRAFO = 300
+
+
+def _para_comparar(texto):
+    """Forma normalizada de um trecho, para saber se ele ja aparece no markdown."""
+    limpo = re.sub(r"[^\w\s]", " ", html_lib.unescape(texto or "").lower())
+    return " ".join(limpo.split())
 
 
 def _linhas_do_complemento(dados, markdown, termos=None):
@@ -505,20 +516,37 @@ def _linhas_do_complemento(dados, markdown, termos=None):
     if not perdidas and not falta_texto:
         return []
 
+    ja_no_markdown = _para_comparar(markdown)
+
+    def falta(texto):
+        trecho = _para_comparar(texto)
+        return bool(trecho) and trecho not in ja_no_markdown
+
     def serve(linha):
         return not termos or any(termo in linha.lower() for termo in termos)
 
     linhas = []
     ja_ditas = set()
-    if perdidas:
-        linhas.append(f"TABELAS COMPLETAS ({len(perdidas)} de {len(tabelas)} que o conversor perdeu):")
-        for tabela in perdidas:
-            for linha in tabela:
-                texto = " | ".join(celula for celula in linha if celula)
-                if not texto or not serve(texto):
-                    continue
-                linhas.append(f"  {texto}")
-                ja_ditas.add(texto.lower().replace(" | ", " "))
+    blocos = []
+    for tabela in perdidas:
+        linhas_da_tabela = []
+        for linha in tabela:
+            texto = " | ".join(celula for celula in linha if celula)
+            if not texto or not serve(texto):
+                continue
+            if not any(falta(celula) for celula in linha if celula):
+                continue
+            chave = _para_comparar(texto)
+            if chave in ja_ditas:
+                continue
+            ja_ditas.add(chave)
+            linhas_da_tabela.append(f"  {texto}")
+        if linhas_da_tabela:
+            blocos.append(linhas_da_tabela)
+    if blocos:
+        linhas.append(f"TABELAS COMPLETAS ({len(blocos)} de {len(tabelas)} que o conversor perdeu):")
+        for bloco in blocos:
+            linhas.extend(bloco)
 
     if falta_texto:
         corpo_util = []
@@ -526,13 +554,16 @@ def _linhas_do_complemento(dados, markdown, termos=None):
             baixa = linha.lower()
             if any(marca in baixa for marca in _FIM_DO_CORPO):
                 break
+            if any(marca in baixa for marca in _RUIDO_DO_CORPO):
+                continue
             if len(linha) > LIMITE_DO_PARAGRAFO:
                 continue
-            if baixa in ja_ditas or not serve(linha):
+            if not serve(linha) or not falta(linha) or _para_comparar(linha) in ja_ditas:
                 continue
             corpo_util.append(linha)
         if corpo_util:
-            linhas.append(f"TEXTO DO CORPO: o markdown trouxe {len(markdown or '')} chars, a pagina tem {len(corpo)}.")
+            linhas.append(f"TEXTO DO CORPO (so o que o markdown nao tem): {len(corpo)} chars na pagina, "
+                          f"{len(markdown or '')} no markdown.")
             usado, cortado = 0, False
             for linha in corpo_util:
                 if usado + len(linha) > LIMITE_DO_COMPLEMENTO:
@@ -550,7 +581,7 @@ def _linhas_do_complemento(dados, markdown, termos=None):
 
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. O mapa traz ainda as SECOES do indice da pagina, o MENU daquela secao (todas as ligacoes irmas, e uma por pasta do resto do site) e as IMAGENS: com 'imagens'=True elas são baixadas e ficam prontas para tool_ver_imagem. O markdown vem do conversor do provedor e perde conteúdo em páginas antigas (tabelas HTML, células com imagem): quando isso acontece a resposta acrescenta o bloco 'O QUE O MARKDOWN NAO TROUXE' com as tabelas e o corpo lidos do HTML cru, sem um segundo pedido. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. O mapa traz ainda as SECOES do indice da pagina, o MENU daquela secao (todas as ligacoes irmas, e uma por pasta do resto do site) e as IMAGENS: com 'imagens'=True elas são baixadas e ficam prontas para tool_ver_imagem. O markdown vem do conversor do provedor e perde conteúdo em páginas antigas (tabelas HTML, células com imagem): quando isso acontece a resposta acrescenta o bloco 'O QUE O MARKDOWN NAO TROUXE' com as tabelas e o corpo lidos do HTML cru, sem um segundo pedido, mostrando SO o que o markdown não trouxe (uma tabela de personagem do Tibia sai com tudo numa chamada só). Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
