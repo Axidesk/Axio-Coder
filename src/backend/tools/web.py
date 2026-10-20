@@ -4,7 +4,7 @@ import re
 import time
 from urllib.parse import urlparse
 
-from src.backend.config import caminho_data
+from src.backend.config import APP_ROOT, caminho_data
 from src.backend.services import busca_deepseek, paginas_web
 from src.backend.state import emit_event, estado
 from src.backend.tools.registry import register
@@ -403,19 +403,87 @@ def _nivel_do_resultado(res):
     return _nivel_da_fonte(res.get("url", ""))
 
 
+LIMITE_DO_MENU = 90
+LIMITE_DAS_OUTRAS = 30
+
+
+def _linhas_do_mapa(indice, endereco, dados, gravadas=None, falhadas=None, completo=False):
+    """O que a pagina mostra: secoes do indice, menu daquela secao e imagens."""
+    linhas = [f"FONTE {indice}: {endereco}"]
+    if dados.get("erro"):
+        linhas.append(f"  (menu indisponivel: {dados['erro']} - o texto da pagina continua valido)")
+        return linhas
+
+    secoes = dados.get("secoes") or []
+    if secoes:
+        linhas.append("  Secoes desta pagina (o indice 'Contents'):")
+        for secao in secoes[:40]:
+            recuo = "  " * max(0, secao["nivel"] - 2)
+            linhas.append(f"    {recuo}{secao['texto']}")
+
+    ligacoes = dados.get("ligacoes") or []
+    profundidade = len([s for s in urlparse(endereco).path.split("/") if s])
+    limiar = max(2, profundidade - 2)
+    perto = [item for item in ligacoes if item["comum"] >= limiar]
+    longe = [item for item in ligacoes if item["comum"] < limiar]
+
+    if perto:
+        quantas = LIMITE_DO_MENU if completo else 15
+        linhas.append(f"  Menu desta secao ({len(perto)} ligacao(oes)):")
+        for item in perto[:quantas]:
+            linhas.append(f"    -> {item['texto']} : {item['url']}")
+        if len(perto) > quantas:
+            resto = len(perto) - quantas
+            aviso = "" if completo else " - repita com mapa='completo' para as ver todas"
+            linhas.append(f"    (+{resto} nao mostradas{aviso})")
+
+    vistas, outras = set(), []
+    for item in longe:
+        segmentos = [s for s in urlparse(item["url"]).path.split("/") if s]
+        chave = "/".join(segmentos[:limiar]) or item["pasta"]
+        if chave in vistas:
+            continue
+        vistas.add(chave)
+        outras.append(item)
+    if outras:
+        linhas.append(f"  Outras secoes do site (1 por pasta, {len(outras)} de {len(longe)} ligacoes):")
+        for item in outras[:LIMITE_DAS_OUTRAS]:
+            linhas.append(f"    -> {item['texto']} : {item['url']}")
+        if len(outras) > LIMITE_DAS_OUTRAS:
+            linhas.append(f"    (+{len(outras) - LIMITE_DAS_OUTRAS} nao mostradas)")
+
+    imagens = dados.get("imagens") or []
+    if gravadas is not None:
+        if gravadas:
+            linhas.append(f"  Imagens baixadas ({len(gravadas)}) - abra cada uma com tool_ver_imagem:")
+            for item in gravadas:
+                linhas.append(f"    [{item['texto']}] {item['caminho']} ({max(1, item['bytes'] // 1024)} KB)")
+        elif not falhadas:
+            linhas.append("  Imagens: a pagina nao tem nenhuma imagem util (so icones ou nenhuma).")
+        for item in (falhadas or []):
+            linhas.append(f"    [{item['texto']}] nao baixou ({item['erro']}): {item['url']}")
+    elif imagens:
+        linhas.append(f"  Imagens da pagina ({len(imagens)}) - para as VER repita com imagens=true:")
+        for item in imagens[:8]:
+            linhas.append(f"    [{item['texto']}] {item['url']}")
+    return linhas
+
+
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. O mapa traz ainda as SECOES do indice da pagina, o MENU daquela secao (todas as ligacoes irmas, e uma por pasta do resto do site) e as IMAGENS: com 'imagens'=True elas são baixadas e ficam prontas para tool_ver_imagem. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
         'dominios': {"tipo": "STRING", "desc": 'Domínios a privilegiar, separados por vírgula (ex: docs.python.org,mozilla.org). Use para refazer a busca quando as fontes vierem de blogs.', "padrao": ""},
         'filtro': {"tipo": "STRING", "desc": 'Mostra só as linhas do conteúdo extraído que contêm algum destes termos (um por linha, sem distinguir maiúsculas). O texto integral fica em data/busca.txt — use o filtro para não encher o contexto com uma página inteira.', "padrao": ""},
         'ler': {"tipo": "BOOLEAN", "desc": 'Traz o TEXTO das páginas junto com a lista, na MESMA chamada (na DeepSeek é o mesmo pedido com need_content). Sem ele volta só o resumo de ~700 caracteres e ler a página custaria um segundo pedido por URL. Use quando precisar mesmo do conteúdo; para só escolher onde clicar, deixe desligado.', "padrao": False},
+        'imagens': {"tipo": "BOOLEAN", "desc": 'Baixa as imagens da página extraída para .axio/web e devolve o caminho de cada uma, para as VER com tool_ver_imagem (diagramas, capturas de ecrã, prints de resultado). Sem ele a resposta só lista as imagens com o endereço. Ligar apenas quando a imagem for necessária: cada uma gasta contexto ao ser olhada.', "padrao": False},
+        'mapa': {"tipo": "STRING", "desc": "Quanto do menu da página extraída volta: 'auto' (padrão) traz o índice, as outras seções do site e as 15 ligações mais próximas; 'completo' traz todas as ligações da secção (menus grandes custam contexto). Use 'completo' quando for navegar pelo menu.", "padrao": "auto"},
     },
     disponivel="web",
 )
-def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=False):
+def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=False, imagens=False, mapa="auto"):
     """Busca na web pelo provedor escolhido e extrai paginas por URL."""
     if not busca_configurada():
         return ("ERRO: navegacao web desativada. Ative a chave do DeepSeek ou da Tavily em "
@@ -506,19 +574,23 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
         
         navegacao = ""
         if url_especifica and not termos:
-            mapa = []
+            linhas_do_mapa = []
             for idx, res in enumerate(resultado.get("results", []), 1):
-                achadas, _ = paginas_web.ligacoes(res.get("url", ""), 20)
-                if not achadas:
-                    continue
-                mapa.append(f"FONTE {idx}: {res.get('url', '')}")
-                for ligacao in achadas:
-                    onde = "area" if ligacao["mesma_area"] else "site"
-                    mapa.append(f"  [{onde}] {ligacao['texto']} -> {ligacao['url']}")
-            if mapa:
-                navegacao = ("\n=== NAVEGACAO DA PAGINA (menu e links que ela mostra) ===\n"
-                             + "\n".join(mapa) + "\n"
-                             "Para abrir a que interessa use 'url_especifica' (varias? uma por linha).\n")
+                endereco = res.get("url", "")
+                dados = paginas_web.mapa(endereco)
+                gravadas, falhadas = [], []
+                if imagens and dados.get("imagens"):
+                    emit_event("status", message=f"Navegando: baixando as imagens de {endereco[:70]}")
+                    gravadas, falhadas = paginas_web.gravar_imagens(
+                        dados["imagens"], os.path.join(APP_ROOT, ".axio", "web")
+                    )
+                completo = (mapa or "").strip().lower() in ("completo", "completa", "tudo")
+                linhas_do_mapa.extend(_linhas_do_mapa(idx, endereco, dados,
+                                                      gravadas if imagens else None, falhadas, completo))
+            if linhas_do_mapa:
+                navegacao = ("\n=== ESTRUTURA DA PAGINA (secoes do indice, menu da secao e imagens) ===\n"
+                             + "\n".join(linhas_do_mapa) + "\n"
+                             "Para abrir uma ligacao use 'url_especifica' (varias? uma por linha).\n")
 
         estado["urls_navegadas_turno"].update(fontes)
 
