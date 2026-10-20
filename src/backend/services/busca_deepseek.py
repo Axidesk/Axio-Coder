@@ -9,6 +9,7 @@ LIMITE_DO_RESUMO = 700
 LIMITE_DO_TEXTO = 12000
 TEMPO_DE_BUSCA = 20
 TEMPO_DE_EXTRAIR = 35
+_ULTIMA_NOTA = ""
 
 
 class ErroDoProvedor(Exception):
@@ -91,7 +92,12 @@ def _na_frente_as_latinas(itens, query):
     return latinas + outras
 
 
-_IDIOMAS_PREFERIDOS = ("en", "pt-br", "pt", "es", "fr", "de", "it")
+_PALAVRAS_EM_PORTUGUES = frozenset((
+    "nao", "não", "para", "como", "erro", "esta", "está", "fazer", "instalar", "baixar",
+    "preciso", "quero", "qual", "onde", "porque", "tambem", "também", "arquivo", "usando",
+    "funciona", "exemplo", "servidor", "versao", "versão",
+))
+_PALAVRA_SIMPLES = re.compile(r"[a-zà-ÿ]+")
 _CODIGOS_DE_IDIOMA = frozenset((
     "af", "ar", "az", "be", "bg", "bn", "bs", "ca", "cs", "cy", "da", "de", "el", "en",
     "eo", "es", "et", "eu", "fa", "fi", "fr", "ga", "gl", "gu", "he", "hi", "hr", "hu",
@@ -122,39 +128,62 @@ def _idioma_declarado(url):
     return ""
 
 
-def _idioma_preferido(codigo):
+def _idioma_preferido(codigo, aceitos=("en", "pt")):
     if not codigo:
         return False
     base = codigo.split("-")[0]
-    return any(base == preferido.split("-")[0] for preferido in _IDIOMAS_PREFERIDOS)
+    return any(base == preferido.split("-")[0] for preferido in aceitos)
 
 
-def _chave_de_variante(url):
-    """Duas traducoes da mesma pagina caem no mesmo grupo quando o caminho e o mesmo."""
+_SEGMENTO_DE_VERSAO = re.compile(
+    r"^(v?\d+(?:[._]\d+)*|latest|stable|current|dev|master|main|head|pr-\d+)$", re.I
+)
+
+
+def _sufixo_do_caminho(url, quantos=2):
+    """O fim do caminho sem o prefixo de idioma nem a versao: /pt-br/3.16/library/x -> library/x."""
+    segmentos = [s for s in (urlparse(url or "").path or "/").split("/") if s]
+    uteis = []
+    for segmento in segmentos:
+        limpo = _EXTENSAO_NO_FIM.sub("", segmento)
+        if not limpo or _SEGMENTO_DE_VERSAO.match(limpo):
+            continue
+        if limpo.lower() in _CODIGOS_DE_IDIOMA:
+            continue
+        uteis.append(limpo)
+    return "/".join(uteis[-quantos:])
+
+
+def _chave_de_variante(url, idioma=""):
+    """Duas traducoes da mesma pagina caem no mesmo grupo quando o fim do caminho e o mesmo."""
+    sufixo = _sufixo_do_caminho(url)
+    if idioma and sufixo:
+        return "idioma:" + sufixo
     partes = urlparse(url or "")
     caminho = _EXTENSAO_NO_FIM.sub("", (partes.path or "/").rstrip("/"))
-    if _idioma_declarado(url) and caminho.count("/") >= 2:
-        return "idioma:" + caminho
     chave = partes.netloc + caminho
     if partes.query:
         chave += "?" + partes.query
     return chave
 
 
-def _sem_variantes_de_idioma(resultados):
+def _sem_variantes_de_idioma(resultados, query=""):
     """Uma pagina traduzida em cinco idiomas ocupa cinco lugares; fica a melhor variante."""
+    aceitos = _idiomas_da_query(query)
     grupos, ordem = {}, []
     for indice, item in enumerate(resultados):
-        chave = _chave_de_variante(item.get("url") or "")
+        url = item.get("url") or ""
+        idioma = _idioma_declarado(url) or _idioma_do_texto(item.get("title") or "")
+        chave = _chave_de_variante(url, idioma)
         if chave not in grupos:
             grupos[chave] = []
             ordem.append(chave)
-        grupos[chave].append((_idioma_declarado(item.get("url") or ""), indice, item))
+        grupos[chave].append((idioma, indice, item))
     finais = []
     for chave in ordem:
         candidatos = grupos[chave]
         candidatos.sort(key=lambda t: (
-            0 if _idioma_preferido(t[0]) else (1 if t[0] else 0.5),
+            0 if _idioma_preferido(t[0], aceitos) else (1 if t[0] else 0.5),
             t[1],
         ))
         finais.append(candidatos[0][2])
@@ -166,11 +195,202 @@ def _no_idioma_da_pergunta(resultados, query):
     if _CJK.search(query or ""):
         return resultados
 
+    aceitos = _idiomas_da_query(query)
+
     def peso(item):
-        codigo = _idioma_declarado(item.get("url") or "")
-        return 0 if (not codigo or _idioma_preferido(codigo)) else 1
+        codigo = _idioma_declarado(item.get("url") or "") or _idioma_do_texto(item.get("title") or "")
+        return 0 if (not codigo or _idioma_preferido(codigo, aceitos)) else 1
 
     return sorted(resultados, key=peso)
+
+
+_TERMOS_VAZIOS = frozenset((
+    "a", "o", "as", "os", "de", "da", "do", "das", "dos", "e", "em", "no", "na", "nos", "nas",
+    "para", "pra", "por", "com", "um", "uma", "que", "se", "ao", "aos", "como", "mais", "sobre",
+    "the", "and", "for", "with", "how", "what", "who", "why", "when", "where", "of", "to", "in",
+    "on", "at", "is", "are", "be", "it", "this", "that", "from", "by", "or", "not",
+    "el", "la", "los", "las", "del", "y", "en", "con", "una", "uno", "les", "des", "du", "et",
+    "une", "der", "die", "das", "und", "mit", "fur", "von",
+    "site", "lang", "after", "before",
+))
+
+_OPERADOR_NA_QUERY = re.compile(r"\b(?:site|after|before|lang):\S+", re.I)
+_TERMO_NA_QUERY = re.compile(r"[0-9a-zA-ZÀ-ÿ][0-9a-zA-ZÀ-ÿ+#._-]{2,}")
+
+
+def _distintivos(query):
+    """O que a pergunta quer dizer sobre o assunto: fora os operadores e as palavras vazias."""
+    texto = _OPERADOR_NA_QUERY.sub(" ", query or "")
+    termos = []
+    for bruto in _TERMO_NA_QUERY.findall(texto.lower()):
+        limpo = bruto.strip("._-")
+        if len(limpo) >= 3 and limpo not in _TERMOS_VAZIOS and limpo not in termos:
+            termos.append(limpo)
+    return termos
+
+
+def _dominio(url):
+    return (urlparse(url or "").netloc or "").lower().removeprefix("www.")
+
+
+def _cobertura(item, termos):
+    alvo = " ".join((
+        item.get("title") or "", item.get("content") or "", item.get("url") or ""
+    )).lower()
+    return sum(1 for termo in termos if termo in alvo)
+
+
+_CAMINHOS_DE_FORUM = (
+    "/answers/", "/questions/", "/forum", "/forums/", "/community/", "/threads/",
+    "/discussion", "/topic/", "stackoverflow.com/questions", "/issues/", "/comments/",
+)
+_PALAVRAS_DE_PROBLEMA = (
+    "erro", "error", "falha", "fail", "corrigir", "crash", "exception", "traceback",
+    "problema", "issue", "bug", "nao funciona", "not working", "dll", "exit code",
+)
+
+
+def _e_forum(item):
+    endereco = (item.get("url") or "").lower()
+    return any(caminho in endereco for caminho in _CAMINHOS_DE_FORUM)
+
+
+def _pede_ajuda_com_problema(query):
+    alvo = (query or "").lower()
+    return any(palavra in alvo for palavra in _PALAVRAS_DE_PROBLEMA)
+
+
+def _da_fonte_do_projeto(item, termos):
+    """O dominio que carrega o nome do proprio projeto (docs.vulkan.org para 'vulkan')."""
+    dominio = _dominio(item.get("url") or "")
+    return bool(dominio) and any(termo in dominio for termo in termos)
+
+
+def _por_utilidade(resultados, query):
+    """A fonte do proprio projeto sobe, o resultado fora do assunto desce, e o forum idem.
+
+    So reordena: a ordem relativa de quem tem o mesmo peso fica a da API, que e a que
+    conhece o ranking. Nada e apagado aqui.
+    """
+    termos = _distintivos(query)
+    if not termos:
+        return resultados
+    minimo = max(1, (len(termos) + 1) // 2)
+    aceita_forum = _pede_ajuda_com_problema(query)
+
+    def peso(par):
+        indice, item = par
+        cobertura = _cobertura(item, termos)
+        ponto = 0
+        if cobertura >= minimo:
+            ponto += 2
+        elif cobertura == 0:
+            ponto -= 2
+        if _da_fonte_do_projeto(item, termos):
+            ponto += 1
+        if not aceita_forum and _e_forum(item):
+            ponto -= 1
+        return (-ponto, indice)
+
+    return [item for _, item in sorted(enumerate(resultados), key=peso)]
+
+
+_LANG_NA_QUERY = re.compile(r"\blang:([a-z]{2}(?:[-_][a-z]{2,4})?)", re.I)
+
+_ESCRITAS = (
+    ("ja", re.compile(r"[぀-ヿ]")),
+    ("ko", re.compile(r"[가-힯]")),
+    ("zh", re.compile(r"[㐀-䶿一-鿿]")),
+    ("ru", re.compile(r"[Ѐ-ӿ]")),
+    ("ar", re.compile(r"[؀-ۿ]")),
+    ("he", re.compile(r"[֐-׿]")),
+    ("el", re.compile(r"[Ͱ-Ͽ]")),
+    ("th", re.compile(r"[฀-๿]")),
+)
+
+
+_MARCAS_EM_INGLES = frozenset((
+    "the", "and", "of", "to", "is", "are", "with", "for", "this", "that", "from", "you",
+    "your", "will", "can", "not", "how", "what", "when", "have", "has", "been", "which",
+))
+_MARCAS_EM_PORTUGUES = frozenset((
+    "que", "para", "como", "nao", "não", "uma", "dos", "das", "com", "esta", "está", "seu",
+    "sua", "pelo", "pela", "voce", "você", "mais", "sem", "aos", "foi", "sao", "são", "tem",
+))
+
+
+def _idiomas_pedidos(query):
+    return [m.group(1).lower().replace("_", "-") for m in _LANG_NA_QUERY.finditer(query or "")]
+
+
+def _idiomas_da_query(query):
+    """Uma pergunta em portugues quer portugues ou ingles; uma em ingles nao quer alemao."""
+    palavras = set(_PALAVRA_SIMPLES.findall((query or "").lower()))
+    if palavras & _PALAVRAS_EM_PORTUGUES:
+        return ("pt", "en")
+    return ("en", "pt")
+
+
+def _idioma_latino(texto):
+    """Portugues ou ingles pelo peso das palavras funcionais: um titulo curto nao decide."""
+    palavras = _PALAVRA_SIMPLES.findall((texto or "").lower())
+    if len(palavras) < 12:
+        return ""
+    portugues = sum(1 for p in palavras if p in _MARCAS_EM_PORTUGUES)
+    ingles = sum(1 for p in palavras if p in _MARCAS_EM_INGLES)
+    if max(portugues, ingles) < 3:
+        return ""
+    return "pt" if portugues > ingles else "en"
+
+
+def _idioma_do_texto(texto):
+    """O idioma que se ve na escrita (para quem nao declara idioma no endereco)."""
+    for codigo, padrao in _ESCRITAS:
+        if padrao.search(texto or ""):
+            return codigo
+    return _idioma_latino(texto)
+
+
+def _mesmo_idioma(um, outro):
+    if not um or not outro:
+        return False
+    return um.split("-")[0] == outro.split("-")[0]
+
+
+def _por_idioma_pedido(resultados, query):
+    """A API ignora o lang:: quem filtra e este codigo, pelo idioma que a pagina declara."""
+    pedidos = _idiomas_pedidos(query)
+    if not pedidos:
+        return resultados, ""
+
+    certos, sem_idioma, outros = [], [], []
+    for item in resultados:
+        amostra = (item.get("title") or "") + " " + (item.get("content") or "")[:400]
+        codigo = _idioma_declarado(item.get("url") or "") or _idioma_do_texto(amostra)
+        if any(_mesmo_idioma(codigo, pedido) for pedido in pedidos):
+            certos.append(item)
+        elif not codigo:
+            sem_idioma.append(item)
+        else:
+            outros.append(item)
+
+    alvo = ", ".join(pedidos)
+    if not certos:
+        if sem_idioma:
+            return sem_idioma, (
+                f"lang:{alvo}: nenhuma destas fontes declara idioma no endereco, logo o filtro "
+                f"nao pode ser verificado (a API ignora o operador) — ficaram so as que nao declaram."
+            )
+        return resultados, (
+            f"lang:{alvo} nao pode ser cumprido: todas as fontes vieram noutro idioma "
+            f"(a API ignora o operador)."
+        )
+    nota = f"lang:{alvo} aplicado localmente: {len(certos)} no idioma pedido"
+    if sem_idioma:
+        nota += f", {len(sem_idioma)} sem idioma declarado"
+    if outros:
+        nota += f", {len(outros)} fora do idioma descartado(s)"
+    return certos + sem_idioma, nota + "."
 
 
 def _resultado(item, ler=False):
@@ -200,15 +420,24 @@ def pesquisar(query, count=5, dominios=None, ler=False):
     consulta = _normalizar_datas(_consulta_com_dominios(query, dominios or []))
     corpo = {
         "query": consulta,
-        "count": min(alvo + 5, 50),
+        "count": min(alvo + 10, 50),
         "need_content": bool(ler),
     }
     dados = _pedido("/v1/tools/search", corpo, TEMPO_DE_BUSCA)
     itens = [_resultado(item, ler) for item in (dados.get("results") or []) if item.get("url")]
-    itens = _sem_variantes_de_idioma(itens)
+    itens = _sem_variantes_de_idioma(itens, consulta)
     itens = _no_idioma_da_pergunta(itens, consulta)
     itens = _na_frente_as_latinas(itens, consulta)
+    itens, nota = _por_idioma_pedido(itens, consulta)
+    itens = _por_utilidade(itens, consulta)
+    global _ULTIMA_NOTA
+    _ULTIMA_NOTA = nota
     return itens[:alvo]
+
+
+def ultima_nota():
+    """O que os filtros locais fizeram na ultima busca (idioma pedido, fonte descartada)."""
+    return _ULTIMA_NOTA
 
 
 def extrair(url):

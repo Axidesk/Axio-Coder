@@ -434,12 +434,15 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
     try:
         origem_servida = []
         aviso_do_provedor = ""
+        nota_do_filtro = ""
         if url_especifica:
             pedidas = [linha.strip() for linha in url_especifica.splitlines() if linha.strip()]
             emit_event("status", message=f"Navegando: {', '.join(pedidas)[:120]}")
             resultado, origem_servida, _ = _extrair_paginas(pedidas)
         elif query:
             resultado, origem_servida, falhas = _pesquisar(query, dominios, ler=ler)
+            if "deepseek" in origem_servida:
+                nota_do_filtro = busca_deepseek.ultima_nota()
             if not resultado.get("results") and falhas:
                 return _texto_das_falhas(falhas)
             if falhas:
@@ -518,6 +521,8 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
             resumo += f"🔎 provedor: {_nomes_dos_provedores(origem_servida)}\n"
         if aviso_do_provedor:
             resumo += aviso_do_provedor
+        if nota_do_filtro:
+            resumo += f"🌐 {nota_do_filtro}\n"
 
         niveis = [_nivel_do_resultado(res) for res in resultado.get("results", [])]
 
