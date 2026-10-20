@@ -5,7 +5,7 @@ import time
 from urllib.parse import urlparse
 
 from src.backend.config import caminho_data
-from src.backend.services import busca_deepseek
+from src.backend.services import busca_deepseek, paginas_web
 from src.backend.state import emit_event, estado
 from src.backend.tools.registry import register
 
@@ -405,7 +405,7 @@ def _nivel_do_resultado(res):
 
 @register(
     "tool_buscar_web",
-    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
+    "Pesquisa na internet (Tavily ou DeepSeek) ou extrai uma URL específica. 'query' busca por termo e 'url_especifica' extrai uma página. Cada fonte volta etiquetada por confiança (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG): sem nenhuma OFICIAL, repita a busca com 'dominios' apontado à documentação do projeto. Com 'ler' a MESMA chamada traz o texto das páginas (na DeepSeek é o mesmo pedido com need_content, sem um segundo pedido por URL); sem ele vem só o resumo de ~700 caracteres e o Fetch (4s por página) é o caminho para ler. Na dúvida, ligue 'ler' quando for para ler o conteúdo e deixe desligado quando for só escolher onde clicar. O conteúdo bruto fica em data/busca.txt. Ao extrair uma URL (sem 'filtro'), a resposta termina com a NAVEGACAO da pagina - o menu e os links dela, da mesma secao primeiro - que e o caminho para achar a pagina certa quando a que se recebeu nao e a que interessa: leia ali e peca a escolhida por 'url_especifica'. Com 'filtro' (um termo por linha, ex: Sigurd|Sells) o conteúdo devolvido fica reduzido às linhas que contêm algum desses termos, com a contagem — o texto integral continua no ficheiro. Use-o sempre que só lhe interessar uma parte da página. Aceita VÁRIOS pedidos numa só chamada: um termo por linha em 'query' (uma busca por linha) ou uma URL por linha em 'url_especifica' (uma única extração para todas) — o resultado vem agrupado por pedido.",
     {
         'query': {"tipo": "STRING", "desc": 'Termo de busca na web. Vários assuntos? um por linha: faz uma busca para cada e agrupa o resultado.', "padrao": ""},
         'url_especifica': {"tipo": "STRING", "desc": 'URL específica para extrair conteúdo. Várias páginas? uma por linha, numa só extração.', "padrao": ""},
@@ -495,8 +495,31 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
                                  "Comeco da pagina:\n")
                     contexto += "\n".join(inicio)[:12000] + "\n\n"
             else:
-                contexto += f"{conteudo[:30000]}\n\n"
+                limite_do_texto = 30000
+                if len(conteudo) > limite_do_texto:
+                    contexto += (f"{conteudo[:limite_do_texto]}\n\n"
+                                 f"[PAGINA CORTADA: faltam {len(conteudo) - limite_do_texto} caracteres. "
+                                 f"O texto inteiro esta em data/busca.txt - leia o resto com "
+                                 f"tool_ler_trecho_arquivo.]\n\n")
+                else:
+                    contexto += f"{conteudo}\n\n"
         
+        navegacao = ""
+        if url_especifica and not termos:
+            mapa = []
+            for idx, res in enumerate(resultado.get("results", []), 1):
+                achadas, _ = paginas_web.ligacoes(res.get("url", ""), 20)
+                if not achadas:
+                    continue
+                mapa.append(f"FONTE {idx}: {res.get('url', '')}")
+                for ligacao in achadas:
+                    onde = "area" if ligacao["mesma_area"] else "site"
+                    mapa.append(f"  [{onde}] {ligacao['texto']} -> {ligacao['url']}")
+            if mapa:
+                navegacao = ("\n=== NAVEGACAO DA PAGINA (menu e links que ela mostra) ===\n"
+                             + "\n".join(mapa) + "\n"
+                             "Para abrir a que interessa use 'url_especifica' (varias? uma por linha).\n")
+
         estado["urls_navegadas_turno"].update(fontes)
 
         emit_event("tool_sources", urls=fontes)
@@ -562,12 +585,16 @@ def tool_buscar_web(query="", url_especifica="", dominios="", filtro="", ler=Fal
         
         if termos:
             resumo += f"=== CONTEÚDO FILTRADO por {', '.join(termos)} (o integral está no log) ===\n" + contexto
+        elif url_especifica:
+            resumo += "=== PAGINA EXTRAIDA (Markdown) ===\n" + contexto
         elif ler:
             resumo += "=== TEXTO DAS FONTES (até 12000 chars por fonte) ===\n" + contexto
         else:
             resumo += ("=== RESUMO DAS FONTES (sem o texto completo) ===\n"
                        "Para ler uma página inteira repita a busca com ler=true, numa única chamada.\n") + contexto
-        
+
+        resumo += navegacao
+
         return resumo
         
     except Exception as e:

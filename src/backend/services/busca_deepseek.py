@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 import requests
 
 BASE = "https://api.deepseek.com"
+_ESCAPE_MARKDOWN = re.compile(r"\\([#*_.()\[\]\-+!|:<>%=&/$~^`{},;?@])")
 LIMITE_DO_RESUMO = 700
 LIMITE_DO_TEXTO = 12000
 TEMPO_DE_BUSCA = 20
@@ -393,15 +394,20 @@ def _por_idioma_pedido(resultados, query):
     return certos + sem_idioma, nota + "."
 
 
+def _desescapar(texto):
+    """O Fetch devolve o Markdown com toda a pontuacao escapada (\\#, \\.): sem isto le-se mal."""
+    return _ESCAPE_MARKDOWN.sub(r"\1", texto or "")
+
+
 def _resultado(item, ler=False):
     titulo = (item.get("title") or "").strip()
     resumo = (item.get("summary") or item.get("snippet") or "").strip()
     if ler:
         inteiro = (item.get("content") or "").strip() or resumo
-        conteudo = inteiro[:LIMITE_DO_TEXTO]
+        conteudo = _desescapar(inteiro[:LIMITE_DO_TEXTO])
     else:
         inteiro = f"# {titulo}\n{resumo}" if titulo else resumo
-        conteudo = inteiro[:LIMITE_DO_RESUMO]
+        conteudo = _desescapar(inteiro[:LIMITE_DO_RESUMO])
     return {
         "url": item.get("url") or "",
         "title": titulo,
@@ -449,6 +455,6 @@ def extrair(url):
     return {
         "url": url,
         "title": (dados.get("title") or "").strip(),
-        "content": conteudo,
+        "content": _desescapar(conteudo),
         "debug_content": conteudo,
     }
