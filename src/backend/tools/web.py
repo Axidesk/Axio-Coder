@@ -498,6 +498,8 @@ _RUIDO_DO_CORPO = ("internet explorer", "netscape", "javascript is disabled",
                    "your browser", "supported browser", "outdated browser",
                    "enable javascript")
 
+_SO_NUMERO = re.compile(r"[\d.,:/%+-]+")
+
 LIMITE_DO_PARAGRAFO = 300
 
 
@@ -505,6 +507,21 @@ def _para_comparar(texto):
     """Forma normalizada de um trecho, para saber se ele ja aparece no markdown."""
     limpo = re.sub(r"[^\w\s]", " ", html_lib.unescape(texto or "").lower())
     return " ".join(limpo.split())
+
+
+def _e_nome_do_site(linha, titulo):
+    """A linha que repete o <title> e o cabecalho do site, nao conteudo."""
+    alvo = _para_comparar(linha)
+    return bool(titulo) and bool(alvo) and alvo in _para_comparar(titulo)
+
+
+def _e_barra_de_numeros(linha):
+    """Linha feita de contadores (jogadores online, visitas) nao e texto da pagina."""
+    palavras = linha.split()
+    if len(palavras) < 4:
+        return False
+    numeros = sum(1 for palavra in palavras if _SO_NUMERO.fullmatch(palavra))
+    return numeros / len(palavras) >= 0.4
 
 
 def _linhas_do_complemento(dados, markdown, termos=None):
@@ -549,6 +566,7 @@ def _linhas_do_complemento(dados, markdown, termos=None):
             linhas.extend(bloco)
 
     if falta_texto:
+        titulo = dados.get("titulo") or ""
         corpo_util = []
         for linha in corpo.splitlines():
             baixa = linha.lower()
@@ -557,6 +575,8 @@ def _linhas_do_complemento(dados, markdown, termos=None):
             if any(marca in baixa for marca in _RUIDO_DO_CORPO):
                 continue
             if len(linha) > LIMITE_DO_PARAGRAFO:
+                continue
+            if _e_nome_do_site(linha, titulo) or _e_barra_de_numeros(linha):
                 continue
             if not serve(linha) or not falta(linha) or _para_comparar(linha) in ja_ditas:
                 continue

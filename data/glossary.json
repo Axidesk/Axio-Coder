@@ -3672,10 +3672,10 @@
       "descricao": "Etiqueta cada fonte da busca por confianca (OFICIAL, REPOSITORIO, COMUNIDADE, BLOG) usando a tabela DOMINIOS_OFICIAIS/DOMINIOS_FRACOS; sem fonte oficial entre as encontradas, avisa e manda refazer a busca com 'dominios' (um filtro que privilegia o dominio da documentacao oficial).",
       "localizacao": {
         "arquivo": "src/backend/tools/web.py",
-        "linha": 119,
+        "linha": 120,
         "conferido": [
-          1792514662.349,
-          31498
+          1792516407.064,
+          36951
         ]
       }
     },

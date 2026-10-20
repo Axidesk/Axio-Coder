@@ -136,6 +136,12 @@ def _rotulos(html):
     return rotulos
 
 
+def _titulo_da_pagina(html):
+    """Texto do <title>: o nome do site repetido no topo nao acrescenta nada ao corpo."""
+    casamento = re.search(r"<title[^>]*>(.*?)</title>", html or "", re.IGNORECASE | re.DOTALL)
+    return _limpar_texto(casamento.group(1)) if casamento else ""
+
+
 def _ligacoes(html, url):
     alvo = urlparse(url)
     vistos, textos, achadas = set(), set(), []
@@ -231,8 +237,9 @@ def mapa(url):
     html, erro = _baixar(url)
     if erro:
         return {"ligacoes": [], "secoes": [], "imagens": [], "texto": "", "tabelas": [],
-                "rotulos": [], "erro": erro}
+                "rotulos": [], "titulo": "", "erro": erro}
     return {
+        "titulo": _titulo_da_pagina(html),
         "ligacoes": _ligacoes(html, url),
         "secoes": _secoes(html),
         "imagens": _imagens(html, url),
