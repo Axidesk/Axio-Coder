@@ -1,5 +1,7 @@
 import os
 import re
+import time
+from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -33,34 +35,61 @@ def configurada():
     return bool(_chave())
 
 
+_MOTIVOS_POR_CODIGO = {
+    400: "pedido invalido",
+    401: "chave da DeepSeek invalida ou ausente",
+    402: "saldo da conta DeepSeek insuficiente",
+    403: "a politica de seguranca da DeepSeek recusou esta pagina",
+    404: "a pagina nao devolveu conteudo aproveitavel (fora do ar, bloqueada pelo site ou sem markdown)",
+    408: "tempo esgotado a ler o pedido",
+    413: "o pedido e grande demais",
+    429: "limite de pedidos por segundo (QPS) excedido",
+    500: "erro interno da DeepSeek",
+    504: "o site de destino demorou demais a responder",
+}
+
+
 def _mensagem_de_erro(resposta):
     try:
         dados = resposta.json()
     except ValueError:
         dados = {}
     erro = (dados or {}).get("error") or {}
-    return erro.get("message") or f"HTTP {resposta.status_code}"
+    motivo = _MOTIVOS_POR_CODIGO.get(resposta.status_code, "")
+    return erro.get("message") or motivo or f"HTTP {resposta.status_code}"
 
 
-def _pedido(caminho, corpo, tempo):
+_RECUPERAVEIS = (408, 429, 500, 502, 503, 504)
+
+
+def _pedido(caminho, corpo, tempo, tentativas=3):
+    """Repete nos 408/429/5xx, como a documentacao manda; os restantes 4xx nao se repetem."""
     chave = _chave()
     if not chave:
         raise ErroDoProvedor("chave da DeepSeek ausente", 401)
-    try:
-        resposta = requests.post(
-            BASE + caminho,
-            headers={"Authorization": f"Bearer {chave}", "Content-Type": "application/json"},
-            json=corpo,
-            timeout=tempo,
-        )
-    except requests.RequestException as erro:
-        raise ErroDoProvedor(f"falha de rede ({type(erro).__name__})") from erro
-    if resposta.status_code != 200:
+    for tentativa in range(tentativas):
+        try:
+            resposta = requests.post(
+                BASE + caminho,
+                headers={"Authorization": f"Bearer {chave}", "Content-Type": "application/json"},
+                json=corpo,
+                timeout=tempo,
+            )
+        except requests.RequestException as erro:
+            if tentativa + 1 < tentativas:
+                time.sleep(0.8 * (tentativa + 1))
+                continue
+            raise ErroDoProvedor(f"falha de rede ({type(erro).__name__})") from erro
+        if resposta.status_code == 200:
+            try:
+                return resposta.json() or {}
+            except ValueError as erro:
+                raise ErroDoProvedor("a resposta nao e JSON", 200) from erro
+        if resposta.status_code in _RECUPERAVEIS and tentativa + 1 < tentativas:
+            time.sleep(2.0 if resposta.status_code == 429 else 0.8 * (tentativa + 1))
+            continue
         raise ErroDoProvedor(_mensagem_de_erro(resposta), resposta.status_code)
-    try:
-        return resposta.json() or {}
-    except ValueError as erro:
-        raise ErroDoProvedor("a resposta nao e JSON", resposta.status_code) from erro
+    raise ErroDoProvedor("a DeepSeek nao respondeu depois de varias tentativas")
 
 
 def _consulta_com_dominios(query, dominios):
@@ -73,10 +102,18 @@ _DATA_SEM_MES = re.compile(r"\b(after|before):(\d{4})(?![\d-])")
 
 
 def _normalizar_datas(query):
-    """O after:2026 e lido como 'depois de 2026 inteiro' e devolve zero resultados."""
+    """after:2026 e lido como 'depois de 2026 inteiro' e devolve zero resultados.
+
+    So o ano corrente e o futuro levam essa correcao: para anos ja passados a leitura
+    natural da API e a que o usuario quer, e mexer nela mudaria a intencao.
+    """
+    este_ano = date.today().year
+
     def troca(achado):
         operador, ano = achado.group(1), achado.group(2)
-        return f"{operador}:{ano}-01-01" if operador == "after" else f"{operador}:{ano}-12-31"
+        if operador == "after" and int(ano) >= este_ano:
+            return f"{operador}:{ano}-01-01"
+        return achado.group(0)
 
     return _DATA_SEM_MES.sub(troca, query)
 
@@ -156,12 +193,20 @@ def _sufixo_do_caminho(url, quantos=2):
 
 
 def _chave_de_variante(url, idioma=""):
-    """Duas traducoes da mesma pagina caem no mesmo grupo quando o fim do caminho e o mesmo."""
+    """Duas traducoes da mesma pagina caem no mesmo grupo quando o fim do caminho e o mesmo.
+
+    O mesmo ficheiro servido por espelhos diferentes (chromium.googlesource.com e
+    chromium.cpp.hybrid-analysis.googlesource.com) tambem: caminho longo e identico
+    em dominios diferentes e copia, nao duas fontes.
+    """
     sufixo = _sufixo_do_caminho(url)
     if idioma and sufixo:
         return "idioma:" + sufixo
     partes = urlparse(url or "")
     caminho = _EXTENSAO_NO_FIM.sub("", (partes.path or "/").rstrip("/"))
+    segmentos = [s for s in caminho.split("/") if s and not _SEGMENTO_DE_VERSAO.match(s)]
+    if len(segmentos) >= 4:
+        return "caminho:" + "/".join(segmentos)
     chave = partes.netloc + caminho
     if partes.query:
         chave += "?" + partes.query
@@ -185,6 +230,7 @@ def _sem_variantes_de_idioma(resultados, query=""):
         candidatos = grupos[chave]
         candidatos.sort(key=lambda t: (
             0 if _idioma_preferido(t[0], aceitos) else (1 if t[0] else 0.5),
+            -(t[2].get("rerank_score") or 0),
             t[1],
         ))
         finais.append(candidatos[0][2])
@@ -268,10 +314,11 @@ def _da_fonte_do_projeto(item, termos):
 
 
 def _por_utilidade(resultados, query):
-    """A fonte do proprio projeto sobe, o resultado fora do assunto desce, e o forum idem.
+    """O rerank_score da API manda; a heuristica local so ajusta por cima.
 
-    So reordena: a ordem relativa de quem tem o mesmo peso fica a da API, que e a que
-    conhece o ranking. Nada e apagado aqui.
+    O rerank_score (0 a 3) ja combina relevancia, autoridade e frescor, logo e ele que
+    ordena - a fonte do proprio projeto sobe um pouco e o que nao cita a pergunta desce.
+    Nada e apagado aqui.
     """
     termos = _distintivos(query)
     if not termos:
@@ -279,24 +326,24 @@ def _por_utilidade(resultados, query):
     minimo = max(1, (len(termos) + 1) // 2)
     aceita_forum = _pede_ajuda_com_problema(query)
 
-    def peso(par):
+    def nota(par):
         indice, item = par
         cobertura = _cobertura(item, termos)
-        ponto = 0
+        ajuste = 0.0
         if cobertura >= minimo:
-            ponto += 2
+            ajuste += 1.0
         elif cobertura == 0:
-            ponto -= 2
+            ajuste -= 2.0
         if _da_fonte_do_projeto(item, termos):
-            ponto += 1
+            ajuste += 0.8
         if not aceita_forum and _e_forum(item):
-            ponto -= 1
-        return (-ponto, indice)
+            ajuste -= 1.0
+        return (-(float(item.get("rerank_score") or 0) + ajuste), indice)
 
-    return [item for _, item in sorted(enumerate(resultados), key=peso)]
+    return [item for _, item in sorted(enumerate(resultados), key=nota)]
 
 
-_LANG_NA_QUERY = re.compile(r"\blang:([a-z]{2}(?:[-_][a-z]{2,4})?)", re.I)
+_LANG_NA_QUERY = re.compile(r"\blang:((?:[a-z]{2}(?:[-_][a-z]{2,4})?)(?:\s*,\s*[a-z]{2}(?:[-_][a-z]{2,4})?)*)", re.I)
 
 _ESCRITAS = (
     ("ja", re.compile(r"[぀-ヿ]")),
@@ -321,7 +368,13 @@ _MARCAS_EM_PORTUGUES = frozenset((
 
 
 def _idiomas_pedidos(query):
-    return [m.group(1).lower().replace("_", "-") for m in _LANG_NA_QUERY.finditer(query or "")]
+    pedidos = []
+    for achado in _LANG_NA_QUERY.finditer(query or ""):
+        for codigo in achado.group(1).split(","):
+            codigo = codigo.strip().lower().replace("_", "-")
+            if codigo and codigo not in pedidos:
+                pedidos.append(codigo)
+    return pedidos
 
 
 def _idiomas_da_query(query):
@@ -359,7 +412,11 @@ def _mesmo_idioma(um, outro):
 
 
 def _por_idioma_pedido(resultados, query):
-    """A API ignora o lang:: quem filtra e este codigo, pelo idioma que a pagina declara."""
+    """O lang: da API so filtra com os codigos separados por virgula (lang:en,pt).
+
+    Como isso nao e garantido em toda a consulta, o idioma declarado por cada pagina e
+    conferido aqui e o que escapa e descartado.
+    """
     pedidos = _idiomas_pedidos(query)
     if not pedidos:
         return resultados, ""
@@ -380,13 +437,12 @@ def _por_idioma_pedido(resultados, query):
         if sem_idioma:
             return sem_idioma, (
                 f"lang:{alvo}: nenhuma destas fontes declara idioma no endereco, logo o filtro "
-                f"nao pode ser verificado (a API ignora o operador) — ficaram so as que nao declaram."
+                f"nao pode ser conferido — ficaram so as que nao declaram."
             )
         return resultados, (
-            f"lang:{alvo} nao pode ser cumprido: todas as fontes vieram noutro idioma "
-            f"(a API ignora o operador)."
+            f"lang:{alvo} nao pode ser cumprido: todas as fontes vieram noutro idioma."
         )
-    nota = f"lang:{alvo} aplicado localmente: {len(certos)} no idioma pedido"
+    nota = f"lang:{alvo}: {len(certos)} no idioma pedido"
     if sem_idioma:
         nota += f", {len(sem_idioma)} sem idioma declarado"
     if outros:
@@ -416,11 +472,13 @@ def _resultado(item, ler=False):
         "authority": item.get("authority"),
         "date": item.get("date") or "",
         "site_name": item.get("site_name") or "",
+        "site_icon": item.get("site_icon") or "",
+        "snippet": (item.get("snippet") or "").strip(),
         "rerank_score": item.get("rerank_score"),
     }
 
 
-def pesquisar(query, count=5, dominios=None, ler=False):
+def pesquisar(query, count=5, dominios=None, ler=False, pergunta=None):
     """Search da DeepSeek, devolvendo os resultados no formato dos da Tavily."""
     alvo = max(1, min(int(count or 5), 50))
     consulta = _normalizar_datas(_consulta_com_dominios(query, dominios or []))
@@ -429,6 +487,9 @@ def pesquisar(query, count=5, dominios=None, ler=False):
         "count": min(alvo + 10, 50),
         "need_content": bool(ler),
     }
+    original = (pergunta or query or "").strip()
+    if original and original != consulta:
+        corpo["ori_question"] = original[:128]
     dados = _pedido("/v1/tools/search", corpo, TEMPO_DE_BUSCA)
     itens = [_resultado(item, ler) for item in (dados.get("results") or []) if item.get("url")]
     itens = _sem_variantes_de_idioma(itens, consulta)
