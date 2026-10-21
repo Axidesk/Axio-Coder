@@ -23,6 +23,8 @@ _STOPWORDS = {
     "ter", "estar", "for", "haja", "haver", "houve", "dizer", "diz", "quer",
     "apos", "durante", "apenas", "tipo", "tipos", "forma", "maneira", "exemplo",
     "caso", "parte", "coisa", "coisas", "meio", "vez", "vezes",
+    "testar", "ajustar", "comecar", "corrigir", "verificar", "preciso", "quero",
+    "vamos", "ficar", "continua", "funciona",
     "the", "and", "that", "with", "this", "from", "have", "has", "are",
     "was", "were", "will", "would", "should", "could", "can", "may", "might",
     "must", "shall", "you", "your", "them", "they", "their", "there", "here",
@@ -185,6 +187,18 @@ def _termos_relevantes(query):
         if p not in vistos:
             vistos.append(p)
     return vistos
+
+def termos_de_assunto(texto):
+    """Termos que identificam ASSUNTO: sem acento, sem palavra vazia, sem repeticao.
+
+    Devolve um CONJUNTO (e nao lista) porque quem o usa compara assuntos por
+    intersecao: medido a 2026-10-21 no palace real, uma consulta sem relacao com
+    o projeto devolve 8 hits entre 0,467 e 0,524 de similaridade sem NENHUM
+    termo em comum, enquanto as notas uteis de um assunto verdadeiro pontuam
+    mais BAIXO (0,457 a 0,540) e partilham sempre alguma palavra tecnica -
+    o numero sozinho nao separa os dois casos, o vocabulario separa.
+    """
+    return set(_termos_relevantes(texto))
 
 def _score_textual(query, conteudo):
     """Cobertura: quantos termos DA CONSULTA aparecem no texto.

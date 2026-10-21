@@ -22,6 +22,7 @@ from src.backend.memory.store import (
     buscar_knowledge_textual,
     idade_legivel,
     data_legivel,
+    termos_de_assunto,
 )
 from src.backend.memory.manutencao import deduplicar_textos
 from src.backend.tools.code_index import buscar_codigo_relevante_para_contexto
@@ -57,6 +58,7 @@ def _e_historico(hit):
 SIMILARIDADE_MINIMA_TRANSCRICAO = 0.60
 SIMILARIDADE_MINIMA_NOTA = 0.45
 LIMITE_TRANSCRICOES = 1
+LIMIAR_DE_CONFIANCA = 0.60
 
 
 def _inicio_da_sessao():
@@ -215,7 +217,7 @@ def _reforcar_notas_curadas(query, palace_path, wing, hits):
         query=query,
         palace_path=palace_path,
         wing=wing,
-        n_results=3,
+        n_results=5,
         timeout=4.0,
         room=ROOM_NOTAS,
     )
@@ -237,7 +239,7 @@ def _registrar_injecao(hit):
     estado.setdefault("memorias_injetadas", {})[_marca_do_texto(hit.get("text"))] = time.time()
 
 
-def _selecionar_memorias(hits):
+def _selecionar_memorias(hits, prompt_usuario=""):
     """Separa o que pode entrar no contexto do que so ocuparia espaco.
 
     Tres cortes, todos medidos no palace real a 2026-09-26:
@@ -252,12 +254,18 @@ def _selecionar_memorias(hits):
        historico dela.
     3. REPETICAO - o mesmo texto ja injetado nesta sessao nao volta. E o que
        impede uma memoria de me fazer repetir uma resposta ja dada.
+    4. ASSUNTO - o piso de similaridade NAO separa sozinho: a consulta sem
+       relacao pontua MAIS ALTO (0,467-0,524) do que notas uteis de um assunto
+       verdadeiro (0,457-0,540). Subir o piso mataria justamente as boas. O que
+       corta o ruido e exigir um termo significativo em comum sempre que a
+       similaridade ficar abaixo do limiar de confianca.
 
     Devolve (mantidos, omitidos) com a contagem por motivo.
     """
     mantidos = []
-    omitidos = {"irrelevante": 0, "conversa_atual": 0, "repetido": 0}
+    omitidos = {"irrelevante": 0, "conversa_atual": 0, "repetido": 0, "sem_assunto": 0}
     usadas = estado.setdefault("memorias_injetadas", {})
+    termos_consulta = termos_de_assunto(prompt_usuario)
     for hit in sorted(hits, key=_e_historico):
         piso = SIMILARIDADE_MINIMA_NOTA if _e_nota_curada(hit) else SIMILARIDADE_MINIMA_TRANSCRICAO
         try:
@@ -266,6 +274,10 @@ def _selecionar_memorias(hits):
             simil = 0.0
         if simil < piso:
             omitidos["irrelevante"] += 1
+            continue
+        if (termos_consulta and simil < LIMIAR_DE_CONFIANCA
+                and not (termos_de_assunto(hit.get("text", "")) & termos_consulta)):
+            omitidos["sem_assunto"] += 1
             continue
         if _e_conversa_viva(hit):
             omitidos["conversa_atual"] += 1
@@ -286,6 +298,8 @@ def _nota_de_omissao(omitidos):
         partes.append(f"{omitidos['repetido']} ja usadas nesta sessao")
     if omitidos.get("irrelevante"):
         partes.append(f"{omitidos['irrelevante']} abaixo da relevancia")
+    if omitidos.get("sem_assunto"):
+        partes.append(f"{omitidos['sem_assunto']} de outro assunto")
     if not partes:
         return ""
     return "[filtro] fora: " + ", ".join(partes) + "."
@@ -327,7 +341,7 @@ def coletar_contexto(prompt_usuario, wing_atual, palace_path):
             return "(nenhuma memória relevante para esta consulta)"
         if not any(_e_nota_curada(h) for h in hits):
             hits = _reforcar_notas_curadas(prompt_usuario, palace_path, wing_atual, hits)
-        mantidos, omitidos = _selecionar_memorias(hits)
+        mantidos, omitidos = _selecionar_memorias(hits, prompt_usuario)
         if not mantidos:
             return _sem_memoria(omitidos)
         texto, incluidos = _rotular_memorias(mantidos, projeto_atual=wing_atual)
