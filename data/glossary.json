@@ -1145,10 +1145,10 @@
       "descricao": "Bloco injetado a cada rodada. Passa por tres cortes antes de entrar: relevancia (transcricao 0,60; nota curada 0,45 - uma pergunta sem relacao devolvia 8 hits entre 0,467 e 0,524, e o limiar antigo de 0,45 deixava passar tudo), conversa viva (transcricao gravada depois do inicio da sessao e eco da conversa de agora) e repeticao (texto ja injetado nesta sessao nao volta; o registo vive em estado['memorias_injetadas'] e morre ao abrir pasta ou limpar a conversa). Limite de 1 transcricao por rodada. A sobra sai declarada na linha '[filtro] fora: ...'.",
       "localizacao": {
         "arquivo": "src/backend/ai/coleta.py",
-        "linha": 240,
+        "linha": 242,
         "conferido": [
-          1790444456.531,
-          15144
+          1792609670.221,
+          15995
         ]
       }
     },
@@ -3674,8 +3674,8 @@
         "arquivo": "src/backend/tools/web.py",
         "linha": 120,
         "conferido": [
-          1792516407.064,
-          36951
+          1792516530.034,
+          37696
         ]
       }
     },
