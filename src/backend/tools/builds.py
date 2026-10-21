@@ -194,6 +194,10 @@ def _construir(pasta, configuracao, alvo, plataforma=""):
         resumo = _resumo_do_build(pasta, crua, time.time() - inicio, marca, produzidos)
         blocos.append(f"{resumo}\n{_texto_executaveis(produzidos)}\n{saida}")
         return True, "\n\n".join(blocos)
+    pos_build = _falha_so_no_pos_build(saida, produzidos)
+    if pos_build:
+        blocos.append(f"{pos_build}\n\nSAIDA DO BUILD:\n{saida}")
+        return False, "\n\n".join(blocos)
     blocos.append(f"ERRO AO COMPILAR (exit {resultado.returncode}):\n{saida}")
     return False, "\n\n".join(blocos)
 
@@ -245,6 +249,24 @@ def _resumo_do_build(pasta, saida_crua, decorrido, marca, produzidos=()):
                 f"edite os .cpp um a um."
             )
     return "\n".join(linhas)
+
+def _falha_so_no_pos_build(saida, produzidos):
+    """Diz se o codigo compilou e ligou, e so o passo POS-BUILD falhou.
+
+    Caso frequente num projeto cujo post-build copia o executavel para a pasta de execucao: a copia
+    falha porque o programa (ou o servidor que o usa) esta aberto e o Windows tranca o ficheiro. O
+    codigo ficou compilado e o executavel existe; responder 'ERRO AO COMPILAR' manda procurar um erro
+    de codigo que nao existe.
+    """
+    if not produzidos or "MSB3073" not in saida:
+        return ""
+    if any(m in saida for m in ("error C", "error LNK", "error RC")):
+        return ""
+    escritos = ", ".join(p["caminho"].replace("\\", "/") for p in produzidos[:3])
+    return (f"CODIGO COMPILADO E LIGADO - falhou apenas o passo POS-BUILD (MSB3073).\n"
+            f"  O executavel saiu: {escritos}\n"
+            "  A causa habitual e o destino da copia estar em uso (programa ou servidor aberto). "
+            "Feche-o e repita o build, ou copie o ficheiro a mao depois de o fechar.")
 
 def _bloqueio(plano):
     if plano.get("erro"):

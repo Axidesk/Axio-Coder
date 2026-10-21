@@ -6069,8 +6069,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 602,
         "conferido": [
-          1791574309.723,
-          53954
+          1792620915.337,
+          53952
         ]
       }
     },
@@ -6083,8 +6083,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1281,
         "conferido": [
-          1791574309.723,
-          53954
+          1792620915.337,
+          53952
         ]
       }
     },
@@ -6140,10 +6140,10 @@
       "descricao": "A combobox que substituiu a lista de personagens recolhidos: fechada diz \"selecionar personagem (N)\", cada opcao e \"nome . lvl N\" e o primeiro item e \"criar personagem\". Ao lado da combobox das contas, que mostra o email (ou \"conta id . senha\" quando nao ha email).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 782,
+        "linha": 809,
         "conferido": [
-          1791573285.443,
-          42375
+          1792620896.439,
+          44153
         ]
       }
     },
@@ -6160,10 +6160,10 @@
       "descricao": "A lixeira que vive ao lado do contador de cada tabela no bloco Manutencao: o 1o clique mostra no recado o que sai e o 2o esvazia (DELETE com a guarda do God). Antes de apagar, grava sempre uma copia so daquela tabela.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 987,
+        "linha": 1014,
         "conferido": [
-          1791573285.443,
-          42375
+          1792620896.439,
+          44153
         ]
       }
     },
@@ -6176,8 +6176,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1313,
         "conferido": [
-          1791574309.723,
-          53954
+          1792620915.337,
+          53952
         ]
       }
     },
@@ -6194,10 +6194,10 @@
       "descricao": "Cadeado que aparece encostado a combobox da conta quando a conta esta bloqueada, com o nome da conta em vermelho na lista. Substituiu o bloco \"Bloqueada\" escrito no corpo.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 809,
+        "linha": 836,
         "conferido": [
-          1791573285.443,
-          42375
+          1792620896.439,
+          44153
         ]
       }
     },
@@ -6230,10 +6230,10 @@
       "descricao": "Botao do olho ao lado de um campo de senha do painel do banco: o campo nasce VISIVEL (type=text) e o clique oculta (type=password) trocando o desenho para OLHO_RISCADO e acendendo o botao (aria-pressed). Usado no campo da senha da conta escolhida e no da conta nova.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 866,
+        "linha": 893,
         "conferido": [
-          1791573285.443,
-          42375
+          1792620896.439,
+          44153
         ]
       }
     },
@@ -6830,10 +6830,10 @@
       "descricao": "As cinco bênçãos do servidor, marcáveis na ficha do personagem do painel. Vivem na tabela player_storage (chaves 95004, 95005, 95007, 95009, 95013, value=1) e é o login.lua do servidor que as conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 516,
+        "linha": 543,
         "conferido": [
-          1791573285.443,
-          42375
+          1792620896.439,
+          44153
         ]
       }
     },
