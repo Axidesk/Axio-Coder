@@ -316,6 +316,163 @@ def tool_marcar_portas_otbm(caminho_relativo, posicoes="", actionid=0, ids="", a
     return "\n".join(linhas)
 
 
+@register(
+    "tool_ler_items_otb",
+    "Le o items.otb (o binario de itens do servidor, NAO o items.xml) e diz, item a item, as flags REAIS: "
+    "se MOVE, se PEGA, se bloqueia a passagem, e o clientId - o id visual que o cliente desenha. E a "
+    "resposta a 'porque e que este item nao se move' e a 'o id que eu criei existe mesmo no ficheiro': um "
+    "item que so exista no items.xml carrega sem as flags do otb e nasce IMOVEL, por mais atributos que "
+    "tenha no XML. E tambem a resposta a confusao dos sprites repetidos: varios serverIds podem apontar "
+    "para o mesmo clientId, logo o tooltip do cliente mostra o mesmo numero para todos e NAO distingue um "
+    "do outro - o que distingue e esta leitura. Com 'items_xml' cruza o nome e o peso (o que o jogador ve "
+    "ao olhar) e denuncia o item que o XML descreve mas o otb nao conhece. 'sem_mover' lista de uma vez os "
+    "itens do XML que o otb deixa fixos.",
+    {
+        "caminho_relativo": {
+            "tipo": "STRING",
+            "desc": "Arquivo items.otb, dentro do projeto.",
+            "obrig": True,
+            "padrao": "",
+        },
+        "ids": {
+            "tipo": "STRING",
+            "desc": "Os item ids a medir, separados por virgula ou um por linha. Vazio com acao 'flags' mostra o resumo do ficheiro.",
+            "padrao": "",
+        },
+        "items_xml": {
+            "tipo": "STRING",
+            "desc": "Opcional: o items.xml do servidor, para cruzar o nome e o peso de cada id.",
+            "padrao": "",
+        },
+        "acao": {
+            "tipo": "STRING",
+            "desc": "'flags' (mede os ids pedidos, ou resume o ficheiro sem ids), 'sem_mover' (todos os itens do XML que o otb deixa fixos) ou 'sprites' (que serverIds apontam para o mesmo clientId de um id pedido).",
+            "padrao": "flags",
+        },
+    },
+)
+def tool_ler_items_otb(caminho_relativo, ids="", items_xml="", acao="flags"):
+    emit_event("executing", function=f"Lendo items.otb: {caminho_relativo}")
+    alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
+    if erro:
+        return erro
+    if not os.path.isfile(alvo):
+        return f"ERRO: arquivo nao encontrado: {caminho_relativo}"
+
+    itens = _itens_do_otb(_bytes_do_mapa(alvo))
+    if not itens:
+        return f"ERRO: '{caminho_relativo}' nao parece um items.otb (nenhum no de item encontrado)."
+
+    nomes = _nomes_do_items_xml(items_xml) if items_xml else {}
+    escolha = (acao or "flags").strip().lower()
+    pedidos = [int(p) for p in re.findall(r"\d+", ids or "")]
+
+    if escolha == "sem_mover":
+        return _relato_itens_fixos(itens, nomes)
+    if escolha == "sprites" and pedidos:
+        return _relato_sprites(itens, pedidos)
+    if pedidos:
+        return _relato_flags(itens, pedidos, nomes)
+    return (
+        f"{caminho_relativo}: {len(itens)} itens no binario, id maximo {max(itens)}.\n"
+        f"Moveis: {sum(1 for c, f in itens.values() if f & 0x40)} | "
+        f"Pegaveis: {sum(1 for c, f in itens.values() if f & 0x20)} | "
+        f"Fixos (sem FLAG_MOVEABLE): {sum(1 for c, f in itens.values() if not f & 0x40)}.\n"
+        "Passe 'ids' para medir itens concretos, 'items_xml' para cruzar nome e peso, "
+        "ou acao='sem_mover' para ver os que o XML descreve e o binario deixa fixos."
+    )
+
+
+def _itens_do_otb(dados):
+    itens = {}
+    padrao = rb"\xfe(.)(....)\x10\x02\x00(..)\x11\x02\x00(..)"
+    for achado in re.finditer(padrao, dados, re.S):
+        flags = int.from_bytes(achado.group(2), "little")
+        servidor = int.from_bytes(achado.group(3), "little")
+        cliente = int.from_bytes(achado.group(4), "little")
+        itens[servidor] = (cliente, flags)
+    return itens
+
+
+def _nomes_do_items_xml(caminho_relativo):
+    alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
+    if erro or not os.path.isfile(alvo):
+        return {}
+    texto = open(alvo, encoding="utf-8", errors="ignore").read()
+    nomes = {}
+    for achado in re.finditer(r'<item\s+id="(\d+)"[^>]*?(?:/>|>(.*?)</item>)', texto, re.S):
+        bloco = achado.group(0)
+        nome = re.search(r'name="([^"]*)"', bloco)
+        peso = re.search(r'key="weight"\s+value="(\d+)"', bloco)
+        nomes[int(achado.group(1))] = (
+            nome.group(1) if nome else None,
+            int(peso.group(1)) if peso else None,
+        )
+    return nomes
+
+
+def _etiquetas_das_flags(flags):
+    partes = []
+    if flags & 0x40:
+        partes.append("move")
+    if flags & 0x20:
+        partes.append("pega")
+    if flags & 0x01:
+        partes.append("bloqueia")
+    return ", ".join(partes) or "nenhuma"
+
+
+def _relato_flags(itens, pedidos, nomes):
+    linhas = [f"{'id':>6} | {'clientId':>8} | {'flags':>6} | {'move/pega':<16} | nome (peso)"]
+    for pid in pedidos:
+        par = itens.get(pid)
+        if par is None:
+            linhas.append(
+                f"{pid:>6} | {'-':>8} | {'-':>6} | {'NAO EXISTE no otb':<16} | nasce imovel e sem flags"
+            )
+            continue
+        cliente, flags = par
+        nome, peso = nomes.get(pid, (None, None))
+        rotulo = f"{nome} ({peso})" if nome else ""
+        linhas.append(
+            f"{pid:>6} | {cliente:>8} | 0x{flags:02x} | {_etiquetas_das_flags(flags):<16} | {rotulo}"
+        )
+    aviso = ""
+    if any(pid not in itens for pid in pedidos):
+        aviso = "\nUm id que nao aparece aqui existe so no items.xml: carrega sem as flags do binario."
+    return "\n".join(linhas) + aviso
+
+
+def _relato_sprites(itens, pedidos):
+    linhas = []
+    for pid in pedidos:
+        par = itens.get(pid)
+        if par is None:
+            linhas.append(f"{pid}: nao existe no otb.")
+            continue
+        cliente = par[0]
+        gemeos = [sid for sid, (cid, _f) in sorted(itens.items()) if cid == cliente]
+        linhas.append(
+            f"clientId {cliente}: serverIds {', '.join(str(g) for g in gemeos)} "
+            f"({len(gemeos)} item(ns) com o mesmo sprite)"
+        )
+    return "\n".join(linhas)
+
+
+def _relato_itens_fixos(itens, nomes):
+    fixos = []
+    for pid, (nome, peso) in sorted(nomes.items()):
+        par = itens.get(pid)
+        if par is not None and not par[1] & 0x40:
+            fixos.append(f"{pid:>6} | {nome} ({peso})")
+    if not fixos:
+        return "Nenhum item do items.xml esta fixo no otb."
+    return (
+        f"{len(fixos)} item(ns) que o items.xml descreve e o otb deixa fixos "
+        "(nao se pegam nem se arrastam):\n" + "\n".join(fixos)
+    )
+
+
 def _guardar_copia_do_mapa(alvo, dados):
     marca = time.strftime("%Y%m%d-%H%M%S")
     destino = os.path.join(tempfile.gettempdir(), f"{os.path.basename(alvo)}.{marca}.bak")
