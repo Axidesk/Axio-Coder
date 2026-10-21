@@ -383,6 +383,103 @@ def tool_ler_items_otb(caminho_relativo, ids="", items_xml="", acao="flags"):
     )
 
 
+@register(
+    "tool_comparar_items_xml",
+    "Compara DOIS items.xml item a item (nome, article, peso e descricao) e diz o que difere: e o "
+    "caminho para manter o Map Editor igual ao servidor, ou para descobrir porque e que um item se "
+    "chama uma coisa no jogo e outra no editor. O Map Editor (RME) le o items.xml DELE, nao o do "
+    "servidor, e carrega-o so no arranque - mudar o nome no servidor nao chega ao editor, e recarregar "
+    "o mapa tambem nao (o .otbm nao guarda nomes). Aceita 'ids' para olhar so alguns itens e devolve, "
+    "para cada diferenca, o valor de cada lado e de que lado vem a versao (o do editor e a lista do "
+    "7.4; o do servidor e o que o jogador le).",
+    {
+        "caminho_relativo": {
+            "tipo": "STRING",
+            "desc": "O primeiro items.xml (normalmente o do servidor).",
+            "obrig": True,
+            "padrao": "",
+        },
+        "comparado": {
+            "tipo": "STRING",
+            "desc": "O segundo items.xml (normalmente o do Map Editor).",
+            "obrig": True,
+            "padrao": "",
+        },
+        "ids": {
+            "tipo": "STRING",
+            "desc": "Opcional: ids a comparar, por virgula ou um por linha. Vazio compara todos.",
+            "padrao": "",
+        },
+    },
+)
+def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
+    emit_event("executing", function=f"Comparando items.xml: {caminho_relativo}")
+    primeiro, erro = _itens_do_items_xml(caminho_relativo)
+    if erro:
+        return erro
+    segundo, erro = _itens_do_items_xml(comparado)
+    if erro:
+        return erro
+    pedidos = [int(p) for p in re.findall(r"\d+", ids or "")]
+    alvo = pedidos if pedidos else sorted(set(primeiro) & set(segundo))
+    diferencas = []
+    for iid in alvo:
+        a, b = primeiro.get(iid), segundo.get(iid)
+        if not a or not b:
+            continue
+        for campo in ("nome", "article", "weight", "description"):
+            if (a[campo] or "") != (b[campo] or ""):
+                diferencas.append((iid, campo, b[campo], a[campo]))
+    so_primeiro = sorted(set(primeiro) - set(segundo))
+    so_segundo = sorted(set(segundo) - set(primeiro))
+    linhas = [
+        f"{caminho_relativo}: {len(primeiro)} itens | {comparado}: {len(segundo)} itens",
+        f"Diferencas em {len({d[0] for d in diferencas})} item(ns)"
+        + (f" (olhando {len(pedidos)} id(s) pedidos)" if pedidos else "")
+        + ":",
+    ]
+    for iid, campo, valor_segundo, valor_primeiro in diferencas:
+        linhas.append(
+            f"  id={iid:<5} {campo:<12} '{valor_segundo}' (2o)  !=  '{valor_primeiro}' (1o)"
+        )
+    if not diferencas:
+        linhas.append("  nenhuma - os dois ficheiros dizem o mesmo para estes ids.")
+    if not pedidos:
+        if so_primeiro:
+            linhas.append(f"So no 1o ({len(so_primeiro)}): {', '.join(map(str, so_primeiro[:40]))}")
+        if so_segundo:
+            linhas.append(f"So no 2o ({len(so_segundo)}): {', '.join(map(str, so_segundo[:40]))}")
+    return "\n".join(linhas)
+
+
+def _itens_do_items_xml(caminho_relativo):
+    alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
+    if erro:
+        return {}, erro
+    if not os.path.isfile(alvo):
+        return {}, f"ERRO: arquivo nao encontrado: {caminho_relativo}"
+    with open(alvo, encoding="utf-8", errors="replace") as f:
+        texto = f.read()
+    itens = {}
+    for achado in re.finditer(r'<item\s+id="(\d+)"([^>]*?)(?:/>|>(.*?)</item>)', texto, re.S):
+        cabecalho = achado.group(2)
+        corpo = (achado.group(3) or "")
+        nome = re.search(r'name="([^"]*)"', cabecalho)
+        article = re.search(r'article="([^"]*)"', cabecalho)
+        itens[int(achado.group(1))] = {
+            "nome": nome.group(1) if nome else "",
+            "article": article.group(1) if article else "",
+            "weight": _atributo_do_item(corpo, "weight"),
+            "description": _atributo_do_item(corpo, "description"),
+        }
+    return itens, ""
+
+
+def _atributo_do_item(corpo, chave):
+    achado = re.search(r'key="%s"\s+value="([^"]*)"' % chave, corpo)
+    return achado.group(1) if achado else ""
+
+
 def _itens_do_otb(dados):
     itens = {}
     padrao = rb"\xfe(.)(....)\x10\x02\x00(..)\x11\x02\x00(..)"
@@ -395,18 +492,13 @@ def _itens_do_otb(dados):
 
 
 def _nomes_do_items_xml(caminho_relativo):
-    alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
-    if erro or not os.path.isfile(alvo):
-        return {}
-    texto = open(alvo, encoding="utf-8", errors="ignore").read()
+    itens, _ = _itens_do_items_xml(caminho_relativo)
     nomes = {}
-    for achado in re.finditer(r'<item\s+id="(\d+)"[^>]*?(?:/>|>(.*?)</item>)', texto, re.S):
-        bloco = achado.group(0)
-        nome = re.search(r'name="([^"]*)"', bloco)
-        peso = re.search(r'key="weight"\s+value="(\d+)"', bloco)
-        nomes[int(achado.group(1))] = (
-            nome.group(1) if nome else None,
-            int(peso.group(1)) if peso else None,
+    for iid, dados in itens.items():
+        peso = dados["weight"]
+        nomes[iid] = (
+            dados["nome"] or None,
+            int(peso) if peso and peso.isdigit() else None,
         )
     return nomes
 
