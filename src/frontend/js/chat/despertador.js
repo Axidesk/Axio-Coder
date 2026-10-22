@@ -5,6 +5,9 @@ import { state } from './state.js';
 let _alvo = 0;
 let _relogio = null;
 let _rascunho = null;
+let _modo = 'fixo';
+let _rotulo = '';
+let _tipo = '';
 
 function _elementos() {
     return {
@@ -26,13 +29,22 @@ function _humano(segundos) {
     return `${dias} d`;
 }
 
+function _textoDaContagem(restante) {
+    if (_modo === 'decorrido') {
+        return `${_rotulo} · ha ${_humano(Date.now() / 1000 - _alvo)}`;
+    }
+    return _tipo === 'tempo'
+        ? `agendado para ${_humano(restante)}`
+        : `${_rotulo} · faltam ${_humano(restante)}`;
+}
+
 function _pintarContagem() {
     const { texto } = _elementos();
     if (!texto) return;
     const restante = _alvo - Date.now() / 1000;
-    texto.textContent = restante > 0
-        ? `agendado para ${_humano(restante)}`
-        : 'a acordar\u2026';
+    texto.textContent = _modo === 'decorrido' || restante > 0
+        ? _textoDaContagem(restante)
+        : 'a acordar…';
 }
 
 function _pararRelogio() {
@@ -40,19 +52,35 @@ function _pararRelogio() {
     _relogio = null;
 }
 
-function _mostrar(descricao, falta) {
+function _semPrazo(descricao) {
+    return String(descricao || '').replace(/\s*\(no maximo [^)]*\)/i, '');
+}
+
+function _mostrar(dados) {
     const { barra, texto } = _elementos();
     if (!barra || !texto) return;
     barra.hidden = false;
+    const falta = Number(dados && dados.falta) || 0;
+    const decorrido = Number(dados && dados.decorrido) || 0;
+    _rotulo = _semPrazo(dados && dados.descricao) || 'agendado';
+    _tipo = String((dados && dados.tipo) || '');
+    _pararRelogio();
     if (falta > 0) {
+        _modo = 'restante';
         _alvo = Date.now() / 1000 + falta;
-        _pararRelogio();
         _pintarContagem();
         _relogio = setInterval(_pintarContagem, 1000);
         return;
     }
-    _pararRelogio();
-    texto.textContent = descricao || 'agendado';
+    if (decorrido > 0) {
+        _modo = 'decorrido';
+        _alvo = Date.now() / 1000 - decorrido;
+        _pintarContagem();
+        _relogio = setInterval(_pintarContagem, 1000);
+        return;
+    }
+    _modo = 'fixo';
+    texto.textContent = _rotulo;
 }
 
 function _esconder() {
@@ -88,13 +116,13 @@ function _adotarTurno(turnId) {
 export function tratarDespertador(data) {
     const estado = String(data.estado || '');
     if (estado === 'armado') {
-        _mostrar(data.descricao, Number(data.falta) || 0);
+        _mostrar(data);
         _travar(data.nota || '');
         return;
     }
     if (estado === 'disparado') {
         _soltar();
-        _mostrar('acordei agora', 0);
+        _mostrar({ descricao: 'acordei agora' });
         _adotarTurno(data.proximo_turno || '');
         fetch('/api/despertador/entregue', { method: 'POST' }).catch(() => {});
         return;
@@ -111,13 +139,13 @@ async function _carregar() {
         const dados = await resposta.json();
         if (!dados || !dados.ok) return;
         if (dados.armado) {
-            _mostrar(dados.descricao, Number(dados.falta) || 0);
+            _mostrar(dados);
             _travar(dados.nota || '');
             return;
         }
         if (dados.estado === 'disparado') {
             _soltar();
-            _mostrar('acordei agora', 0);
+            _mostrar({ descricao: 'acordei agora' });
             fetch('/api/despertador/entregue', { method: 'POST' }).catch(() => {});
             return;
         }

@@ -29,10 +29,17 @@ _INTERVALO = 2.0
 _trava = threading.Lock()
 _trava_turno = threading.Lock()
 _vigia_ligada = False
+_ultimo_ciclo = 0.0
 
 _FORMATOS = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M")
 _PROCESSO_CONSULTA_LIMITADA = 0x1000
 _PROCESSO_AINDA_ATIVO = 259
+_ESPERA_MINIMA = 600
+_NOVA_TENTATIVA = 15
+
+
+class _FILETIME(ctypes.Structure):
+    _fields_ = [("dwLowDateTime", wintypes.DWORD), ("dwHighDateTime", wintypes.DWORD)]
 
 
 def _caminho():
@@ -125,35 +132,86 @@ def _humano(segundos):
     return f"{dias} d {resto_h} h" if resto_h else f"{dias} d"
 
 
-def _processo_vivo(pid):
-    """Estar no registo NAO e estar vivo: o popen tem a ultima palavra."""
-    pid = str(pid or "").strip()
-    if not pid:
-        return False
-    registo = (estado.get("processos") or {}).get(pid)
+def _numero_do_pid(pid):
+    """O pid do sistema por tras do registo: a chave pode ser 'proc_7' e o numero vive no popen."""
+    registo = (estado.get("processos") or {}).get(str(pid or "").strip())
     if registo is not None:
-        popen = registo.get("popen")
-        if popen is None:
-            return True
-        try:
-            return popen.poll() is None
-        except Exception:
-            return False
+        real = getattr(registo.get("popen"), "pid", None)
+        if real:
+            return int(real)
     try:
-        numero = int(pid)
+        return int(str(pid or "").strip())
     except ValueError:
+        return None
+
+
+def _criacao_do_handle(handle):
+    """Instante de criacao do processo (FILETIME). E a identidade: um pid reutilizado tem outro."""
+    criacao, saida, kernel, utilizador = _FILETIME(), _FILETIME(), _FILETIME(), _FILETIME()
+    try:
+        if not ctypes.windll.kernel32.GetProcessTimes(
+                handle, ctypes.byref(criacao), ctypes.byref(saida),
+                ctypes.byref(kernel), ctypes.byref(utilizador)):
+            return None
+    except Exception:
+        return None
+    return (criacao.dwHighDateTime << 32) | criacao.dwLowDateTime
+
+
+def _vivo_no_sistema(numero, nascimento=None):
+    if not numero:
         return False
     try:
         kernel32 = ctypes.windll.kernel32
         handle = kernel32.OpenProcess(_PROCESSO_CONSULTA_LIMITADA, False, numero)
         if not handle:
             return False
-        codigo = wintypes.DWORD()
-        consultou = kernel32.GetExitCodeProcess(handle, ctypes.byref(codigo))
-        kernel32.CloseHandle(handle)
-        return bool(consultou) and codigo.value == _PROCESSO_AINDA_ATIVO
+        try:
+            codigo = wintypes.DWORD()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(codigo)):
+                return False
+            if codigo.value != _PROCESSO_AINDA_ATIVO:
+                return False
+            if nascimento:
+                criacao = _criacao_do_handle(handle)
+                if criacao is None or criacao != int(nascimento):
+                    return False
+            return True
+        finally:
+            kernel32.CloseHandle(handle)
     except Exception:
         return False
+
+
+def _inicio_do_processo(pid):
+    numero = _numero_do_pid(pid)
+    if not numero:
+        return None
+    try:
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(_PROCESSO_CONSULTA_LIMITADA, False, numero)
+        if not handle:
+            return None
+        try:
+            return _criacao_do_handle(handle)
+        finally:
+            kernel32.CloseHandle(handle)
+    except Exception:
+        return None
+
+
+def _processo_vivo(pid, nascimento=None):
+    """Estar no registo NAO e estar vivo, e o pid sozinho tambem nao basta: o processo que o tem agora pode ser outro."""
+    registo = (estado.get("processos") or {}).get(str(pid or "").strip())
+    if registo is not None:
+        popen = registo.get("popen")
+        if popen is not None:
+            try:
+                if popen.poll() is not None:
+                    return False
+            except Exception:
+                return False
+    return _vivo_no_sistema(_numero_do_pid(pid), nascimento)
 
 
 def _alvo_de(gatilho):
@@ -248,7 +306,7 @@ def _verificar(gatilho):
         pid = gatilho.get("pid")
         linhas, situacao, tem_registo = _log_do_processo(pid)
         achado = _sinal_no_log(linhas, gatilho.get("sinal"))
-        vivo = _processo_vivo(pid)
+        vivo = _processo_vivo(pid, gatilho.get("nascimento"))
         if achado and vivo:
             return {"acordou": True, "motivo": "sinal", "detalhe": achado}
         if not vivo:
@@ -280,14 +338,20 @@ def _nota_com_verdade(nota, veredito):
 
 def retrato():
     """O que a interface e a ferramenta mostram sobre o agendamento."""
+    _garantir_vigia()
     agendamento = _ler()
     if not agendamento:
         return {"armado": False, "estado": "nenhum", "descricao": "", "falta": 0, "nota": ""}
     estado_atual = agendamento.get("estado") or "armado"
     gatilho = agendamento.get("gatilho") or {}
     falta = 0
-    if estado_atual == "armado" and gatilho.get("tipo") == "tempo":
-        falta = max(0, int(_alvo_de(gatilho) - _agora()))
+    if estado_atual == "armado":
+        if gatilho.get("tipo") == "tempo":
+            falta = max(0, int(_alvo_de(gatilho) - _agora()))
+        elif gatilho.get("limite_ts"):
+            falta = max(0, int(float(gatilho["limite_ts"]) - _agora()))
+    criado = float(agendamento.get("criado_ts") or 0)
+    decorrido = max(0, int(_agora() - criado)) if (criado and estado_atual in ("armado", "disparado")) else 0
     return {
         "armado": estado_atual == "armado",
         "estado": estado_atual,
@@ -297,6 +361,10 @@ def retrato():
         "descricao_do_gatilho": _descricao(gatilho),
         "falta": falta,
         "falta_humano": _humano(falta) if falta else "",
+        "decorrido": decorrido,
+        "decorrido_humano": _humano(decorrido) if decorrido else "",
+        "tipo": gatilho.get("tipo", ""),
+        "rodada_iniciada": bool(agendamento.get("rodada_iniciada")),
         "quando": gatilho.get("quando", ""),
         "gatilho": gatilho,
         "disparado_em": agendamento.get("disparado_em", ""),
@@ -333,6 +401,12 @@ def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", not
         segundos = _duracao_de(depois_de)
         if segundos is None or segundos <= 0:
             return {"erro": f"nao entendi o intervalo '{depois_de}'. Use '90' (minutos), '45s', '30m', '2h' ou '1h30'."}
+        if segundos < _ESPERA_MINIMA:
+            return {"erro": (f"{_humano(segundos)} e curto demais para dormir: operacao curta (compilar, instalar, "
+                             "rodar um teste) resolve-se NA MESMA RODADA, com tool_listar_processos ou "
+                             "tool_executar_processo em modo 'aguardar'. O despertador e para operacoes longas - "
+                             "30 min ou mais - e para EVENTOS DO MUNDO (esperar um email, ver um anuncio amanha). "
+                             "Para o que esta a correr agora, arme em quando_processo=<pid>.")}
         gatilho = {"tipo": "tempo", "alvo_ts": agora + segundos}
     elif quando:
         alvo = _data_de(quando)
@@ -345,6 +419,9 @@ def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", not
         gatilho = {"tipo": "tempo", "alvo_ts": alvo}
     elif quando_processo:
         gatilho = {"tipo": "processo", "pid": quando_processo}
+        nascimento = _inicio_do_processo(quando_processo)
+        if nascimento:
+            gatilho["nascimento"] = nascimento
     else:
         caminho = os.path.abspath(quando_ficheiro)
         gatilho = {"tipo": "ficheiro", "caminho": caminho}
@@ -382,7 +459,8 @@ def agendar(quando="", depois_de="", quando_processo="", quando_ficheiro="", not
             "detetado, mas o 'sinal' nao tem saida para vigiar."
         )
     emit_event("despertador", estado="armado", descricao=pronto.get("descricao", ""),
-               nota=nota, falta=pronto.get("falta", 0))
+               nota=nota, falta=pronto.get("falta", 0),
+               decorrido=pronto.get("decorrido", 0), tipo=pronto.get("tipo", ""))
     return pronto
 
 
@@ -405,24 +483,39 @@ def confirmar_entrega():
     with _trava:
         agendamento = _ler()
         if agendamento.get("estado") == "disparado":
+            if not agendamento.get("rodada_iniciada"):
+                return {"ok": False, "motivo": "a rodada ainda nao arrancou - a nota continua a espera"}
             agendamento["estado"] = "entregue"
             _gravar(agendamento)
     return {"ok": True}
+
+
+_rodada_a_caminho = False
+_ultimo_aviso = 0.0
+
+
+def _avisar(texto):
+    global _ultimo_aviso
+    agora = _agora()
+    if agora - _ultimo_aviso < 60:
+        return
+    _ultimo_aviso = agora
+    emit_event("status", message=texto)
 
 
 def _arrancar_rodada(nota, turn_id, tentativa=0):
     from src.backend.routes.chat import _correr_loop  # import-local: evita ciclo routes.chat <-> services
 
     if not estado.get("pasta_raiz"):
-        emit_event("status", message="Despertador: nenhuma pasta aberta - a nota fica guardada.")
+        _avisar("Despertador: acordei, mas ainda nao ha pasta aberta - tento de novo em instantes.")
         return False
     with _trava_turno:
         ocupado = bool(estado.get("turno_ocupado"))
         if not ocupado:
             estado["turno_ocupado"] = True
     if ocupado:
-        if tentativa >= 300:
-            emit_event("status", message="Despertador: o turno anterior nunca acabou.")
+        if tentativa >= 150:
+            _avisar("Despertador: o turno anterior ainda esta a correr - tento de novo em instantes.")
             return False
         time.sleep(2)
         return _arrancar_rodada(nota, turn_id, tentativa + 1)
@@ -441,52 +534,115 @@ def _arrancar_rodada(nota, turn_id, tentativa=0):
     return True
 
 
+def _gravar_tentativa(agendamento, iniciou):
+    with _trava:
+        atual = _ler()
+        if atual.get("id") != agendamento.get("id"):
+            return
+        atual["rodada_iniciada"] = bool(iniciou)
+        atual["ultima_tentativa"] = _agora()
+        _gravar(atual)
+
+
+def _correr_a_rodada(agendamento, nota, turn_id):
+    global _rodada_a_caminho
+    iniciou = False
+    try:
+        iniciou = _arrancar_rodada(nota, turn_id)
+    except Exception:
+        iniciou = False
+    finally:
+        try:
+            _gravar_tentativa(agendamento, iniciou)
+        finally:
+            with _trava_turno:
+                _rodada_a_caminho = False
+
+
+def _tentar_rodada(agendamento, nota, turn_id):
+    """Arranca a rodada FORA da vigia: um turno ocupado nao pode parar o relogio do despertador."""
+    global _rodada_a_caminho
+    with _trava_turno:
+        if _rodada_a_caminho:
+            return
+        _rodada_a_caminho = True
+    threading.Thread(target=_correr_a_rodada, args=(agendamento, nota, turn_id),
+                     daemon=True, name="despertador-arranque").start()
+
+
+def _retomar_pendente(agendamento):
+    veredito = {
+        "motivo": agendamento.get("motivo_do_disparo", "condicao"),
+        "detalhe": agendamento.get("detalhe_do_disparo", ""),
+    }
+    nota = _nota_com_verdade(agendamento.get("nota", ""), veredito)
+    turn_id = agendamento.get("turn_id") or str(int(time.time() * 1000))
+    _tentar_rodada(agendamento, nota, turn_id)
+
+
 def _disparar(agendamento, veredito=None):
     veredito = veredito or {}
+    turn_id = str(int(time.time() * 1000))
     agendamento["estado"] = "disparado"
     agendamento["disparado_em"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     agendamento["motivo_do_disparo"] = veredito.get("motivo", "condicao")
     agendamento["detalhe_do_disparo"] = veredito.get("detalhe", "")
+    agendamento["rodada_iniciada"] = False
+    agendamento["ultima_tentativa"] = 0
+    agendamento["turn_id"] = turn_id
+    gatilho = agendamento.get("gatilho") or {}
+    nota = _nota_com_verdade(agendamento.get("nota", ""), veredito)
     with _trava:
         _gravar(agendamento)
-    gatilho = agendamento.get("gatilho") or {}
-    turn_id = str(int(time.time() * 1000))
-    nota = _nota_com_verdade(agendamento.get("nota", ""), veredito)
     detalhe = str(veredito.get("detalhe") or "").strip()
     descricao = detalhe.splitlines()[0] if detalhe else _descricao(gatilho)
     emit_event("despertador", estado="disparado", descricao=descricao,
-               nota=nota, falta=0, proximo_turno=turn_id)
-    _arrancar_rodada(nota, turn_id)
+               nota=nota, falta=0, decorrido=0, tipo=gatilho.get("tipo", ""),
+               proximo_turno=turn_id)
+    _tentar_rodada(agendamento, nota, turn_id)
 
 
 def _vigiar():
+    global _ultimo_ciclo
     while True:
         time.sleep(_INTERVALO)
+        _ultimo_ciclo = _agora()
         try:
             agendamento = _ler()
-            if not agendamento or agendamento.get("estado") != "armado":
+            if not agendamento:
                 continue
-            veredito = _verificar(agendamento.get("gatilho") or {})
-            if veredito.get("acordou"):
-                _disparar(agendamento, veredito)
+            situacao = agendamento.get("estado")
+            if situacao == "armado":
+                veredito = _verificar(agendamento.get("gatilho") or {})
+                if veredito.get("acordou"):
+                    _disparar(agendamento, veredito)
+                continue
+            if situacao == "disparado" and not agendamento.get("rodada_iniciada"):
+                if _agora() - float(agendamento.get("ultima_tentativa") or 0) >= _NOVA_TENTATIVA:
+                    _retomar_pendente(agendamento)
         except Exception:
             continue
 
 
 def _garantir_vigia():
-    global _vigia_ligada
-    if _vigia_ligada:
+    """Sobe a vigia - e sobe OUTRA se a anterior parou de dar sinal: uma thread morta nao avisa."""
+    global _vigia_ligada, _ultimo_ciclo
+    if _vigia_ligada and (_agora() - _ultimo_ciclo) < 10:
         return
     _vigia_ligada = True
+    _ultimo_ciclo = _agora()
     threading.Thread(target=_vigiar, daemon=True, name="despertador-vigia").start()
 
 
 def iniciar_vigia():
-    """Arranca a vigia no arranque do backend e dispara o que venceu com o programa fechado."""
+    """Arranca a vigia no arranque do backend e resolve o que ficou pendente com o programa fechado."""
     _garantir_vigia()
     agendamento = _ler()
-    if agendamento.get("estado") == "armado":
+    situacao = agendamento.get("estado")
+    if situacao == "armado":
         veredito = _verificar(agendamento.get("gatilho") or {})
         if veredito.get("acordou"):
             _disparar(agendamento, veredito)
+    elif situacao == "disparado" and not agendamento.get("rodada_iniciada"):
+        _retomar_pendente(agendamento)
     return True

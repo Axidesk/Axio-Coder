@@ -14,9 +14,13 @@ from src.backend.tools.registry import register
 @register(
     "tool_agendar_despertar",
     "Agenda um despertar: FECHA a rodada e o Axio volta sozinho quando a condicao se cumprir, "
-    "com a 'nota' como primeira mensagem da rodada nova. E o caminho para nao ficar a sondar um "
-    "estado em chamadas repetidas quando algo demora - um download grande, um treino, um build, "
-    "uma instalacao. Escolha UM gatilho: 'depois_de' (intervalo: '90' minutos, '45s', '30m', '2h', "
+    "com a 'nota' como primeira mensagem da rodada nova. SO SERVE PARA DUAS COISAS: operacao LONGA "
+    "(30 min ou mais - um download de GB, um treino, uma copia enorme) ou EVENTO DO MUNDO (um email "
+    "que vai chegar, um anuncio que so muda amanha). NUNCA para compilar, instalar, rodar um teste "
+    "ou qualquer coisa que termine em minutos: isso resolve-se NA MESMA RODADA, com "
+    "tool_executar_processo em modo 'aguardar' ou com tool_listar_processos - dormir 2 minutos "
+    "gasta uma rodada inteira e nao adianta nada. Para o que ja esta a correr, arme em "
+    "quando_processo=<pid>, nunca no relogio. Escolha UM gatilho: 'depois_de' (intervalo: '90' minutos, '45s', '30m', '2h', "
     "'1h30'), 'quando' (instante: 'HH:MM' ou 'AAAA-MM-DD HH:MM') ou 'quando_processo' (o pid que "
     "tool_executar_processo devolveu - acorda quando ele terminar) ou 'quando_ficheiro' (acorda "
     "quando o caminho aparecer). PARA UMA OPERACAO QUE ESTA A CORRER, ARME NO PROCESSO E NAO NO "
