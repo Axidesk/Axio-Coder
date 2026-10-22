@@ -97,7 +97,7 @@ def correr(comando, cwd=None, timeout=120, shell=False):
     return _texto_do_subprocesso(proc.stdout) + _texto_do_subprocesso(proc.stderr), proc.returncode
 
 def processos(nome=None):
-    """Sem nome: {imagem: [pids]} de tudo o que corre. Com nome: os pids cuja imagem contem esse texto."""
+    """Sem nome: {imagem: [pids]} de tudo o que corre. Com nome: uma LISTA simples de pids (sem .items()) das imagens que contem esse texto."""
     texto, _ = correr(["tasklist", "/NH", "/FO", "CSV"])
     imagens = {}
     for linha in (texto or "").splitlines():
@@ -1955,7 +1955,7 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
     "(um assert sobre a funcao real, um calculo, um resultado do despacho) em vez de criar scripts de "
     "prova na raiz. Nao substitui as ferramentas nativas: ler/editar/buscar/validar sintaxe tem "
     "ferramenta propria e a app Flask a responder tem tool_auditar_rotas. O cabecalho traz correr() e "
-    "processos() - sem nome devolve {imagem: [pids]} de tudo o que corre, com um nome filtra as "
+    "processos() - sem nome devolve {imagem: [pids]} de tudo o que corre; com um nome devolve uma LISTA de pids (iterar direto, sem .items()) das imagens que o contem, "
     "imagens que o contem - para correr um comando do sistema ou saber se um build esta a correr, sem escrever "
     "subprocess.run a mao - que perde a saida INTEIRA quando ela nao e UTF-8. correr() aceita a linha "
     "como texto ('git status') ou como lista de argumentos, e devolve (saida, codigo de saida): "
