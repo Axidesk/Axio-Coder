@@ -1902,6 +1902,16 @@ def _acao_arrastar(janela, pedido):
     )
 
 
+def _teclas_em_passos(tecla):
+    bruto = str(tecla or "").strip()
+    if not bruto or "{" in bruto:
+        return [_normalizar_teclas(bruto)]
+    passos = [passo.strip() for passo in bruto.split(",") if passo.strip()]
+    if len(passos) <= 1:
+        return [_normalizar_teclas(bruto)]
+    return [_normalizar_teclas(passo) for passo in passos]
+
+
 def _teclas_a_janela(janela, tecla, alvo_teclas):
     """Teclas para a JANELA (sem alvo): vao pelo teclado do sistema, com a janela trazida a frente.
 
@@ -1918,8 +1928,12 @@ def _teclas_a_janela(janela, tecla, alvo_teclas):
                 time.sleep(0.3)
         except Exception:
             pass
+    passos = _teclas_em_passos(tecla)
     try:
-        _teclado().send_keys(alvo_teclas)
+        for indice, passo in enumerate(passos):
+            if indice:
+                time.sleep(0.12)
+            _teclado().send_keys(passo)
     except Exception as exc:
         return (
             f"ERRO: nao consegui enviar as teclas ({type(exc).__name__}: {exc})."
@@ -2168,7 +2182,7 @@ def _passos_em_serie(passos, janela):
         },
         "tecla": {
             "tipo": "STRING", "obrig": False, "padrao": "",
-            "desc": "Teclas em acao='teclas': '{ENTER}', '{TAB}', '{ESC}', 'ctrl+s', 'alt+f4' ou 'win+r' (o Win e escrito por nome, nao como prefixo). Injeta input: a janela tem de estar em primeiro plano.",
+            "desc": "Teclas em acao='teclas': '{ENTER}', '{TAB}', '{ESC}', 'ctrl+s', 'alt+f4' ou 'win+r' (o Win e escrito por nome, nao como prefixo). Uma SEQUENCIA vai por virgulas - 'down,enter' muda a opcao de um combo nativo e confirma, 'tab,tab,space' percorre e marca - e cada passo e enviado com 120ms de folga. Injeta input: a janela tem de estar em primeiro plano.",
         },
         "regiao": {
             "tipo": "STRING", "obrig": False, "padrao": "",
@@ -2330,11 +2344,15 @@ def tool_operar_janela(acao, janela="", alvo="", texto="", tecla="", regiao="", 
     if acao == "teclas":
         if not tecla:
             return "ERRO: acao='teclas' precisa de 'tecla' (ex: 'ctrl+shift+r', 'enter' ou '{ENTER}')."
-        alvo_teclas = _normalizar_teclas(tecla)
+        passos = _teclas_em_passos(tecla)
+        alvo_teclas = passos[0] if len(passos) == 1 else ",".join(passos)
         antes = _valor(elemento)
         try:
             elemento.set_focus()
-            elemento.type_keys(alvo_teclas, with_spaces=True)
+            for indice, passo in enumerate(passos):
+                if indice:
+                    time.sleep(0.12)
+                elemento.type_keys(passo, with_spaces=True)
         except Exception as exc:
             return (
                 f"ERRO: nao consegui enviar as teclas ({type(exc).__name__}: {exc})."
