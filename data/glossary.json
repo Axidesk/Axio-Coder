@@ -1173,8 +1173,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1977,
         "conferido": [
-          1792189617.816,
-          99196
+          1792633361.063,
+          99305
         ]
       }
     },
@@ -2246,8 +2246,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1470,
         "conferido": [
-          1792189617.816,
-          99196
+          1792633361.063,
+          99305
         ]
       }
     },
@@ -2799,10 +2799,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 2207,
+        "linha": 2221,
         "conferido": [
-          1791492752.867,
-          106277
+          1792631080.517,
+          107134
         ]
       }
     },
@@ -2822,8 +2822,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 1119,
         "conferido": [
-          1791492752.867,
-          106277
+          1792631080.517,
+          107134
         ]
       }
     },
@@ -2844,8 +2844,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 1885,
         "conferido": [
-          1791492752.867,
-          106277
+          1792631080.517,
+          107134
         ]
       }
     },
@@ -3611,8 +3611,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 1042,
         "conferido": [
-          1791492752.867,
-          106277
+          1792631080.517,
+          107134
         ]
       }
     },
@@ -5469,10 +5469,10 @@
       "descricao": "Sessao de depuracao: C++ pelo cdb, Python pelo pdb em card do terminal. Quando a execucao para (ou rebenta), o vigia emite 'debug_stop' com o caminho e a linha; abrirParagemDoDepurador (workspace.js) abre o ficheiro numa aba e pinta a linha (vermelha se foi erro). Numa queda vale o sitio do ERRO - o ultimo quadro do traceback - e nao o sitio onde o depurador ficou parado: um erro de sintaxe dentro de um modulo importado nao tem quadro proprio, e o pdb fica no import que o chamou.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 714,
+        "linha": 736,
         "conferido": [
-          1790967072.051,
-          43855
+          1792626892.957,
+          45081
         ]
       }
     },
@@ -5671,10 +5671,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 483,
+        "linha": 505,
         "conferido": [
-          1790967072.051,
-          43855
+          1792626892.957,
+          45081
         ]
       }
     },
@@ -5741,8 +5741,8 @@
         "arquivo": "docs/projetos/Tibia74/Server/config.lua",
         "linha": 17,
         "conferido": [
-          1791572040.598,
-          7089
+          1792886340.265,
+          7226
         ]
       }
     },
@@ -5798,10 +5798,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
-        "linha": 762,
+        "linha": 768,
         "conferido": [
-          1791498573.744,
-          32313
+          1792632692.162,
+          32762
         ]
       }
     },
@@ -5819,10 +5819,10 @@
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
-        "linha": 400,
+        "linha": 406,
         "conferido": [
-          1791498573.744,
-          32313
+          1792632692.162,
+          32762
         ]
       }
     },
@@ -5838,10 +5838,10 @@
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
-        "linha": 573,
+        "linha": 579,
         "conferido": [
-          1791498573.744,
-          32313
+          1792632692.162,
+          32762
         ]
       }
     },
@@ -6067,10 +6067,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 602,
+        "linha": 630,
         "conferido": [
-          1792620915.337,
-          53952
+          1792630738.451,
+          59493
         ]
       }
     },
@@ -6081,10 +6081,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 1281,
+        "linha": 1392,
         "conferido": [
-          1792620915.337,
-          53952
+          1792630738.451,
+          59493
         ]
       }
     },
@@ -6140,10 +6140,10 @@
       "descricao": "A combobox que substituiu a lista de personagens recolhidos: fechada diz \"selecionar personagem (N)\", cada opcao e \"nome . lvl N\" e o primeiro item e \"criar personagem\". Ao lado da combobox das contas, que mostra o email (ou \"conta id . senha\" quando nao ha email).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 809,
+        "linha": 888,
         "conferido": [
-          1792620896.439,
-          44153
+          1792630276.405,
+          48388
         ]
       }
     },
@@ -6160,10 +6160,10 @@
       "descricao": "A lixeira que vive ao lado do contador de cada tabela no bloco Manutencao: o 1o clique mostra no recado o que sai e o 2o esvazia (DELETE com a guarda do God). Antes de apagar, grava sempre uma copia so daquela tabela.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 1014,
+        "linha": 1093,
         "conferido": [
-          1792620896.439,
-          44153
+          1792630276.405,
+          48388
         ]
       }
     },
@@ -6174,10 +6174,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 1313,
+        "linha": 1424,
         "conferido": [
-          1792620915.337,
-          53952
+          1792630738.451,
+          59493
         ]
       }
     },
@@ -6194,10 +6194,10 @@
       "descricao": "Cadeado que aparece encostado a combobox da conta quando a conta esta bloqueada, com o nome da conta em vermelho na lista. Substituiu o bloco \"Bloqueada\" escrito no corpo.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 836,
+        "linha": 915,
         "conferido": [
-          1792620896.439,
-          44153
+          1792630276.405,
+          48388
         ]
       }
     },
@@ -6230,10 +6230,10 @@
       "descricao": "Botao do olho ao lado de um campo de senha do painel do banco: o campo nasce VISIVEL (type=text) e o clique oculta (type=password) trocando o desenho para OLHO_RISCADO e acendendo o botao (aria-pressed). Usado no campo da senha da conta escolhida e no da conta nova.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 893,
+        "linha": 972,
         "conferido": [
-          1792620896.439,
-          44153
+          1792630276.405,
+          48388
         ]
       }
     },
@@ -6250,10 +6250,10 @@
       "descricao": "O nome que o card do terminal mostra num build: \"Compiler: <ferramenta> - <Configuracao> <plataforma>\". CMake nomeia o gerador, MSBuild o produto, Qt o kit; o comando cru fica no title do card.",
       "localizacao": {
         "arquivo": "src/backend/tools/builds.py",
-        "linha": 570,
+        "linha": 592,
         "conferido": [
-          1790967072.051,
-          43855
+          1792626892.957,
+          45081
         ]
       }
     },
@@ -6368,10 +6368,10 @@
       "descricao": "Operar um programa nativo (jogo, cliente, app desenhada a mao) por gestos reais: abrir, arrumar as janelas lado a lado, correr um roteiro de cliques/teclas e olhar para o resultado. Os caracteres especiais do teclado vao escapados e as janelas com o mesmo titulo escolhem-se por '#N'.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 2207,
+        "linha": 2221,
         "conferido": [
-          1791492752.867,
-          106277
+          1792631080.517,
+          107134
         ]
       }
     },
@@ -6750,10 +6750,10 @@
       "descricao": "Duração do primeiro ban automático por mortes injustificadas, em segundos no config.lua e em dias no painel. O segundo e o terceiro são RED_SKULL_BAN_LENGTH_2 e _3.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Solution/src/configmanager.h",
-        "linha": 120,
+        "linha": 121,
         "conferido": [
-          1791247355.213,
-          4755
+          1792632688.505,
+          4778
         ]
       }
     },
@@ -6791,8 +6791,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
         "linha": 140,
         "conferido": [
-          1791498573.744,
-          32313
+          1792632692.162,
+          32762
         ]
       }
     },
@@ -6830,10 +6830,10 @@
       "descricao": "As cinco bênçãos do servidor, marcáveis na ficha do personagem do painel. Vivem na tabela player_storage (chaves 95004, 95005, 95007, 95009, 95013, value=1) e é o login.lua do servidor que as conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
-        "linha": 543,
+        "linha": 622,
         "conferido": [
-          1792620896.439,
-          44153
+          1792630276.405,
+          48388
         ]
       }
     },
@@ -6963,6 +6963,27 @@
         "conferido": [
           1792452450.958,
           80160
+        ]
+      }
+    },
+    {
+      "termo": "campo de visao do monstro",
+      "aliases": [
+        "visao alem da tela",
+        "monstro para de seguir",
+        "monstro larga o alvo",
+        "continua seguindo fora da tela",
+        "tiles a mais da visao",
+        "monsterviewrange"
+      ],
+      "identificador": "MonsterViewRange",
+      "descricao": "Quantos tiles o monstro continua a ver e a perseguir depois de o jogador sair da borda da tela do cliente. Padrao 2, teto 3.",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Server/config.lua",
+        "linha": 98,
+        "conferido": [
+          1792886340.265,
+          7226
         ]
       }
     }
