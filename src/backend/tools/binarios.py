@@ -34,7 +34,9 @@ LIMITE_NA_LISTA = 40
     "nada: diz o que ele pede, onde cada biblioteca existe (pasta do programa, System32, "
     "SysWOW64, PATH) e o que nao esta em lado nenhum. Com 'funcoes', diz tambem cada funcao "
     "pedida e quais dessas a biblioteca nao exporta; com 'filtro', mostra so as funcoes que "
-    "contem esse texto - e' a resposta a 'este programa importa o FindWindow?'.",
+    "contem esse texto - e' a resposta a 'este programa importa o FindWindow?'. Diz tambem se "
+    "o programa arranca como janela ou como consola - e' o que explica a janela de cmd que "
+    "aparece atras de um programa e que, ao ser fechada, leva o programa com ela.",
     {
         "caminho_relativo": {
             "tipo": "STRING",
@@ -96,7 +98,8 @@ def _relato(caminho, bruto, bits, pedidas, achadas, faltam, conjuntos, com_funco
     linhas = [
         f"'{caminho}' ({bits} bits, {len(bruto) / 1024 / 1024:.2f} MB) pede {len(pedidas)}"
         f" biblioteca(s): {len(pedidas) - len(faltam) - len(conjuntos)} encontrada(s) no disco,"
-        f" {len(conjuntos)} do proprio Windows e {len(faltam)} EM FALTA."
+        f" {len(conjuntos)} do proprio Windows e {len(faltam)} EM FALTA.",
+        _linha_do_subsistema(bruto),
     ]
     if faltam:
         linhas.append("")
@@ -291,6 +294,22 @@ def _secoes_e_diretorios(bruto):
         if virtual and tamanho_virtual and bruto_em:
             secoes.append((virtual, max(tamanho_virtual, tamanho_bruto), bruto_em))
     return bits, base_da_imagem, secoes, diretorios
+
+
+def _linha_do_subsistema(bruto):
+    """Se o programa abre so a janela ou se puxa atras uma consola de texto."""
+    nomes = {
+        2: "GUI - abre so a janela, sem consola",
+        3: "CONSOLE - o Windows abre atras uma janela de texto (cmd), e fecha-la mata o programa",
+    }
+    try:
+        inicio = struct.unpack_from("<I", bruto, 0x3C)[0] + 24
+        subsistema = struct.unpack_from("<H", bruto, inicio + 0x44)[0]
+    except struct.error:
+        return ""
+    if not subsistema:
+        return ""
+    return f"Arranque: {nomes.get(subsistema, f'subsistema {subsistema}')}."
 
 
 def _deslocamento(rva, secoes):
