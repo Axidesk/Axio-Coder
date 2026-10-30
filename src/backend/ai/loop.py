@@ -39,6 +39,7 @@ from src.backend.tools import (
     fluidez,
     git,
     graph,
+    gravacoes,
     harness,
     html_ligacoes,
     janelas,
