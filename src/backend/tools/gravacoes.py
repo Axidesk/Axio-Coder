@@ -104,7 +104,7 @@ _CLIENTES = {}
 )
 def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False):
     emit_event("executing", function=f"Lendo a gravacao: {gravacao}")
-    caminho = _achar_gravacao(gravacao, pasta)
+    caminho, alternativas = _achar_gravacao(gravacao, pasta)
     if not caminho:
         return f"ERRO: nao achei a gravacao '{gravacao}'. Passe 'pasta' com a pasta onde ela esta."
 
@@ -128,6 +128,8 @@ def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", lim
 
     blocos = bruto if isinstance(bruto, list) else []
     linhas = _cabecalho(caminho, blocos, usado)
+    if alternativas:
+        linhas.append("  OUTRAS COM ESSE NOME: " + " | ".join(alternativas))
     filtro = _filtro(grupo, evento)
     de, ate = _janela(inicio, fim)
     if not filtro and de is None and ate is None:
@@ -140,18 +142,25 @@ def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", lim
 def _achar_gravacao(pedido, pasta):
     texto = str(pedido or "").strip().strip('"')
     if not texto:
-        return ""
+        return "", []
     if os.path.isabs(texto) and os.path.isfile(texto):
-        return texto
+        return texto, []
     alvo, erro = resolver_caminho(texto, permitir_extra=True)
     if not erro and os.path.isfile(alvo):
-        return alvo
+        return alvo, []
     nome = texto if texto.lower().endswith(".rec") else f"{texto}.rec"
+    achadas = []
+    vistos = set()
     for candidata in _pastas_de_gravacoes(pasta):
         caminho = os.path.join(candidata, nome)
-        if os.path.isfile(caminho):
-            return caminho
-    return ""
+        chave = os.path.normcase(os.path.abspath(caminho))
+        if chave in vistos or not os.path.isfile(caminho):
+            continue
+        vistos.add(chave)
+        achadas.append(caminho)
+    if not achadas:
+        return "", []
+    return achadas[0], achadas[1:]
 
 
 def _pastas_de_gravacoes(pasta):
@@ -287,6 +296,7 @@ def _cabecalho(caminho, blocos, versao):
     segundos = _duracao(blocos)
     linhas = [
         f"GRAVACAO: {os.path.basename(caminho)} ({_bytes(os.path.getsize(caminho))})",
+        f"  pasta: {os.path.dirname(caminho)}",
         f"  versao {versao} | {_hora(segundos * 1000)} de duracao | {len(blocos)} blocos",
     ]
     jogador = _quem_grave(blocos)
