@@ -39,6 +39,7 @@ GRUPOS = {
     "loot": ("ContainerAddedItem", "ContainerRemovedItem", "ContainerTransformedItem", "ContainerOpened", "ContainerClosed"),
     "magia": ("MissileFired",),
     "movimento": ("CreatureMoved", "PlayerMoved"),
+    "velocidade": ("CreatureSpeedUpdated",),
     "criatura": ("CreatureSeen", "CreatureRemoved", "CreatureHeadingUpdated"),
 }
 _CACHE = {}
@@ -82,7 +83,7 @@ _CLIENTES = {}
         },
         "grupo": {
             "tipo": "STRING",
-            "desc": "Familia de eventos: dano, efeito, vida, chat, loot, magia, movimento, criatura. Vazio = resumo geral.",
+            "desc": "Familia de eventos: dano, efeito, vida, chat, loot, magia, movimento, velocidade, criatura. Vazio = resumo geral.",
             "padrao": "",
         },
         "evento": {
