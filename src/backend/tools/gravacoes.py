@@ -140,6 +140,28 @@ def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", lim
     return "\n".join(linhas)
 
 
+def eventos_da_gravacao(gravacao, pasta="", terreno=False):
+    """Devolve a lista de eventos da gravacao, cada um com '__t' em segundos."""
+    caminho, _ = _achar_gravacao(gravacao, pasta)
+    if not caminho:
+        raise RuntimeError(f"nao achei a gravacao '{gravacao}'")
+    miner = _achar_miner()
+    if isinstance(miner, tuple):
+        miner = miner[0]
+    if not miner:
+        raise RuntimeError("nao achei o miner.exe no projeto")
+    bruto, _ = _ler_bruto(caminho, miner, _achar_clientes(miner), bool(terreno))
+    blocos = bruto if isinstance(bruto, list) else []
+    eventos = []
+    for bloco in blocos:
+        quando = float(bloco.get("Timestamp", 0)) / 1000.0
+        for evento in bloco.get("Events", []):
+            linha = dict(evento)
+            linha["__t"] = quando
+            eventos.append(linha)
+    return eventos
+
+
 def _achar_gravacao(pedido, pasta):
     texto = str(pedido or "").strip().strip('"')
     if not texto:
@@ -306,6 +328,17 @@ def _cabecalho(caminho, blocos, versao):
     return linhas
 
 
+CORES_DE_NUMERO = {
+    5: "azul",
+    30: "verde (veneno)",
+    35: "azul (energia)",
+    129: "cinza (fisico em undead)",
+    180: "vermelho (sangue/dreno)",
+    198: "laranja (fogo)",
+    215: "experiencia (nao e dano)",
+}
+
+
 def _resumo(blocos):
     contagem = collections.Counter()
     cores = collections.Counter()
@@ -321,8 +354,10 @@ def _resumo(blocos):
     linhas = ["", "EVENTOS (por tipo):"]
     linhas += [f"  {tipo}: {quantos}" for tipo, quantos in contagem.most_common()]
     if cores:
-        linhas.append("CORES DOS NUMEROS (acende o tipo do dano):")
-        linhas.append("  " + " | ".join(f"{cor} -> {quantos}x" for cor, quantos in cores.most_common(12)))
+        linhas.append("CORES DOS NUMEROS (cor do cliente -> o que acende -> quantas vezes):")
+        linhas.append("  " + " | ".join(
+            f"{cor} {CORES_DE_NUMERO.get(cor, '?')} -> {quantos}x"
+            for cor, quantos in cores.most_common(12)))
     if efeitos:
         linhas.append("EFEITOS GRAFICOS (id -> quantas vezes):")
         linhas.append("  " + " | ".join(f"{i} -> {q}x" for i, q in efeitos.most_common(12)))
