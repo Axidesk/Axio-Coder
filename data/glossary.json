@@ -5926,8 +5926,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 102,
         "conferido": [
-          1793665721.659,
-          29098
+          1794517872.592,
+          29744
         ]
       }
     },
@@ -6122,8 +6122,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 230,
         "conferido": [
-          1793665721.659,
-          29098
+          1794517872.592,
+          29744
         ]
       }
     },
@@ -6428,10 +6428,10 @@
       "descricao": "Barra fininha na base da consola do painel, enquanto o Preparar instala o xampp e liga as pecas. Alimentada pelo evento `painel:progresso` (avisar_progresso em xampp.rs) e escondida no fim do comando.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 403,
+        "linha": 410,
         "conferido": [
-          1793665721.659,
-          29098
+          1794517872.592,
+          29744
         ]
       }
     },
@@ -6695,8 +6695,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 86,
         "conferido": [
-          1793665721.659,
-          29098
+          1794517872.592,
+          29744
         ]
       }
     },
@@ -6712,10 +6712,10 @@
       "descricao": "Botao X ao lado do Salvar, no cabecalho do editor de codigo do painel; fecha o arquivo aberto e volta a mensagem \"Escolha um arquivo...\". Com alteracoes por gravar nao fecha: deixa o recado \"grava ou descarta antes de fechar\" (fechar em conteudo.js:308).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 418,
+        "linha": 425,
         "conferido": [
-          1793665721.659,
-          29098
+          1794517872.592,
+          29744
         ]
       }
     },
