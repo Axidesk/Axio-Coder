@@ -1,5 +1,7 @@
 """Combate: le um log de combate e mede-o - e compara dois lado a lado."""
 
+import difflib
+import os
 import re
 import statistics
 
@@ -16,7 +18,25 @@ _CAUSADO_VIDEO = re.compile(r"causado\s+(\d+)\s+a\s+(.+)$")
 _SOFRIDO_VIDEO = re.compile(r"sofrido\s+(\d+)\s+de\s+(.+)$")
 
 
+def _caminho_ausente(caminho):
+    """Diz que o arquivo nao existe E quais os parecidos que estao na mesma pasta."""
+    pasta = os.path.dirname(caminho) or "."
+    try:
+        vizinhos = [nome for nome in os.listdir(pasta) if os.path.isfile(os.path.join(pasta, nome))]
+    except OSError:
+        return f"o arquivo '{caminho}' nao existe e a pasta '{pasta}' nao pode ser lida."
+    alvo = os.path.basename(caminho)
+    parecidos = difflib.get_close_matches(alvo, vizinhos, n=3, cutoff=0.4)
+    if not parecidos:
+        parecidos = [nome for nome in vizinhos if alvo.split()[0].lower() in nome.lower()][:5]
+    if not parecidos:
+        return f"o arquivo '{caminho}' nao existe e nao ha nenhum parecido em '{pasta}'."
+    return f"o arquivo '{caminho}' nao existe. Parecidos em '{pasta}': " + ", ".join(parecidos) + "."
+
+
 def _ler_eventos(caminho):
+    if not os.path.isfile(caminho):
+        raise FileNotFoundError(_caminho_ausente(caminho))
     with open(caminho, encoding="utf-8", errors="replace") as ficheiro:
         linhas = [linha.rstrip("\n") for linha in ficheiro]
     uteis = [linha.strip() for linha in linhas if linha.strip()]
@@ -91,9 +111,9 @@ def _alvo_provavel(eventos, formato):
     return max(contagem.items(), key=lambda par: par[1])[0]
 
 
-def _medir(eventos, alvo, formato):
-    acertos, puffs, sparks, curas, instantes, vidas = [], 0, 0, [], [], []
-    sofridos = 0
+def _medir(eventos, alvo, formato, direcao=""):
+    puffs, sparks, curas, vidas = 0, 0, [], []
+    levados, instantes_levar, atacados, instantes_atacar = [], [], [], []
     for segundos, campos in eventos:
         texto = " ".join(campos)
         if formato == "servidor":
@@ -101,8 +121,8 @@ def _medir(eventos, alvo, formato):
             if casamento and casamento.group(2) == alvo and casamento.group(3) == "fisico":
                 valor = int(casamento.group(4))
                 if valor > 0:
-                    acertos.append(valor)
-                    instantes.append(segundos)
+                    levados.append(valor)
+                    instantes_levar.append(segundos)
                 if valor <= 0:
                     continue
                 vida = re.search(r"hp=(\d+)/", texto)
@@ -115,7 +135,7 @@ def _medir(eventos, alvo, formato):
                     puffs += 1
                 else:
                     sparks += 1
-                instantes.append(segundos)
+                instantes_levar.append(segundos)
                 continue
             casamento = _CURA_SERVIDOR.match(texto)
             if casamento and casamento.group(1) == alvo:
@@ -131,24 +151,33 @@ def _medir(eventos, alvo, formato):
                 puffs += 1
             else:
                 sparks += 1
-            instantes.append(segundos)
+            instantes_levar.append(segundos)
         elif primeiro == "cura" and any(alvo in campo for campo in campos[1:]):
             valor = re.search(r"curou\s+(\d+)", " ".join(campos))
             if valor:
                 curas.append(int(valor.group(1)))
-        elif primeiro == "melee" or primeiro.startswith("sofrido"):
-            valor = _CAUSADO_VIDEO.search(texto)
-            if valor and valor.group(2) == alvo:
-                acertos.append(int(valor.group(1)))
-                instantes.append(segundos)
-                continue
-            sofrido = _SOFRIDO_VIDEO.search(texto)
-            if sofrido and sofrido.group(2).strip() == alvo and "veneno" not in campos:
-                acertos.append(int(sofrido.group(1)))
-                instantes.append(segundos)
-                sofridos += 1
+        else:
+            for campo in campos:
+                if "veneno" in campo or "poison" in campo:
+                    continue
+                valor = _CAUSADO_VIDEO.search(campo)
+                if valor and valor.group(2).strip() == alvo:
+                    levados.append(int(valor.group(1)))
+                    instantes_levar.append(segundos)
+                    continue
+                sofrido = _SOFRIDO_VIDEO.search(campo)
+                if sofrido and sofrido.group(2).strip() == alvo:
+                    atacados.append(int(sofrido.group(1)))
+                    instantes_atacar.append(segundos)
 
-    a_atacar = bool(sofridos) and sofridos >= len(acertos)
+    if formato == "servidor":
+        acertos, instantes, a_atacar = levados, instantes_levar, False
+    else:
+        quer_atacar = direcao == "atacar" or (not direcao and len(atacados) > len(levados))
+        if quer_atacar:
+            acertos, instantes, a_atacar = atacados, instantes_atacar, True
+        else:
+            acertos, instantes, a_atacar = levados, instantes_levar, False
     tentativas = len(acertos) if a_atacar else len(acertos) + puffs + sparks
     duracao = eventos[-1][0] - eventos[0][0] if len(eventos) > 1 else 0
     if not acertos or not tentativas or duracao <= 0:
@@ -310,9 +339,14 @@ def _curto(caminho):
             "desc": "Um segundo ficheiro (ou vários, um por linha) para a tabela lado a lado. E o caminho para comparar o teste de agora com a gravacao de referencia.",
             "padrao": "",
         },
+        "direcao": {
+            "tipo": "STRING",
+            "desc": "Sentido a medir, quando o alvo aparece nos dois: 'levar' (o alvo leva os golpes - eu a bater no monstro) ou 'atacar' (o alvo e quem bate - o monstro a bater em mim). Vazio decide pelo lado com mais eventos, o que ja trocou comparacoes: diga sempre o sentido.",
+            "padrao": "",
+        },
     },
 )
-def tool_analisar_combate(caminhos, alvo="", comparar_com=""):
+def tool_analisar_combate(caminhos, alvo="", comparar_com="", direcao=""):
     grupos = []
     for lista in (caminhos, comparar_com):
         nomes = [linha.strip() for linha in (lista or "").splitlines() if linha.strip()]
@@ -326,7 +360,7 @@ def tool_analisar_combate(caminhos, alvo="", comparar_com=""):
                     f"ERRO: não consegui descobrir quem leva os golpes em {nome}. "
                     "Passe 'alvo' com o nome da criatura."
                 )
-            medida = _medir(eventos, escolhido, formato)
+            medida = _medir(eventos, escolhido, formato, direcao)
             if medida is None:
                 return f"ERRO: {nome} não tem golpes de '{escolhido}' legíveis o suficiente para medir."
             medida["nome"] = _curto(nome)

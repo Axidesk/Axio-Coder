@@ -36,6 +36,7 @@ import difflib
 import importlib
 import threading
 import time
+import traceback
 
 from src.backend.services.transferencia import duracao_texto
 from src.backend.state import emit_event, set_turn_id, turn_id_atual
@@ -199,11 +200,37 @@ def dispatch(nome, args):
     entry = TOOL_REGISTRY.get(nome)
     if entry is None:
         return None, False
-    resultado = _com_vigia(nome, entry["handler"], resolver_kwargs(entry["params"], args or {}))
+    try:
+        resultado = _com_vigia(nome, entry["handler"], resolver_kwargs(entry["params"], args or {}))
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except Exception as erro:
+        resultado = _texto_da_falha(nome, erro)
     aviso = _aviso_dos_desconhecidos(entry["params"], args or {})
     if aviso and isinstance(resultado, str):
         resultado = f"{aviso}\n\n{resultado}"
     return resultado, True
+
+
+def _texto_da_falha(nome, erro):
+    """Devolve a falha de uma ferramenta como RESULTADO, para ela nao matar o turno.
+
+    Sem esta rede, qualquer excecao de um handler (um arquivo que nao existe, um indice
+    fora da lista, uma lib que rebenta) sobe ate o loop e interrompe a rodada inteira: o
+    utilizador perde o trabalho e a chamada seguinte ja nao acontece. Aqui o erro volta
+    como texto, com o sitio onde rebentou, e a rodada continua.
+    """
+    marcas = traceback.extract_tb(erro.__traceback__)
+    onde = ""
+    if marcas:
+        ultima = marcas[-1]
+        onde = f" [em {ultima.filename}:{ultima.lineno} ({ultima.name})]"
+    return (
+        f"[FALHA DA FERRAMENTA] {nome}: {type(erro).__name__}: {erro}{onde}\n"
+        "O turno NAO foi interrompido - este texto e o resultado da chamada. "
+        "Corrija a causa (caminho errado, argumento invalido ou defeito da propria ferramenta) "
+        "e repita apenas o que falhou, ou siga com o resto do trabalho."
+    )
 
 
 def _com_vigia(nome, handler, kwargs):
