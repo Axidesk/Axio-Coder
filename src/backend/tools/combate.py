@@ -15,6 +15,7 @@ _LINHA_TEMPO_SERVIDOR = re.compile(r"^(\d+):(\d+):(\d+)\.(\d+)\s+(.*)$")
 _DANO_SERVIDOR = re.compile(r"^dano\s+(.+?)\s+->\s+(.+?)\s+tipo=(\w+)\s+valor=(-?\d+)")
 _DEFESA_SERVIDOR = re.compile(r"^defesa\s+(.+?)\s+tipo=(\w+).*?bruto=(\d+)")
 _CURA_SERVIDOR = re.compile(r"^cura\s+(.+?)\s+\+(\d+)")
+_BLOQUEIO_SERVIDOR = re.compile(r"bloqueio=(\d+)")
 _CAUSADO_VIDEO = re.compile(r"causado\s+(\d+)\s+a\s+(.+)$")
 _SOFRIDO_VIDEO = re.compile(r"sofrido\s+(\d+)\s+de\s+(.+)$")
 
@@ -88,8 +89,13 @@ def _eventos_do_servidor(uteis):
     return eventos, "servidor"
 
 
+def _defende_com_bloqueio(texto):
+    valor = _BLOQUEIO_SERVIDOR.search(texto)
+    return bool(valor) and int(valor.group(1)) > 0
+
+
 def _alvo_provavel(eventos, formato):
-    contagem = {}
+    contagem, monstros = {}, {}
     for _, campos in eventos:
         texto = " ".join(campos)
         if formato == "servidor":
@@ -97,6 +103,10 @@ def _alvo_provavel(eventos, formato):
             if casamento and casamento.group(3) == "fisico":
                 nome = casamento.group(2)
                 contagem[nome] = contagem.get(nome, 0) + 2
+            defesa = _DEFESA_SERVIDOR.match(texto)
+            if defesa and _defende_com_bloqueio(texto):
+                nome = defesa.group(1)
+                monstros[nome] = monstros.get(nome, 0) + 1
             continue
         valor = _CAUSADO_VIDEO.search(texto)
         if valor and campos and campos[0] == "melee":
@@ -107,6 +117,8 @@ def _alvo_provavel(eventos, formato):
         if sofrido and "veneno" not in campos:
             nome = sofrido.group(2).strip()
             contagem[nome] = contagem.get(nome, 0) + 2
+    if monstros:
+        return max(monstros.items(), key=lambda par: par[1])[0]
     if not contagem:
         return ""
     return max(contagem.items(), key=lambda par: par[1])[0]
@@ -174,7 +186,7 @@ def _medir(eventos, alvo, formato, direcao=""):
     if formato == "servidor":
         acertos, instantes, a_atacar = levados, instantes_levar, False
     else:
-        quer_atacar = direcao == "atacar" or (not direcao and len(atacados) > len(levados))
+        quer_atacar = direcao == "atacar"
         if quer_atacar:
             acertos, instantes, a_atacar = atacados, instantes_atacar, True
         else:
@@ -242,6 +254,8 @@ def _numero(chave, valor):
     return f"{valor:.1f}"
 
 
+_SO_DEFESA = {"acerta", "puff", "spark", "defesa", "margem"}
+
 _ROTULOS = [
     ("alvo", "alvo"),
     ("duração", "duração"),
@@ -269,23 +283,22 @@ _ROTULOS = [
 
 
 def _tabela(nomes, medidas):
-    a_atacar = any(medida.get("direção") == "atacar" for medida in medidas)
-    saltar = {"acerta", "puff", "spark", "defesa", "margem"} if a_atacar else set()
+    todas_atacam = all(medida.get("direção") == "atacar" for medida in medidas)
     largura = max(len(rotulo) for _, rotulo in _ROTULOS) + 1
     colunas = max(len(nome) for nome in nomes) + 2
     cabecalho = " " * largura + "".join(nome.rjust(colunas) for nome in nomes)
     linhas = [cabecalho]
     for chave, rotulo in _ROTULOS:
-        if chave in saltar:
-            continue
-        if chave == "tentativas" and a_atacar:
+        if chave == "tentativas" and todas_atacam:
             rotulo = "golpes que acertam"
         valores = []
         for medida in medidas:
+            if medida.get("direção") == "atacar" and chave in _SO_DEFESA:
+                valores.append("—")
+                continue
             if chave == "alvo":
                 nome = medida.get("alvo", "—")
-                if medida.get("direção") == "atacar":
-                    nome += " (a atacar)"
+                nome += " (ataca)" if medida.get("direção") == "atacar" else " (leva)"
                 valores.append(nome)
             elif chave in ("tentativas", "curas"):
                 valores.append(str(medida.get(chave, 0)))
