@@ -14,6 +14,10 @@ _EFEITO_DEFESA = 3
 _EFEITO_BLOQUEIO = 4
 _JANELA_DO_ALVO = 1.5
 _MEMORIA_DO_ALVO = 10.0
+_JANELA_DA_CURA = 5.0
+_SUBIDA_MINIMA = 2
+_PASTAS_DE_MONSTROS = (("Server", "data", "monster"), ("data", "monster"), ("data", "monsters"))
+_MAXIMOS = {}
 _CASAS = {"duração", "dano/s", "cura/s", "líquido/s", "média", "mediana", "máx", "vida mín"}
 _LINHA_TEMPO_VIDEO = re.compile(r"^(\d+):(\d+)\.(\d+)$")
 _LINHA_TEMPO_SERVIDOR = re.compile(r"^(\d+):(\d+):(\d+)\.(\d+)\s+(.*)$")
@@ -96,6 +100,55 @@ def _eventos_do_servidor(uteis):
     return eventos, "servidor"
 
 
+def _pastas_de_monstros(caminho):
+    """As pastas de XML de monstro ao alcance: subindo da gravacao e do proprio Axio."""
+    raizes = [os.path.abspath(caminho or "."), os.path.abspath(__file__)]
+    achadas = []
+    for raiz in raizes:
+        atual = raiz if os.path.isdir(raiz) else os.path.dirname(raiz)
+        for _ in range(9):
+            candidatas = [os.path.join(atual, *partes) for partes in _PASTAS_DE_MONSTROS]
+            projetos = os.path.join(atual, "docs", "projetos")
+            if os.path.isdir(projetos):
+                candidatas += [
+                    os.path.join(projetos, nome, *partes)
+                    for nome in sorted(os.listdir(projetos))
+                    for partes in _PASTAS_DE_MONSTROS
+                ]
+            for candidata in candidatas:
+                if os.path.isdir(candidata) and candidata not in achadas:
+                    achadas.append(candidata)
+            pai = os.path.dirname(atual)
+            if pai == atual:
+                break
+            atual = pai
+    return achadas
+
+
+def _vidas_maximas(caminho):
+    """Vida maxima de cada monstro, pelo <health max> dos XML do servidor."""
+    pastas = _pastas_de_monstros(caminho)
+    chave = tuple(pastas)
+    if chave in _MAXIMOS:
+        return _MAXIMOS[chave]
+    maximos = {}
+    for pasta in pastas:
+        for nome in sorted(os.listdir(pasta)):
+            if not nome.lower().endswith(".xml"):
+                continue
+            try:
+                with open(os.path.join(pasta, nome), encoding="utf-8", errors="replace") as ficheiro:
+                    texto = ficheiro.read(6000)
+            except OSError:
+                continue
+            criatura = re.search(r'<monster[^>]*\bname="([^"]+)"', texto)
+            vida = re.search(r'<health[^>]*\bmax="(\d+)"', texto)
+            if criatura and vida:
+                maximos.setdefault(criatura.group(1).strip().lower(), int(vida.group(1)))
+    _MAXIMOS[chave] = maximos
+    return maximos
+
+
 def _eventos_do_rec(caminho):
     """Le uma gravacao do TibiaCam e devolve os eventos no formato da transcricao."""
     from src.backend.tools import gravacoes  # import-local: so carrega o leitor de gravacoes quando ha um .rec
@@ -104,6 +157,7 @@ def _eventos_do_rec(caminho):
     if not achado:
         raise FileNotFoundError(_caminho_ausente(caminho))
     bruto = gravacoes.eventos_da_gravacao(achado)
+    maximos = _vidas_maximas(caminho)
 
     nomes, tipos = {}, {}
     for evento in bruto:
@@ -122,14 +176,21 @@ def _eventos_do_rec(caminho):
             posicao = evento.get("Position") or {}
             passos.append((evento["__t"], posicao.get("X"), posicao.get("Y"), posicao.get("Z")))
 
-    anterior, quedas = {}, []
+    series = {}
     for evento in bruto:
         if evento.get("Event") != "CreatureHealthUpdated":
             continue
         chave, vida = evento.get("CreatureId"), evento.get("Health")
-        if chave in anterior and isinstance(vida, int) and vida < anterior[chave] and chave in monstros:
-            quedas.append((evento["__t"], chave))
-        anterior[chave] = vida
+        if isinstance(vida, int):
+            series.setdefault(chave, []).append((evento["__t"], vida))
+
+    quedas = []
+    for chave, amostras in series.items():
+        if chave not in monstros:
+            continue
+        for (_, antes), (quando, agora) in zip(amostras, amostras[1:]):
+            if agora < antes:
+                quedas.append((quando, chave))
     quedas.sort()
 
     instantes_das_quedas = [instante for instante, _ in quedas]
@@ -166,6 +227,37 @@ def _eventos_do_rec(caminho):
                 return True
         return False
 
+    curas = []
+    for chave, amostras in series.items():
+        nome = monstros.get(chave, "")
+        if not nome:
+            continue
+        maximo = maximos.get(nome)
+        for (instante, antes), (quando, agora) in zip(amostras, amostras[1:]):
+            subida = agora - antes
+            if subida < _SUBIDA_MINIMA or quando - instante > _JANELA_DA_CURA:
+                continue
+            if maximo:
+                ganho = int(round(subida / 100.0 * maximo))
+                curas.append((quando, ["cura", f"curou {ganho} ({subida}%) em {nome}"]))
+            else:
+                curas.append((quando, ["cura", f"curou {subida}% em {nome}"]))
+
+    vida_antes, teto_antes = None, None
+    for evento in bruto:
+        if evento.get("Event") != "PlayerDataUpdated":
+            continue
+        vida, teto = evento.get("Health"), evento.get("MaxHealth")
+        if isinstance(vida, int) and isinstance(vida_antes, int):
+            subida = vida - vida_antes
+            teto_mudou = teto_antes is not None and teto != teto_antes
+            if not teto_mudou and not (vida_antes <= 0 < vida) and subida >= _SUBIDA_MINIMA:
+                curas.append((evento["__t"], ["cura", f"curou {subida}"]))
+        if isinstance(vida, int):
+            vida_antes = vida
+        if isinstance(teto, int):
+            teto_antes = teto
+
     eventos = []
     for evento in bruto:
         tipo = evento.get("Event")
@@ -187,6 +279,7 @@ def _eventos_do_rec(caminho):
                 continue
             rotulo = "defesa" if evento.get("Id") == _EFEITO_DEFESA else "bloqueio"
             eventos.append((quando, [rotulo, nome]))
+    eventos.extend(curas)
     eventos.sort(key=lambda par: par[0])
     return eventos
 
@@ -330,7 +423,7 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
                 sparks += 1
             instantes_levar.append(segundos)
         elif primeiro == "cura" and any(alvo in campo for campo in campos[1:]):
-            valor = re.search(r"curou\s+(\d+)", " ".join(campos))
+            valor = re.search(r"curou\s+(\d+)\s*\(", " ".join(campos))
             if valor:
                 curas.append(int(valor.group(1)))
         else:
@@ -599,6 +692,14 @@ def _tempo_em_combate(eventos, limite=8.0):
     return sum(b - a for a, b in zip(instantes, instantes[1:]) if b - a < limite)
 
 
+def _janela_da_criatura(eventos, nome):
+    """Do primeiro ao ultimo evento que nomeia a criatura: a luta dela, sem o resto da gravacao."""
+    relevantes = [indice for indice, (_, campos) in enumerate(eventos) if any(nome in campo for campo in campos)]
+    if len(relevantes) < 2:
+        return eventos
+    return eventos[relevantes[0] : relevantes[-1] + 1]
+
+
 def _medir_lista(lista, alvo, direcao):
     medidas = []
     for nome in [linha.strip() for linha in (lista or "").splitlines() if linha.strip()]:
@@ -618,7 +719,7 @@ def _medir_lista(lista, alvo, direcao):
             sozinho = len(criaturas) == 1
             recorte = eventos if sozinho else _eventos_da(eventos, criatura, criaturas, formato)
             if formato == "gravacao":
-                tempo = _tempo_em_combate(recorte, 4.0)
+                tempo = _tempo_em_combate(_janela_da_criatura(recorte, criatura), 4.0)
             elif sozinho:
                 tempo = None
             else:
