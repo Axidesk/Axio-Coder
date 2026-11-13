@@ -219,6 +219,7 @@ def _medir(eventos, alvo, formato, direcao=""):
         "cura_s": cura_total / duracao,
         "intervalo": statistics.median(intervalos) if intervalos else 0.0,
         "vida_min": min(vidas) if vidas else None,
+        "ritmo_suspeito": formato == "video" and 60.0 * tentativas / duracao > 33,
     }
 
 
@@ -284,6 +285,11 @@ def _tabela(nomes, medidas):
             else:
                 valores.append(_numero(chave, medida.get(chave)))
         linhas.append(rotulo.ljust(largura) + "".join(valor.rjust(colunas) for valor in valores))
+    if any(medida.get("ritmo_suspeito") for medida in medidas):
+        linhas.append("")
+        linhas.append("AVISO DE RITMO: mais de 33 tentativas/min (menos de 1,8s entre golpes).")
+        linhas.append("O cliente 7.4 ataca de 2 em 2 segundos, logo a contagem esta inflada:")
+        linhas.append("'defesa X' e 'bloqueio X' sao ambos X A DEFENDER - nao somar o bloqueio do oponente.")
     return "\n".join(linhas)
 
 
