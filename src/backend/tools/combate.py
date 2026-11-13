@@ -1,6 +1,7 @@
 """Combate: le um log de combate e mede-o - e compara dois lado a lado."""
 
 import difflib
+import math
 import os
 import re
 import statistics
@@ -193,6 +194,8 @@ def _medir(eventos, alvo, formato, direcao=""):
     ordenados = sorted(acertos)
     dano_total = sum(acertos)
     cura_total = sum(curas)
+    taxa_defesa = 0.0 if a_atacar else (puffs + sparks) / tentativas
+    margem = 196.0 * math.sqrt(taxa_defesa * (1.0 - taxa_defesa) / tentativas) if tentativas else 0.0
     return {
         "alvo": alvo,
         "direção": "atacar" if a_atacar else "levar",
@@ -202,6 +205,8 @@ def _medir(eventos, alvo, formato, direcao=""):
         "acerta": 100.0 if a_atacar else 100.0 * len(acertos) / tentativas,
         "puff": 0.0 if a_atacar else 100.0 * puffs / tentativas,
         "spark": 0.0 if a_atacar else 100.0 * sparks / tentativas,
+        "defesa": 100.0 * taxa_defesa,
+        "margem": margem,
         "média": dano_total / len(acertos),
         "mediana": statistics.median(acertos),
         "máx": max(acertos),
@@ -226,8 +231,10 @@ def _medir(eventos, alvo, formato, direcao=""):
 def _numero(chave, valor):
     if valor is None:
         return "—"
-    if chave in ("acerta", "puff", "spark", "abaixo50", "acima100", "acima130", "acima150"):
+    if chave in ("acerta", "puff", "spark", "defesa", "abaixo50", "acima100", "acima130", "acima150"):
         return f"{valor:.1f}%"
+    if chave == "margem":
+        return f"+-{valor:.1f}"
     if chave == "duração":
         return f"{valor:.0f}s"
     if chave in ("tentativas", "curas", "máx", "p10", "p90"):
@@ -243,6 +250,8 @@ _ROTULOS = [
     ("acerta", "acerta"),
     ("puff", "puff (escudo)"),
     ("spark", "spark (armadura)"),
+    ("defesa", "defesa total"),
+    ("margem", "margem 95%"),
     ("média", "golpe médio"),
     ("mediana", "golpe mediano"),
     ("máx", "golpe máximo"),
@@ -261,7 +270,7 @@ _ROTULOS = [
 
 def _tabela(nomes, medidas):
     a_atacar = any(medida.get("direção") == "atacar" for medida in medidas)
-    saltar = {"acerta", "puff", "spark"} if a_atacar else set()
+    saltar = {"acerta", "puff", "spark", "defesa", "margem"} if a_atacar else set()
     largura = max(len(rotulo) for _, rotulo in _ROTULOS) + 1
     colunas = max(len(nome) for nome in nomes) + 2
     cabecalho = " " * largura + "".join(nome.rjust(colunas) for nome in nomes)
@@ -352,28 +361,73 @@ def _curto(caminho):
         },
     },
 )
-def tool_analisar_combate(caminhos, alvo="", comparar_com="", direcao=""):
-    grupos = []
-    for lista in (caminhos, comparar_com):
-        nomes = [linha.strip() for linha in (lista or "").splitlines() if linha.strip()]
-        for nome in nomes:
-            eventos, formato = _ler_eventos(nome)
-            if not eventos:
-                return f"ERRO: {nome} não tem nenhum evento legível."
-            escolhido = alvo.strip() or _alvo_provavel(eventos, formato)
-            if not escolhido:
-                return (
-                    f"ERRO: não consegui descobrir quem leva os golpes em {nome}. "
-                    "Passe 'alvo' com o nome da criatura."
-                )
-            medida = _medir(eventos, escolhido, formato, direcao)
-            if medida is None:
-                return f"ERRO: {nome} não tem golpes de '{escolhido}' legíveis o suficiente para medir."
-            medida["nome"] = _curto(nome)
-            grupos.append(medida)
 
+
+def tool_analisar_combate(caminhos, alvo="", comparar_com="", direcao=""):
+    teste, erro = _medir_lista(caminhos, alvo, direcao)
+    if erro:
+        return erro
+    referencia, erro = _medir_lista(comparar_com, alvo, direcao)
+    if erro:
+        return erro
+    grupos = (teste or []) + (referencia or [])
     if not grupos:
         return "ERRO: nenhum ficheiro indicado."
     corpo = _tabela([medida["nome"] for medida in grupos], grupos)
     detalhe = "\n".join(f"{medida['nome']}: {_efeito(medida)}" for medida in grupos)
-    return f"{corpo}\n\n{detalhe}"
+    juizo = _veredicto(teste, referencia)
+    return f"{corpo}\n\n{detalhe}" + (f"\n\n{juizo}" if juizo else "")
+
+
+def _veredicto(teste, referencia):
+    if not teste or not referencia:
+        return ""
+    pares = []
+    if len(teste) == len(referencia):
+        pares = list(zip(teste, referencia))
+    else:
+        sobra = list(referencia)
+        for medida in teste:
+            igual = next((r for r in sobra if r.get("alvo", "").lower() == medida.get("alvo", "").lower()), None)
+            if igual:
+                sobra.remove(igual)
+            pares.append((medida, igual))
+
+    linhas = ["VEREDICTO (a diferença só conta se passar da margem):"]
+    for medida, par in pares:
+        if par is None:
+            linhas.append(f"  {medida['nome']}: sem par para comparar.")
+            continue
+        dif = medida["defesa"] - par["defesa"]
+        margem = math.sqrt(medida["margem"] ** 2 + par["margem"] ** 2)
+        juiz = "compatível" if abs(dif) <= margem else "DIFERE"
+        linhas.append(
+            f"  {medida['nome']} vs {par['nome']}: defesa {medida['defesa']:.1f}% contra {par['defesa']:.1f}% "
+            f"(dif {dif:+.1f}, margem +-{margem:.1f}) -> {juiz}"
+        )
+        if medida.get("média") and par.get("média"):
+            desvio = 100.0 * (medida["média"] - par["média"]) / par["média"]
+            linhas.append(
+                f"      golpe médio {medida['média']:.1f} contra {par['média']:.1f} ({desvio:+.0f}%)"
+            )
+    return "\n".join(linhas)
+
+
+def _medir_lista(lista, alvo, direcao):
+    medidas = []
+    for nome in [linha.strip() for linha in (lista or "").splitlines() if linha.strip()]:
+        eventos, formato = _ler_eventos(nome)
+        if not eventos:
+            return None, f"ERRO: {nome} não tem nenhum evento legível."
+        escolhido = alvo.strip() or _alvo_provavel(eventos, formato)
+        if not escolhido:
+            return None, (
+                f"ERRO: não consegui descobrir quem leva os golpes em {nome}. "
+                "Passe 'alvo' com o nome da criatura."
+            )
+        medida = _medir(eventos, escolhido, formato, direcao)
+        if medida is None:
+            return None, f"ERRO: {nome} não tem golpes de '{escolhido}' legíveis o suficiente para medir."
+        medida["nome"] = _curto(nome)
+        medidas.append(medida)
+    return medidas, ""
