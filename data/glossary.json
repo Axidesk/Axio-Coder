@@ -6067,10 +6067,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 632,
+        "linha": 633,
         "conferido": [
-          1793465218.206,
-          68289
+          1794540992.147,
+          69005
         ]
       }
     },
@@ -6081,10 +6081,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 1612,
+        "linha": 1620,
         "conferido": [
-          1793465218.206,
-          68289
+          1794540992.147,
+          69005
         ]
       }
     },
@@ -6174,10 +6174,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 1644,
+        "linha": 1652,
         "conferido": [
-          1793465218.206,
-          68289
+          1794540992.147,
+          69005
         ]
       }
     },
@@ -6673,10 +6673,10 @@
       "descricao": "Tira a linha do resumo do que fica a vista no chat e guarda-a para o contexto da rodada seguinte.",
       "localizacao": {
         "arquivo": "src/backend/ai/loop.py",
-        "linha": 308,
+        "linha": 309,
         "conferido": [
-          1793400741.772,
-          32783
+          1794533723.813,
+          32797
         ]
       }
     },

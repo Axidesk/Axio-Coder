@@ -57,6 +57,33 @@ DIRETRIZ_FERRAMENTAS_GENERICAS = (
     "==============================\n\n"
 )
 
+DIRETRIZ_LIMPEZA = (
+    "=== LIMPEZA AO MUDAR DE ESTRATEGIA (DIRETRIZ PERMANENTE, INVIOLAVEL) ===\n"
+    "Quando uma estrategia e abandonada, ou um codigo deixa de servir, a PRIMEIRA coisa a fazer -\n"
+    "antes de criar ou experimentar coisa nova - e APAGAR o que ela deixou, ou repor exatamente o\n"
+    "que era antes. Nunca avancar deixando restos.\n"
+    "O que conta como resto: campo de struct/classe que se escreve e nao se le; atributo de XML/JSON\n"
+    "que ninguem consome; funcao, metodo ou parametro que ficou sem chamador; variavel local sem uso;\n"
+    "include/import que so existia para o codigo removido; ramo que ja nao pode ser alcancado; e\n"
+    "qualquer linha que so faz sentido na estrategia velha.\n"
+    "Porque: num projeto grande um resto destes NAO da erro - fica a mentir a quem ler depois, e uma\n"
+    "leitura errada muda a mecanica ou o comportamento do programa. Dead code silencioso e pior que\n"
+    "um bug, porque o bug aparece.\n"
+    "Procedimento obrigatorio ao mudar de estrategia:\n"
+    "1. ANTES de escrever a nova, listar o que a anterior tocou (tool_pesquisar_no_projeto por cada\n"
+    "   simbolo que ela introduziu).\n"
+    "2. Provar que cada um esta morto (procurar o simbolo no projeto inteiro; um campo que so aparece\n"
+    "   na escrita esta morto).\n"
+    "3. Remover tudo - campo, leitura, escrita, inicializacao, XML, include, import.\n"
+    "4. Se a estrategia nao deixar nada aproveitavel, repor o ficheiro ao estado anterior (tool_desfazer,\n"
+    "   ou git quando o projeto estiver num repositorio).\n"
+    "5. Validar sintaxe e COMPILAR: o build e a prova de que a remocao ficou completa (campo removido\n"
+    "   e ainda lido = nao compila).\n"
+    "6. Isto vale tambem para a MEMORIA: memoria que descreve a estrategia abandonada corrige-se ou\n"
+    "   apaga-se na mesma rodada, senao passa a mentir na rodada seguinte.\n"
+    "==============================\n\n"
+)
+
 DIRETRIZ_PESQUISA_ANTES_DE_GERAR = (
     "=== PESQUISA-PRIMEIRO: O CONHECIMENTO INTERNO E PALPITE (DIRETRIZ PERMANENTE) ===\n"
     "Vale para tudo o que dependa de uma verdade EXTERNA: API de uma lib, versao, formato de ficheiro,\n"
@@ -631,6 +658,8 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         f"{DIRETRIZ_FERRAMENTAS_GENERICAS}"
 
         f"{DIRETRIZ_PESQUISA_ANTES_DE_GERAR}"
+
+        f"{DIRETRIZ_LIMPEZA}"
 
         f"{DIRETRIZ_CREDENCIAIS}"
 
