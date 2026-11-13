@@ -95,6 +95,42 @@
     min-height: 0;
     margin: 0 16px;
 }
+.projeto-notas-preview {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    margin: 0 8px 0 16px;
+    padding: 0 8px 32px 0;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--text-corpo);
+    overflow-wrap: anywhere;
+}
+#panel-col-3-notes.modo-leitura #project-notes-editor,
+#panel-col-3-notes.modo-leitura #project-notes-placeholder {
+    display: none;
+}
+#panel-col-3-notes.modo-leitura .projeto-notas-preview {
+    display: block;
+}
+.projeto-notas-preview .md-table-wrap {
+    border: none;
+    background: transparent;
+    width: 100%;
+    max-width: 100%;
+}
+.projeto-notas-preview .md-table th {
+    background: transparent;
+    border-bottom: 1px solid var(--border-suave);
+}
+.projeto-notas-preview .md-table td {
+    border-bottom: 1px solid var(--border-suave);
+}
+.projeto-notas-preview .md-table tbody tr:last-child td {
+    border-bottom: none;
+}
 .projeto-notas-placeholder {
     position: absolute;
     top: calc(var(--projeto-notas-cabecalho) + var(--projeto-notas-altura) + 16px);

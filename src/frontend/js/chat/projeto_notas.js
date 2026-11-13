@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { state as estadoEditor } from '../editor/state.js';
 import { ordenarPorChaves, tornarAbasArrastaveis } from '../editor/arrastar_abas.js';
 import { showAlert } from './ui.js';
+import { formatInlineText } from './markdown.js';
 import { criarVista } from './colunas.js';
 import { syncDocTopBar } from './layout.js';
 import { defineEditorTheme } from '../editor/themes.js';
@@ -27,6 +28,7 @@ let relogioGravacao = null;
 let aAplicarLeitura = false;
 let criarDepoisDeCarregar = false;
 let modeloVazio = null;
+let modoLeitura = false;
 
 let abas = [];
 let ativaId = null;
@@ -209,7 +211,43 @@ function _ativarAba(id, focar) {
     if (vista) editorNotas.restoreViewState(vista);
     _renderAbas();
     _atualizarAviso();
-    if (focar) editorNotas.focus();
+    if (modoLeitura) _renderizarLeitura();
+    if (focar && !modoLeitura) editorNotas.focus();
+}
+
+function _renderizarLeitura() {
+    if (!dom.projectNotesPreview || !editorNotas) return;
+    const modelo = editorNotas.getModel();
+    const texto = modelo ? modelo.getValue() : '';
+    if (!texto.trim()) {
+        dom.projectNotesPreview.innerHTML = '<div class="projeto-vazio">Esta nota está vazia.</div>';
+        return;
+    }
+    dom.projectNotesPreview.innerHTML = formatInlineText(texto);
+}
+
+function _aplicarModoLeitura() {
+    if (dom.panelCol3Notes) dom.panelCol3Notes.classList.toggle('modo-leitura', modoLeitura);
+    if (dom.btnNotesPreview) {
+        dom.btnNotesPreview.classList.toggle('ativo', modoLeitura);
+        dom.btnNotesPreview.title = modoLeitura ? 'Voltar a editar' : 'Ver formatado';
+    }
+    if (modoLeitura) {
+        _renderizarLeitura();
+        if (dom.projectNotesPlaceholder) dom.projectNotesPlaceholder.classList.remove('visivel');
+        if (dom.projectNotesPreview) dom.projectNotesPreview.scrollTop = 0;
+        return;
+    }
+    _atualizarAviso();
+    if (editorNotas) {
+        editorNotas.layout();
+        editorNotas.focus();
+    }
+}
+
+function alternarLeituraNota() {
+    modoLeitura = !modoLeitura;
+    _aplicarModoLeitura();
 }
 
 export function criarNota() {
@@ -419,7 +457,8 @@ export function alternarCamadaNotas() {
     }
     if (!editorNotas) return;
     editorNotas.layout();
-    editorNotas.focus();
+    if (modoLeitura) _renderizarLeitura();
+    else editorNotas.focus();
 }
 
 async function _carregarNotas() {
@@ -485,6 +524,8 @@ async function _enviarNotas(documento) {
         gravacaoPendente = true;
     }
 }
+
+if (dom.btnNotesPreview) dom.btnNotesPreview.addEventListener('click', alternarLeituraNota);
 
 if (dom.notesContextMenu) {
     dom.notesContextMenu.addEventListener('click', function (e) {
