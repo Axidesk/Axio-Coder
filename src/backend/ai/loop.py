@@ -26,6 +26,7 @@ from src.backend.tools import (
     browse,
     builds,
     cofre,
+    combate,
     comments,
     computador,
     cpp,
