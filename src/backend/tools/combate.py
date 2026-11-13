@@ -5,10 +5,15 @@ import math
 import os
 import re
 import statistics
+from bisect import bisect_left, bisect_right
 
 from src.backend.tools.registry import register
 
 _PERCENTIS = (0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+_EFEITO_DEFESA = 3
+_EFEITO_BLOQUEIO = 4
+_JANELA_DO_ALVO = 1.5
+_MEMORIA_DO_ALVO = 10.0
 _CASAS = {"duração", "dano/s", "cura/s", "líquido/s", "média", "mediana", "máx", "vida mín"}
 _LINHA_TEMPO_VIDEO = re.compile(r"^(\d+):(\d+)\.(\d+)$")
 _LINHA_TEMPO_SERVIDOR = re.compile(r"^(\d+):(\d+):(\d+)\.(\d+)\s+(.*)$")
@@ -37,6 +42,8 @@ def _caminho_ausente(caminho):
 
 
 def _ler_eventos(caminho):
+    if str(caminho).lower().endswith(".rec"):
+        return _eventos_do_rec(caminho), "gravacao"
     if not os.path.isfile(caminho):
         raise FileNotFoundError(_caminho_ausente(caminho))
     with open(caminho, encoding="utf-8", errors="replace") as ficheiro:
@@ -87,6 +94,101 @@ def _eventos_do_servidor(uteis):
         )
         eventos.append((segundos, [casamento.group(5)]))
     return eventos, "servidor"
+
+
+def _eventos_do_rec(caminho):
+    """Le uma gravacao do TibiaCam e devolve os eventos no formato da transcricao."""
+    from src.backend.tools import gravacoes  # import-local: so carrega o leitor de gravacoes quando ha um .rec
+
+    achado, _ = gravacoes._achar_gravacao(caminho, "")
+    if not achado:
+        raise FileNotFoundError(_caminho_ausente(caminho))
+    bruto = gravacoes.eventos_da_gravacao(achado)
+
+    nomes, tipos = {}, {}
+    for evento in bruto:
+        if evento.get("Event") == "CreatureSeen":
+            nomes[evento.get("CreatureId")] = str(evento.get("Name") or "").strip().lower()
+            tipos[evento.get("CreatureId")] = evento.get("Type") or ""
+    monstros = {
+        chave: nome
+        for chave, nome in nomes.items()
+        if nome and tipos.get(chave) == "Monster"
+    }
+
+    passos = []
+    for evento in bruto:
+        if evento.get("Event") == "PlayerMoved":
+            posicao = evento.get("Position") or {}
+            passos.append((evento["__t"], posicao.get("X"), posicao.get("Y"), posicao.get("Z")))
+
+    anterior, quedas = {}, []
+    for evento in bruto:
+        if evento.get("Event") != "CreatureHealthUpdated":
+            continue
+        chave, vida = evento.get("CreatureId"), evento.get("Health")
+        if chave in anterior and isinstance(vida, int) and vida < anterior[chave] and chave in monstros:
+            quedas.append((evento["__t"], chave))
+        anterior[chave] = vida
+    quedas.sort()
+
+    instantes_das_quedas = [instante for instante, _ in quedas]
+    instantes_dos_passos = [passo[0] for passo in passos]
+    numeros = set()
+    for evento in bruto:
+        if evento.get("Event") == "NumberEffectPopped":
+            posicao = evento.get("Position") or {}
+            numeros.add((round(evento["__t"], 2), posicao.get("X"), posicao.get("Y")))
+
+    def monstro_em(quando):
+        if not quedas:
+            return ""
+        indice = bisect_right(instantes_das_quedas, quando + _JANELA_DO_ALVO)
+        if indice == 0:
+            return ""
+        instante, chave = quedas[indice - 1]
+        if quando - instante > _MEMORIA_DO_ALVO:
+            return ""
+        return monstros.get(chave, "")
+
+    def no_jogador(quando, x, y, z):
+        if not passos:
+            return False
+        indice = bisect_left(instantes_dos_passos, quando + 1e-9)
+        if indice == 0:
+            return False
+        _, px, py, pz = passos[indice - 1]
+        return (px, py, pz) == (x, y, z)
+
+    def tem_numero(quando, x, y):
+        for deslocamento in (0.0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3):
+            if (round(quando + deslocamento, 2), x, y) in numeros:
+                return True
+        return False
+
+    eventos = []
+    for evento in bruto:
+        tipo = evento.get("Event")
+        quando = evento.get("__t", 0.0)
+        posicao = evento.get("Position") or {}
+        x, y, z = posicao.get("X"), posicao.get("Y"), posicao.get("Z")
+        if tipo == "NumberEffectPopped":
+            nome = monstro_em(quando)
+            valor = int(evento.get("Value") or 0)
+            if no_jogador(quando, x, y, z):
+                eventos.append((quando, [f"sofrido {valor} de {nome or 'monstro'}"]))
+            elif nome:
+                eventos.append((quando, ["melee", f"causado {valor} a {nome}"]))
+        elif tipo == "GraphicalEffectPopped" and evento.get("Id") in (_EFEITO_DEFESA, _EFEITO_BLOQUEIO):
+            if tem_numero(quando, x, y) or no_jogador(quando, x, y, z):
+                continue
+            nome = monstro_em(quando)
+            if not nome:
+                continue
+            rotulo = "defesa" if evento.get("Id") == _EFEITO_DEFESA else "bloqueio"
+            eventos.append((quando, [rotulo, nome]))
+    eventos.sort(key=lambda par: par[0])
+    return eventos
 
 
 def _defende_com_bloqueio(texto):
@@ -402,9 +504,11 @@ def _curto(caminho):
 
 @register(
     "tool_analisar_combate",
-    "Le um log de combate e mede-o, sem contar nada a mao. Aceita os DOIS formatos: o log do "
-    "proprio servidor ('HH:MM:SS.mmm dano/defesa/cura ...') e a transcricao do TibiaCam "
-    "('10:45.26 / 91% / melee / causado 83 a banshee'). Devolve o que decide o balanceamento: "
+    "Le um log de combate e mede-o, sem contar nada a mao. Aceita os TRES formatos: o log do "
+    "proprio servidor ('HH:MM:SS.mmm dano/defesa/cura ...'), a transcricao do TibiaCam "
+    "('10:45.26 / 91% / melee / causado 83 a banshee') e a GRAVACAO .rec direto (nome ou caminho) "
+    "- da gravacao saem tambem o puff e o spark de cada criatura, lidos dos efeitos 3 (poff) e 4 "
+    "(blockhit), o que antes so a transcricao dava. Devolve o que decide o balanceamento: "
     "duracao, tentativas por minuto, quanto ACERTA, quanto e ANULADO pelo escudo (puff) e pela "
     "armadura (spark), o golpe medio/mediano/maximo, a cauda (<50, >=100, >=130, >=150), as curas "
     "por minuto com o valor medio, e o LIQUIDO em HP/s - dano por segundo menos cura por segundo, "
@@ -416,7 +520,7 @@ def _curto(caminho):
     {
         "caminhos": {
             "tipo": "STRING",
-            "desc": "Um ou mais ficheiros a medir, um por linha (log do servidor ou transcricao do TibiaCam). Vários são somados como se fossem um combate só.",
+            "desc": "Um ou mais ficheiros a medir, um por linha (log do servidor, transcricao do TibiaCam ou gravacao .rec). Vários são somados como se fossem um combate só.",
             "obrig": True,
             "padrao": "",
         },
@@ -513,7 +617,12 @@ def _medir_lista(lista, alvo, direcao):
         for criatura in criaturas:
             sozinho = len(criaturas) == 1
             recorte = eventos if sozinho else _eventos_da(eventos, criatura, criaturas, formato)
-            tempo = None if sozinho else _tempo_em_combate(recorte)
+            if formato == "gravacao":
+                tempo = _tempo_em_combate(recorte, 4.0)
+            elif sozinho:
+                tempo = None
+            else:
+                tempo = _tempo_em_combate(recorte)
             medida = _medir(recorte, criatura, formato, direcao, tempo)
             if medida is None:
                 if sozinho:

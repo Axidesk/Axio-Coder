@@ -224,7 +224,7 @@ def _pastas_do_estado(ficheiro):
         return []
     mapa = dados.get("pastas")
     if isinstance(mapa, dict):
-        return [str(valor) for valor in mapa.values() if isinstance(valor, str)]
+        return [str(mapa[chave]) for chave in sorted(mapa, reverse=True) if isinstance(mapa[chave], str)]
     alvo = dados.get("pasta")
     return [alvo] if isinstance(alvo, str) else []
 
