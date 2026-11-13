@@ -124,7 +124,69 @@ def _alvo_provavel(eventos, formato):
     return max(contagem.items(), key=lambda par: par[1])[0]
 
 
-def _medir(eventos, alvo, formato, direcao=""):
+def _quem_leva(campos, formato):
+    """A criatura que apanha o golpe fisico do jogador (o alvo do combate)."""
+    texto = " ".join(campos)
+    if formato == "servidor":
+        casamento = _DANO_SERVIDOR.match(texto)
+        if casamento and casamento.group(3) == "fisico":
+            return casamento.group(2)
+        return ""
+    if campos and campos[0] == "melee":
+        valor = _CAUSADO_VIDEO.search(texto)
+        if valor:
+            return valor.group(2).strip()
+    return ""
+
+
+def _criaturas_alvo(eventos, formato, minimo=8):
+    """Os monstros que o jogador matou no ficheiro, pela ordem em que aparecem."""
+    ordem, contagem, defende = [], {}, set()
+    for _, campos in eventos:
+        texto = " ".join(campos)
+        if formato == "servidor":
+            defesa = _DEFESA_SERVIDOR.match(texto)
+            if defesa and _defende_com_bloqueio(texto):
+                defende.add(defesa.group(1))
+        nome = _quem_leva(campos, formato)
+        if not nome:
+            continue
+        if nome not in contagem:
+            ordem.append(nome)
+        contagem[nome] = contagem.get(nome, 0) + 1
+    escolhidas = [
+        nome for nome in ordem
+        if contagem[nome] >= minimo and (formato != "servidor" or nome in defende)
+    ]
+    return escolhidas if len(escolhidas) > 1 else []
+
+
+def _nomes_no_texto(texto, nomes):
+    """Nomes presentes no texto, com o mais longo a vencer o prefixo ('orc fighter' ganha a 'orc')."""
+    achados = []
+    for nome in nomes:
+        padrao = r"(?<![A-Za-z])" + re.escape(nome) + r"(?![A-Za-z])"
+        for casamento in re.finditer(padrao, texto, re.IGNORECASE):
+            achados.append((casamento.start(), casamento.end(), nome))
+    achados.sort(key=lambda item: (item[0], -item[1]))
+    resultado, fim = [], -1
+    for inicio, termino, nome in achados:
+        if inicio < fim:
+            continue
+        resultado.append(nome)
+        fim = termino
+    return resultado
+
+
+def _eventos_da(eventos, nome, nomes, formato):
+    devolvidos = []
+    for segundos, campos in eventos:
+        if nome in _nomes_no_texto(" ".join(campos), nomes):
+            devolvidos.append((segundos, campos))
+    return devolvidos
+
+
+def _medir(eventos, alvo, formato, direcao="", duracao=None):
     puffs, sparks, curas, vidas = 0, 0, [], []
     levados, instantes_levar, atacados, instantes_atacar = [], [], [], []
     for segundos, campos in eventos:
@@ -192,7 +254,8 @@ def _medir(eventos, alvo, formato, direcao=""):
         else:
             acertos, instantes, a_atacar = levados, instantes_levar, False
     tentativas = len(acertos) if a_atacar else len(acertos) + puffs + sparks
-    duracao = eventos[-1][0] - eventos[0][0] if len(eventos) > 1 else 0
+    if duracao is None:
+        duracao = eventos[-1][0] - eventos[0][0] if len(eventos) > 1 else 0
     if not acertos or not tentativas or duracao <= 0:
         return None
     instantes.sort()
@@ -426,21 +489,39 @@ def _veredicto(teste, referencia):
     return "\n".join(linhas)
 
 
+def _tempo_em_combate(eventos, limite=8.0):
+    """Tempo efectivamente em combate: soma os intervalos curtos, ignorando as pausas entre monstros."""
+    instantes = sorted({segundos for segundos, _ in eventos})
+    return sum(b - a for a, b in zip(instantes, instantes[1:]) if b - a < limite)
+
+
 def _medir_lista(lista, alvo, direcao):
     medidas = []
     for nome in [linha.strip() for linha in (lista or "").splitlines() if linha.strip()]:
         eventos, formato = _ler_eventos(nome)
         if not eventos:
             return None, f"ERRO: {nome} não tem nenhum evento legível."
-        escolhido = alvo.strip() or _alvo_provavel(eventos, formato)
-        if not escolhido:
+        if alvo.strip():
+            criaturas = [alvo.strip()]
+        else:
+            criaturas = _criaturas_alvo(eventos, formato) or [_alvo_provavel(eventos, formato)]
+        if not criaturas or not criaturas[0]:
             return None, (
                 f"ERRO: não consegui descobrir quem leva os golpes em {nome}. "
                 "Passe 'alvo' com o nome da criatura."
             )
-        medida = _medir(eventos, escolhido, formato, direcao)
-        if medida is None:
-            return None, f"ERRO: {nome} não tem golpes de '{escolhido}' legíveis o suficiente para medir."
-        medida["nome"] = _curto(nome)
-        medidas.append(medida)
+        for criatura in criaturas:
+            sozinho = len(criaturas) == 1
+            recorte = eventos if sozinho else _eventos_da(eventos, criatura, criaturas, formato)
+            tempo = None if sozinho else _tempo_em_combate(recorte)
+            medida = _medir(recorte, criatura, formato, direcao, tempo)
+            if medida is None:
+                if sozinho:
+                    return None, (
+                        f"ERRO: {nome} não tem golpes de '{criatura}' legíveis o suficiente para medir."
+                    )
+                continue
+            medida["nome"] = _curto(nome) if sozinho else criatura
+            medida["ficheiro"] = _curto(nome)
+            medidas.append(medida)
     return medidas, ""
