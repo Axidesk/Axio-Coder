@@ -13,6 +13,7 @@ _DANO_SERVIDOR = re.compile(r"^dano\s+(.+?)\s+->\s+(.+?)\s+tipo=(\w+)\s+valor=(-
 _DEFESA_SERVIDOR = re.compile(r"^defesa\s+(.+?)\s+tipo=(\w+).*?bruto=(\d+)")
 _CURA_SERVIDOR = re.compile(r"^cura\s+(.+?)\s+\+(\d+)")
 _CAUSADO_VIDEO = re.compile(r"causado\s+(\d+)\s+a\s+(.+)$")
+_SOFRIDO_VIDEO = re.compile(r"sofrido\s+(\d+)\s+de\s+(.+)$")
 
 
 def _ler_eventos(caminho):
@@ -77,6 +78,11 @@ def _alvo_provavel(eventos, formato):
         if valor and campos and campos[0] == "melee":
             nome = valor.group(2)
             contagem[nome] = contagem.get(nome, 0) + 2
+            continue
+        sofrido = _SOFRIDO_VIDEO.search(texto)
+        if sofrido and "veneno" not in campos:
+            nome = sofrido.group(2).strip()
+            contagem[nome] = contagem.get(nome, 0) + 2
     if not contagem:
         return ""
     return max(contagem.items(), key=lambda par: par[1])[0]
@@ -84,6 +90,7 @@ def _alvo_provavel(eventos, formato):
 
 def _medir(eventos, alvo, formato):
     acertos, puffs, sparks, curas, instantes, vidas = [], 0, 0, [], [], []
+    sofridos = 0
     for segundos, campos in eventos:
         texto = " ".join(campos)
         if formato == "servidor":
@@ -126,13 +133,20 @@ def _medir(eventos, alvo, formato):
             valor = re.search(r"curou\s+(\d+)", " ".join(campos))
             if valor:
                 curas.append(int(valor.group(1)))
-        elif primeiro == "melee":
+        elif primeiro == "melee" or primeiro.startswith("sofrido"):
             valor = _CAUSADO_VIDEO.search(texto)
             if valor and valor.group(2) == alvo:
                 acertos.append(int(valor.group(1)))
                 instantes.append(segundos)
+                continue
+            sofrido = _SOFRIDO_VIDEO.search(texto)
+            if sofrido and sofrido.group(2).strip() == alvo and "veneno" not in campos:
+                acertos.append(int(sofrido.group(1)))
+                instantes.append(segundos)
+                sofridos += 1
 
-    tentativas = len(acertos) + puffs + sparks
+    a_atacar = bool(sofridos) and sofridos >= len(acertos)
+    tentativas = len(acertos) if a_atacar else len(acertos) + puffs + sparks
     duracao = eventos[-1][0] - eventos[0][0] if len(eventos) > 1 else 0
     if not acertos or not tentativas or duracao <= 0:
         return None
@@ -149,12 +163,13 @@ def _medir(eventos, alvo, formato):
     cura_total = sum(curas)
     return {
         "alvo": alvo,
+        "direção": "atacar" if a_atacar else "levar",
         "duração": duracao,
         "tentativas": tentativas,
         "por_minuto": 60.0 * tentativas / duracao,
-        "acerta": 100.0 * len(acertos) / tentativas,
-        "puff": 100.0 * puffs / tentativas,
-        "spark": 100.0 * sparks / tentativas,
+        "acerta": 100.0 if a_atacar else 100.0 * len(acertos) / tentativas,
+        "puff": 0.0 if a_atacar else 100.0 * puffs / tentativas,
+        "spark": 0.0 if a_atacar else 100.0 * sparks / tentativas,
         "média": dano_total / len(acertos),
         "mediana": statistics.median(acertos),
         "máx": max(acertos),
@@ -212,15 +227,24 @@ _ROTULOS = [
 
 
 def _tabela(nomes, medidas):
+    a_atacar = any(medida.get("direção") == "atacar" for medida in medidas)
+    saltar = {"acerta", "puff", "spark"} if a_atacar else set()
     largura = max(len(rotulo) for _, rotulo in _ROTULOS) + 1
     colunas = max(len(nome) for nome in nomes) + 2
     cabecalho = " " * largura + "".join(nome.rjust(colunas) for nome in nomes)
     linhas = [cabecalho]
     for chave, rotulo in _ROTULOS:
+        if chave in saltar:
+            continue
+        if chave == "tentativas" and a_atacar:
+            rotulo = "golpes que acertam"
         valores = []
         for medida in medidas:
             if chave == "alvo":
-                valores.append(medida.get("alvo", "—"))
+                nome = medida.get("alvo", "—")
+                if medida.get("direção") == "atacar":
+                    nome += " (a atacar)"
+                valores.append(nome)
             elif chave in ("tentativas", "curas"):
                 valores.append(str(medida.get(chave, 0)))
             elif chave == "duração":
