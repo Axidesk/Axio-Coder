@@ -66,8 +66,47 @@ export function formatMessage(text, escape = false) {
         html += '</tbody></table></div>';
         return html;
     }
+function camposTabulados(linha) {
+        const partes = linha.includes('\t')
+            ? linha.split('\t')
+            : (linha.split(/ {2,}/).length > 1 ? linha.split(/ {2,}/) : [linha]);
+        const limpos = partes.map(c => c.trim());
+        while (limpos.length > 1 && limpos[limpos.length - 1] === '') limpos.pop();
+        while (limpos.length > 1 && limpos[0] === '') limpos.shift();
+        return limpos.length > 1 ? limpos : null;
+    }
+    function expandirTabelasTabuladas(text) {
+        const linhas = text.split('\n');
+        const out = [];
+        const escapa = c => c
+            .replace(/&(?!(?:lt|gt|amp|quot|#\d+);)/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\|/g, '&#124;');
+        let i = 0;
+        while (i < linhas.length) {
+            const cabecalho = camposTabulados(linhas[i]);
+            if (!cabecalho) { out.push(linhas[i]); i++; continue; }
+            const bloco = [cabecalho];
+            let j = i + 1;
+            while (j < linhas.length) {
+                const campos = camposTabulados(linhas[j]);
+                if (!campos || campos.length !== cabecalho.length) break;
+                bloco.push(campos);
+                j++;
+            }
+            if (bloco.length < 2) { out.push(linhas[i]); i++; continue; }
+            out.push('| ' + bloco[0].map(escapa).join(' | ') + ' |');
+            out.push('|' + bloco[0].map(() => ' --- ').join('|') + '|');
+            for (let k = 1; k < bloco.length; k++) {
+                out.push('| ' + bloco[k].map(escapa).join(' | ') + ' |');
+            }
+            i = j;
+        }
+        return out.join('\n');
+    }
 export function formatInlineText(text) {
-        const lines = text.split('\n');
+        const lines = expandirTabelasTabuladas(text).split('\n');
         const out = [];
         let buffer = [];
         let i = 0;
