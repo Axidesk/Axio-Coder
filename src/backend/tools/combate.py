@@ -22,13 +22,16 @@ def _ler_eventos(caminho):
     uteis = [linha.strip() for linha in linhas if linha.strip()]
     if not uteis:
         return [], "vazio"
-    if _LINHA_TEMPO_VIDEO.match(uteis[0]):
-        return _eventos_do_video(uteis)
-    if _LINHA_TEMPO_SERVIDOR.match(uteis[0]):
-        return _eventos_do_servidor(uteis)
+    for linha in uteis:
+        if _LINHA_TEMPO_VIDEO.match(linha):
+            return _eventos_do_video(uteis)
+        if _LINHA_TEMPO_SERVIDOR.match(linha):
+            return _eventos_do_servidor(uteis)
     raise ValueError(
         "formato nao reconhecido: esperava 'HH:MM:SS.mmm <mensagem>' (log do servidor) "
-        "ou 'MM:SS.cc' numa linha propria (transcricao do TibiaCam)."
+        "ou 'MM:SS.cc' numa linha propria (transcricao do TibiaCam). "
+        f"O ficheiro tem {len(uteis)} linhas uteis e nenhuma delas e um instante. "
+        f"Primeira linha: {uteis[0][:80]!r}"
     )
 
 
