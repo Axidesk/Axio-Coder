@@ -12,6 +12,8 @@ from src.backend.tools.registry import register
 _PERCENTIS = (0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
 _EFEITO_DEFESA = 3
 _EFEITO_BLOQUEIO = 4
+_CORES_DE_DANO = {180: "fisico", 129: "fisico", 198: "fogo", 30: "veneno", 35: "energia"}
+_CORES_SEM_DANO = {215, 5}
 _JANELA_DO_ALVO = 1.5
 _MEMORIA_DO_ALVO = 10.0
 _JANELA_DA_CURA = 5.0
@@ -265,12 +267,16 @@ def _eventos_do_rec(caminho):
         posicao = evento.get("Position") or {}
         x, y, z = posicao.get("X"), posicao.get("Y"), posicao.get("Z")
         if tipo == "NumberEffectPopped":
+            cor = evento.get("Color")
+            if cor in _CORES_SEM_DANO:
+                continue
+            elemento = _CORES_DE_DANO.get(cor, "fisico")
             nome = monstro_em(quando)
             valor = int(evento.get("Value") or 0)
             if no_jogador(quando, x, y, z):
-                eventos.append((quando, [f"sofrido {valor} de {nome or 'monstro'}"]))
+                eventos.append((quando, ["sofrido", elemento, f"sofrido {valor} de {nome or 'monstro'}"]))
             elif nome:
-                eventos.append((quando, ["melee", f"causado {valor} a {nome}"]))
+                eventos.append((quando, ["melee", elemento, f"causado {valor} a {nome}"]))
         elif tipo == "GraphicalEffectPopped" and evento.get("Id") in (_EFEITO_DEFESA, _EFEITO_BLOQUEIO):
             if tem_numero(quando, x, y) or no_jogador(quando, x, y, z):
                 continue
@@ -304,12 +310,12 @@ def _alvo_provavel(eventos, formato):
                 monstros[nome] = monstros.get(nome, 0) + 1
             continue
         valor = _CAUSADO_VIDEO.search(texto)
-        if valor and campos and campos[0] == "melee":
+        if valor and campos and campos[0] == "melee" and _e_fisico(campos):
             nome = valor.group(2)
             contagem[nome] = contagem.get(nome, 0) + 2
             continue
         sofrido = _SOFRIDO_VIDEO.search(texto)
-        if sofrido and "veneno" not in campos:
+        if sofrido and "veneno" not in campos and _e_fisico(campos):
             nome = sofrido.group(2).strip()
             contagem[nome] = contagem.get(nome, 0) + 2
     if monstros:
@@ -317,6 +323,11 @@ def _alvo_provavel(eventos, formato):
     if not contagem:
         return ""
     return max(contagem.items(), key=lambda par: par[1])[0]
+
+
+def _e_fisico(campos):
+    """Dano de corpo a corpo: nos eventos da gravacao o elemento vem no segundo campo."""
+    return len(campos) < 3 or campos[1] == "fisico"
 
 
 def _quem_leva(campos, formato):
@@ -327,7 +338,7 @@ def _quem_leva(campos, formato):
         if casamento and casamento.group(3) == "fisico":
             return casamento.group(2)
         return ""
-    if campos and campos[0] == "melee":
+    if campos and campos[0] == "melee" and _e_fisico(campos):
         valor = _CAUSADO_VIDEO.search(texto)
         if valor:
             return valor.group(2).strip()
@@ -381,15 +392,34 @@ def _eventos_da(eventos, nome, nomes, formato):
     return devolvidos
 
 
+def _atacante_principal(eventos, alvo):
+    """Quem mais acerta o alvo com dano fisico - separa o jogador do teste de outro que apareca no log."""
+    contagem = {}
+    for _, campos in eventos:
+        casamento = _DANO_SERVIDOR.match(" ".join(campos))
+        if casamento and casamento.group(2) == alvo and casamento.group(3) == "fisico":
+            quem = casamento.group(1)
+            contagem[quem] = contagem.get(quem, 0) + 1
+    if len(contagem) <= 1:
+        return ""
+    return max(contagem.items(), key=lambda par: par[1])[0]
+
+
 def _medir(eventos, alvo, formato, direcao="", duracao=None):
     puffs, sparks, curas, vidas = 0, 0, [], []
+    atacante = _atacante_principal(eventos, alvo) if formato == "servidor" else ""
     levados, instantes_levar, atacados, instantes_atacar = [], [], [], []
+    magias = []
     for segundos, campos in eventos:
         texto = " ".join(campos)
         if formato == "servidor":
             casamento = _DANO_SERVIDOR.match(texto)
-            if casamento and casamento.group(2) == alvo and casamento.group(3) == "fisico":
+            if casamento and casamento.group(2) == alvo and (not atacante or casamento.group(1) == atacante):
                 valor = int(casamento.group(4))
+                if casamento.group(3) != "fisico":
+                    if valor > 0:
+                        magias.append(valor)
+                    continue
                 if valor > 0:
                     levados.append(valor)
                     instantes_levar.append(segundos)
@@ -416,6 +446,7 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
             continue
 
         primeiro = campos[0] if campos else ""
+        elemento = campos[1] if len(campos) > 2 else "fisico"
         if primeiro in ("defesa", "bloqueio") and len(campos) > 1 and campos[1] == alvo:
             if primeiro == "defesa":
                 puffs += 1
@@ -432,11 +463,14 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
                     continue
                 valor = _CAUSADO_VIDEO.search(campo)
                 if valor and valor.group(2).strip() == alvo:
-                    levados.append(int(valor.group(1)))
-                    instantes_levar.append(segundos)
+                    if elemento == "fisico":
+                        levados.append(int(valor.group(1)))
+                        instantes_levar.append(segundos)
+                    else:
+                        magias.append(int(valor.group(1)))
                     continue
                 sofrido = _SOFRIDO_VIDEO.search(campo)
-                if sofrido and sofrido.group(2).strip() == alvo:
+                if sofrido and sofrido.group(2).strip() == alvo and elemento == "fisico":
                     atacados.append(int(sofrido.group(1)))
                     instantes_atacar.append(segundos)
 
@@ -464,10 +498,12 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
     ordenados = sorted(acertos)
     dano_total = sum(acertos)
     cura_total = sum(curas)
+    magia_total = sum(magias)
     taxa_defesa = 0.0 if a_atacar else (puffs + sparks) / tentativas
     margem = 196.0 * math.sqrt(taxa_defesa * (1.0 - taxa_defesa) / tentativas) if tentativas else 0.0
     return {
         "alvo": alvo,
+        "atacante": atacante,
         "direção": "atacar" if a_atacar else "levar",
         "duração": duracao,
         "tentativas": tentativas,
@@ -493,6 +529,9 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         "dano_s": dano_total / duracao,
         "cura_s": cura_total / duracao,
         "intervalo": statistics.median(intervalos) if intervalos else 0.0,
+        "golpes_magia": len(magias),
+        "magia_media": (magia_total / len(magias)) if magias else 0.0,
+        "magia_max": max(magias) if magias else 0,
         "vida_min": min(vidas) if vidas else None,
         "ritmo_suspeito": formato == "video" and 60.0 * tentativas / duracao > 33,
     }
@@ -507,8 +546,10 @@ def _numero(chave, valor):
         return f"+-{valor:.1f}"
     if chave == "duração":
         return f"{valor:.0f}s"
-    if chave in ("tentativas", "curas", "máx", "p10", "p90"):
-        return f"{valor:.0f}"
+    if chave in ("tentativas", "curas", "máx", "p10", "p90", "golpes_magia"):
+        return f"{valor:.0f}" if valor else "—"
+    if chave in ("magia_media", "magia_max") and not valor:
+        return "—"
     return f"{valor:.1f}"
 
 
@@ -527,6 +568,9 @@ _ROTULOS = [
     ("média", "golpe médio"),
     ("mediana", "golpe mediano"),
     ("máx", "golpe máximo"),
+    ("golpes_magia", "golpes de magia"),
+    ("magia_media", "magia média"),
+    ("magia_max", "magia máxima"),
     ("abaixo50", "<50"),
     ("acima100", ">=100"),
     ("acima130", ">=130"),
@@ -557,6 +601,8 @@ def _tabela(nomes, medidas):
             if chave == "alvo":
                 nome = medida.get("alvo", "—")
                 nome += " (ataca)" if medida.get("direção") == "atacar" else " (leva)"
+                if medida.get("atacante"):
+                    nome += f" por {medida['atacante']}"
                 valores.append(nome)
             elif chave in ("tentativas", "curas"):
                 valores.append(str(medida.get(chave, 0)))
