@@ -375,7 +375,7 @@ def _validar_escopos(itens, caminhos):
     for indice, (escopo, _, _) in enumerate(itens, 1):
         if escopo is not None and _chave_caminho(escopo) not in chaves:
             return (f"ERRO: o bloco {indice} aponta para '{escopo}', que nao esta na lista de ficheiros. "
-                    "Nada foi gravado.")
+                    f"A lista tem {len(caminhos)}: {' | '.join(caminhos)}. Nada foi gravado.")
     return None
 
 
@@ -449,7 +449,11 @@ def tool_substituir_lote(caminho_relativo: str, substituicoes: str):
     itens, erro = _dividir_lote(substituicoes)
     if erro:
         return erro
-    caminhos = [linha.strip() for linha in normalizar_unicode(caminho_relativo).splitlines() if linha.strip()]
+    caminhos = [
+        linha.strip().lstrip(_MARCA_ESCOPO).strip()
+        for linha in normalizar_unicode(caminho_relativo).splitlines()
+        if linha.strip()
+    ]
     if not caminhos:
         return "ERRO: nenhum arquivo indicado."
     erro = _validar_escopos(itens, caminhos)
