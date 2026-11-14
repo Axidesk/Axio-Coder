@@ -5858,10 +5858,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 174,
+        "linha": 179,
         "conferido": [
-          1794665887.505,
-          60154
+          1794675365.754,
+          98095
         ]
       }
     },
@@ -5926,8 +5926,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 102,
         "conferido": [
-          1794664584.828,
-          31102
+          1794673796.208,
+          36536
         ]
       }
     },
@@ -5940,8 +5940,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1794665969.032,
-          44450
+          1794675327.864,
+          51462
         ]
       }
     },
@@ -5967,10 +5967,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 350,
+        "linha": 355,
         "conferido": [
-          1794665887.505,
-          60154
+          1794675365.754,
+          98095
         ]
       }
     },
@@ -6018,10 +6018,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 840,
+        "linha": 1735,
         "conferido": [
-          1794665887.505,
-          60154
+          1794675365.754,
+          98095
         ]
       }
     },
@@ -6100,10 +6100,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 796,
+        "linha": 1691,
         "conferido": [
-          1794665887.505,
-          60154
+          1794675365.754,
+          98095
         ]
       }
     },
@@ -6122,8 +6122,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 230,
         "conferido": [
-          1794664584.828,
-          31102
+          1794673796.208,
+          36536
         ]
       }
     },
@@ -6428,10 +6428,10 @@
       "descricao": "Barra fininha na base da consola do painel, enquanto o Preparar instala o xampp e liga as pecas. Alimentada pelo evento `painel:progresso` (avisar_progresso em xampp.rs) e escondida no fim do comando.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 426,
+        "linha": 500,
         "conferido": [
-          1794664584.828,
-          31102
+          1794673796.208,
+          36536
         ]
       }
     },
@@ -6448,10 +6448,10 @@
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 879,
+        "linha": 1774,
         "conferido": [
-          1794665887.505,
-          60154
+          1794675365.754,
+          98095
         ]
       }
     },
@@ -6654,10 +6654,10 @@
       "descricao": "Botao pill sem fundo (o `--bg-selecao` so entra no hover/active ou com `aria-pressed=\"true\"`). O \"Abrir editor\" fica aceso enquanto o Editor_x64.exe corre: quem responde e o comando `editor_do_mapa_aberto` (tasklist por IMAGENAME) e o vigia e um setTimeout recursivo de 2,5 s que so roda com o editor aberto, mais uma verificacao ao voltar a pagina a vista.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
-        "linha": 1539,
+        "linha": 1894,
         "conferido": [
-          1794665969.032,
-          44450
+          1794675327.864,
+          51462
         ]
       }
     },
@@ -6695,8 +6695,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
         "linha": 86,
         "conferido": [
-          1794664584.828,
-          31102
+          1794673796.208,
+          36536
         ]
       }
     },
@@ -6712,10 +6712,10 @@
       "descricao": "Botao X ao lado do Salvar, no cabecalho do editor de codigo do painel; fecha o arquivo aberto e volta a mensagem \"Escolha um arquivo...\". Com alteracoes por gravar nao fecha: deixa o recado \"grava ou descarta antes de fechar\" (fechar em conteudo.js:308).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 441,
+        "linha": 515,
         "conferido": [
-          1794664584.828,
-          31102
+          1794673796.208,
+          36536
         ]
       }
     },
