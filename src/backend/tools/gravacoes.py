@@ -385,10 +385,27 @@ def _listar(blocos, filtro, de, ate, limite):
         if len(linhas) < limite:
             linhas.append(f"  {_hora(evento.get('_quando', 0))} {_descrever(evento, nomes, jogador)}")
     if not total:
-        return ["", "Nada nesse intervalo/filtro."]
+        return ["", _motivo_do_vazio(blocos, filtro, de, ate)]
     if total > len(linhas):
         linhas.append(f"  ... e mais {total - len(linhas)} evento(s) fora do 'limite'.")
     return [""] + linhas
+
+
+def _motivo_do_vazio(blocos, filtro, de, ate):
+    if not filtro:
+        return "Nada nesse intervalo."
+    tipos = collections.Counter(evento.get("Event", "") for evento in _eventos(blocos))
+    existentes = [nome for nome in filtro if tipos.get(nome)]
+    if existentes:
+        quantos = sum(tipos[nome] for nome in existentes)
+        return (f"O filtro '{', '.join(existentes)}' existe nesta gravacao ({quantos} evento(s)), "
+                f"mas nenhum cai dentro do intervalo pedido.")
+    pedidos = ", ".join(filtro)
+    parecidos = [tipo for tipo in tipos if any(p.lower() in tipo.lower() for p in filtro)]
+    sugestao = ", ".join(parecidos[:6]) or ", ".join(tipo for tipo, _ in tipos.most_common(6))
+    return (f"'{pedidos}' nao e nome de evento desta gravacao - em 'evento' o nome tem de ser exato "
+            f"(ex: NumberEffectPopped). Para familias use 'grupo' (dano, efeito, vida, chat, loot, "
+            f"magia, movimento, velocidade, criatura). Nomes desta gravacao que existem: {sugestao}.")
 
 
 def _descrever(evento, nomes, jogador):
