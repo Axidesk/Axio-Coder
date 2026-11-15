@@ -489,6 +489,9 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         return None
     instantes.sort()
     intervalos = [b - a for a, b in zip(instantes, instantes[1:])]
+    pausa_max = max(intervalos) if intervalos else 0.0
+    pausas_longas = sum(1 for valor in intervalos if valor > 2.6)
+    perdidos = max(0, int(round(duracao / 2.0)) - tentativas)
     intervalos = [valor for valor in intervalos if valor < 8]
 
     def parte(limite, acima):
@@ -531,6 +534,9 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         "dano_total": dano_total,
         "cura_total": cura_total,
         "intervalo": statistics.median(intervalos) if intervalos else 0.0,
+        "pausas_longas": pausas_longas,
+        "pausa_max": pausa_max,
+        "perdidos": perdidos,
         "golpes_magia": len(magias),
         "magia_media": (magia_total / len(magias)) if magias else 0.0,
         "magia_max": max(magias) if magias else 0,
@@ -552,6 +558,10 @@ def _numero(chave, valor):
         return f"{valor:.0f}" if valor else "—"
     if chave in ("magia_media", "magia_max") and not valor:
         return "—"
+    if chave in ("pausas_longas", "perdidos"):
+        return f"{valor:.0f}"
+    if chave == "pausa_max":
+        return f"{valor:.2f}s"
     return f"{valor:.1f}"
 
 
@@ -583,6 +593,9 @@ _ROTULOS = [
     ("dano_s", "dano/s"),
     ("cura_s", "cura/s"),
     ("intervalo", "intervalo entre tentativas"),
+    ("pausas_longas", "pausas > 2.6s"),
+    ("pausa_max", "maior pausa"),
+    ("perdidos", "golpes a menos que 2s"),
 ]
 
 
