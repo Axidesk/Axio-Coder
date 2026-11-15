@@ -195,11 +195,31 @@ def _aviso_dos_desconhecidos(params, args):
     )
 
 
+def _adotar_nomes(params, args):
+    """Adota o nome declarado quando a diferenca e so o plural (trecho -> trechos)."""
+    conhecidos = list((params or {}).keys())
+    if not args or not conhecidos:
+        return args
+    adotados = {}
+    for nome, valor in args.items():
+        if nome in conhecidos:
+            adotados[nome] = valor
+            continue
+        raiz = nome.rstrip("s")
+        gemeo = next((c for c in conhecidos if c.rstrip("s") == raiz), None)
+        if gemeo and gemeo not in args and gemeo not in adotados:
+            adotados[gemeo] = valor
+        else:
+            adotados[nome] = valor
+    return adotados
+
+
 def dispatch(nome, args):
     """Chama o handler registado. Devolve (resultado, conhecida)."""
     entry = TOOL_REGISTRY.get(nome)
     if entry is None:
         return None, False
+    args = _adotar_nomes(entry["params"], args or {})
     try:
         resultado = _com_vigia(nome, entry["handler"], resolver_kwargs(entry["params"], args or {}))
     except (KeyboardInterrupt, SystemExit):
