@@ -5858,10 +5858,10 @@
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 179,
+        "linha": 193,
         "conferido": [
-          1794675365.754,
-          98095
+          1794783076.119,
+          145935
         ]
       }
     },
@@ -5924,10 +5924,10 @@
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 102,
+        "linha": 100,
         "conferido": [
-          1794673796.208,
-          36536
+          1794780677.671,
+          40095
         ]
       }
     },
@@ -5940,8 +5940,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
-          1794675327.864,
-          51462
+          1794782188.191,
+          58932
         ]
       }
     },
@@ -5967,10 +5967,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 355,
+        "linha": 369,
         "conferido": [
-          1794675365.754,
-          98095
+          1794783076.119,
+          145935
         ]
       }
     },
@@ -6004,10 +6004,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 2355,
+        "linha": 2377,
         "conferido": [
-          1794667674.201,
-          93970
+          1794751026.246,
+          94927
         ]
       }
     },
@@ -6018,10 +6018,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 1735,
+        "linha": 2951,
         "conferido": [
-          1794675365.754,
-          98095
+          1794783076.119,
+          145935
         ]
       }
     },
@@ -6069,8 +6069,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
         "linha": 633,
         "conferido": [
-          1794540992.147,
-          69005
+          1794756285.633,
+          71356
         ]
       }
     },
@@ -6081,10 +6081,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 1620,
+        "linha": 1702,
         "conferido": [
-          1794540992.147,
-          69005
+          1794756285.633,
+          71356
         ]
       }
     },
@@ -6100,10 +6100,10 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 1691,
+        "linha": 2907,
         "conferido": [
-          1794675365.754,
-          98095
+          1794783076.119,
+          145935
         ]
       }
     },
@@ -6120,10 +6120,10 @@
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 230,
+        "linha": 228,
         "conferido": [
-          1794673796.208,
-          36536
+          1794780677.671,
+          40095
         ]
       }
     },
@@ -6174,10 +6174,10 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
-        "linha": 1652,
+        "linha": 1734,
         "conferido": [
-          1794540992.147,
-          69005
+          1794756285.633,
+          71356
         ]
       }
     },
@@ -6210,8 +6210,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 1513,
         "conferido": [
-          1794667674.201,
-          93970
+          1794751026.246,
+          94927
         ]
       }
     },
@@ -6428,10 +6428,10 @@
       "descricao": "Barra fininha na base da consola do painel, enquanto o Preparar instala o xampp e liga as pecas. Alimentada pelo evento `painel:progresso` (avisar_progresso em xampp.rs) e escondida no fim do comando.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 500,
+        "linha": 525,
         "conferido": [
-          1794673796.208,
-          36536
+          1794780677.671,
+          40095
         ]
       }
     },
@@ -6448,10 +6448,10 @@
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
-        "linha": 1774,
+        "linha": 2997,
         "conferido": [
-          1794675365.754,
-          98095
+          1794783076.119,
+          145935
         ]
       }
     },
@@ -6492,8 +6492,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 780,
         "conferido": [
-          1794667674.201,
-          93970
+          1794751026.246,
+          94927
         ]
       }
     },
@@ -6534,8 +6534,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 190,
         "conferido": [
-          1794667674.201,
-          93970
+          1794751026.246,
+          94927
         ]
       }
     },
@@ -6614,8 +6614,8 @@
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
         "linha": 880,
         "conferido": [
-          1794667674.201,
-          93970
+          1794751026.246,
+          94927
         ]
       }
     },
@@ -6654,10 +6654,10 @@
       "descricao": "Botao pill sem fundo (o `--bg-selecao` so entra no hover/active ou com `aria-pressed=\"true\"`). O \"Abrir editor\" fica aceso enquanto o Editor_x64.exe corre: quem responde e o comando `editor_do_mapa_aberto` (tasklist por IMAGENAME) e o vigia e um setTimeout recursivo de 2,5 s que so roda com o editor aberto, mais uma verificacao ao voltar a pagina a vista.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
-        "linha": 1894,
+        "linha": 2232,
         "conferido": [
-          1794675327.864,
-          51462
+          1794782188.191,
+          58932
         ]
       }
     },
@@ -6693,10 +6693,10 @@
       "descricao": "Botao de largura total que sobe com fade quando o servidor fica no ar; abre o cliente do jogo e, depois da primeira vez, passa a \"Abrir outro cliente\" (abre mais uma instancia). Vive em .jogo > .jogo-clip, o estado e decidido por pintarJogo em app.js:549.",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 86,
+        "linha": 84,
         "conferido": [
-          1794673796.208,
-          36536
+          1794780677.671,
+          40095
         ]
       }
     },
@@ -6712,10 +6712,10 @@
       "descricao": "Botao X ao lado do Salvar, no cabecalho do editor de codigo do painel; fecha o arquivo aberto e volta a mensagem \"Escolha um arquivo...\". Com alteracoes por gravar nao fecha: deixa o recado \"grava ou descarta antes de fechar\" (fechar em conteudo.js:308).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
-        "linha": 515,
+        "linha": 540,
         "conferido": [
-          1794673796.208,
-          36536
+          1794780677.671,
+          40095
         ]
       }
     },
@@ -7004,8 +7004,8 @@
         "arquivo": "src/backend/tools/gravacoes.py",
         "linha": 106,
         "conferido": [
-          1794600438.943,
-          19279
+          1794698022.761,
+          20328
         ]
       }
     }
