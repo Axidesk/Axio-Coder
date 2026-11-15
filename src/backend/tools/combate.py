@@ -528,6 +528,8 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         "cura_média": (cura_total / len(curas)) if curas else 0.0,
         "dano_s": dano_total / duracao,
         "cura_s": cura_total / duracao,
+        "dano_total": dano_total,
+        "cura_total": cura_total,
         "intervalo": statistics.median(intervalos) if intervalos else 0.0,
         "golpes_magia": len(magias),
         "magia_media": (magia_total / len(magias)) if magias else 0.0,
@@ -621,14 +623,38 @@ def _tabela(nomes, medidas):
 
 def _efeito(medida):
     liquido = medida["dano_s"] - medida["cura_s"]
+    vida = medida.get("vida_max") or 1000
     if liquido <= 0:
-        return (
+        texto = (
             "A cura empata ou passa o dano: ele nunca morre sem a sorte o trair "
             f"(dano {medida['dano_s']:.1f}/s menos cura {medida['cura_s']:.1f}/s)."
         )
+    else:
+        texto = (
+            f"Liquido {liquido:.1f} HP/s -> {vida / liquido:.0f}s para gastar {vida} de vida "
+            f"(dano {medida['dano_s']:.1f}/s menos cura {medida['cura_s']:.1f}/s)."
+        )
+    fecho = _fecho(medida, vida)
+    return f"{texto} {fecho}" if fecho else texto
+
+
+def _fecho(medida, vida):
+    if medida.get("direção") != "levar" or not medida.get("vida_max"):
+        return ""
+    fecho = medida.get("dano_total", 0) - medida.get("cura_total", 0)
+    sobra = fecho - vida
+    if abs(sobra) <= vida * 0.1:
+        return ""
+    if sobra > 0:
+        return (
+            f"CONTAS: dano {medida['dano_total']:.0f} menos cura {medida['cura_total']:.0f} devia dar "
+            f"{vida} (a vida dela) e da {fecho:.0f} - sobram {sobra:.0f} de vida que so a cura explica: "
+            "ha curas que a leitura nao ve (caem no mesmo instante de um golpe), logo o tempo real e "
+            "maior do que o liquido sugere."
+        )
     return (
-        f"Liquido {liquido:.1f} HP/s -> {1000 / liquido:.0f}s para gastar 1000 de vida "
-        f"(dano {medida['dano_s']:.1f}/s menos cura {medida['cura_s']:.1f}/s)."
+        f"CONTAS: dano {medida['dano_total']:.0f} menos cura {medida['cura_total']:.0f} da {fecho:.0f}, "
+        f"abaixo dos {vida} de vida dela - a luta nao acabou dentro do registo, ou falta dano na leitura."
     )
 
 
@@ -652,7 +678,10 @@ def _curto(caminho):
     "armadura (spark), o golpe medio/mediano/maximo, a cauda (<50, >=100, >=130, >=150), as curas "
     "por minuto com o valor medio, e o LIQUIDO em HP/s - dano por segundo menos cura por segundo, "
     "que e o numero que explica por que um combate dura o que dura (dois numeros grandes que se "
-    "anulam: quando o liquido fica perto de zero, o bicho so morre por azar). Com 'comparar_com' "
+    "anulam: quando o liquido fica perto de zero, o bicho so morre por azar) e avisa quando as "
+    "CONTAS nao fecham (dano menos cura devia dar a vida da ficha): e o sinal de uma gravacao que "
+    "esconde curas, sem o qual a comparacao acusa o servidor de um defeito que e da leitura. "
+    "Com 'comparar_com' "
     "poe os dois lado a lado na mesma tabela, ja alinhados - e o caminho para julgar um teste "
     "contra a gravacao de referencia sem escrever um leitor de log em cada rodada. O alvo e "
     "detetado sozinho (a criatura que mais defende), mas pode ser dado em 'alvo'.",
@@ -779,5 +808,8 @@ def _medir_lista(lista, alvo, direcao):
                 continue
             medida["nome"] = _curto(nome) if sozinho else criatura
             medida["ficheiro"] = _curto(nome)
+            maximos = _vidas_maximas(nome)
+            chave = criatura.strip().lower()
+            medida["vida_max"] = maximos.get(chave) or maximos.get(re.sub(r"^(a|an|the)\s+", "", chave))
             medidas.append(medida)
     return medidas, ""
