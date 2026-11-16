@@ -339,6 +339,11 @@
       "area": "espera-e-dialogos",
       "texto": "ESPERA LONGA = PAUSAR E OLHAR, NUNCA POSTERGAR (pedido a 2026-11-05, ao abrir um .pla grande no Archicad). Quando uma operacao demora mais do que devia - abrir um programa, carregar um ficheiro, um build, uma conversao - e OBRIGATORIO parar de esperar e OLHAR para o ecra (tool_capturar_print da janela ou tool_operar_janela acao='print'/'situacao') para descobrir o que esta a travar. A causa mais comum NAO e lentidao: e uma JANELA DE CONFIRMACAO a espera de um OK (o Archicad mostra 2-3 avisos ao abrir um .pla; um dialogo modal bloqueia a API e o programa inteiro). Nunca ficar a renovar a espera em ciclo sem saber o que aconteceu. Regra: esperar uma vez, com teto curto; se nao chegou, PRINT e ler a tela antes de qualquer outra tentativa.",
       "atualizado": "2026-11-05 20:31:11"
+    },
+    {
+      "area": "reinicio",
+      "texto": "Quando eu melhorar ou criar uma ferramenta MINHA (codigo do Axio) e a mudanca so entrar em vigor com reinicio do backend, reinicie SOZINHO no fim da rodada, sem esperar pedido. Sempre no FIM: o texto da resposta tem de estar entregue antes, nunca a meio. A conversa continua a vista depois de reiniciar.",
+      "atualizado": "2026-11-16 23:01:17"
     }
   ]
 }

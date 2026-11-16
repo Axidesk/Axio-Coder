@@ -131,6 +131,9 @@ _CLIENTES = {}
 )
 def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer=""):
     if str(varrer or "").strip():
+        if str(loot or "").strip():
+            emit_event("executing", function=f"Somando o loot de: {varrer}")
+            return _loot_somado(str(varrer).strip())
         emit_event("executing", function=f"Varrendo as gravacoes por: {varrer}")
         return _varredura(str(varrer).strip())
     if not str(gravacao or "").strip():
@@ -1196,6 +1199,58 @@ def _varredura(termo):
         linhas.append("  gravacao para separar pela assinatura:")
         for corpo, nomes in sorted(partilhados.items()):
             linhas.append(f"    {corpo}: {', '.join(nomes)}")
+    return "\n".join(linhas)
+
+
+def _loot_somado(procurado):
+    """Loot de um monstro somado em TODAS as gravacoes do indice, com a posicao que o XML declara."""
+    indice, nota = indexar_gravacoes()
+    termo = procurado.lower()
+    ids = {int(termo)} if termo.isdigit() else _corpos_do_nome(termo)
+    nomes = _nomes_de_itens()
+    corpo = collections.Counter()
+    saco = collections.Counter()
+    pilhas = []
+    corpos = 0
+    for dados in indice.values():
+        if dados.get("erro"):
+            continue
+        for identificador, achado in (dados.get("corpos") or {}).items():
+            try:
+                if int(identificador) not in ids:
+                    continue
+            except (TypeError, ValueError):
+                continue
+            corpos += achado.get("n") or 0
+            corpo.update(achado.get("corpo") or {})
+            saco.update(achado.get("saco") or {})
+            pilhas.extend(achado.get("pilhas") or [])
+    if not corpos:
+        return f"\nLOOT SOMADO: nenhum corpo de '{procurado}' no indice ({nota})."
+
+    declarado = _loot_do_monstro(procurado) or {}
+    linhas = ["", f"LOOT SOMADO: '{procurado}' em todas as gravacoes · {corpos} corpo(s) · {nota}"]
+    for rotulo, contagem in (("CORPO", corpo), ("SACO", saco)):
+        if not contagem:
+            continue
+        linhas.append(f"  {rotulo}:")
+        for identificador, vezes in contagem.most_common():
+            try:
+                numero = int(identificador)
+            except (TypeError, ValueError):
+                continue
+            sitio = declarado.get(numero) or declarado.get(identificador)
+            if sitio and sitio != rotulo.lower():
+                marca = f"   (o XML poe no {sitio})"
+            elif not sitio:
+                marca = "   (nao declarado no XML)"
+            else:
+                marca = ""
+            linhas.append(f"    {str(nomes.get(numero, numero))[:26]:<26} {vezes:5d}  {100 * vezes / corpos:6.2f}%{marca}")
+    if pilhas:
+        totais = [sum(p) for p in pilhas]
+        linhas.append(f"  OURO: {len(pilhas)} de {corpos} corpos = {100 * len(pilhas) / corpos:.1f}%"
+                      f" · medio {sum(totais) / len(totais):.1f} · min {min(totais)} · max {max(totais)}")
     return "\n".join(linhas)
 
 
