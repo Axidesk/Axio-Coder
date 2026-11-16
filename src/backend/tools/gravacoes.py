@@ -482,15 +482,23 @@ def _nomes(blocos):
     return nomes
 
 
+def _lista_de_eventos(blocos):
+    """Aceita blocos crus ou a lista de eventos ja achatada (com __t em segundos)."""
+    if blocos and isinstance(blocos[0], dict) and "Event" in blocos[0]:
+        return [dict(e, _quando=e.get("_quando") or (e.get("__t") or 0) * 1000) for e in blocos]
+    return list(_eventos(blocos))
+
+
 def _loot_dos_corpos(blocos, alvo):
     """Soma o conteudo dos corpos abertos: frequencia de cada item e pilhas de ouro."""
     nomes = _nomes_de_itens()
     procurado = alvo.lower()
     todos = procurado in ("todos", "*")
     por_id = procurado.isdigit()
+    eventos = _lista_de_eventos(blocos)
     corpos = []
     conhecidos = collections.Counter()
-    for evento in _eventos(blocos):
+    for evento in eventos:
         if evento.get("Event") != "ContainerOpened":
             continue
         nome = _nome_de_corpo(evento)
@@ -508,7 +516,7 @@ def _loot_dos_corpos(blocos, alvo):
     if not corpos and not todos and not por_id:
         corpo = _corpo_do_monstro(alvo)
         if corpo is not None:
-            for evento in _eventos(blocos):
+            for evento in eventos:
                 if evento.get("Event") != "ContainerOpened" or not evento.get("Items"):
                     continue
                 if not _nome_de_corpo(evento):
@@ -533,18 +541,19 @@ def _loot_dos_corpos(blocos, alvo):
             linhas.append(f"    id {identificador} · {vezes} corpo(s) · {nomes.get(identificador, '?')}")
         return linhas
 
-    abertos = [e for e in _eventos(blocos) if e.get("Event") == "ContainerOpened"]
+    abertos = [e for e in eventos if e.get("Event") == "ContainerOpened"]
     posicoes = {id(e): i for i, e in enumerate(abertos)}
 
     def itens_de(evento):
         return [item for linha in (evento.get("Items") or []) for item in linha]
 
     def saco_depois(posicao, evento):
+        abertura = (evento.get("_quando") or 0) / 1000.0
         for seguinte in abertos[posicao + 1:posicao + 8]:
             if _nome_de_corpo(seguinte):
                 break
-            if seguinte.get("ContainerId") != evento.get("ContainerId"):
-                continue
+            if (seguinte.get("_quando") or 0) / 1000.0 - abertura > JANELA_DO_CORPO:
+                break
             if (seguinte.get("ContainerItem") or {}).get("ItemId") in MOCHILAS_DO_JOGADOR:
                 continue
             return seguinte
@@ -629,6 +638,31 @@ def _loot_dos_corpos(blocos, alvo):
                   f"{(total_corpo + total_saco) / len(corpos):.2f} (sem ouro) · "
                   f"ouro {len(ouro_corpo) / len(corpos):.2f} pilhas fora + "
                   f"{len(ouro_saco) / len(corpos):.2f} no saco")
+
+    nome_do_monstro = alvo
+    if por_id:
+        nome_do_monstro = _monstro_do_corpo(int(alvo)) or ""
+    if not todos and nome_do_monstro:
+        declarado = _loot_do_monstro(nome_do_monstro)
+        if declarado:
+            vistos = set(no_corpo) | set(no_saco)
+            if ouro_corpo or ouro_saco:
+                vistos.add(OURO)
+            faltam = sorted(i for i in declarado if i not in vistos and i not in SACOS_DE_LOOT)
+            sobram = sorted(i for i in vistos if i not in declarado)
+            linhas.append("")
+            linhas.append("  CRUZAMENTO com o <loot> do XML do monstro:")
+            if faltam:
+                linhas.append("    no XML e NUNCA vistos nesta gravacao (NAO apagar so por isto):")
+                for identificador in faltam:
+                    linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
+                                  f"({identificador}) · {declarado[identificador]}")
+            else:
+                linhas.append("    todos os itens do XML apareceram")
+            if sobram:
+                linhas.append("    vistos e NAO estao no XML:")
+                for identificador in sobram:
+                    linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} ({identificador})")
     return linhas
 
 
@@ -639,25 +673,30 @@ def _nome_de_corpo(evento):
     return nome
 
 
+def _assinatura_do_corpo(evento):
+    return frozenset(
+        (item.get("ItemId"), item.get("Count") or 1)
+        for linha in (evento.get("Items") or [])
+        for item in linha
+    )
+
+
 def _sem_reaberturas(corpos):
-    vistos = {}
     limpos = []
+    ultimo = {}
     for evento in corpos:
-        assinatura = (
-            evento.get("ContainerId"),
-            (evento.get("ContainerItem") or {}).get("ItemId"),
-            tuple(sorted(
-                (item.get("ItemId"), item.get("Count") or 1)
-                for linha in (evento.get("Items") or [])
-                for item in linha
-                if item.get("ItemId") not in SACOS_DE_LOOT
-            )),
-        )
-        quando = evento.get("_quando", 0) / 1000.0
-        antes = vistos.get(assinatura)
-        if antes is not None and quando - antes < JANELA_DO_CORPO:
+        chave = (evento.get("ContainerId"), (evento.get("ContainerItem") or {}).get("ItemId"))
+        quando = (evento.get("_quando") or 0) / 1000.0
+        agora = _assinatura_do_corpo(evento)
+        anterior = ultimo.get(chave)
+        if anterior is not None and quando - anterior[0] < JANELA_DO_CORPO:
+            antes = _assinatura_do_corpo(anterior[1])
+            if agora <= antes:
+                continue
+            limpos[anterior[2]] = evento
+            ultimo[chave] = (quando, evento, anterior[2])
             continue
-        vistos[assinatura] = quando
+        ultimo[chave] = (quando, evento, len(limpos))
         limpos.append(evento)
     return limpos
 
@@ -689,7 +728,7 @@ def _nomes_de_itens():
     return nomes
 
 
-def _corpo_do_monstro(nome):
+def _ficheiro_do_monstro(nome):
     try:
         devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
     except Exception:
@@ -699,30 +738,88 @@ def _corpo_do_monstro(nome):
         return None
     procurado = re.sub(r"\s+", " ", nome.strip()).lower()
     direto = os.path.join(pasta, procurado + ".xml")
-    candidatos = [direto] if os.path.isfile(direto) else []
-    if not candidatos:
-        for ficheiro in sorted(os.listdir(pasta)):
-            if not ficheiro.lower().endswith(".xml"):
-                continue
-            try:
-                with open(os.path.join(pasta, ficheiro), encoding="utf-8", errors="replace") as fh:
-                    cabeca = fh.read(800)
-            except OSError:
-                continue
-            achado = re.search(r'<monster\s+name="([^"]*)"', cabeca)
-            if achado and re.sub(r"\s+", " ", achado.group(1)).lower() == procurado:
-                candidatos = [os.path.join(pasta, ficheiro)]
-                break
-    for caminho in candidatos:
+    if os.path.isfile(direto):
+        return direto
+    for ficheiro in sorted(os.listdir(pasta)):
+        if not ficheiro.lower().endswith(".xml"):
+            continue
+        caminho = os.path.join(pasta, ficheiro)
         try:
             with open(caminho, encoding="utf-8", errors="replace") as fh:
-                texto = fh.read()
+                cabeca = fh.read(800)
         except OSError:
             continue
-        achado = re.search(r'corpse="(\d+)"', texto)
-        if achado:
-            return int(achado.group(1))
+        achado = re.search(r'<monster\s+name="([^"]*)"', cabeca)
+        if achado and re.sub(r"\s+", " ", achado.group(1)).lower() == procurado:
+            return caminho
     return None
+
+
+def _corpo_do_monstro(nome):
+    caminho = _ficheiro_do_monstro(nome)
+    if not caminho:
+        return None
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as fh:
+            texto = fh.read()
+    except OSError:
+        return None
+    achado = re.search(r'corpse="(\d+)"', texto)
+    return int(achado.group(1)) if achado else None
+
+
+def _monstro_do_corpo(corpo):
+    """Nome do monstro cujo corpse= e este id (o inverso de _corpo_do_monstro)."""
+    try:
+        devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
+    except Exception:
+        return None
+    pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+    if not pasta or not os.path.isdir(pasta):
+        return None
+    for ficheiro in sorted(os.listdir(pasta)):
+        if not ficheiro.lower().endswith(".xml"):
+            continue
+        try:
+            with open(os.path.join(pasta, ficheiro), encoding="utf-8", errors="replace") as fh:
+                texto = fh.read(4000)
+        except OSError:
+            continue
+        if re.search(r'corpse="%d"' % corpo, texto):
+            achado = re.search(r'<monster\s+name="([^"]*)"', texto)
+            if achado:
+                return achado.group(1)
+    return None
+
+
+def _loot_do_monstro(nome):
+    """id -> 'corpo' ou 'saco', lido do <loot> do XML do monstro."""
+    caminho = _ficheiro_do_monstro(nome)
+    if not caminho:
+        return {}
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as fh:
+            texto = fh.read()
+    except OSError:
+        return {}
+    bloco = re.search(r"<loot\b.*?</loot>", texto, re.S)
+    if not bloco:
+        return {}
+    declarado = {}
+    profundidade = 0
+    for achado in re.finditer(r"<inside\b|</inside\b|<item\s+id=\"(\d+)\"", bloco.group(0)):
+        pedaco = achado.group(0)
+        if pedaco.startswith("<inside"):
+            profundidade += 1
+            continue
+        if pedaco.startswith("</inside"):
+            profundidade = max(0, profundidade - 1)
+            continue
+        identificador = int(achado.group(1))
+        onde = "saco" if profundidade else "corpo"
+        if declarado.get(identificador) != "corpo":
+            declarado[identificador] = onde
+    return declarado
 
 
 def _quem_grave(blocos):
