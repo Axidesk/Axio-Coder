@@ -1100,11 +1100,22 @@ def _gravar_indice(indice, caminho):
         pass
 
 
+def _corpos_do_nome(procurado):
+    """Ids de corpo cujo monstro casa com o nome - o 'varrer' aceita o monstro, nao so o corpo."""
+    _monstros_do_corpo(0)
+    return {
+        corpo
+        for corpo, nomes in (_CACHE.get("corpos") or {}).items()
+        if any(procurado in nome for nome in nomes)
+    }
+
+
 def _varredura(termo):
     """Todas as gravacoes que tem um corpo cujo nome casa com o termo."""
     indice, nota = indexar_gravacoes()
     procurado = termo.lower()
     por_id = procurado.isdigit()
+    ids_do_monstro = set() if por_id else _corpos_do_nome(procurado)
     achados = []
     for chave, dados in indice.items():
         if dados.get("erro"):
@@ -1112,9 +1123,13 @@ def _varredura(termo):
         for identificador, corpo in (dados.get("corpos") or {}).items():
             nome = str(corpo.get("nome") or "").lower()
             if (identificador if por_id else nome).find(procurado) < 0:
-                continue
+                try:
+                    if int(identificador) not in ids_do_monstro:
+                        continue
+                except (TypeError, ValueError):
+                    continue
             achados.append((dados.get("nome") or os.path.basename(chave), nome,
-                            corpo.get("n") or 0, dados.get("segundos") or 0))
+                            corpo.get("n") or 0, dados.get("segundos") or 0, identificador))
     achados.sort(key=lambda x: -x[2])
     if not achados:
         linhas = ["", f"VARREDURA: nenhuma gravacao com '{termo}' no indice ({nota})."]
@@ -1128,13 +1143,30 @@ def _varredura(termo):
                 linhas.append(f"    {nome[:44]:44s} {vezes:5d} gravacao(oes)")
         return "\n".join(linhas)
     total = sum(a[2] for a in achados)
+    via = ""
+    if ids_do_monstro:
+        via = " · casou pelo MONSTRO, corpo(s) %s" % sorted(ids_do_monstro)
     linhas = ["", f"VARREDURA: '{termo}' em {len(achados)} gravacao(oes) · {total} corpo(s)"
-                  f" · {nota}", ""]
+                  f"{via} · {nota}", ""]
     linhas.append(f"    {'corpos':>6s} {'min':>8s}  arquivo")
-    for nome_arquivo, _nome_corpo, quantos, segundos in achados[:60]:
+    for nome_arquivo, _nome_corpo, quantos, segundos, _ident in achados[:60]:
         linhas.append(f"    {quantos:6d} {segundos / 60:7.1f}  {nome_arquivo}")
     if len(achados) > 60:
         linhas.append(f"    ... e mais {len(achados) - 60}")
+    vistos = set()
+    for achado in achados:
+        try:
+            vistos.add(int(achado[4]))
+        except (TypeError, ValueError):
+            continue
+    partilhados = {c: _monstros_do_corpo(c) for c in vistos}
+    partilhados = {c: m for c, m in partilhados.items() if len(m) > 1}
+    if partilhados:
+        linhas.append("")
+        linhas.append("  CORPO PARTILHADO (a contagem mistura estes monstros) - use loot=<monstro> numa")
+        linhas.append("  gravacao para separar pela assinatura:")
+        for corpo, nomes in sorted(partilhados.items()):
+            linhas.append(f"    {corpo}: {', '.join(nomes)}")
     return "\n".join(linhas)
 
 

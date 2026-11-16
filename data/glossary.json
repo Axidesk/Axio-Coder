@@ -7002,10 +7002,10 @@
       "descricao": "Lê um ficheiro .rec do TibiaCAM e devolve os eventos em texto com hora ao milésimo (dano com valor/cor/tile, efeito por id e tile, vida, fala, loot, magia), filtrável por intervalo de tempo e por grupo.",
       "localizacao": {
         "arquivo": "src/backend/tools/gravacoes.py",
-        "linha": 106,
+        "linha": 132,
         "conferido": [
-          1794698022.761,
-          20328
+          1794865361.227,
+          48635
         ]
       }
     }
