@@ -687,6 +687,23 @@ def _loot_dos_corpos(blocos, alvo):
                                   f"({identificador}) · {declarado[identificador]}")
             else:
                 linhas.append("    todos os itens do XML apareceram")
+            trocados = []
+            for identificador, sitio_no_xml in sorted(declarado.items()):
+                if identificador in SACOS_DE_LOOT:
+                    continue
+                fora = no_corpo.get(identificador, 0)
+                dentro = no_saco.get(identificador, 0)
+                if sitio_no_xml == "corpo" and dentro:
+                    trocados.append((identificador,
+                                     f"o XML poe no corpo e caiu {dentro} vez(es) no saco", dentro))
+                elif sitio_no_xml == "saco" and fora:
+                    trocados.append((identificador,
+                                     f"o XML poe no saco e caiu {fora} vez(es) no corpo", fora))
+            if trocados:
+                linhas.append("    POSICAO diferente do XML (o motor decide o sitio - nao apagar):")
+                for identificador, que, vezes in trocados:
+                    linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
+                                  f"({identificador}) · {que}")
             if sobram:
                 linhas.append("    vistos e NAO estao no XML:")
                 for identificador in sobram:
