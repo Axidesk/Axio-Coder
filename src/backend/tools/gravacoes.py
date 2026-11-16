@@ -66,11 +66,20 @@ _CLIENTES = {}
     "'IO failure'. Nao serve para concluir o tipo de dano sozinha - ela mostra a cor do numero e o id do "
     "efeito no mesmo tile, que e o que permite julgar isso.",
     {
+        "varrer": {
+            "tipo": "STRING",
+            "desc": "NAO abre uma gravacao: varre TODAS as gravacoes da pasta e diz quais tem "
+            "corpos daquele monstro, com quantos cada uma. Aceita o nome ('demon') ou o id do "
+            "corpo. Le cada ficheiro uma vez e guarda o resumo em cache (data/indice_recs.json), "
+            "por isso a primeira chamada demora e as seguintes sao instantaneas. E o caminho "
+            "para escolher QUAL gravacao abrir antes de analisar um monstro.",
+            "padrao": "",
+        },
         "gravacao": {
             "tipo": "STRING",
             "desc": "Nome da gravacao ('dlsolo.rec' ou so 'dlsolo') ou caminho completo. Sem 'pasta', "
-            "procura nas pastas de gravacoes que o Painel de Controlo tem registadas.",
-            "obrig": True,
+            "procura nas pastas de gravacoes que o Painel de Controlo tem registadas. Nao e preciso "
+            "quando se usa 'varrer'.",
             "padrao": "",
         },
         "pasta": {
@@ -120,7 +129,12 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer=""):
+    if str(varrer or "").strip():
+        emit_event("executing", function=f"Varrendo as gravacoes por: {varrer}")
+        return _varredura(str(varrer).strip())
+    if not str(gravacao or "").strip():
+        return "ERRO: diga qual gravacao abrir, ou use 'varrer' para procurar um monstro em todas."
     emit_event("executing", function=f"Lendo a gravacao: {gravacao}")
     caminho, alternativas = _achar_gravacao(gravacao, pasta)
     if not caminho:
@@ -525,6 +539,11 @@ def _loot_dos_corpos(blocos, alvo):
                     corpos.append(evento)
             if corpos:
                 nota = f" (pelo corpo {corpo}, lido do XML do monstro)"
+    corpo_id = None
+    if por_id:
+        corpo_id = int(alvo) if alvo.isdigit() else None
+    elif not todos:
+        corpo_id = _corpo_do_monstro(alvo)
     if not corpos:
         linhas = ["", f"LOOT: nenhum corpo aberto com '{alvo}' nesta gravacao."]
         if conhecidos:
@@ -540,6 +559,14 @@ def _loot_dos_corpos(blocos, alvo):
         for identificador, vezes in variados.most_common():
             linhas.append(f"    id {identificador} · {vezes} corpo(s) · {nomes.get(identificador, '?')}")
         return linhas
+
+    separacao = []
+    if corpo_id and not por_id:
+        corpos, separacao = _separar_por_assinatura(corpos, alvo, corpo_id)
+        if not corpos:
+            return (["", f"LOOT: nenhum corpo de '{alvo}' sobrou depois de separar o corpo "
+                         f"partilhado (id {corpo_id}) pela assinatura do loot (a separacao "
+                         f"atribuiu-os a outros monstros ou a jogadores):"] + separacao)
 
     abertos = [e for e in eventos if e.get("Event") == "ContainerOpened"]
     posicoes = {id(e): i for i, e in enumerate(abertos)}
@@ -607,6 +634,7 @@ def _loot_dos_corpos(blocos, alvo):
     linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
               f"({100.0 * com_saco / len(corpos):.1f}%) · {sacos_vazios} saco(s) vazio(s) "
               f"· {vazios} corpo(s) sem nada"]
+    linhas.extend(separacao)
 
     def tabela(titulo, contagem, base, ouro, extra="", absoluto=None, com_ouro=0):
         if not contagem and not ouro:
@@ -792,6 +820,98 @@ def _monstro_do_corpo(corpo):
     return None
 
 
+def _monstros_do_corpo(corpo):
+    """Todos os monstros cujo corpse= e este id: o mesmo corpo serve a varios."""
+    if "corpos" not in _CACHE:
+        indice = {}
+        try:
+            devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
+        except Exception:
+            devolvido = None
+        pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+        if pasta and os.path.isdir(pasta):
+            for ficheiro in sorted(os.listdir(pasta)):
+                if not ficheiro.lower().endswith(".xml"):
+                    continue
+                try:
+                    with open(os.path.join(pasta, ficheiro), encoding="utf-8", errors="replace") as fh:
+                        texto = fh.read(4000)
+                except OSError:
+                    continue
+                achado_corpo = re.search(r'corpse="(\d+)"', texto)
+                achado_nome = re.search(r'<monster\s+name="([^"]*)"', texto)
+                if not achado_corpo or not achado_nome:
+                    continue
+                nome = re.sub(r"\s+", " ", achado_nome.group(1)).strip().lower()
+                indice.setdefault(int(achado_corpo.group(1)), []).append(nome)
+        _CACHE["corpos"] = indice
+    return list(_CACHE["corpos"].get(corpo) or [])
+
+
+def _itens_sem_saco(evento):
+    return frozenset(
+        item.get("ItemId")
+        for linha in (evento.get("Items") or [])
+        for item in linha
+        if item.get("ItemId") not in SACOS_DE_LOOT and item.get("ItemId") != OURO
+    )
+
+
+def _separar_por_assinatura(corpos, alvo, corpo):
+    """Separa os corpos de um id partilhado pelo monstro, pela cara do loot.
+
+    Cada corpo e comparado com o <loot> de cada monstro que usa aquele id; fica
+    com o que explica mais itens. Devolve (corpos do alvo, linhas do relatorio).
+    """
+    inquilinos = _monstros_do_corpo(corpo)
+    alvo_normal = re.sub(r"\s+", " ", str(alvo or "").strip()).lower()
+    if len(inquilinos) < 2 or alvo_normal not in inquilinos:
+        return corpos, []
+    declarados = {nome: set(_loot_do_monstro(nome)) for nome in inquilinos}
+    meus = declarados.get(alvo_normal) or set()
+    if not meus:
+        return corpos, []
+    dos_outros = set()
+    for nome, itens in declarados.items():
+        if nome != alvo_normal:
+            dos_outros |= itens
+    marcadores = meus - dos_outros
+    grupos = collections.Counter()
+    ficam = []
+    for evento in corpos:
+        itens = _itens_sem_saco(evento)
+        if not itens:
+            grupos["so ouro (indefinido)"] += 1
+            ficam.append(evento)
+            continue
+        if marcadores & itens:
+            grupos[alvo_normal] += 1
+            ficam.append(evento)
+            continue
+        melhor, nota = None, 0.0
+        for nome, declarado in declarados.items():
+            if not declarado:
+                continue
+            valor = len(itens & declarado) / len(itens)
+            if valor > nota:
+                melhor, nota = nome, valor
+        if melhor == alvo_normal:
+            grupos[alvo_normal] += 1
+            ficam.append(evento)
+        elif melhor:
+            grupos[melhor] += 1
+        else:
+            grupos["sem assinatura (jogador/outro)"] += 1
+    linhas = ["", f"  CORPO PARTILHADO (id {corpo}) com: {', '.join(inquilinos)}",
+              f"    separado pela assinatura do loot · {len(ficam)} de {len(corpos)} corpos ficam:"]
+    for nome, quantos in grupos.most_common():
+        linhas.append(f"      {nome[:30]:30s} {quantos:5d}")
+    if marcadores:
+        linhas.append("    marcadores (so este monstro declara): "
+                      + ", ".join(str(i) for i in sorted(marcadores)))
+    return ficam, linhas
+
+
 def _loot_do_monstro(nome):
     """id -> 'corpo' ou 'saco', lido do <loot> do XML do monstro."""
     caminho = _ficheiro_do_monstro(nome)
@@ -820,6 +940,202 @@ def _loot_do_monstro(nome):
         if declarado.get(identificador) != "corpo":
             declarado[identificador] = onde
     return declarado
+
+
+INDICE_DE_GRAVACOES = "data/indice_recs.json"
+
+
+def _caminho_do_indice():
+    raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    caminho = os.path.join(raiz, *INDICE_DE_GRAVACOES.split("/"))
+    if not os.path.isdir(os.path.dirname(caminho)):
+        return ""
+    return caminho
+
+
+def _gravacoes_no_disco():
+    achadas = {}
+    for pasta in _pastas_conhecidas():
+        if not os.path.isdir(pasta):
+            continue
+        try:
+            nomes = os.listdir(pasta)
+        except OSError:
+            continue
+        for nome in nomes:
+            if not nome.lower().endswith(".rec"):
+                continue
+            caminho = os.path.join(pasta, nome)
+            chave = os.path.normcase(os.path.abspath(caminho))
+            if chave not in achadas:
+                achadas[chave] = caminho
+    return achadas
+
+
+def _corpos_resumidos(blocos):
+    """id do corpo -> nome, quantos e o que caiu no corpo e no saco."""
+    eventos = _lista_de_eventos(blocos)
+    abertos = [e for e in eventos if e.get("Event") == "ContainerOpened"]
+    posicoes = {id(e): i for i, e in enumerate(abertos)}
+
+    def itens_de(evento):
+        return [item for linha in (evento.get("Items") or []) for item in linha]
+
+    def saco_depois(posicao):
+        for seguinte in abertos[posicao + 1:posicao + 8]:
+            if _nome_de_corpo(seguinte):
+                break
+            if (seguinte.get("ContainerItem") or {}).get("ItemId") in MOCHILAS_DO_JOGADOR:
+                continue
+            return seguinte
+        return None
+
+    corpos = _sem_reaberturas([e for e in abertos if _nome_de_corpo(e)])
+    resumo = {}
+    for evento in corpos:
+        identificador = (evento.get("ContainerItem") or {}).get("ItemId")
+        if identificador is None:
+            continue
+        registo = resumo.setdefault(
+            str(identificador),
+            {"nome": _nome_de_corpo(evento), "n": 0, "corpo": collections.Counter(),
+             "saco": collections.Counter(), "pilhas": []},
+        )
+        registo["n"] += 1
+        topos = itens_de(evento)
+        pilhas = [item.get("Count") or 1 for item in topos if item.get("ItemId") == OURO]
+        for item in topos:
+            if item.get("ItemId") in SACOS_DE_LOOT or item.get("ItemId") == OURO:
+                continue
+            registo["corpo"][str(item.get("ItemId"))] += 1
+        if any(item.get("ItemId") in SACOS_DE_LOOT for item in topos):
+            saco = saco_depois(posicoes.get(id(evento), -1))
+            if saco is not None:
+                for item in itens_de(saco):
+                    if item.get("ItemId") == OURO:
+                        pilhas.append(item.get("Count") or 1)
+                        continue
+                    if item.get("ItemId") in SACOS_DE_LOOT:
+                        continue
+                    registo["saco"][str(item.get("ItemId"))] += 1
+        if pilhas:
+            registo["pilhas"].append(pilhas)
+    return {
+        chave: {"nome": r["nome"], "n": r["n"], "corpo": dict(r["corpo"]),
+                "saco": dict(r["saco"]), "pilhas": r["pilhas"][:300]}
+        for chave, r in resumo.items()
+    }
+
+
+def indexar_gravacoes(progresso=None, refazer=False):
+    """Le o loot de todas as gravacoes e guarda o resumo em cache."""
+    caminho_indice = _caminho_do_indice()
+    if not caminho_indice:
+        return {}, "nao consegui resolver o caminho do indice"
+    indice = {}
+    try:
+        with open(caminho_indice, encoding="utf-8") as aberto:
+            guardado = json.load(aberto)
+        if isinstance(guardado, dict) and isinstance(guardado.get("gravacoes"), dict):
+            indice = guardado["gravacoes"]
+    except (OSError, ValueError):
+        indice = {}
+
+    miner = _achar_miner()
+    if isinstance(miner, tuple):
+        miner = miner[0]
+    if not miner:
+        return indice, "nao achei o miner.exe"
+    clientes = _achar_clientes(miner)
+    if not clientes:
+        return indice, "nao achei os clientes do miner"
+
+    por_ler = []
+    for chave, caminho in sorted(_gravacoes_no_disco().items()):
+        try:
+            stat = os.stat(caminho)
+        except OSError:
+            continue
+        anterior = indice.get(chave) or {}
+        if not refazer and anterior.get("mtime") == stat.st_mtime and anterior.get("bytes") == stat.st_size:
+            continue
+        por_ler.append((chave, caminho, stat))
+
+    lidos = 0
+    falhados = 0
+    for posicao, (chave, caminho, stat) in enumerate(por_ler, 1):
+        if progresso:
+            progresso(posicao, len(por_ler), os.path.basename(caminho))
+        try:
+            bruto, _ = _ler_bruto(caminho, miner, clientes, False)
+        except RuntimeError:
+            falhados += 1
+            indice[chave] = {"mtime": stat.st_mtime, "bytes": stat.st_size,
+                             "nome": os.path.basename(caminho), "erro": True}
+            continue
+        blocos = bruto if isinstance(bruto, list) else []
+        indice[chave] = {
+            "mtime": stat.st_mtime,
+            "bytes": stat.st_size,
+            "nome": os.path.basename(caminho),
+            "segundos": round(_duracao(blocos), 1),
+            "corpos": _corpos_resumidos(blocos),
+        }
+        lidos += 1
+        if lidos % 25 == 0:
+            _gravar_indice(indice, caminho_indice)
+
+    if lidos or falhados:
+        _gravar_indice(indice, caminho_indice)
+    return indice, f"{lidos} lidas agora, {falhados} falharam, {len(indice)} no indice"
+
+
+def _gravar_indice(indice, caminho):
+    try:
+        os.makedirs(os.path.dirname(caminho), exist_ok=True)
+        with open(caminho + ".tmp", "w", encoding="utf-8") as saida:
+            json.dump({"gravacoes": indice}, saida, ensure_ascii=False)
+        os.replace(caminho + ".tmp", caminho)
+    except OSError:
+        pass
+
+
+def _varredura(termo):
+    """Todas as gravacoes que tem um corpo cujo nome casa com o termo."""
+    indice, nota = indexar_gravacoes()
+    procurado = termo.lower()
+    por_id = procurado.isdigit()
+    achados = []
+    for chave, dados in indice.items():
+        if dados.get("erro"):
+            continue
+        for identificador, corpo in (dados.get("corpos") or {}).items():
+            nome = str(corpo.get("nome") or "").lower()
+            if (identificador if por_id else nome).find(procurado) < 0:
+                continue
+            achados.append((dados.get("nome") or os.path.basename(chave), nome,
+                            corpo.get("n") or 0, dados.get("segundos") or 0))
+    achados.sort(key=lambda x: -x[2])
+    if not achados:
+        linhas = ["", f"VARREDURA: nenhuma gravacao com '{termo}' no indice ({nota})."]
+        nomes = collections.Counter(
+            str(c.get("nome")) for d in indice.values() if not d.get("erro")
+            for c in (d.get("corpos") or {}).values()
+        )
+        if nomes:
+            linhas.append("  corpos que o indice conhece:")
+            for nome, vezes in nomes.most_common(40):
+                linhas.append(f"    {nome[:44]:44s} {vezes:5d} gravacao(oes)")
+        return "\n".join(linhas)
+    total = sum(a[2] for a in achados)
+    linhas = ["", f"VARREDURA: '{termo}' em {len(achados)} gravacao(oes) · {total} corpo(s)"
+                  f" · {nota}", ""]
+    linhas.append(f"    {'corpos':>6s} {'min':>8s}  arquivo")
+    for nome_arquivo, _nome_corpo, quantos, segundos in achados[:60]:
+        linhas.append(f"    {quantos:6d} {segundos / 60:7.1f}  {nome_arquivo}")
+    if len(achados) > 60:
+        linhas.append(f"    ... e mais {len(achados) - 60}")
+    return "\n".join(linhas)
 
 
 def _quem_grave(blocos):
@@ -897,3 +1213,12 @@ def _teto(limite):
         return max(1, min(1000, int(limite)))
     except (TypeError, ValueError):
         return TETO_DE_LINHAS
+
+
+if __name__ == "__main__":
+    def _progresso(posicao, total, nome):
+        if posicao % 25 == 0 or posicao == total:
+            print(f"[{posicao}/{total}] {nome}", flush=True)
+
+    _, relato = indexar_gravacoes(progresso=_progresso, refazer="--refazer" in os.sys.argv)
+    print(relato)
