@@ -1,6 +1,7 @@
 import collections
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -96,6 +97,13 @@ _CLIENTES = {}
             "desc": "Numero maximo de linhas a listar.",
             "padrao": TETO_DE_LINHAS,
         },
+        "loot": {
+            "tipo": "STRING",
+            "desc": "Soma o loot dos corpos abertos na gravacao e devolve a tabela de drops com a "
+            "frequencia de cada item (e as pilhas de ouro). Nome do monstro ('dragon lord') filtra "
+            "pelos corpos dele; 'todos' soma todos os corpos.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -103,7 +111,7 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False):
+def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot=""):
     emit_event("executing", function=f"Lendo a gravacao: {gravacao}")
     caminho, alternativas = _achar_gravacao(gravacao, pasta)
     if not caminho:
@@ -131,6 +139,9 @@ def tool_ler_rec(gravacao, pasta="", inicio="", fim="", grupo="", evento="", lim
     linhas = _cabecalho(caminho, blocos, usado)
     if alternativas:
         linhas.append("  OUTRAS COM ESSE NOME: " + " | ".join(alternativas))
+    if str(loot or "").strip():
+        linhas += _loot_dos_corpos(blocos, str(loot).strip())
+        return "\n".join(linhas)
     filtro = _filtro(grupo, evento)
     de, ate = _janela(inicio, fim)
     if not filtro and de is None and ate is None:
@@ -457,6 +468,116 @@ def _nomes(blocos):
     for evento in _eventos(blocos):
         if evento.get("Event") == "CreatureSeen" and evento.get("Name"):
             nomes[evento.get("CreatureId")] = evento["Name"]
+    return nomes
+
+
+def _loot_dos_corpos(blocos, alvo):
+    """Soma o conteudo dos corpos abertos: frequencia de cada item e pilhas de ouro."""
+    nomes = _nomes_de_itens()
+    procurado = alvo.lower()
+    todos = procurado in ("todos", "*")
+    por_id = procurado.isdigit()
+    corpos = []
+    conhecidos = collections.Counter()
+    for evento in _eventos(blocos):
+        if evento.get("Event") != "ContainerOpened" or not evento.get("Items"):
+            continue
+        nome = str(evento.get("ContainerName") or "")
+        if not nome.lower().startswith("dead"):
+            continue
+        identificador = (evento.get("ContainerItem") or {}).get("ItemId")
+        conhecidos[(nome, identificador)] += 1
+        if todos:
+            corpos.append(evento)
+        elif por_id and str(identificador) == procurado:
+            corpos.append(evento)
+        elif not por_id and procurado in nome.lower():
+            corpos.append(evento)
+    if not corpos:
+        linhas = ["", f"LOOT: nenhum corpo aberto com '{alvo}' nesta gravacao."]
+        if conhecidos:
+            linhas.append("  corpos que existem (nome, id do corpo, vezes):")
+            for (nome, identificador), vezes in conhecidos.most_common():
+                linhas.append(f"    {nome} · id {identificador} · {vezes}")
+        return linhas
+    variados = collections.Counter((e.get("ContainerItem") or {}).get("ItemId") for e in corpos)
+    if not por_id and len(variados) > 1:
+        linhas = ["", f"LOOT: '{alvo}' tem {len(variados)} corpos diferentes na gravacao "
+                  f"(o cliente da o mesmo nome a todos). Passe o id para escolher:"]
+        for identificador, vezes in variados.most_common():
+            linhas.append(f"    id {identificador} · {vezes} corpo(s) · {nomes.get(identificador, '?')}")
+        return linhas
+
+    sacos = [e for e in _eventos(blocos)
+             if e.get("Event") == "ContainerOpened"
+             and (e.get("ContainerItem") or {}).get("ItemId") == 1987]
+    achados = collections.Counter()
+    quantos = collections.Counter()
+    ouro = []
+    com_saco = 0
+    total = 0
+    for corpo in corpos:
+        itens = [item for linha in corpo["Items"] for item in linha]
+        saco = None
+        anterior = [s for s in sacos if s.get("__t", 0) > corpo.get("__t", 0)]
+        if anterior:
+            saco = min(anterior, key=lambda s: s["__t"])
+        if saco is not None and saco["__t"] - corpo.get("__t", 0) < 180 and any(
+                item.get("ItemId") == 1987 for item in itens):
+            com_saco += 1
+            itens += [item for linha in saco["Items"] for item in linha]
+        for item in itens:
+            identificador = item.get("ItemId")
+            if identificador == 1987:
+                continue
+            achados[identificador] += 1
+            quantos[identificador] += item.get("Count") or 1
+            total += 1
+            if identificador == 2148:
+                ouro.append(item.get("Count") or 1)
+
+    linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'"
+              + (f" ({com_saco} com saco)" if com_saco else "")]
+    linhas.append(f"  {'item':34s} {'vezes':>6s} {'%':>7s}")
+    for identificador, vezes in achados.most_common():
+        nome = nomes.get(identificador, "?")
+        linhas.append(f"  {nome[:32] + ' (' + str(identificador) + ')':34s} "
+                      f"{vezes:6d} {100.0 * vezes / len(corpos):6.1f}%")
+    if ouro:
+        linhas.append("")
+        linhas.append(
+            f"  OURO: {len(ouro)} pilhas · media {sum(ouro) / len(ouro):.1f} por pilha · "
+            f"{sum(ouro) / len(corpos):.1f} por corpo · maior {max(ouro)} · "
+            f"{sum(1 for corpo in corpos if not any(i.get('ItemId') == 2148 for l in corpo['Items'] for i in l))} "
+            f"corpos sem ouro")
+    linhas.append(f"  itens por corpo: {total / len(corpos):.2f}")
+    return linhas
+
+
+def _nomes_de_itens():
+    """id -> nome, lido do items.xml mais proximo da raiz do projeto."""
+    if "itens" in _CACHE:
+        return _CACHE["itens"]
+    nomes = {}
+    for alvo in ("docs/projetos/Tibia74/Server/data/items/items.xml",
+                 "Server/data/items/items.xml"):
+        try:
+            devolvido = resolver_caminho(alvo)
+        except Exception:
+            continue
+        caminho = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+        if not caminho or not os.path.isfile(caminho):
+            continue
+        try:
+            with open(caminho, encoding="utf-8", errors="replace") as fh:
+                texto = fh.read()
+        except OSError:
+            continue
+        for achado in re.finditer(r'<item\s+id="(\d+)"[^>]*?\bname="([^"]*)"', texto):
+            nomes[int(achado.group(1))] = achado.group(2)
+        if nomes:
+            break
+    _CACHE["itens"] = nomes
     return nomes
 
 
