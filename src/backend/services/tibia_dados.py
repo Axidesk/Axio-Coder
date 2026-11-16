@@ -92,10 +92,11 @@ def _loot_do_xml(base, monstro):
             atributos = dict(re.findall(r'(\w+)="([^"]*)"', item.group(1)))
             if 'id' not in atributos:
                 continue
+            bruto = atributos.get('chance') or atributos.get('chance1') or 0
             entradas.append({
                 'id': int(atributos['id']),
                 'countmax': int(atributos.get('countmax', 1)),
-                'chance': int(atributos.get('chance', 0)) / 1000,
+                'chance': int(bruto) / 1000,
                 'dentro': dentro,
             })
             if item.group(3):

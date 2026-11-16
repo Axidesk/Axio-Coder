@@ -659,7 +659,7 @@ def _loot_dos_corpos(blocos, alvo):
 
     tabela("NO CORPO", no_corpo, len(corpos), ouro_corpo, com_ouro=com_ouro_corpo)
     tabela("DENTRO DO SACO", no_saco, max(com_saco, 1), ouro_saco,
-           f" {com_saco} com saco", len(corpos), com_ouro_saco)
+           " que tinham saco", len(corpos), com_ouro_saco)
     linhas.append("")
     linhas.append(f"  itens por corpo: {total_corpo / len(corpos):.2f} fora + "
                   f"{total_saco / len(corpos):.2f} no saco = "
@@ -694,8 +694,10 @@ def _loot_dos_corpos(blocos, alvo):
                 fora = no_corpo.get(identificador, 0)
                 dentro = no_saco.get(identificador, 0)
                 if sitio_no_xml == "corpo" and dentro:
+                    comum = no_corpo.get(identificador, 0) / max(len(corpos), 1)
+                    aviso = " (comum no corpo: o saco pode ser a mochila do jogador)" if comum >= 0.15 else ""
                     trocados.append((identificador,
-                                     f"o XML poe no corpo e caiu {dentro} vez(es) no saco", dentro))
+                                     f"o XML poe no corpo e caiu {dentro} vez(es) no saco{aviso}", dentro))
                 elif sitio_no_xml == "saco" and fora:
                     trocados.append((identificador,
                                      f"o XML poe no saco e caiu {fora} vez(es) no corpo", fora))
@@ -704,6 +706,16 @@ def _loot_dos_corpos(blocos, alvo):
                 for identificador, que, vezes in trocados:
                     linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
                                   f"({identificador}) · {que}")
+            if sobram:
+                linhas.append("    NAO estao no <loot> (lixo do saque ou mochila do jogador - nao acrescentar):")
+                for identificador in sobram[:12]:
+                    onde = []
+                    if no_corpo.get(identificador):
+                        onde.append(f"{no_corpo[identificador]} no corpo")
+                    if no_saco.get(identificador):
+                        onde.append(f"{no_saco[identificador]} no saco")
+                    linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
+                                  f"({identificador}) · {', '.join(onde)}")
             if sobram:
                 linhas.append("    vistos e NAO estao no XML:")
                 for identificador in sobram:
