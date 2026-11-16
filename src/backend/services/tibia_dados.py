@@ -153,3 +153,69 @@ def cruzar_monstro(base, monstro):
         'inventario': inventario,
         'xml': entradas,
     }
+
+
+def _nomes_por_id(base):
+    return {i: _normalizar(nome) for nome, ids in items_740(base).items() for i in ids}
+
+
+def validar_monstro(base, monstro):
+    """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
+    cruz = cruzar_monstro(base, monstro)
+    if 'erro' in cruz:
+        return cruz
+    texto = _texto_do_xml(base, monstro) or ''
+    nomes = _nomes_por_id(base)
+    servidor = objetos_do_srv(base)
+    do_mon = {_normalizar(p['nome']) for p in cruz['inventario']}
+
+    problemas = []
+    divergencias = []
+
+    for entrada in cruz['xml']:
+        if entrada['id'] == 1987:
+            continue
+        ident = entrada['id']
+        if ident in nomes:
+            if nomes[ident] not in do_mon:
+                divergencias.append(
+                    f'"{nomes[ident]}" ({ident}) esta no XML e o .mon nao o tem -'
+                    f' confirmar no video antes de apagar'
+                )
+            continue
+        if ident in servidor:
+            problemas.append(
+                f'id {ident} NAO existe no items.xml - no objects.srv e "{servidor[ident]}";'
+                f' e id do servidor CipSoft, nao do nosso items.xml'
+            )
+        else:
+            problemas.append(f'id {ident} nao existe no items.xml nem no objects.srv')
+        if not 0 <= entrada['chance'] <= 100:
+            problemas.append(f'id {ident} com chance {entrada["chance"]} fora de 0..100')
+
+    for nome, no_mon, no_xml in cruz['chances_diferentes']:
+        divergencias.append(f'chance de "{nome}" difere: .mon {no_mon} vs xml {no_xml}')
+
+    melee = re.search(r'<attack name="melee"[^>]*>', texto)
+    if melee:
+        linha = melee.group(0)
+        tem_formula = 'skill=' in linha and 'attack=' in linha
+        tem_faixa = 'min=' in linha and 'max=' in linha
+        if not (tem_formula or tem_faixa):
+            problemas.append('melee SEM skill+attack e SEM min+max: o motor nao carrega dano nenhum')
+
+    if 'Tibia - graphical' not in texto:
+        problemas.append('sem o cabecalho "# Tibia - graphical Multi-User-Dungeon" no inicio do ficheiro')
+
+    ordem = [m.group(1) for m in re.finditer(r'<(flags|attacks|defenses|immunities|summons|loot|voices)>', texto)]
+    if 'voices' in ordem and ordem[-1] != 'voices':
+        problemas.append(f'voices nao fica por ultimo (ordem atual: {ordem})')
+
+    return {
+        'monstro': monstro,
+        'problemas': problemas,
+        'divergencias': divergencias,
+        'ok': not problemas,
+        'produtos_no_mon': cruz['produtos_no_mon'],
+        'entradas_no_xml': cruz['entradas_no_xml'],
+    }

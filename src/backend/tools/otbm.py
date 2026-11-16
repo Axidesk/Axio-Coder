@@ -5,6 +5,7 @@ import tempfile
 import time
 import xml.etree.ElementTree as ET
 
+from src.backend.services import tibia_dados
 from src.backend.services.file_service import resolver_caminho
 from src.backend.state import emit_event
 from src.backend.tools.registry import register
@@ -450,6 +451,48 @@ def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
         if so_segundo:
             linhas.append(f"So no 2o ({len(so_segundo)}): {', '.join(map(str, so_segundo[:40]))}")
     return "\n".join(linhas)
+
+
+@register(
+    "tool_validar_monstro",
+    "Confere o XML de um monstro do Tibia74 contra o .mon da CipSoft, o items.xml e o motor, e diz o "
+    "que esta errado antes de o servidor carregar: id do loot que nao existe no items.xml (o erro de "
+    "colar um id do objects.srv em vez do nosso), chance fora de 0..100, melee que o motor nao carrega "
+    "(sem skill+attack nem min+max), cabecalho 'Tibia - graphical' em falta e voices fora do fim do "
+    "ficheiro. Separa o que e ERRO do que e so divergencia do .mon (um item que o video pode provar "
+    "que existe). Aceita varios monstros de uma vez, um por linha.",
+    {
+        "monstros": {
+            "tipo": "STRING",
+            "desc": "Nome do monstro (o do ficheiro, ex: 'minotaur archer'), um por linha.",
+            "obrig": True,
+            "padrao": "",
+        },
+        "pasta": {
+            "tipo": "STRING",
+            "desc": "Opcional: a pasta do projeto Tibia74, quando nao for a de origem.",
+            "padrao": "",
+        },
+    },
+)
+def tool_validar_monstro(monstros, pasta=""):
+    base = pasta or tibia_dados.BASE_PADRAO
+    linhas = []
+    for nome in [linha.strip() for linha in (monstros or "").splitlines() if linha.strip()]:
+        resultado = tibia_dados.validar_monstro(base, nome)
+        if "erro" in resultado:
+            linhas.append(f"{nome}: {resultado['erro']}")
+            continue
+        estado = "OK" if resultado["ok"] else f"{len(resultado['problemas'])} ERRO(S)"
+        linhas.append(
+            f"{nome}: {estado} · .mon {resultado['produtos_no_mon']} item(ns)"
+            f" · xml {resultado['entradas_no_xml']} entrada(s)"
+        )
+        for problema in resultado["problemas"]:
+            linhas.append(f"  ERRO: {problema}")
+        for divergencia in resultado.get("divergencias", []):
+            linhas.append(f"  divergencia: {divergencia}")
+    return "\n".join(linhas) if linhas else "ERRO: diga ao menos um monstro."
 
 
 def _itens_do_items_xml(caminho_relativo):
