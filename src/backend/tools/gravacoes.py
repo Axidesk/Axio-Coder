@@ -12,7 +12,11 @@ from src.backend.tools.registry import register
 
 VERSAO_PADRAO = "7.40"
 SACO_DE_LOOT = 1987
+SACOS_DE_LOOT = frozenset({1987, 1993})
 OURO = 2148
+PREFIXOS_DE_CORPO = ("dead ", "slain ", "remains ")
+MOCHILAS_DO_JOGADOR = frozenset(range(1988, 2005))
+JANELA_DO_CORPO = 15.0
 TETO_DE_LINHAS = 60
 SEGUNDOS_PADRAO = 300
 PROFUNDIDADE_DA_BUSCA = 7
@@ -453,9 +457,11 @@ def _descrever(evento, nomes, jogador):
         alvo = evento.get("To") if tipo == "CreatureMoved" else evento.get("Position")
         return f"{tipo} para {_ponto(alvo)}"
     if tipo.startswith("Container"):
-        item = evento.get("Item") or {}
+        item = evento.get("ContainerItem") or {}
         identificador = item.get("ItemId") if isinstance(item, dict) else None
-        return f"{tipo} item {identificador} no contentor {evento.get('ContainerId')}"
+        nome = evento.get("ContainerName") or ""
+        apelido = f" {nome}" if nome else ""
+        return f"{tipo} item {identificador}{apelido} no contentor {evento.get('ContainerId')}"
     return f"{tipo} {json.dumps(evento, ensure_ascii=False)[:180]}"
 
 
@@ -485,10 +491,10 @@ def _loot_dos_corpos(blocos, alvo):
     corpos = []
     conhecidos = collections.Counter()
     for evento in _eventos(blocos):
-        if evento.get("Event") != "ContainerOpened" or not evento.get("Items"):
+        if evento.get("Event") != "ContainerOpened":
             continue
-        nome = str(evento.get("ContainerName") or "")
-        if not nome.lower().startswith("dead"):
+        nome = _nome_de_corpo(evento)
+        if not nome:
             continue
         identificador = (evento.get("ContainerItem") or {}).get("ItemId")
         conhecidos[(nome, identificador)] += 1
@@ -505,7 +511,7 @@ def _loot_dos_corpos(blocos, alvo):
             for evento in _eventos(blocos):
                 if evento.get("Event") != "ContainerOpened" or not evento.get("Items"):
                     continue
-                if not str(evento.get("ContainerName") or "").lower().startswith("dead"):
+                if not _nome_de_corpo(evento):
                     continue
                 if str((evento.get("ContainerItem") or {}).get("ItemId")) == str(corpo):
                     corpos.append(evento)
@@ -518,6 +524,7 @@ def _loot_dos_corpos(blocos, alvo):
             for (nome, identificador), vezes in conhecidos.most_common():
                 linhas.append(f"    {nome} · id {identificador} · {vezes}")
         return linhas
+    corpos = _sem_reaberturas(corpos)
     variados = collections.Counter((e.get("ContainerItem") or {}).get("ItemId") for e in corpos)
     if not por_id and len(variados) > 1:
         linhas = ["", f"LOOT: '{alvo}' tem {len(variados)} corpos diferentes na gravacao "
@@ -527,12 +534,21 @@ def _loot_dos_corpos(blocos, alvo):
         return linhas
 
     abertos = [e for e in _eventos(blocos) if e.get("Event") == "ContainerOpened"]
+    posicoes = {id(e): i for i, e in enumerate(abertos)}
 
     def itens_de(evento):
         return [item for linha in (evento.get("Items") or []) for item in linha]
 
-    def eh_saco(evento):
-        return (evento.get("ContainerItem") or {}).get("ItemId") == SACO_DE_LOOT
+    def saco_depois(posicao, evento):
+        for seguinte in abertos[posicao + 1:posicao + 8]:
+            if _nome_de_corpo(seguinte):
+                break
+            if seguinte.get("ContainerId") != evento.get("ContainerId"):
+                continue
+            if (seguinte.get("ContainerItem") or {}).get("ItemId") in MOCHILAS_DO_JOGADOR:
+                continue
+            return seguinte
+        return None
 
     no_corpo = collections.Counter()
     no_saco = collections.Counter()
@@ -542,20 +558,25 @@ def _loot_dos_corpos(blocos, alvo):
     sacos_vazios = 0
     total_corpo = 0
     total_saco = 0
+    com_ouro_corpo = 0
+    com_ouro_saco = 0
     for evento in corpos:
         topos = itens_de(evento)
-        tem_saco = any(item.get("ItemId") == SACO_DE_LOOT for item in topos)
+        if any(item.get("ItemId") == OURO for item in topos):
+            com_ouro_corpo += 1
+        tem_saco = any(item.get("ItemId") in SACOS_DE_LOOT for item in topos)
         for item in topos:
-            if item.get("ItemId") == SACO_DE_LOOT:
+            if item.get("ItemId") in SACOS_DE_LOOT:
+                continue
+            if item.get("ItemId") == OURO:
+                ouro_corpo.append(item.get("Count") or 1)
                 continue
             no_corpo[item.get("ItemId")] += 1
             total_corpo += 1
-            if item.get("ItemId") == OURO:
-                ouro_corpo.append(item.get("Count") or 1)
         if not tem_saco:
             continue
-        posicao = abertos.index(evento)
-        saco = next((x for x in abertos[posicao + 1:posicao + 8] if eh_saco(x)), None)
+        posicao = posicoes.get(id(evento), -1)
+        saco = saco_depois(posicao, evento) if posicao >= 0 else None
         if saco is None:
             sacos_vazios += 1
             continue
@@ -564,37 +585,81 @@ def _loot_dos_corpos(blocos, alvo):
             sacos_vazios += 1
             continue
         com_saco += 1
+        if any(item.get("ItemId") == OURO for item in dentro):
+            com_ouro_saco += 1
         for item in dentro:
-            no_saco[item.get("ItemId")] += 1
-            total_saco += 1
             if item.get("ItemId") == OURO:
                 ouro_saco.append(item.get("Count") or 1)
+                continue
+            no_saco[item.get("ItemId")] += 1
+            total_saco += 1
 
+    vazios = sum(1 for evento in corpos if not itens_de(evento))
     linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
-              f"({100.0 * com_saco / len(corpos):.1f}%) · {sacos_vazios} saco(s) vazio(s)"]
+              f"({100.0 * com_saco / len(corpos):.1f}%) · {sacos_vazios} saco(s) vazio(s) "
+              f"· {vazios} corpo(s) sem nada"]
 
-    def tabela(titulo, contagem, base, ouro, extra=""):
+    def tabela(titulo, contagem, base, ouro, extra="", absoluto=None, com_ouro=0):
         if not contagem and not ouro:
             return
         linhas.append("")
         linhas.append(f"  {titulo} (de {base}{extra}):")
-        linhas.append(f"    {'item':32s} {'vezes':>6s} {'%':>7s}")
+        cabeca = f"    {'item':32s} {'vezes':>6s} {'%':>7s}"
+        linhas.append(cabeca + (f" {'% por corpo':>12s}" if absoluto else ""))
         for identificador, vezes in contagem.most_common():
             nome = nomes.get(identificador, "?")
-            linhas.append(f"    {nome[:30] + ' (' + str(identificador) + ')':32s} "
-                          f"{vezes:6d} {100.0 * vezes / base:6.1f}%")
+            linha = (f"    {nome[:30] + ' (' + str(identificador) + ')':32s} "
+                     f"{vezes:6d} {100.0 * vezes / base:6.1f}%")
+            if absoluto:
+                linha += f" {100.0 * vezes / absoluto:11.1f}%"
+            linhas.append(linha)
         if ouro:
-            linhas.append(f"    OURO: {len(ouro)} pilhas · media {sum(ouro) / len(ouro):.1f} "
-                          f"· {sum(ouro) / base:.2f} por corpo · maior {max(ouro)} "
+            universo = absoluto or base
+            linhas.append(f"    OURO: {len(ouro)} pilhas em {100.0 * com_ouro / universo:.1f}% dos "
+                          f"corpos · media {sum(ouro) / len(ouro):.1f} · "
+                          f"{sum(ouro) / universo:.2f} por corpo · maior {max(ouro)} "
                           f"· valores {sorted(ouro, reverse=True)[:12]}")
 
-    tabela("NO CORPO", no_corpo, len(corpos), ouro_corpo)
-    tabela("DENTRO DO SACO", no_saco, max(com_saco, 1), ouro_saco, f" {com_saco} com saco")
+    tabela("NO CORPO", no_corpo, len(corpos), ouro_corpo, com_ouro=com_ouro_corpo)
+    tabela("DENTRO DO SACO", no_saco, max(com_saco, 1), ouro_saco,
+           f" {com_saco} com saco", len(corpos), com_ouro_saco)
     linhas.append("")
     linhas.append(f"  itens por corpo: {total_corpo / len(corpos):.2f} fora + "
                   f"{total_saco / len(corpos):.2f} no saco = "
-                  f"{(total_corpo + total_saco) / len(corpos):.2f}")
+                  f"{(total_corpo + total_saco) / len(corpos):.2f} (sem ouro) · "
+                  f"ouro {len(ouro_corpo) / len(corpos):.2f} pilhas fora + "
+                  f"{len(ouro_saco) / len(corpos):.2f} no saco")
     return linhas
+
+
+def _nome_de_corpo(evento):
+    nome = str(evento.get("ContainerName") or "").strip()
+    if not nome.lower().startswith(PREFIXOS_DE_CORPO):
+        return ""
+    return nome
+
+
+def _sem_reaberturas(corpos):
+    vistos = {}
+    limpos = []
+    for evento in corpos:
+        assinatura = (
+            evento.get("ContainerId"),
+            (evento.get("ContainerItem") or {}).get("ItemId"),
+            tuple(sorted(
+                (item.get("ItemId"), item.get("Count") or 1)
+                for linha in (evento.get("Items") or [])
+                for item in linha
+                if item.get("ItemId") not in SACOS_DE_LOOT
+            )),
+        )
+        quando = evento.get("_quando", 0) / 1000.0
+        antes = vistos.get(assinatura)
+        if antes is not None and quando - antes < JANELA_DO_CORPO:
+            continue
+        vistos[assinatura] = quando
+        limpos.append(evento)
+    return limpos
 
 
 def _nomes_de_itens():
