@@ -498,6 +498,19 @@ def _loot_dos_corpos(blocos, alvo):
             corpos.append(evento)
         elif not por_id and procurado in nome.lower():
             corpos.append(evento)
+    nota = ""
+    if not corpos and not todos and not por_id:
+        corpo = _corpo_do_monstro(alvo)
+        if corpo is not None:
+            for evento in _eventos(blocos):
+                if evento.get("Event") != "ContainerOpened" or not evento.get("Items"):
+                    continue
+                if not str(evento.get("ContainerName") or "").lower().startswith("dead"):
+                    continue
+                if str((evento.get("ContainerItem") or {}).get("ItemId")) == str(corpo):
+                    corpos.append(evento)
+            if corpos:
+                nota = f" (pelo corpo {corpo}, lido do XML do monstro)"
     if not corpos:
         linhas = ["", f"LOOT: nenhum corpo aberto com '{alvo}' nesta gravacao."]
         if conhecidos:
@@ -557,7 +570,7 @@ def _loot_dos_corpos(blocos, alvo):
             if item.get("ItemId") == OURO:
                 ouro_saco.append(item.get("Count") or 1)
 
-    linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}' · {com_saco} com saco "
+    linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
               f"({100.0 * com_saco / len(corpos):.1f}%) · {sacos_vazios} saco(s) vazio(s)"]
 
     def tabela(titulo, contagem, base, ouro, extra=""):
@@ -609,6 +622,42 @@ def _nomes_de_itens():
             break
     _CACHE["itens"] = nomes
     return nomes
+
+
+def _corpo_do_monstro(nome):
+    try:
+        devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
+    except Exception:
+        return None
+    pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+    if not pasta or not os.path.isdir(pasta):
+        return None
+    procurado = re.sub(r"\s+", " ", nome.strip()).lower()
+    direto = os.path.join(pasta, procurado + ".xml")
+    candidatos = [direto] if os.path.isfile(direto) else []
+    if not candidatos:
+        for ficheiro in sorted(os.listdir(pasta)):
+            if not ficheiro.lower().endswith(".xml"):
+                continue
+            try:
+                with open(os.path.join(pasta, ficheiro), encoding="utf-8", errors="replace") as fh:
+                    cabeca = fh.read(800)
+            except OSError:
+                continue
+            achado = re.search(r'<monster\s+name="([^"]*)"', cabeca)
+            if achado and re.sub(r"\s+", " ", achado.group(1)).lower() == procurado:
+                candidatos = [os.path.join(pasta, ficheiro)]
+                break
+    for caminho in candidatos:
+        try:
+            with open(caminho, encoding="utf-8", errors="replace") as fh:
+                texto = fh.read()
+        except OSError:
+            continue
+        achado = re.search(r'corpse="(\d+)"', texto)
+        if achado:
+            return int(achado.group(1))
+    return None
 
 
 def _quem_grave(blocos):
