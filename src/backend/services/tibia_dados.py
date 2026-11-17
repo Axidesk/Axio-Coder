@@ -1,14 +1,43 @@
+import html
 import os
 import re
 from functools import lru_cache
 
 BASE_PADRAO = 'docs/projetos/Tibia74'
 
+SANGUE_PARA_RACE = {'blood': 'blood', 'slime': 'venom', 'bones': 'undead', 'fire': 'fire'}
+
+FLAGS_DO_MON = {
+    'KickBoxes': ('flags', 'canpushitems', '1'),
+    'KickCreatures': ('flags', 'canpushcreatures', '1'),
+    'Unpushable': ('flags', 'pushable', '0'),
+    'NoSummon': ('flags', 'summonable', '0'),
+    'NoIllusion': ('flags', 'illusionable', '0'),
+    'NoConvince': ('flags', 'convinceable', '0'),
+    'NoBurning': ('immunities', 'fire', '1'),
+    'NoPoison': ('immunities', 'poison', '1'),
+    'NoEnergy': ('immunities', 'energy', '1'),
+    'NoLifeDrain': ('immunities', 'lifedrain', '1'),
+    'NoParalyze': ('immunities', 'paralyze', '1'),
+    'NoHit': ('immunities', 'physical', '1'),
+}
+
+FLAGS_SEM_CAMPO = {'SeeInvisible'}
+
+
+CORPO_DE = re.compile(r'^(dead|slain|remains)')
+
+
+def _sem_artigo(nome):
+    return re.sub(r'^(a|an|the)\s+', '', nome.lower().strip())
+
+
+def _palavras(nome):
+    return set(re.findall(r'[a-z0-9]+', _sem_artigo(nome)))
+
 
 def _normalizar(nome):
-    nome = nome.lower()
-    nome = re.sub(r'^(a|an|the)\s+', '', nome)
-    return re.sub(r'[^a-z0-9]', '', nome)
+    return re.sub(r'[^a-z0-9]', '', _sem_artigo(nome))
 
 
 @lru_cache(maxsize=4)
@@ -68,6 +97,67 @@ def inventario_do_mon(base, monstro):
             'ids_740': itens.get(_normalizar(nome), []),
         })
     return inventario
+
+
+@lru_cache(maxsize=64)
+def cabecalho_do_mon(base, monstro):
+    """Le do .mon a identidade, as flags, as skills, as invocacoes e as falas."""
+    caminho = _ficheiro_do_mon(base, monstro)
+    if not caminho:
+        return None
+    texto = open(caminho, encoding='latin-1').read()
+
+    def numero(campo):
+        achado = re.search(r'^%s\s*=\s*(-?\d+)' % campo, texto, re.M)
+        return int(achado.group(1)) if achado else None
+
+    def palavra(campo):
+        achado = re.search(r'^%s\s*=\s*(\w+)' % campo, texto, re.M)
+        return achado.group(1) if achado else ''
+
+    outfit = re.search(r'^Outfit\s*=\s*\((\d+),\s*([\d-]+)\)', texto, re.M)
+    bloco_flags = re.search(r'^Flags\s*=\s*\{(.*?)\}', texto, re.S | re.M)
+    estrategia = re.search(r'^Strategy\s*=\s*\(([^)]*)\)', texto, re.M)
+    seguinte = r'(?=\n[A-Z]\w*\s*=|\Z)'
+    bloco_skills = re.search(r'^Skills\s*=\s*\{(.*?)' + seguinte, texto, re.S | re.M)
+    bloco_talk = re.search(r'^Talk\s*=\s*\{(.*?)' + seguinte, texto, re.S | re.M)
+
+    skills = {}
+    if bloco_skills:
+        for nome, valor in re.findall(r'\((\w+),\s*(-?\d+)', bloco_skills.group(1)):
+            skills.setdefault(nome, int(valor))
+
+    achado_nome = re.search(r'^Name\s*=\s*"([^"]*)"', texto, re.M)
+    nome_do_mon = achado_nome.group(1) if achado_nome else monstro
+
+    falas = []
+    if bloco_talk:
+        for achado in re.finditer(r'"(#[yY])?\s*([^"]*)"', bloco_talk.group(1)):
+            falas.append({'grita': achado.group(1) == '#Y', 'frase': achado.group(2).strip()})
+
+    return {
+        'nome': nome_do_mon,
+        'racenumero': numero('RaceNumber'),
+        'corpse': numero('Corpse'),
+        'sangue': palavra('Blood'),
+        'experiencia': numero('Experience'),
+        'custo_invocacao': numero('SummonCost'),
+        'foge': numero('FleeThreshold') or 0,
+        'ataque': numero('Attack'),
+        'defesa': numero('Defend'),
+        'armadura': numero('Armor'),
+        'velocidade_base': skills.get('GoStrength'),
+        'vida': skills.get('HitPoints'),
+        'skill_melee': skills.get('FistFighting'),
+        'outfit': [int(outfit.group(1))] + [int(p) for p in outfit.group(2).split('-')] if outfit else [],
+        'estrategia': [int(p) for p in re.findall(r'-?\d+', estrategia.group(1))] if estrategia else [],
+        'flags': set(re.findall(r'[A-Za-z]+', bloco_flags.group(1))) if bloco_flags else set(),
+        'invoca': [
+            {'typeid': int(t), 'chance': 100.0 / int(n)}
+            for t, _c, n in re.findall(r'Summon\s*\((\d+),\s*(\d+)\)\s*:\s*(\d+)', texto)
+        ],
+        'falas': falas,
+    }
 
 
 def _texto_do_xml(base, monstro):
@@ -159,6 +249,176 @@ def _nomes_por_id(base):
     return {i: _normalizar(nome) for nome, ids in items_740(base).items() for i in ids}
 
 
+@lru_cache(maxsize=4)
+def nomes_crus_740(base=BASE_PADRAO):
+    caminho = f'{base}/Tools/Map Editor/data/740/items.xml'
+    texto = open(caminho, encoding='latin-1').read()
+    return {
+        int(ident): nome
+        for ident, nome in re.findall(r'<item\s+id="(\d+)"[^>]*name="([^"]*)"', texto)
+    }
+
+
+def _comparar_identidade(base, cabecalho, texto):
+    """Cruza race, corpse, flags, imunidades, invocacoes e vozes do XML com o .mon."""
+    problemas = []
+    divergencias = []
+    objetos = objetos_do_srv(base)
+
+    esperado = SANGUE_PARA_RACE.get((cabecalho['sangue'] or '').lower(), '')
+    achado = re.search(r'<monster[^>]*\brace="(\w+)"', texto)
+    if achado and esperado and achado.group(1).lower() != esperado:
+        divergencias.append(
+            f'race="{achado.group(1)}" mas o .mon diz {cabecalho["sangue"]} -> devia ser "{esperado}"'
+        )
+
+    if cabecalho['corpse'] is not None:
+        nome_corpse = objetos.get(cabecalho['corpse'], '')
+        achado = re.search(r'corpse="(\d+)"', texto)
+        if not achado:
+            problemas.append(
+                f'sem corpse="": o .mon diz Corpse {cabecalho["corpse"]} ("{nome_corpse}")'
+            )
+        else:
+            ident = int(achado.group(1))
+            crus = nomes_crus_740(base)
+            do_item = crus.get(ident, '')
+            if not do_item:
+                problemas.append(f'corpse="{ident}" nao existe no items.xml')
+            else:
+                nosso = _normalizar(do_item)
+                do_mon = _normalizar(nome_corpse)
+                proprios = sorted(
+                    i for i, nome in crus.items()
+                    if CORPO_DE.match(_sem_artigo(nome))
+                    and _palavras(cabecalho['nome']) <= _palavras(nome)
+                )
+                if proprios and ident in proprios:
+                    pass
+                elif proprios:
+                    problemas.append(
+                        f'corpse="{ident}" e "{_sem_artigo(do_item)}", mas o corpo deste monstro'
+                        f' e "{_sem_artigo(crus[proprios[0]])}" (id {proprios[0]})'
+                    )
+                elif nosso in do_mon or do_mon in nosso:
+                    pass
+                elif CORPO_DE.match(_sem_artigo(nome_corpse)) and not CORPO_DE.match(
+                    _sem_artigo(do_item)
+                ):
+                    problemas.append(
+                        f'corpse="{ident}" e "{_sem_artigo(do_item)}", que nao e corpo,'
+                        f' e o .mon diz que o corpo e "{_sem_artigo(nome_corpse)}"'
+                    )
+                else:
+                    divergencias.append(
+                        f'corpo: o .mon chama-lhe "{_sem_artigo(nome_corpse)}" e o XML usa'
+                        f' "{_sem_artigo(do_item)}" - confirmar no video'
+                    )
+
+    tabelas = {}
+    for secao, tag in (('flags', 'flag'), ('immunities', 'immunity')):
+        bloco = re.search(r'<%s>(.*?)</%s>' % (secao, secao), texto, re.S)
+        tabelas[secao] = dict(re.findall(r'<%s\s+(\w+)="(-?\d+)' % tag, bloco.group(1))) if bloco else {}
+
+    for atributo, (flag, (secao, _, valor)) in {
+        alvo[1]: (nome, alvo) for nome, alvo in FLAGS_DO_MON.items()
+    }.items():
+        atual = tabelas[secao].get(atributo)
+        if flag in cabecalho['flags']:
+            if atual is None:
+                divergencias.append(f'.mon tem {flag} e o XML nao declara {secao}/{atributo}')
+            elif atual != valor:
+                divergencias.append(
+                    f'{secao}/{atributo}="{atual}" mas o .mon tem {flag} -> devia ser "{valor}"'
+                )
+            continue
+        esperado_sem = '0' if valor == '1' else '1'
+        if atual is None or atual == esperado_sem:
+            continue
+        if secao == 'immunities' and valor == '1':
+            if atributo == 'physical':
+                problemas.append(
+                    'imunidade a physical="1" que o .mon nao tem (NoHit ausente)'
+                    ' - o monstro fica invulneravel a dano fisico'
+                )
+            else:
+                divergencias.append(
+                    f'imunidade a {atributo}="1" que o .mon nao declara ({flag} ausente)'
+                )
+        else:
+            divergencias.append(
+                f'{secao}/{atributo}="{atual}" com {flag} ausente no .mon -> devia ser "{esperado_sem}"'
+            )
+
+    for rotulo, do_mon, padrao in (
+        ('health', cabecalho['vida'], r'<health[^>]*max="(-?\d+)"'),
+        ('defenses armor', cabecalho['armadura'], r'<defenses[^>]*armor="(-?\d+)"'),
+        ('defenses defense', cabecalho['defesa'], r'<defenses[^>]*defense="(-?\d+)"'),
+        ('experience', cabecalho['experiencia'], r'<monster[^>]*\bexperience="(-?\d+)"'),
+        ('manacost', cabecalho['custo_invocacao'], r'<monster[^>]*\bmanacost="(-?\d+)"'),
+        ('melee attack', cabecalho['ataque'], r'<attack name="melee"[^>]*attack="(-?\d+)"'),
+        ('melee skill', cabecalho['skill_melee'], r'<attack name="melee"[^>]*skill="(-?\d+)"'),
+    ):
+        if do_mon is None:
+            continue
+        achado = re.search(padrao, texto)
+        if achado and int(achado.group(1)) != do_mon:
+            divergencias.append(f'{rotulo}: .mon {do_mon} vs xml {achado.group(1)}')
+
+    for indice, atributo in ((0, 'attack'), (1, 'defense'), (2, 'hurt')):
+        if len(cabecalho['estrategia']) <= indice:
+            continue
+        achado = re.search(r'<strategy[^>]*\b%s="(-?\d+)"' % atributo, texto)
+        if achado and int(achado.group(1)) != cabecalho['estrategia'][indice]:
+            divergencias.append(
+                f'strategy {atributo}: .mon {cabecalho["estrategia"][indice]} vs xml {achado.group(1)}'
+            )
+
+    chances_do_mon = [ficha['chance'] for ficha in cabecalho['invoca']]
+    chances_do_xml = []
+    for achado in re.finditer(r'<summon\s+([^>]*)/>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        try:
+            chances_do_xml.append(float(atributos.get('chance', 0)))
+        except ValueError:
+            continue
+    if len(chances_do_mon) != len(chances_do_xml):
+        divergencias.append(
+            f'o .mon invoca {len(chances_do_mon)} criatura(s) e o XML invoca {len(chances_do_xml)}'
+        )
+    else:
+        for do_mon, do_xml in zip(sorted(chances_do_mon), sorted(chances_do_xml)):
+            if abs(do_mon - do_xml) > 1.0:
+                divergencias.append(
+                    f'chance de invocacao: .mon {do_mon:.0f}% vs xml {do_xml:.0f}%'
+                )
+
+    vozes = []
+    for achado in re.finditer(r'<voice\s+([^>]*)/>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        vozes.append((html.unescape(atributos.get('sentence', '')), atributos.get('yell')))
+    if vozes:
+        if len(vozes) < len(cabecalho['falas']):
+            divergencias.append(
+                f'o .mon tem {len(cabecalho["falas"])} fala(s) e o XML tem {len(vozes)}'
+            )
+        por_frase = dict(vozes)
+        for fala in cabecalho['falas']:
+            if fala['frase'] not in por_frase:
+                continue
+            grita = por_frase[fala['frase']] == '1'
+            if fala['grita'] and not grita:
+                divergencias.append(
+                    f'voz "{fala["frase"][:38]}" comeca por #Y (grito) e o XML nao tem yell="1"'
+                )
+            elif not fala['grita'] and grita:
+                divergencias.append(
+                    f'voz "{fala["frase"][:38]}" sai gritada no XML e o .mon nao tem #Y'
+                )
+
+    return problemas, divergencias
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -226,6 +486,12 @@ def validar_monstro(base, monstro):
             f'chance de "{nome}" difere: .mon {chave_mon} ({esperado:.1f} juntas) vs'
             f' xml {detalhe} ({junto:.1f} juntas)'
         )
+
+    cabecalho = cabecalho_do_mon(base, monstro)
+    if cabecalho:
+        da_identidade, divergencias_da_identidade = _comparar_identidade(base, cabecalho, texto)
+        problemas.extend(da_identidade)
+        divergencias.extend(divergencias_da_identidade)
 
     melee = re.search(r'<attack name="melee"[^>]*>', texto)
     if melee:

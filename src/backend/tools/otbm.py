@@ -456,11 +456,17 @@ def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
 @register(
     "tool_validar_monstro",
     "Confere o XML de um monstro do Tibia74 contra o .mon da CipSoft, o items.xml e o motor, e diz o "
-    "que esta errado antes de o servidor carregar: id do loot que nao existe no items.xml (o erro de "
-    "colar um id do objects.srv em vez do nosso), chance fora de 0..100, melee que o motor nao carrega "
-    "(sem skill+attack nem min+max), cabecalho 'Tibia - graphical' em falta e voices fora do fim do "
-    "ficheiro. Separa o que e ERRO do que e so divergencia do .mon (um item que o video pode provar "
-    "que existe). Aceita varios monstros de uma vez, um por linha.",
+    "que esta errado antes de o servidor carregar. LOOT: id que nao existe no items.xml (o erro de "
+    "colar um id do objects.srv em vez do nosso), chance fora de 0..100 e chances que nao fecham com "
+    "o .mon. IDENTIDADE: corpse que nao existe, que nao e corpo de bicho nenhum ou que e o corpo de "
+    "OUTRA criatura (o caso classico de usar o corpo do bicho-base), race contra o Blood do .mon, "
+    "armor/defense/health/experience/manacost e Strategy. FLAGS: cada flag do .mon tem de aparecer no "
+    "<flags> ou nas <immunities> certas, e uma imunidade que o .mon nao declara aparece como ERRO "
+    "quando e a physical (monstro invulneravel) e como divergencia nas outras. INVOCACOES: numero e "
+    "chance contra o Summon do .mon. VOZES: quantas faltam e se o #Y do .mon bate com o yell do XML. "
+    "MOTOR: melee sem skill+attack nem min+max, cabecalho 'Tibia - graphical' em falta e voices fora "
+    "do fim do ficheiro. Separa o que e ERRO do que e so divergencia do .mon (que o video pode "
+    "desmentir). Aceita varios monstros de uma vez, um por linha.",
     {
         "monstros": {
             "tipo": "STRING",
