@@ -419,6 +419,16 @@ def _comparar_identidade(base, cabecalho, texto):
     return problemas, divergencias
 
 
+def _nome_do_mon_por_chance(inventario, chance):
+    candidatos = {}
+    for produto in inventario:
+        if abs(produto['chance'] - chance) <= 1.0:
+            candidatos[_normalizar(produto['nome'])] = produto['nome']
+    if len(candidatos) == 1:
+        return next(iter(candidatos.values()))
+    return None
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -442,10 +452,18 @@ def validar_monstro(base, monstro):
         if ident in nomes:
             if nomes[ident] not in do_mon and nomes[ident] not in ja_avisado:
                 ja_avisado.add(nomes[ident])
-                divergencias.append(
-                    f'"{nomes[ident]}" ({ident}) esta no XML e o .mon nao o tem -'
-                    f' confirmar no video antes de apagar'
-                )
+                gemeo = _nome_do_mon_por_chance(cruz['inventario'], entrada['chance'])
+                if gemeo:
+                    divergencias.append(
+                        f'"{nomes[ident]}" ({ident}) nao casa por nome, mas o .mon tem'
+                        f' "{gemeo}" com a mesma chance ({entrada["chance"]:.0f}%) -'
+                        f' provavel o mesmo item'
+                    )
+                else:
+                    divergencias.append(
+                        f'"{nomes[ident]}" ({ident}) esta no XML e o .mon nao o tem -'
+                        f' confirmar no video antes de apagar'
+                    )
             continue
         if ident in servidor:
             problemas.append(
