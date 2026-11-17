@@ -16,6 +16,7 @@ SACOS_DE_LOOT = frozenset({1987, 1993})
 OURO = 2148
 PREFIXOS_DE_CORPO = ("dead ", "slain ", "remains ")
 MOCHILAS_DO_JOGADOR = frozenset(range(1988, 2005))
+MEXER_NO_SACO = ("ContainerRemovedItem", "ContainerAddedItem", "ContainerTransformedItem")
 JANELA_DO_CORPO = 15.0
 TETO_DE_LINHAS = 60
 SEGUNDOS_PADRAO = 300
@@ -573,6 +574,7 @@ def _loot_dos_corpos(blocos, alvo):
 
     abertos = [e for e in eventos if e.get("Event") == "ContainerOpened"]
     posicoes = {id(e): i for i, e in enumerate(abertos)}
+    em_eventos = {id(e): i for i, e in enumerate(eventos)}
 
     def itens_de(evento):
         return [item for linha in (evento.get("Items") or []) for item in linha]
@@ -600,6 +602,7 @@ def _loot_dos_corpos(blocos, alvo):
     com_ouro_corpo = 0
     com_ouro_saco = 0
     nos_dois = collections.Counter()
+    nos_dois_limpos = collections.Counter()
     for evento in corpos:
         topos = itens_de(evento)
         if any(item.get("ItemId") == OURO for item in topos):
@@ -635,8 +638,15 @@ def _loot_dos_corpos(blocos, alvo):
             total_saco += 1
         fora_agora = {item.get("ItemId") for item in topos}
         dentro_agora = {item.get("ItemId") for item in dentro}
-        for identificador in (fora_agora & dentro_agora) - SACOS_DE_LOOT - {OURO}:
+        inicio = em_eventos.get(id(evento), -1)
+        fim = em_eventos.get(id(saco), -1)
+        mexeu = inicio >= 0 and fim > inicio and any(
+            x.get("Event") in MEXER_NO_SACO for x in eventos[inicio + 1:fim]
+        )
+        for identificador in (fora_agora & dentro_agora) - SACOS_DE_LOOT:
             nos_dois[identificador] += 1
+            if not mexeu:
+                nos_dois_limpos[identificador] += 1
 
     vazios = sum(1 for evento in corpos if not itens_de(evento))
     linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
@@ -719,11 +729,14 @@ def _loot_dos_corpos(blocos, alvo):
                     linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
                                   f"({identificador}) · {que}")
             if nos_dois:
-                linhas.append("    ATENCAO - mesmo item no corpo E no saco do MESMO corpo "
-                              "(o saco pode ser a mochila do jogador):")
+                linhas.append("    MESMO ITEM no corpo E no saco do MESMO corpo:")
                 for identificador, vezes in nos_dois.most_common(8):
+                    provados = nos_dois_limpos.get(identificador, 0)
+                    nota = (f"{provados} sem o jogador mexer (posto pelo proprio monstro)"
+                            if provados else
+                            "todos com o jogador a mexer antes - pode ser a mochila dele")
                     linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
-                                  f"({identificador}) · {vezes} corpo(s)")
+                                  f"({identificador}) · {vezes} corpo(s) · {nota}")
             if sobram:
                 linhas.append("    NAO estao no <loot> (lixo do saque ou mochila do jogador - nao acrescentar):")
                 for identificador in sobram[:12]:
