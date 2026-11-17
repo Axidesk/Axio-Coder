@@ -1,4 +1,5 @@
 import html
+import json
 import os
 import re
 from functools import lru_cache
@@ -121,6 +122,7 @@ def cabecalho_do_mon(base, monstro):
     seguinte = r'(?=\n[A-Z]\w*\s*=|\Z)'
     bloco_skills = re.search(r'^Skills\s*=\s*\{(.*?)' + seguinte, texto, re.S | re.M)
     bloco_talk = re.search(r'^Talk\s*=\s*\{(.*?)' + seguinte, texto, re.S | re.M)
+    bloco_spells = re.search(r'^Spells\s*=\s*\{(.*?)' + seguinte, texto, re.S | re.M)
 
     skills = {}
     if bloco_skills:
@@ -134,6 +136,19 @@ def cabecalho_do_mon(base, monstro):
     if bloco_talk:
         for achado in re.finditer(r'"(#[yY])?\s*([^"]*)"', bloco_talk.group(1)):
             falas.append({'grita': achado.group(1) == '#Y', 'frase': achado.group(2).strip()})
+
+    magias = []
+    if bloco_spells:
+        for achado in re.finditer(
+            r'(Actor|Victim|Origin|Angle|Destination)\s*\(([^)]*)\)\s*->\s*(\w+)\s*\(([^)]*)\)\s*:\s*(\d+)',
+            bloco_spells.group(1),
+        ):
+            magias.append({
+                'quem': achado.group(1),
+                'efeito': achado.group(3),
+                'numeros': [int(p) for p in re.findall(r'-?\d+', achado.group(4))],
+                'n': int(achado.group(5)),
+            })
 
     return {
         'nome': nome_do_mon,
@@ -157,6 +172,7 @@ def cabecalho_do_mon(base, monstro):
             for t, _c, n in re.findall(r'Summon\s*\((\d+),\s*(\d+)\)\s*:\s*(\d+)', texto)
         ],
         'falas': falas,
+        'magias': magias,
     }
 
 
@@ -259,7 +275,7 @@ def nomes_crus_740(base=BASE_PADRAO):
     }
 
 
-def _comparar_identidade(base, cabecalho, texto):
+def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
     """Cruza race, corpse, flags, imunidades, invocacoes e vozes do XML com o .mon."""
     problemas = []
     divergencias = []
@@ -350,11 +366,12 @@ def _comparar_identidade(base, cabecalho, texto):
                 f'{secao}/{atributo}="{atual}" com {flag} ausente no .mon -> devia ser "{esperado_sem}"'
             )
 
+    experiencia_do_video = xp_do_video if xp_do_video is not None else cabecalho['experiencia']
     for rotulo, do_mon, padrao in (
         ('health', cabecalho['vida'], r'<health[^>]*max="(-?\d+)"'),
         ('defenses armor', cabecalho['armadura'], r'<defenses[^>]*armor="(-?\d+)"'),
         ('defenses defense', cabecalho['defesa'], r'<defenses[^>]*defense="(-?\d+)"'),
-        ('experience', cabecalho['experiencia'], r'<monster[^>]*\bexperience="(-?\d+)"'),
+        ('experience', experiencia_do_video, r'<monster[^>]*\bexperience="(-?\d+)"'),
         ('manacost', cabecalho['custo_invocacao'], r'<monster[^>]*\bmanacost="(-?\d+)"'),
         ('melee attack', cabecalho['ataque'], r'<attack name="melee"[^>]*attack="(-?\d+)"'),
         ('melee skill', cabecalho['skill_melee'], r'<attack name="melee"[^>]*skill="(-?\d+)"'),
@@ -417,6 +434,131 @@ def _comparar_identidade(base, cabecalho, texto):
                 )
 
     return problemas, divergencias
+
+
+def _ritmo_das_magias(cabecalho, texto):
+    """Confere o ritmo: o .mon rola as magias a cada 2s, logo : N vale 30/N por minuto."""
+    problemas = []
+    divergencias = []
+    ataques = []
+    for achado in re.finditer(r'<attack\s+([^>]*)>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        try:
+            ataques.append({
+                'nome': atributos.get('name', ''),
+                'intervalo': int(atributos.get('interval') or 0),
+                'chance': float(atributos.get('chance') or 0),
+                'min': abs(int(atributos.get('min') or 0)),
+                'max': abs(int(atributos.get('max') or 0)),
+                'usado': False,
+            })
+        except ValueError:
+            continue
+    curas = []
+    for achado in re.finditer(r'<defense\s+([^>]*)>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        if atributos.get('name') != 'healing':
+            continue
+        try:
+            curas.append({
+                'intervalo': int(atributos.get('interval') or 0),
+                'chance': float(atributos.get('chance') or 0),
+                'usado': False,
+            })
+        except ValueError:
+            continue
+
+    for magia in cabecalho['magias']:
+        if magia['n'] <= 0:
+            continue
+        numeros = magia['numeros']
+        esperado = 30.0 / magia['n']
+        alvo = None
+        rotulo = ''
+        if magia['efeito'] == 'Healing':
+            alvo = next((c for c in curas if not c['usado']), None)
+            rotulo = 'cura'
+        elif magia['efeito'] == 'Damage' and len(numeros) >= 3:
+            faixa = (numeros[1] - numeros[2], numeros[1] + numeros[2])
+            alvo = next(
+                (a for a in ataques if not a['usado'] and (a['min'], a['max']) == faixa), None
+            )
+            rotulo = f'{alvo["nome"]} {faixa[0]}-{faixa[1]}' if alvo else ''
+        if alvo is None or not alvo['intervalo']:
+            continue
+        alvo['usado'] = True
+        real = 600.0 * alvo['chance'] / alvo['intervalo']
+        razao = real / esperado
+        if 0.7 <= razao <= 1.4:
+            continue
+        veredito = 'o DOBRO do original' if razao > 1 else 'METADE do original'
+        divergencias.append(
+            f'ritmo da magia "{rotulo}": {real:.1f} por minuto contra {esperado:.1f} do .mon'
+            f' (: {magia["n"]}, rolagem a cada 2s) - {veredito}; esta com interval='
+            f'"{alvo["intervalo"]}" e chance="{alvo["chance"]:.0f}", e o par certo e'
+            f' chance="{100 / magia["n"]:.0f}" com interval="2000"'
+        )
+    return problemas, divergencias
+
+
+@lru_cache(maxsize=2)
+def _indice_de_gravacoes():
+    raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    caminho = os.path.join(raiz, 'data', 'indice_recs.json')
+    if not os.path.exists(caminho):
+        return {}
+    try:
+        with open(caminho, encoding='utf-8') as aberto:
+            return json.load(aberto).get('gravacoes', {})
+    except (OSError, ValueError):
+        return {}
+
+
+def xp_do_video(base, monstro, corpo):
+    """XP real de um abate, lido de uma gravacao em que o jogador matou SO este monstro."""
+    if not corpo:
+        return None
+    alvo = str(corpo)
+    sozinhas = [
+        (caminho, dados)
+        for caminho, dados in _indice_de_gravacoes().items()
+        if dados.get('corpos') and list(dados['corpos']) == [alvo]
+    ]
+    if not sozinhas:
+        return None
+    sozinhas.sort(key=lambda par: par[1].get('bytes', 0))
+    try:
+        from src.backend.tools.gravacoes import eventos_da_gravacao
+    except ImportError:
+        return None
+    for caminho, dados in sozinhas[:2]:
+        try:
+            blocos = eventos_da_gravacao(caminho)
+        except Exception:
+            continue
+        saltos = []
+        anterior = None
+        for evento in blocos:
+            if evento.get('Event') != 'PlayerDataUpdated':
+                continue
+            valor = evento.get('Experience')
+            if valor is None:
+                continue
+            if anterior is not None and valor > anterior:
+                saltos.append(valor - anterior)
+            anterior = valor
+        if len(saltos) < 3:
+            continue
+        valor = max(set(saltos), key=saltos.count)
+        vezes = saltos.count(valor)
+        if vezes >= max(3, len(saltos) * 0.8):
+            return {
+                'xp': valor,
+                'saltos': len(saltos),
+                'iguais': vezes,
+                'gravacao': dados.get('nome', ''),
+            }
+    return None
 
 
 def _nome_do_mon_por_chance(inventario, chance):
@@ -507,9 +649,23 @@ def validar_monstro(base, monstro):
 
     cabecalho = cabecalho_do_mon(base, monstro)
     if cabecalho:
-        da_identidade, divergencias_da_identidade = _comparar_identidade(base, cabecalho, texto)
+        achado_corpo = re.search(r'corpse="(\d+)"', texto)
+        video = xp_do_video(base, monstro, int(achado_corpo.group(1))) if achado_corpo else None
+        da_identidade, divergencias_da_identidade = _comparar_identidade(
+            base, cabecalho, texto, video['xp'] if video else None
+        )
         problemas.extend(da_identidade)
         divergencias.extend(divergencias_da_identidade)
+        if video and cabecalho['experiencia'] != video['xp']:
+            divergencias.append(
+                f'o .mon diz Experience {cabecalho["experiencia"]} e a gravacao da'
+                f' {video["xp"]} por abate ({video["iguais"]} de {video["saltos"]} saltos'
+                f' iguais em "{video["gravacao"]}") - o video manda, nao reverter para'
+                f' {cabecalho["experiencia"]}'
+            )
+        do_ritmo, divergencias_do_ritmo = _ritmo_das_magias(cabecalho, texto)
+        problemas.extend(do_ritmo)
+        divergencias.extend(divergencias_do_ritmo)
 
     melee = re.search(r'<attack name="melee"[^>]*>', texto)
     if melee:
