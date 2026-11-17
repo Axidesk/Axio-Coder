@@ -604,6 +604,7 @@ let cacheDoUltimoEnviadoValida = false;
     async function hidratarGroup(group) {
         if (!group || !group.__saved) return group;
         const saved = await carregarRodadaCompleta(group.__saved);
+        if (!saved || saved.__leve) return group;
         group.snapshot = saved.snapshot || {};
         group.aiResponse = saved.aiResponse || '';
         group.tools = saved.tools || [];
@@ -612,6 +613,48 @@ let cacheDoUltimoEnviadoValida = false;
         group.nFerramentas = group.tools.length || saved.nFerramentas || 0;
         group.files = filesDoSaved(saved);
         return group;
+    }
+    async function _mapaDeRodadasPorSessao() {
+        if (state.mapaRodadasPorSessao) return state.mapaRodadasPorSessao;
+        const mapa = new Map();
+        try {
+            const resp = await fetch('/api/sessions_index');
+            const dados = await resp.json();
+            (dados.sessions || []).forEach(s => {
+                (s.rounds || []).forEach(r => {
+                    if (r && r.id) mapa.set(String(r.id), s.filename);
+                });
+            });
+        } catch (e) {
+            console.error('Falha a indexar as rodadas por sessao:', e);
+        }
+        state.mapaRodadasPorSessao = mapa;
+        return mapa;
+    }
+    async function hidratarGruposRestaurados(grupos) {
+        const pendentes = (grupos || []).filter(g => g && g.__saved && !g.__hidratado);
+        if (!pendentes.length) return;
+        const semSessao = pendentes.filter(g => !g.__saved.__session);
+        if (semSessao.length) {
+            const mapa = await _mapaDeRodadasPorSessao();
+            semSessao.forEach(g => {
+                const arquivo = mapa.get(String(g.id));
+                if (arquivo) g.__saved = { id: g.id, __leve: true, __session: arquivo };
+            });
+        }
+        for (const grupo of pendentes) {
+            if (!grupo.__saved.__session) continue;
+            try {
+                await hidratarGroup(grupo);
+                grupo.__hidratado = true;
+            } catch (e) {
+                console.error('Falha ao carregar a rodada restaurada:', e);
+                continue;
+            }
+            const vista = vistaDe('dock');
+            const painelAberto = vista.col2 && !vista.col2.classList.contains('panel-col-closed');
+            if (painelAberto && window.currentActiveLogGroup === grupo) openFilesPanel(grupo, vista);
+        }
     }
     async function selectHistoryTaskInPile(dia, turnId) {
         if (!dia || !turnId) return null;
@@ -713,6 +756,7 @@ export {
     assignDisplayNamesByDay,
     ensureSessionDetailsLoaded,
     hidratarGroup,
+    hidratarGruposRestaurados,
     rebuildGroupFromSaved,
     selectHistoryTaskInPile,
     updateRoundCardCommitByTurnId,

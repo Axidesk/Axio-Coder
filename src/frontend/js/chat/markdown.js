@@ -75,6 +75,10 @@ function camposTabulados(linha) {
         while (limpos.length > 1 && limpos[0] === '') limpos.shift();
         return limpos.length > 1 ? limpos : null;
     }
+    const CELULA_DE_TABELA = 80;
+    function blocoPareceTabela(bloco) {
+        return bloco.every(linha => linha.every(c => c.length <= CELULA_DE_TABELA));
+    }
     function expandirTabelasTabuladas(text) {
         const linhas = text.split('\n');
         const out = [];
@@ -95,7 +99,11 @@ function camposTabulados(linha) {
                 bloco.push(campos);
                 j++;
             }
-            if (bloco.length < 2) { out.push(linhas[i]); i++; continue; }
+            if (bloco.length < 2 || !blocoPareceTabela(bloco)) {
+                out.push(linhas[i]);
+                i++;
+                continue;
+            }
             out.push('| ' + bloco[0].map(escapa).join(' | ') + ' |');
             out.push('|' + bloco[0].map(() => ' --- ').join('|') + '|');
             for (let k = 1; k < bloco.length; k++) {

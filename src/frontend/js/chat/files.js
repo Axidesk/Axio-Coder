@@ -501,7 +501,7 @@ const NL = String.fromCharCode(10);
         fileContent.appendChild(fileContentClip);
         fileData.diffElements.forEach(diffEl => fileContentInner.appendChild(diffEl));
         if (fileData.diffElements.length === 0) {
-            fileContentInner.innerHTML = `<div class="p-2 text-sm text-[var(--text-mutado)] font-mono">Nenhuma alteração de código.</div>`;
+            fileContentInner.innerHTML = `<div class="p-2 text-sm text-[var(--text-mutado)] font-mono">${fileData.pendente ? 'Carregando o diff desta rodada...' : 'Nenhuma alteração de código.'}</div>`;
         }
         const toggleIcon = fileHeader.querySelector('.file-toggle-icon');
         function expandir() {
@@ -567,7 +567,7 @@ const NL = String.fromCharCode(10);
             fileData._contentInner.innerHTML = '';
             fileData.diffElements.forEach(diffEl => fileData._contentInner.appendChild(diffEl));
             if (fileData.diffElements.length === 0) {
-                fileData._contentInner.innerHTML = '<div class="p-2 text-sm text-[var(--text-mutado)] font-mono">Nenhuma alteração de código.</div>';
+                fileData._contentInner.innerHTML = `<div class="p-2 text-sm text-[var(--text-mutado)] font-mono">${fileData.pendente ? 'Carregando o diff desta rodada...' : 'Nenhuma alteração de código.'}</div>`;
             }
         }
     }

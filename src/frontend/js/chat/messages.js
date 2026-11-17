@@ -3,7 +3,7 @@ import * as dom from './dom.js';
 import { renderImagePreviews } from './attach.js';
 import { atualizarBotoesUndoRedo, createChildBalloon, gerarSnippetHtml, restaurarPastaSelecionada, sincronizarArquivosEmTempoReal } from './files.js';
 import { repintarCol3Aberta } from './historico/acoes.js';
-import { createLogGroupCard, rebuildGroupFromSaved, roundMetaHtml } from './historico/cards.js';
+import { createLogGroupCard, rebuildGroupFromSaved, roundMetaHtml, hidratarGruposRestaurados } from './historico/cards.js';
 import { epochDeId } from './historico/checkpoint.js';
 import { fetchSessionHistoryData, saveCurrentTurnSession, agendarAutosaveDoTurno, pararAutosaveDoTurno, serializeGroupLeve } from './historico/estado.js';
 import { prefetchSessionDetails, preloadSessionHistory } from './historico/painel.js';
@@ -293,7 +293,7 @@ function restaurarLogsDaLimite(guardados) {
             commit: salvo.commit,
             duration: salvo.duration,
             nFerramentas: salvo.nFerramentas,
-            files: (salvo.arquivos || []).map((f) => ({ name: f.name, deleted: !!f.deleted }))
+            files: (salvo.arquivos || []).map((f) => ({ name: f.name, deleted: !!f.deleted, pendente: true }))
         });
         if (salvo.sessao) grupo.__saved = { id: salvo.id, __leve: true, __session: salvo.sessao };
         const card = createLogGroupCard(grupo);
@@ -305,6 +305,7 @@ function restaurarLogsDaLimite(guardados) {
     });
     const primeiro = currentLogsWrapper.querySelector('.log-card');
     if (primeiro) primeiro.classList.add('log-card-active');
+    hidratarGruposRestaurados(window.sessionLogsData);
 }
 
 
