@@ -1167,13 +1167,23 @@ def _gravar_indice(indice, caminho):
 
 
 def _corpos_do_nome(procurado):
-    """Ids de corpo cujo monstro casa com o nome - o 'varrer' aceita o monstro, nao so o corpo."""
+    """Ids de corpo cujo monstro casa com o nome - o 'varrer' aceita o monstro, nao so o corpo.
+
+    O nome exato ganha ao pedaco de nome: 'elf' e 'elf scout' sao monstros diferentes e
+    partilham tres letras, por isso procurar por 'elf' arrastava o scout e o arcanista e
+    somava loots de tres bichos numa tabela so. So se NENHUM corpo tiver o nome exato e
+    que se aceita quem apenas o contem - e o que permite pedir 'elf scout' e 'beholder'.
+    """
     _monstros_do_corpo(0)
-    return {
-        corpo
-        for corpo, nomes in (_CACHE.get("corpos") or {}).items()
-        if any(procurado in nome for nome in nomes)
-    }
+    exatos, parecidos = set(), set()
+    for corpo, nomes in (_CACHE.get("corpos") or {}).items():
+        for nome in nomes:
+            simples = re.sub(r"^(dead|slain|remains)\s+", "", str(nome).strip().lower())
+            if simples == procurado:
+                exatos.add(corpo)
+            elif procurado in simples:
+                parecidos.add(corpo)
+    return exatos or parecidos
 
 
 def _varredura(termo):
