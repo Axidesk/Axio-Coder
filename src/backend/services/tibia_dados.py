@@ -60,8 +60,6 @@ TABELA 2 - LOOT: onde vai e em que ordem
 chance: .mon por mil -> chance = por_mil*100 (motor MAX_LOOTCHANCE=100000); 800=80%.
 countmax 1:1 (o motor sorteia 1..countmax). chancemax e INERTE.
 gold: entradas separadas, cada uma com o seu sorteio - nunca um countmax grande.
-id: TypeID do objects.srv -> nome -> id do NOSSO items.xml, achado pelo NOME (o nosso tem o article
-entre o id e o nome). Nunca colar o id do objects.srv no XML.
 BAG: Weapon, Shield, Bow, Throw, Wand, Torch, aneis COM CARGA.
 CORPO: Armor, Food, gold, joias/colares, pedras, runas, osso/chifre/ervas.
 Food e gold podem cair no corpo E na bag; o .mon tem UMA entrada e as duas do XML sao aproximacao
@@ -69,6 +67,24 @@ nossa - confirmar monstro a monstro.
 saco vazio nao cai (o motor apaga container sem itens): a linha da bag vai a chance="100000".
 ORDEM: bag = primeira linha do <loot> (vai para o ultimo slot) | corpo = ordem do .mon (alfabetica),
 aparece decrescente | dentro da bag escrever INVERTIDO, aparece crescente.
+
+O ID DO ITEM - a cadeia que NUNCA se atalha
+  1. o .mon guarda o TypeID do objects.srv, que vive em
+     gerados/monstros/cipsoft/objects.srv e e TEXTO PURO - abre com '# ObjectTypes File for Server'
+     e le-se como um .txt, sem ferramenta especial.
+  2. Esse TypeID NAO e o id do nosso servidor. objects.srv 3447 = 'an arrow', mas no nosso items.xml
+     3447 nao existe e arrow e 2544. Caminho obrigatorio: TypeID -> Name no objects.srv -> nome sem
+     artigo -> id do NOSSO items.xml (o nosso poe o article ENTRE o id e o name).
+  3. O nome pode diferir de um lado para o outro e ser o MESMO item (broadsword / broad sword,
+     magic lightwand / magic light wand, o 'a spellbook' do .mon) - casar por nome normalizado,
+     nunca por numero.
+  4. Item que o .mon cita e o nosso items.xml nao tem = item que nao existe nesta versao (o
+     'wand of cosmic energy' do elf arcanist, que o .mon traz por ser 7.5): fica FORA do XML e
+     diz-se isso na resposta, com o nome.
+  5. ANTES de dizer que uma linha do XML 'esta a mais', listar o Inventory INTEIRO pelo objects.srv.
+     O que parece invencao pode ser fiel: a 'morning star' a 10% do elder beholder, que a wiki manda
+     apagar e o .mon prova que cai. E antes de acrescentar um item que o .mon tem, confirmar que o
+     NOME existe no nosso items.xml - se nao existe, nao entra.
 
 AS 4 REGRAS DE OURO
 1. Uma entrada do .mon = um sorteio = um destino. Varias entradas do mesmo item podem cair nos dois
@@ -589,51 +605,74 @@ def _indice_de_gravacoes():
         return {}
 
 
-def xp_do_video(base, monstro, corpo):
-    """XP real de um abate, lido de uma gravacao em que o jogador matou SO este monstro."""
-    if not corpo:
-        return None
-    alvo = str(corpo)
-    sozinhas = [
-        (caminho, dados)
-        for caminho, dados in _indice_de_gravacoes().items()
-        if dados.get('corpos') and list(dados['corpos']) == [alvo]
-    ]
-    if not sozinhas:
-        return None
-    sozinhas.sort(key=lambda par: par[1].get('bytes', 0))
-    try:
-        from src.backend.tools.gravacoes import eventos_da_gravacao
-    except ImportError:
-        return None
-    for caminho, dados in sozinhas[:2]:
-        try:
-            blocos = eventos_da_gravacao(caminho)
-        except Exception:
-            continue
-        saltos = []
-        anterior = None
-        for evento in blocos:
-            if evento.get('Event') != 'PlayerDataUpdated':
-                continue
+def _saltos_casados_com_a_morte(blocos, procurado):
+    """Saltos de experiencia que tem UMA morte conhecida na janela logo antes deles."""
+    nomes, mortes, saltos = {}, [], []
+    anterior = None
+    for evento in blocos:
+        tipo = evento.get('Event')
+        if tipo == 'CreatureSeen':
+            nome = (evento.get('Name') or '').strip().lower()
+            if nome:
+                nomes[evento.get('CreatureId')] = nome
+        elif tipo == 'CreatureHealthUpdated':
+            if evento.get('Health') == 0 and evento.get('CreatureId'):
+                mortes.append((evento.get('__t') or 0.0, evento.get('CreatureId')))
+        elif tipo == 'PlayerDataUpdated':
             valor = evento.get('Experience')
             if valor is None:
                 continue
             if anterior is not None and valor > anterior:
-                saltos.append(valor - anterior)
+                saltos.append((evento.get('__t') or 0.0, valor - anterior))
             anterior = valor
-        if len(saltos) < 3:
+    mortes.sort()
+    meus = []
+    for instante, delta in saltos:
+        ids = {cid for (quando, cid) in mortes if instante - 2.0 <= quando <= instante + 0.3}
+        if len(ids) == 1 and nomes.get(next(iter(ids))) == procurado:
+            meus.append(delta)
+    return meus
+
+
+def xp_do_video(base, monstro, corpo):
+    """XP real de um abate: o salto de experiencia casado com a morte daquela criatura."""
+    if not monstro:
+        return None
+    try:
+        from src.backend.tools.gravacoes import eventos_da_gravacao
+    except ImportError:
+        return None
+    procurado = monstro.strip().lower()
+    alvo = str(corpo) if corpo else None
+    candidatas = []
+    for caminho, dados in _indice_de_gravacoes().items():
+        corpos = dados.get('corpos') or {}
+        meus = int((corpos.get(alvo) or {}).get('n') or 0) if alvo else 0
+        if alvo and not meus:
             continue
-        valor = max(set(saltos), key=saltos.count)
-        vezes = saltos.count(valor)
-        if vezes >= max(3, len(saltos) * 0.8):
-            return {
-                'xp': valor,
-                'saltos': len(saltos),
-                'iguais': vezes,
-                'gravacao': dados.get('nome', ''),
-            }
-    return None
+        candidatas.append((meus, dados.get('bytes', 0), caminho, dados.get('nome', '')))
+    if not candidatas:
+        return None
+    candidatas.sort(key=lambda c: (-c[0], c[1]))
+    amostras, gravacoes = [], []
+    for _, _, caminho, nome in candidatas[:4]:
+        try:
+            achados = _saltos_casados_com_a_morte(eventos_da_gravacao(caminho), procurado)
+        except Exception:
+            continue
+        if achados:
+            gravacoes.append(nome)
+            amostras += achados
+    if not amostras:
+        return None
+    moda = max(set(amostras), key=amostras.count)
+    return {
+        'xp': max(amostras),
+        'moda': moda,
+        'amostras': len(amostras),
+        'iguais': amostras.count(moda),
+        'gravacoes': gravacoes,
+    }
 
 
 def _nome_do_mon_por_chance(inventario, chance):
@@ -712,9 +751,17 @@ def validar_monstro(base, monstro):
     do_mon_por_nome = {}
     for produto in cruz['inventario']:
         do_mon_por_nome.setdefault(_normalizar(produto['nome']), []).append(produto['chance'])
+    normalizados_do_xml = {_normalizar(n) for n in nomes.values()}
+    rotulo_do_mon = {_normalizar(p['nome']): p['nome'] for p in cruz['inventario']}
     for nome, chances_no_mon in do_mon_por_nome.items():
         entradas_xml = [c for i, n in nomes.items() if n == nome for c in do_xml.get(i, [])]
         if not entradas_xml:
+            if nome not in normalizados_do_xml:
+                divergencias.append(
+                    f'"{rotulo_do_mon.get(nome, nome)}" esta no Inventory do .mon e NAO existe'
+                    f' no nosso items.xml - fica fora do XML por ser item de versao posterior;'
+                    f' confirmar que o nome nao e outro do 7.4'
+                )
             continue
         if nome in ja_avisado:
             continue
@@ -740,17 +787,24 @@ def validar_monstro(base, monstro):
     if cabecalho:
         achado_corpo = re.search(r'corpse="(\d+)"', texto)
         video = xp_do_video(base, monstro, int(achado_corpo.group(1))) if achado_corpo else None
+        confiavel = video if video and video['xp'] >= cabecalho['experiencia'] else None
         da_identidade, divergencias_da_identidade = _comparar_identidade(
-            base, cabecalho, texto, video['xp'] if video else None
+            base, cabecalho, texto, confiavel['xp'] if confiavel else None
         )
         problemas.extend(da_identidade)
         divergencias.extend(divergencias_da_identidade)
-        if video and cabecalho['experiencia'] != video['xp']:
+        if confiavel and cabecalho['experiencia'] != confiavel['xp']:
             divergencias.append(
                 f'o .mon diz Experience {cabecalho["experiencia"]} e a gravacao da'
-                f' {video["xp"]} por abate ({video["iguais"]} de {video["saltos"]} saltos'
-                f' iguais em "{video["gravacao"]}") - o video manda, nao reverter para'
-                f' {cabecalho["experiencia"]}'
+                f' {confiavel["xp"]} por abate ({confiavel["amostras"]} abates casados,'
+                f' {" e ".join(confiavel["gravacoes"])}) - o video manda, nao reverter'
+                f' para {cabecalho["experiencia"]}'
+            )
+        elif video and video['xp'] < cabecalho['experiencia']:
+            divergencias.append(
+                f'Experience {cabecalho["experiencia"]}: a gravacao so mostra saltos ate'
+                f' {video["xp"]} ({video["amostras"]} abates, {" e ".join(video["gravacoes"])})'
+                f' - abaixo do .mon, sinal de experiencia em partilha; nao confirma nem desmente'
             )
         do_ritmo, divergencias_do_ritmo = _ritmo_das_magias(cabecalho, texto)
         problemas.extend(do_ritmo)
