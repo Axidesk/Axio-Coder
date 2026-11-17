@@ -171,13 +171,17 @@ def validar_monstro(base, monstro):
 
     problemas = []
     divergencias = []
+    ja_avisado = set()
 
     for entrada in cruz['xml']:
         if entrada['id'] == 1987:
             continue
         ident = entrada['id']
+        if not 0 <= entrada['chance'] <= 100:
+            problemas.append(f'id {ident} com chance {entrada["chance"]} fora de 0..100')
         if ident in nomes:
-            if nomes[ident] not in do_mon:
+            if nomes[ident] not in do_mon and nomes[ident] not in ja_avisado:
+                ja_avisado.add(nomes[ident])
                 divergencias.append(
                     f'"{nomes[ident]}" ({ident}) esta no XML e o .mon nao o tem -'
                     f' confirmar no video antes de apagar'
@@ -190,11 +194,38 @@ def validar_monstro(base, monstro):
             )
         else:
             problemas.append(f'id {ident} nao existe no items.xml nem no objects.srv')
-        if not 0 <= entrada['chance'] <= 100:
-            problemas.append(f'id {ident} com chance {entrada["chance"]} fora de 0..100')
 
-    for nome, no_mon, no_xml in cruz['chances_diferentes']:
-        divergencias.append(f'chance de "{nome}" difere: .mon {no_mon} vs xml {no_xml}')
+    do_xml = {}
+    for entrada in cruz['xml']:
+        if entrada['id'] == 1987:
+            continue
+        do_xml.setdefault(entrada['id'], []).append(entrada['chance'])
+    do_mon_por_nome = {}
+    for produto in cruz['inventario']:
+        do_mon_por_nome.setdefault(_normalizar(produto['nome']), []).append(produto['chance'])
+    for nome, chances_no_mon in do_mon_por_nome.items():
+        entradas_xml = [c for i, n in nomes.items() if n == nome for c in do_xml.get(i, [])]
+        if not entradas_xml:
+            continue
+        if nome in ja_avisado:
+            continue
+        junto_mon = 1.0
+        for chance in chances_no_mon:
+            junto_mon *= 1.0 - chance / 100.0
+        junto_xml = 1.0
+        for chance in entradas_xml:
+            junto_xml *= 1.0 - chance / 100.0
+        esperado = (1.0 - junto_mon) * 100.0
+        junto = round((1.0 - junto_xml) * 100.0, 2)
+        if abs(junto - esperado) <= max(2.0, esperado * 0.2):
+            continue
+        ja_avisado.add(nome)
+        detalhe = ", ".join(f"{c:.1f}" for c in entradas_xml)
+        chave_mon = ", ".join(f"{c:.1f}" for c in chances_no_mon)
+        divergencias.append(
+            f'chance de "{nome}" difere: .mon {chave_mon} ({esperado:.1f} juntas) vs'
+            f' xml {detalhe} ({junto:.1f} juntas)'
+        )
 
     melee = re.search(r'<attack name="melee"[^>]*>', texto)
     if melee:

@@ -599,6 +599,7 @@ def _loot_dos_corpos(blocos, alvo):
     total_saco = 0
     com_ouro_corpo = 0
     com_ouro_saco = 0
+    nos_dois = collections.Counter()
     for evento in corpos:
         topos = itens_de(evento)
         if any(item.get("ItemId") == OURO for item in topos):
@@ -632,6 +633,10 @@ def _loot_dos_corpos(blocos, alvo):
                 continue
             no_saco[item.get("ItemId")] += 1
             total_saco += 1
+        fora_agora = {item.get("ItemId") for item in topos}
+        dentro_agora = {item.get("ItemId") for item in dentro}
+        for identificador in (fora_agora & dentro_agora) - SACOS_DE_LOOT - {OURO}:
+            nos_dois[identificador] += 1
 
     vazios = sum(1 for evento in corpos if not itens_de(evento))
     linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
@@ -696,19 +701,29 @@ def _loot_dos_corpos(blocos, alvo):
                     continue
                 fora = no_corpo.get(identificador, 0)
                 dentro = no_saco.get(identificador, 0)
-                if sitio_no_xml == "corpo" and dentro:
-                    comum = no_corpo.get(identificador, 0) / max(len(corpos), 1)
-                    aviso = " (comum no corpo: o saco pode ser a mochila do jogador)" if comum >= 0.15 else ""
-                    trocados.append((identificador,
-                                     f"o XML poe no corpo e caiu {dentro} vez(es) no saco{aviso}", dentro))
+                if fora and dentro:
+                    trocados.append((identificador, min(fora, dentro),
+                                     f"cai nos DOIS sitios em corpos diferentes ({fora} no corpo, "
+                                     f"{dentro} no saco) - o XML tem uma entrada so: dividir a chance "
+                                     f"entre corpo e saco"))
+                elif sitio_no_xml == "corpo" and dentro:
+                    trocados.append((identificador, dentro,
+                                     f"o XML poe no corpo e caiu {dentro} vez(es) no saco - "
+                                     f"acrescentar uma entrada dentro da bag"))
                 elif sitio_no_xml == "saco" and fora:
-                    trocados.append((identificador,
-                                     f"o XML poe no saco e caiu {fora} vez(es) no corpo", fora))
+                    trocados.append((identificador, fora,
+                                     f"o XML poe no saco e caiu {fora} vez(es) no corpo"))
             if trocados:
-                linhas.append("    POSICAO diferente do XML (o motor decide o sitio - nao apagar):")
-                for identificador, que, vezes in trocados:
+                linhas.append("    POSICAO a corrigir (o saco lido e o do monstro, nao a mochila do jogador):")
+                for identificador, _, que in sorted(trocados, key=lambda t: -t[1]):
                     linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
                                   f"({identificador}) · {que}")
+            if nos_dois:
+                linhas.append("    ATENCAO - mesmo item no corpo E no saco do MESMO corpo "
+                              "(o saco pode ser a mochila do jogador):")
+                for identificador, vezes in nos_dois.most_common(8):
+                    linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
+                                  f"({identificador}) · {vezes} corpo(s)")
             if sobram:
                 linhas.append("    NAO estao no <loot> (lixo do saque ou mochila do jogador - nao acrescentar):")
                 for identificador in sobram[:12]:
@@ -719,10 +734,6 @@ def _loot_dos_corpos(blocos, alvo):
                         onde.append(f"{no_saco[identificador]} no saco")
                     linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} "
                                   f"({identificador}) · {', '.join(onde)}")
-            if sobram:
-                linhas.append("    vistos e NAO estao no XML:")
-                for identificador in sobram:
-                    linhas.append(f"      {(nomes.get(identificador) or '?')[:30]} ({identificador})")
     return linhas
 
 
