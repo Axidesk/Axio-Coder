@@ -150,8 +150,11 @@ def cabecalho_do_mon(base, monstro):
                 'n': int(achado.group(5)),
             })
 
+    artigo = re.search(r'^Article\s*=\s*"([^"]*)"', texto, re.M)
+
     return {
         'nome': nome_do_mon,
+        'artigo': artigo.group(1).strip() if artigo else '',
         'racenumero': numero('RaceNumber'),
         'corpse': numero('Corpse'),
         'sangue': palavra('Blood'),
@@ -571,6 +574,20 @@ def _nome_do_mon_por_chance(inventario, chance):
     return None
 
 
+def _faltas_de_separacao(texto):
+    """Um bloco de topo por linha, separado dos vizinhos por uma linha em branco."""
+    linhas = texto.split('\n')
+    aberturas = ('<flags', '<attacks', '<defenses', '<immunities', '<summons', '<loot', '<voices')
+    faltas = []
+    for i, linha in enumerate(linhas):
+        s = linha.strip()
+        if not s.startswith(aberturas) and not s.startswith('</monster>'):
+            continue
+        if i and linhas[i - 1].strip() != '':
+            faltas.append(f'falta linha em branco antes de {s[:24]} (linha {i + 1})')
+    return faltas
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -666,6 +683,14 @@ def validar_monstro(base, monstro):
         do_ritmo, divergencias_do_ritmo = _ritmo_das_magias(cabecalho, texto)
         problemas.extend(do_ritmo)
         divergencias.extend(divergencias_do_ritmo)
+        combinado = f"{cabecalho.get('artigo', '')} {cabecalho['nome']}".strip().lower()
+        achado_nome = re.search(r'nameDescription="([^"]*)"', texto)
+        if achado_nome and combinado and achado_nome.group(1).strip().lower() != combinado:
+            divergencias.append(
+                f'nameDescription "{achado_nome.group(1)}" nao bate com o .mon'
+                f' (Article "{cabecalho.get("artigo", "")}" + Name "{cabecalho["nome"]}" ='
+                f' "{combinado}")'
+            )
 
     melee = re.search(r'<attack name="melee"[^>]*>', texto)
     if melee:
@@ -681,6 +706,8 @@ def validar_monstro(base, monstro):
     ordem = [m.group(1) for m in re.finditer(r'<(flags|attacks|defenses|immunities|summons|loot|voices)>', texto)]
     if 'voices' in ordem and ordem[-1] != 'voices':
         problemas.append(f'voices nao fica por ultimo (ordem atual: {ordem})')
+
+    problemas.extend(_faltas_de_separacao(texto))
 
     return {
         'monstro': monstro,
