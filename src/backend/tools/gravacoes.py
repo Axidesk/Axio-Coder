@@ -591,12 +591,18 @@ def _loot_dos_corpos(blocos, alvo):
             return seguinte
         return None
 
+    nome_do_monstro = alvo
+    if por_id:
+        nome_do_monstro = _monstro_do_corpo(int(alvo)) or ""
+    declarado_ids = set(_loot_do_monstro(nome_do_monstro) or {}) if nome_do_monstro else set()
+
     no_corpo = collections.Counter()
     no_saco = collections.Counter()
     ouro_corpo = []
     ouro_saco = []
     com_saco = 0
     sacos_vazios = 0
+    sacos_alheios = 0
     total_corpo = 0
     total_saco = 0
     com_ouro_corpo = 0
@@ -627,6 +633,10 @@ def _loot_dos_corpos(blocos, alvo):
         if not dentro:
             sacos_vazios += 1
             continue
+        dentro_ids = {item.get("ItemId") for item in dentro} - {OURO}
+        if declarado_ids and dentro_ids and not (dentro_ids & declarado_ids):
+            sacos_alheios += 1
+            continue
         com_saco += 1
         if any(item.get("ItemId") == OURO for item in dentro):
             com_ouro_saco += 1
@@ -652,6 +662,9 @@ def _loot_dos_corpos(blocos, alvo):
     linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
               f"({100.0 * com_saco / len(corpos):.1f}%) · {sacos_vazios} saco(s) vazio(s) "
               f"· {vazios} corpo(s) sem nada"]
+    if sacos_alheios:
+        linhas.append(f"  (descartados {sacos_alheios} saco(s) sem NENHUM item do monstro - "
+                      f"e a mochila de loot do jogador aberta logo depois do corpo, nao a do monstro)")
     linhas.extend(separacao)
 
     def tabela(titulo, contagem, base, ouro, extra="", absoluto=None, com_ouro=0):
@@ -685,9 +698,6 @@ def _loot_dos_corpos(blocos, alvo):
                   f"ouro {len(ouro_corpo) / len(corpos):.2f} pilhas fora + "
                   f"{len(ouro_saco) / len(corpos):.2f} no saco")
 
-    nome_do_monstro = alvo
-    if por_id:
-        nome_do_monstro = _monstro_do_corpo(int(alvo)) or ""
     if not todos and nome_do_monstro:
         declarado = _loot_do_monstro(nome_do_monstro)
         if declarado:
