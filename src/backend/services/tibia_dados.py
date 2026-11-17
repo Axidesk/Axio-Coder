@@ -25,6 +25,78 @@ FLAGS_DO_MON = {
 
 FLAGS_SEM_CAMPO = {'SeeInvisible'}
 
+RECEITA_DO_MON = """=== RECEITA .mon -> XML (conferida no codigo do motor; manda sobre qualquer nota antiga) ===
+
+TABELA 1 - todos os campos
+health=HitPoints 1:1 | experience=Experience 1:1, MAS o video manda quando existe (so vale a
+gravacao onde o jogador mata SO aquele monstro: morte em area soma varios de uma vez e falseia o
+salto de xp) | defenses armor=Armor 1:1 | defenses defense=Defend 1:1 | blockValue=def*skill/19 |
+melee skill=FistFighting 1:1 | melee attack=Attack 1:1 | melee min/max=Damage(base,var) ->
+base-var..base+var | melee poison=Poison 1:1 | cura min/max=Healing(base,var) -> base-var..base+var |
+cura chance=Healing:N -> 100/N com interval="2000" | speed=GoStrength -> 2*GS+80 (as 41 fixadas a
+olho nao se tocam) | speedchange=(a-b)*10, per-mil, nunca abaixo de -1000 | speedchange_max=(a+b)*10 |
+duration=c*1000 (c em segundos) | chance da magia speed=50/N com interval="1000" (ou 100/N com
+"2000") | outras magias=100/N com interval="2000".
+
+O INTERVALO NAO EXISTE NO .mon. O original rola as magias num ciclo de 2s, mas o motor tem DOIS
+contadores independentes (monster.cpp: attackTicks e defenseTicks), por isso um ataque pode sair a
+1s e a cura a 2s no mesmo bicho. Medido: a pedra do dwarf geomancer sai a 1s e a cura a 2s. O ritmo
+tira-se da gravacao (missil pela posicao de ORIGEM, cura pelo id de criatura da vida), nunca se
+adivinha - e entre 1s e 2s a diferenca e o dobro da frequencia.
+
+A DEFESA DO MONSTRO (monster.cpp:513)
+  if(mType->defense <= 0) return 0;
+  skill = meleeSkill do <attack name="melee">; if(skill <= 0) skill = 42;
+  return mType->defense * skill / 19;
+  Armadilhas: monstro SEM melee usa skill=42 (def 60 bloqueia 132, nao zero); defense<=0 devolve 0 e
+  o ramo do escudo nem corre.
+
+O MELEE DO MONSTRO (weapons.cpp getMaxMeleeDamage)
+  ceil(skill*attack*0.05 + attack*0.5); o dano sai de 0 ate esse valor.
+  O motor so ignora min/max quando a entrada traz skill+attack JUNTOS (monsters.cpp:415); sem os
+  dois le min/max direto - por isso min="-0" max="-800" funciona e NAO se mexe.
+
+TABELA 2 - LOOT: onde vai e em que ordem
+chance: .mon por mil -> chance = por_mil*100 (motor MAX_LOOTCHANCE=100000); 800=80%.
+countmax 1:1 (o motor sorteia 1..countmax). chancemax e INERTE.
+gold: entradas separadas, cada uma com o seu sorteio - nunca um countmax grande.
+id: TypeID do objects.srv -> nome -> id do NOSSO items.xml, achado pelo NOME (o nosso tem o article
+entre o id e o nome). Nunca colar o id do objects.srv no XML.
+BAG: Weapon, Shield, Bow, Throw, Wand, Torch, aneis COM CARGA.
+CORPO: Armor, Food, gold, joias/colares, pedras, runas, osso/chifre/ervas.
+Food e gold podem cair no corpo E na bag; o .mon tem UMA entrada e as duas do XML sao aproximacao
+nossa - confirmar monstro a monstro.
+saco vazio nao cai (o motor apaga container sem itens): a linha da bag vai a chance="100000".
+ORDEM: bag = primeira linha do <loot> (vai para o ultimo slot) | corpo = ordem do .mon (alfabetica),
+aparece decrescente | dentro da bag escrever INVERTIDO, aparece crescente.
+
+AS 4 REGRAS DE OURO
+1. Uma entrada do .mon = um sorteio = um destino. Varias entradas do mesmo item podem cair nos dois
+   lados do MESMO corpo - e normal (ouro do demon).
+2. A bag do monstro e a que esta DENTRO do corpo; a mochila do jogador aberta logo depois NAO e bag
+   do monstro - descartar.
+3. Ouro nunca se calibra pelo video (o jogador saqueia) - serve para saber ONDE a pilha cai.
+4. Posicao nao se calibra por "quantas vezes apareceu num sitio": soma corpo+saco e compara com o
+   numero de entradas do .mon.
+
+PADRAO DO FICHEIRO
+'# Tibia - graphical Multi-User-Dungeon' no inicio -> informacoes do monstro -> flags -> ataque ->
+defesa -> imunidade -> loot -> vozes POR ULTIMO, com uma linha em branco entre cada bloco.
+Modelo: amazon.xml. Conferir tambem o nameDescription (o Article do .mon manda: 'an elf', nao 'a elf').
+
+ORDEM DE VALIDACAO
+1 tool_validar_monstro (ids, chances, melee, cabecalho, ordem, separacao, nameDescription)
+2 tool_ler_rec(varrer=X, loot=X) - todas as gravacoes, com o sitio de cada item
+3 tool_ler_rec(gravacao=Y, loot=X) - corpo a corpo numa gravacao
+4 .mon -> video/.rec -> datapack 7.4 -> wiki ou notas do Tarsal
+  (https://tibiantis-notes.github.io/Creature) -> tibia-rust (so estrutura e ticks, nunca
+  comportamento)
+
+CRUZAR SEMPRE, NUNCA UMA FONTE SO
+Nem o .mon (e de 7.5), nem o video (amostra pequena), nem a wiki (erra data e chance) sao a verdade
+sozinhos: cruzar os quatro e dizer de onde veio cada facto. Analisar bloco a bloco: monster, health,
+look, targetchange, strategy, flags, attacks, defenses, immunities, summon, voices, loot."""
+
 
 CORPO_DE = re.compile(r'^(dead|slain|remains)')
 

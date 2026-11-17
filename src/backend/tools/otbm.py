@@ -466,7 +466,7 @@ def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
     "chance contra o Summon do .mon. VOZES: quantas faltam e se o #Y do .mon bate com o yell do XML. "
     "MOTOR: melee sem skill+attack nem min+max, cabecalho 'Tibia - graphical' em falta e voices fora "
     "do fim do ficheiro. Separa o que e ERRO do que e so divergencia do .mon (que o video pode "
-    "desmentir). Aceita varios monstros de uma vez, um por linha.",
+    "desmentir). Aceita varios monstros de uma vez, um por linha.\n\n" + tibia_dados.RECEITA_DO_MON,
     {
         "monstros": {
             "tipo": "STRING",

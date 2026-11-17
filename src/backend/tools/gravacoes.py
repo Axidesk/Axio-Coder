@@ -11,6 +11,28 @@ from src.backend.state import emit_event
 from src.backend.tools.registry import register
 
 VERSAO_PADRAO = "7.40"
+RECEITA_DA_LEITURA = """=== COMO LER A GRAVACAO (a receita .mon -> XML completa esta na descricao de tool_validar_monstro) ===
+Nem o .mon, nem o video, nem a wiki sao a verdade sozinhos: cruzar sempre e dizer de onde veio cada facto.
+
+LUGAR DO LOOT: ler o loot em DUAS tabelas - NO CORPO e DENTRO DO SACO - e somar corpo+saco antes de
+comparar com o numero de entradas do .mon. A mochila do JOGADOR aberta logo depois do corpo NAO e a
+bag do monstro (descartar). Bag vazia nao cai, logo a linha da bag no XML vai a chance="100000".
+Ouro nunca se calibra pelo video (o jogador saqueia): serve para saber ONDE a pilha cai.
+
+ITEM INVENTADO: item que aparece no XML e nao sai em centenas de corpos deixa de ser duvida de
+amostra e passa a ser prova (legion helmet a 10% em 162 corpos = 1 em dez milhoes). E o caminho para
+limpar o datapack 7.4, que tem loot a mais.
+
+XP: so vale a gravacao em que o jogador mata SO aquele monstro - morte em area soma varios de uma vez
+e falseia o salto. Quando o .mon e o video brigam, o video manda.
+
+INTERVALO: nao existe no .mon. Mede-se por bicho: missil pela posicao de ORIGEM (o bicho parado mantem
+o tile) e cura pelo id de criatura que a vida acompanha. Um ciclo de 2s nunca produz dois eventos a 1s
+do mesmo bicho - se aparecerem, o ciclo e 1s. O motor tem contadores separados para ataque e defesa,
+por isso o mesmo monstro pode atirar a 1s e curar a 2s.
+
+NOME DO MONSTRO: usar o nome exato. Nomes que sao prefixo de outros (elf/elf scout/elf arcanist,
+dragon/dragon lord, demon/demon skeleton) somam dois bichos numa tabela so quando casam por pedaco."""
 SACO_DE_LOOT = 1987
 SACOS_DE_LOOT = frozenset({1987, 1993})
 OURO = 2148
@@ -65,7 +87,7 @@ _CLIENTES = {}
     "TibiaCAM que o painel ja usa, mas chamado pelo caminho certo: a gravacao e copiada para uma pasta "
     "temporaria sem acentos, porque textos como '2. Utilitarios' no caminho fazem o miner responder "
     "'IO failure'. Nao serve para concluir o tipo de dano sozinha - ela mostra a cor do numero e o id do "
-    "efeito no mesmo tile, que e o que permite julgar isso.",
+    "efeito no mesmo tile, que e o que permite julgar isso.\n\n" + RECEITA_DA_LEITURA,
     {
         "varrer": {
             "tipo": "STRING",
