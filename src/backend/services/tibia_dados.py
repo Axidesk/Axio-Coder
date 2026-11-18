@@ -56,6 +56,23 @@ O MELEE DO MONSTRO (weapons.cpp getMaxMeleeDamage)
   O motor so ignora min/max quando a entrada traz skill+attack JUNTOS (monsters.cpp:415); sem os
   dois le min/max direto - por isso min="-0" max="-800" funciona e NAO se mexe.
 
+SUMMON (dentro do bloco Spells: "Origin (0, 13) -> Summon (id, max) : N")
+  chance = 100/N (igual as outras magias, com interval="2000") | maxSummons = max.
+  O `max` de cada <summon> e INERTE no motor (monsters.cpp le so speed/interval, chance e name):
+  quem manda e o maxSummons do <summons>.
+  O `id` e o RaceNumber do .mon, NUNCA o nome - converter pelo RaceNumber de cada .mon
+  (ex: 35=demon, 49=fire elemental, 72=stalker, 101=bonebeast, 20=slime2, 19=slime).
+  O NOME TEM DE EXISTIR no monsters.xml: summon com nome inexistente CARREGA e nunca invoca nada,
+  em silencio. Casos medidos: 'bonebeast' -> 'bone beast'; 'stalkers' -> 'stalker'.
+  CHANCE ACIMA DE 100 E BUG: o motor faz chance=100 quando passa de 100 (monsters.cpp), logo
+  chance="3000" significa SEMPRE invocar. Os valores 1000/3000 sao uma coluna por-mil mal copiada.
+
+LOSETARGET - investigado, NAO se converte para targetchange.chance
+  13 valores distintos nos 159 .mon (0 em 69 deles). O XML usa chance="8" fixo, e 0 onde o .mon
+  tem 0. O conversor da comunidade (soul4soul/ot-monster-converter) mapeia LoseTarget -> chance e
+  poe interval="2000", mas o .mon NAO tem intervalo e NAO existe prova em gravacao do que o campo
+  faz (retarget vs largar alvo inalcancavel). Sem gravacao que prove, nao se mexe.
+
 TABELA 2 - LOOT: onde vai e em que ordem
 chance: .mon por mil -> chance = por_mil*100 (motor MAX_LOOTCHANCE=100000); 800=80%.
 countmax 1:1 (o motor sorteia 1..countmax). chancemax e INERTE.
@@ -259,8 +276,8 @@ def cabecalho_do_mon(base, monstro):
         'estrategia': [int(p) for p in re.findall(r'-?\d+', estrategia.group(1))] if estrategia else [],
         'flags': set(re.findall(r'[A-Za-z]+', bloco_flags.group(1))) if bloco_flags else set(),
         'invoca': [
-            {'typeid': int(t), 'chance': 100.0 / int(n)}
-            for t, _c, n in re.findall(r'Summon\s*\((\d+),\s*(\d+)\)\s*:\s*(\d+)', texto)
+            {'typeid': int(t), 'max': int(c), 'chance': 100.0 / int(n)}
+            for t, c, n in re.findall(r'Summon\s*\((\d+),\s*(\d+)\)\s*:\s*(\d+)', texto)
         ],
         'falas': falas,
         'magias': magias,
@@ -354,6 +371,12 @@ def cruzar_monstro(base, monstro):
 
 def _nomes_por_id(base):
     return {i: _normalizar(nome) for nome, ids in items_740(base).items() for i in ids}
+
+
+@lru_cache(maxsize=4)
+def _monstros_registados(base=BASE_PADRAO):
+    texto = open(f'{base}/Server/data/monster/monsters.xml', encoding='latin-1').read()
+    return {_normalizar(nome) for nome in re.findall(r'<monster\s+name="([^"]+)"', texto)}
 
 
 @lru_cache(maxsize=4)
@@ -483,13 +506,25 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
             )
 
     chances_do_mon = [ficha['chance'] for ficha in cabecalho['invoca']]
+    registados = _monstros_registados(base)
     chances_do_xml = []
     for achado in re.finditer(r'<summon\s+([^>]*)/>', texto):
         atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        nome = atributos.get('name', '')
+        if _normalizar(nome) not in registados:
+            problemas.append(
+                f'summon name="{nome}" nao existe no monsters.xml: o monstro carrega e nunca invoca'
+            )
         try:
-            chances_do_xml.append(float(atributos.get('chance', 0)))
+            chance = float(atributos.get('chance', 0))
         except ValueError:
-            continue
+            chance = 0.0
+        if chance > 100 or chance < 0:
+            problemas.append(
+                f'summon "{nome}" com chance="{atributos.get("chance")}" fora de 0..100:'
+                ' o motor corta para 100 e o monstro invoca sempre'
+            )
+        chances_do_xml.append(chance)
     if len(chances_do_mon) != len(chances_do_xml):
         divergencias.append(
             f'o .mon invoca {len(chances_do_mon)} criatura(s) e o XML invoca {len(chances_do_xml)}'
@@ -500,6 +535,13 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
                 divergencias.append(
                     f'chance de invocacao: .mon {do_mon:.0f}% vs xml {do_xml:.0f}%'
                 )
+    teto = re.search(r'<summons\s+maxSummons="(\d+)"', texto)
+    if teto and cabecalho['invoca']:
+        maior = max(ficha['max'] for ficha in cabecalho['invoca'])
+        if int(teto.group(1)) < maior:
+            divergencias.append(
+                f'maxSummons="{teto.group(1)}" nao chega ao max={maior} que o .mon da a invocacao'
+            )
 
     vozes = []
     for achado in re.finditer(r'<voice\s+([^>]*)/>', texto):
