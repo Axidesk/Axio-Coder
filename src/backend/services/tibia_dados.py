@@ -266,6 +266,7 @@ def cabecalho_do_mon(base, monstro):
         'experiencia': numero('Experience'),
         'custo_invocacao': numero('SummonCost'),
         'foge': numero('FleeThreshold') or 0,
+        'lose_target': numero('LoseTarget'),
         'ataque': numero('Attack'),
         'defesa': numero('Defend'),
         'armadura': numero('Armor'),
@@ -400,6 +401,8 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
     if achado and esperado and achado.group(1).lower() != esperado:
         divergencias.append(
             f'race="{achado.group(1)}" mas o .mon diz {cabecalho["sangue"]} -> devia ser "{esperado}"'
+            f' (confirme com tool_ler_rec raca={cabecalho["nome"]}: a cor do numero e o efeito 9/16'
+            f' no tile do monstro provam a race na gravacao)'
         )
 
     if cabecalho['corpse'] is not None:
@@ -504,6 +507,24 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
             divergencias.append(
                 f'strategy {atributo}: .mon {cabecalho["estrategia"][indice]} vs xml {achado.group(1)}'
             )
+
+    if cabecalho.get('lose_target') is not None:
+        achado = re.search(r'<targetchange([^>]*)/>', texto)
+        if achado:
+            atual = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1))).get('chance')
+            if atual is not None and atual != str(cabecalho['lose_target']):
+                divergencias.append(
+                    f'targetchange chance="{atual}" mas o .mon tem LoseTarget '
+                    f'{cabecalho["lose_target"]} -> devia ser "{cabecalho["lose_target"]}"'
+                )
+
+    de_dano = [magia for magia in cabecalho['magias'] if magia['efeito'] == 'Damage']
+    ataques = [nome for nome in re.findall(r'<attack\s+name="(\w+)"', texto) if nome != 'melee']
+    if len(ataques) > len(de_dano):
+        divergencias.append(
+            f'o XML tem {len(ataques)} magia(s) de ataque ({", ".join(ataques)}) e o .mon '
+            f'declara {len(de_dano)} - ataque que o original nao tem'
+        )
 
     chances_do_mon = [ficha['chance'] for ficha in cabecalho['invoca']]
     registados = _monstros_registados(base)

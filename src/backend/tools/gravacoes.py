@@ -145,6 +145,23 @@ _CLIENTES = {}
             "soma tudo.",
             "padrao": "",
         },
+        "raca": {
+            "tipo": "STRING",
+            "desc": "Mede a RACE (o sangue) de um monstro na gravacao, atribuindo cada numero de dano "
+            "e cada efeito a criatura que estava naquele tile. E a PROVA contra o campo Blood do .mon, "
+            "que e quem manda quando nao ha gravacao. Como a ligacao e feita: o CreatureMoved vem com "
+            "CreatureId=0 e NAO serve; quem traz id E posicao e o TileObjectAdded (Object.CreatureId + "
+            "TilePosition), que sai so com terreno=true - por isso este pedido liga o terreno sozinho. "
+            "O motor escolhe a cor do numero pela race (game.cpp:4251): TEXTCOLOR_RED=180 blood, "
+            "TEXTCOLOR_LIGHTGREY=129 undead, TEXTCOLOR_LIGHTGREEN=30 venom, TEXTCOLOR_ORANGE=198 fire, "
+            "TEXTCOLOR_LIGHTBLUE=35 energy, 215 experiencia. O EFEITO confirma e desempata: 9 hit_area = "
+            "undead, 16 poison = venom, 0 draw_blood = blood OU fire (ai decide a cor, 180 vs 198). "
+            "Licao medida: o beholder deu 9 numeros vermelhos em 11 e o vampire 4 efeitos 9 em 4 - o "
+            "primeiro provou blood contra o VENOM do datapack, o segundo provou undead. Amostra pequena "
+            "engana: rode em 2-3 gravacoes antes de mudar o XML, e lembre que numero laranja ou verde "
+            "no tile do monstro pode ser dano elemental de outra fonte, nao a race dele.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -152,13 +169,15 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
             emit_event("executing", function=f"Somando o loot de: {varrer}")
             return _loot_somado(str(varrer).strip())
         emit_event("executing", function=f"Varrendo as gravacoes por: {varrer}")
         return _varredura(str(varrer).strip())
+    if str(raca or "").strip():
+        terreno = True
     if not str(gravacao or "").strip():
         return "ERRO: diga qual gravacao abrir, ou use 'varrer' para procurar um monstro em todas."
     emit_event("executing", function=f"Lendo a gravacao: {gravacao}")
@@ -188,6 +207,9 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
     linhas = _cabecalho(caminho, blocos, usado)
     if alternativas:
         linhas.append("  OUTRAS COM ESSE NOME: " + " | ".join(alternativas))
+    if str(raca or "").strip():
+        linhas += _raca_das_criaturas(blocos, str(raca).strip().lower())
+        return "\n".join(linhas)
     if str(loot or "").strip():
         linhas += _loot_dos_corpos(blocos, str(loot).strip())
         return "\n".join(linhas)
@@ -503,6 +525,93 @@ def _descrever(evento, nomes, jogador):
         apelido = f" {nome}" if nome else ""
         return f"{tipo} item {identificador}{apelido} no contentor {evento.get('ContainerId')}"
     return f"{tipo} {json.dumps(evento, ensure_ascii=False)[:180]}"
+
+
+SANGUE_POR_EFEITO = {0: ('blood ou fire', 'draw_blood'), 9: ('undead', 'hit_area'), 16: ('venom', 'poison')}
+SANGUE_POR_COR = {180: 'blood', 129: 'undead', 30: 'venom', 198: 'fire'}
+
+
+def _raca_das_criaturas(blocos, pedido):
+    """Atribui cada numero e cada efeito a criatura do tile e vota na race pelo que o motor pinta."""
+    nomes, posicao, ocupante = {}, {}, {}
+    efeitos = collections.defaultdict(collections.Counter)
+    cores = collections.defaultdict(collections.Counter)
+    for bloco in blocos:
+        for evento in bloco.get("Events", []):
+            tipo = evento.get("Event")
+            if tipo == "CreatureSeen":
+                nomes[evento.get("CreatureId")] = str(evento.get("Name") or "").lower()
+            elif tipo == "TileObjectAdded":
+                objeto = evento.get("Object") or {}
+                criatura = objeto.get("CreatureId")
+                if criatura is None:
+                    continue
+                ponto = _ponto(evento.get("TilePosition"))
+                anterior = posicao.get(criatura)
+                if anterior is not None and ocupante.get(anterior) == criatura:
+                    ocupante.pop(anterior, None)
+                posicao[criatura] = ponto
+                ocupante[ponto] = criatura
+            elif tipo in ("GraphicalEffectPopped", "NumberEffectPopped"):
+                criatura = ocupante.get(_ponto(evento.get("Position")))
+                if criatura is None:
+                    continue
+                nome = nomes.get(criatura, "")
+                if not nome or (pedido and pedido not in nome):
+                    continue
+                if tipo == "GraphicalEffectPopped":
+                    efeitos[nome][evento.get("Id")] += 1
+                else:
+                    cores[nome][evento.get("Color")] += 1
+
+    if not efeitos and not cores:
+        return [
+            "",
+            f"  Nenhum numero nem efeito atribuido a '{pedido}' nesta gravacao.",
+            "  Confirme o nome exato do monstro (elf, elf scout e elf arcanist sao bichos diferentes)",
+            "  e que a gravacao tem mesmo uma luta com ele.",
+        ]
+    linhas = ["", "  RACE PELA COR DO DANO E PELO EFEITO (game.cpp:4251)"]
+    for nome in sorted(set(efeitos) | set(cores)):
+        linhas.append(f"  {nome}:")
+        if cores[nome]:
+            total = sum(cores[nome].values())
+            linhas.append("    numeros: " + ", ".join(
+                f"cor {cor} {SANGUE_POR_COR.get(cor, '?')}={quantos} ({100 * quantos / total:.0f}%)"
+                for cor, quantos in cores[nome].most_common(4)))
+        if efeitos[nome]:
+            linhas.append("    efeitos: " + ", ".join(
+                f"{identificador} {SANGUE_POR_EFEITO.get(identificador, ('', 'outro'))[1]}={quantos}"
+                for identificador, quantos in efeitos[nome].most_common(4)))
+        linhas.append("    veredito: " + _veredito_da_raca(efeitos[nome], cores[nome]))
+    linhas.append("  O .mon manda quando nao ha gravacao; com gravacao, e este veredito que vale.")
+    return linhas
+
+
+def _veredito_da_raca(efeitos, cores):
+    """O efeito 9/16 vale o dobro da cor: so a race o produz, enquanto a cor de dano elemental engana."""
+    votos = collections.Counter()
+    for identificador, quantos in efeitos.items():
+        if identificador == 9:
+            votos['undead'] += 2 * quantos
+        elif identificador == 16:
+            votos['venom'] += 2 * quantos
+    for cor, quantos in cores.items():
+        if cor in SANGUE_POR_COR:
+            votos[SANGUE_POR_COR[cor]] += quantos
+    if not votos:
+        return "sem sinal de acerto fisico (so dano elemental) - nao da para concluir a race"
+    raca, peso = votos.most_common(1)[0]
+    total = sum(votos.values())
+    detalhe = (
+        f"{peso} de {total} pontos, {100 * peso / total:.0f}%"
+        f" - efeito 9/16 pesa o dobro da cor, porque so a race o produz"
+    )
+    if peso < 3:
+        return (
+            f"{raca} com amostra pequena ({detalhe}): rode noutra gravacao antes de mexer no XML"
+        )
+    return f"{raca} ({detalhe})"
 
 
 def _eventos(blocos):
