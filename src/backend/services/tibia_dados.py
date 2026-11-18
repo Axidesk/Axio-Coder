@@ -67,11 +67,20 @@ SUMMON (dentro do bloco Spells: "Origin (0, 13) -> Summon (id, max) : N")
   CHANCE ACIMA DE 100 E BUG: o motor faz chance=100 quando passa de 100 (monsters.cpp), logo
   chance="3000" significa SEMPRE invocar. Os valores 1000/3000 sao uma coluna por-mil mal copiada.
 
-LOSETARGET - investigado, NAO se converte para targetchange.chance
-  13 valores distintos nos 159 .mon (0 em 69 deles). O XML usa chance="8" fixo, e 0 onde o .mon
-  tem 0. O conversor da comunidade (soul4soul/ot-monster-converter) mapeia LoseTarget -> chance e
-  poe interval="2000", mas o .mon NAO tem intervalo e NAO existe prova em gravacao do que o campo
-  faz (retarget vs largar alvo inalcancavel). Sem gravacao que prove, nao se mexe.
+LOSETARGET -> targetchange chance, 1:1 (PROVADO e ja aplicado em 80 XML)
+  chance = LoseTarget. O Tarsal documenta "chance creature will retarget" e os 11 monstros
+  DistanceFighting do projeto tem 50; os 25 que ja tinham chance="0" no XML sao exactamente os que
+  tem LoseTarget=0. O chance="8" fixo era enchimento do datapack.
+  O INTERVALO nao se converte: o campo nao existe no .mon. Fica como esta.
+  Diferenca de comportamento que continua: o original escolhe o alvo mais PROXIMO ao retargetar e o
+  nosso motor usa searchTarget(TARGETSEARCH_RANDOM) (monster.cpp:866).
+
+STRATEGY - quatro numeros no .mon, tres no XML, e nao falta nada
+  Strategy = (a, b, c, d) e A SOMA E SEMPRE 100 (medido nos 154 .mon).
+  attack=a (alvo mais PROXIMO) | defense=b (menos vida) | hurt=c (quem mais dano lhe fez) |
+  d = a fatia "sem preferencia", que NAO se escreve no XML: o motor cai nela sozinho quando o
+  sorteio passa de a+b+c (monster.cpp:417-433, strategy 3 = escolha aleatoria entre os candidatos).
+  Medido a 2026-11-18: 105 de 105 monstros batem. Nao e campo a corrigir em massa.
 
 TABELA 2 - LOOT: onde vai e em que ordem
 chance: .mon por mil -> chance = por_mil*100 (motor MAX_LOOTCHANCE=100000); 800=80%.
@@ -498,6 +507,14 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
         achado = re.search(padrao, texto)
         if achado and int(achado.group(1)) != do_mon:
             divergencias.append(f'{rotulo}: .mon {do_mon} vs xml {achado.group(1)}')
+
+    querida = cabecalho['estrategia'][:3]
+    if querida != [0, 0, 0] and not re.search(r'<strategy[^>]*\battack=', texto):
+        divergencias.append(
+            f'sem <strategy attack/defense/hurt>: o .mon diz {querida}'
+            f' (a 4a entrada do .mon, {100 - sum(querida)}, e a fatia "sem preferencia",'
+            f' que nao se escreve no XML)'
+        )
 
     for indice, atributo in ((0, 'attack'), (1, 'defense'), (2, 'hurt')):
         if len(cabecalho['estrategia']) <= indice:
