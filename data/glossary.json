@@ -1618,8 +1618,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 388,
         "conferido": [
-          1791639217.567,
-          42891
+          1794958849.177,
+          43017
         ]
       }
     },
@@ -1640,8 +1640,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 174,
         "conferido": [
-          1791639217.567,
-          42891
+          1794958849.177,
+          43017
         ]
       }
     },
@@ -1750,8 +1750,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 192,
         "conferido": [
-          1791639217.567,
-          42891
+          1794958849.177,
+          43017
         ]
       }
     },
@@ -3228,10 +3228,10 @@
       "descricao": "Ao clicar no botao de parar, o texto volta ao campo (resetTurnUI le window.lastUserMessageText) mas as imagens anexadas perdiam-se. O sendMessage guarda `window.lastUserImages` antes de limpar state.attachedImages, e restaurarImagensDoTurno repoe-as e chama renderImagePreviews. E chamada no clique de stop (messages.js:sendMessage), no tratar_cancel e no ramo de erro do POST. A segunda chamada e inofensiva porque o retrato e consumido (posta a null) na primeira.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/messages.js",
-        "linha": 713,
+        "linha": 717,
         "conferido": [
-          1792453587.863,
-          45284
+          1795190952.569,
+          45454
         ]
       }
     },
@@ -4352,10 +4352,10 @@
       "descricao": "Acende no card de historico a etiqueta cujo ponto e exatamente o commit daquela tarefa; no painel de git a mesma etiqueta ganha fundo",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 512,
+        "linha": 518,
         "conferido": [
-          1791917955.39,
-          33115
+          1795191102.968,
+          36630
         ]
       }
     },
@@ -4394,8 +4394,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 393,
         "conferido": [
-          1791639217.567,
-          42891
+          1794958849.177,
+          43017
         ]
       }
     },
@@ -4413,10 +4413,10 @@
       "descricao": "Botao que vive NO CARD da pilha (2026-10): cards.js:_injectMarcas cria-o ao lado do marcador do ponto sempre que git_panel.js:podeRestaurar(grupo) deixa (commit OU __session), e o CSS troca-o pelo marcador quando o card esta selecionado - por isso ele aparece APENAS no card selecionado. A troca e PURA CSS em style.css: .history-round-restore-icon nasce display:none, .history-round-card.history-round-selected esconde o .history-round-saved-icon e mostra o restaurar. Nao ha repintura por JS na selecao. O clique faz stopPropagation (para nao cair no clique do card, que seleciona/abre) e chama a API registada em cards.js:registrarRestauroDaTarefa, ligada em renderer.js a git_panel.js:restaurarTarefa(grupo) - que escolhe o MOTOR: com commit -> requestGitRestore (previa + modal), sem commit mas com __session -> requestRestoreTask (o snapshot, rede de seguranca). Substituiu o #btn-git-restore-history do cabecalho da coluna 1, REMOVIDO a 2026-10; com ele sairam sincronizarBotaoRestauro (git_panel.js), btnGitRestoreHistory (dom.js) e o registo registrarSincronizacaoDeRestauro (acoes.js). O registo novo existe pelo ciclo de imports: git_panel importa cards, logo cards nao pode importar git_panel. MEDIDO (tool_medir_pintura, CSS real): card fechado pinta o marcador 14x14 e o restaurar 0x0; selecionado, o marcador vai a 0x0 e o restaurar pinta 14x14 na MESMA posicao - o icone nao salta.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 241,
+        "linha": 247,
         "conferido": [
-          1791917955.39,
-          33115
+          1795191102.968,
+          36630
         ]
       }
     },
@@ -4801,8 +4801,8 @@
         "arquivo": "src/frontend/js/chat/files.js",
         "linha": 157,
         "conferido": [
-          1791639217.567,
-          42891
+          1794958849.177,
+          43017
         ]
       }
     },
@@ -4901,10 +4901,10 @@
       "descricao": "A gaveta recolhida dentro do card que ficou guardado, com as tarefas ANTERIORES que nao tinham ponto proprio. Decide-se por CRONOLOGIA, sem perguntar nada ao git: percorre a pilha do dia do fim para o inicio e cada tarefa sem ponto entra na gaveta da primeira seguinte que tenha ponto (as que vierem depois do dono ficam soltas). Nasce recolhida, com o sinal + que vira -. Custo zero, mesmo em modo manual.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 646,
+        "linha": 725,
         "conferido": [
-          1791917955.39,
-          33115
+          1795191102.968,
+          36630
         ]
       }
     },
@@ -4956,10 +4956,10 @@
       "descricao": "REGRA (2026-10, ampliada): o card mostra o AVIAO sempre que o commit esta fora do por_subir (cards.js:enviadaParaOServidor) OU foi registado num envio manual (marcas_envio.js porCommit) - deixou de ser so o ultimo ponto enviado. Todos os restantes (so no PC) mostram o bookmark com o popup \"Salvo localmente\", sem parenteses: o hash e o \"por enviar\" sairam do popup. E assim que as anteriores ja enviadas continuam com o aviao e as novas nascem com o bookmark.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 241,
+        "linha": 247,
         "conferido": [
-          1791917955.39,
-          33115
+          1795191102.968,
+          36630
         ]
       }
     },
@@ -5338,10 +5338,10 @@
       "descricao": "Calcula o \"Tarefa N - \" que aparece antes da mensagem no Por subir e no historico mais antigo: casa o hash com o log da sessao e le o numero do dia (nomeDoTurno), e corta o prefixo do resumo quando o commit ja o traz escrito a mao. Nada disto esta gravado no git - a mensagem do commit so tem o texto.",
       "localizacao": {
         "arquivo": "src/frontend/js/chat/historico/cards.js",
-        "linha": 452,
+        "linha": 458,
         "conferido": [
-          1791917955.39,
-          33115
+          1795191102.968,
+          36630
         ]
       }
     },
@@ -7002,10 +7002,10 @@
       "descricao": "Lê um ficheiro .rec do TibiaCAM e devolve os eventos em texto com hora ao milésimo (dano com valor/cor/tile, efeito por id e tile, vida, fala, loot, magia), filtrável por intervalo de tempo e por grupo.",
       "localizacao": {
         "arquivo": "src/backend/tools/gravacoes.py",
-        "linha": 155,
+        "linha": 172,
         "conferido": [
-          1794957375.529,
-          58642
+          1795189043.594,
+          65439
         ]
       }
     }

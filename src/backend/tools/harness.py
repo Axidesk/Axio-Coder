@@ -23,6 +23,7 @@ import time
 from src.backend.config import APP_ROOT
 from src.backend.services import executaveis
 from src.backend.services.saida import linhas_com_termo, recortar_texto, repartir_teto
+from src.backend.services.session import anotar_escrita_por_script
 from src.backend.state import emit_event, estado, no_diretorio_do_axio
 from src.backend.tools.process import correr_como_card
 from src.backend.tools.registry import register
@@ -1925,6 +1926,7 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
     raiz_projeto = estado.get("pasta_raiz") or APP_ROOT
     nome = (rotulo or "").strip() or _rotulo_teste(trecho, cfg["rotulo"])
     emit_event("executing", function=f"Executando {cfg['rotulo']} em processo novo: {nome}")
+    anotar_escrita_por_script()
     fd, caminho = tempfile.mkstemp(prefix=cfg["prefixo"], suffix=cfg["sufixo"])
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:

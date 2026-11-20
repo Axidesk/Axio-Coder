@@ -4,9 +4,10 @@ import re
 import time
 import traceback
 
+from src.backend.services.diff import gerar_diff
 from src.backend.services.file_watcher import PASTAS_IGNORADAS, TAMANHO_MAX, e_pasta_de_outro_projeto
 from src.backend.services.persistencia import gravar_json_atomico
-from src.backend.state import estado, caminho_estado_projeto
+from src.backend.state import estado, caminho_estado_projeto, emit_event
 def _caminho_checkpoint():
     return caminho_estado_projeto("chats", "checkpoint.json")
 
@@ -777,6 +778,90 @@ def capturar_arvore(pasta_raiz, referencia=None, teto_bytes=TAMANHO_MAX):
                 continue
             capturado[rel] = {"conteudo": conteudo}
     return capturado
+
+def indice_rapido(pasta_raiz):
+    """Mapa {rel: (mtime_ns, tamanho)} da arvore, sem ler conteudo.
+
+    Ler o conteudo de todos os arquivos custa 20s num projeto grande (medido no
+    Tibia74: 3447 arquivos / 22,5 MB); o stat de cada um custa milissegundos. Para
+    saber O QUE um script escreveu, a marca do ficheiro basta.
+    """
+    indice = {}
+    if not pasta_raiz:
+        return indice
+    for dirpath, dirnames, filenames in os.walk(pasta_raiz):
+        dirnames[:] = [d for d in dirnames if d not in PASTAS_IGNORADAS
+                       and not e_pasta_de_outro_projeto(os.path.join(dirpath, d))]
+        for nome in filenames:
+            caminho = os.path.join(dirpath, nome)
+            try:
+                marca = os.stat(caminho)
+            except OSError:
+                continue
+            if marca.st_size > TAMANHO_MAX:
+                continue
+            rel = os.path.relpath(caminho, pasta_raiz).replace("\\", "/")
+            indice[rel] = (marca.st_mtime_ns, marca.st_size)
+    return indice
+
+def anotar_escrita_por_script():
+    """Guarda o indice da arvore antes do primeiro script do turno.
+
+    Uma vez por turno, e so quando um script corre: sem script nao ha nada a medir.
+    """
+    if estado.get("indice_antes_do_script") is not None:
+        return
+    estado["indice_antes_do_script"] = indice_rapido(estado.get("pasta_raiz", ""))
+
+def escritas_por_script():
+    """Lista (rel, conteudo_antes, conteudo_depois) do que os scripts do turno mudaram.
+
+    O 'antes' vem do snapshot da sessao ja em memoria (o conteudo de cada arquivo na
+    ultima gravacao do log), por isso nao ha uma segunda varredura de conteudo - e o
+    arquivo que ja foi escrito por uma ferramenta de edicao neste turno fica de fora,
+    porque esse ja entrou no card pelo caminho normal.
+    """
+    antes = estado.get("indice_antes_do_script")
+    estado["indice_antes_do_script"] = None
+    pasta_raiz = estado.get("pasta_raiz", "")
+    if antes is None or not pasta_raiz:
+        return []
+    agora = indice_rapido(pasta_raiz)
+    conhecido = estado.get("snapshot_sessao") or {}
+    historico = estado.get("file_history") or {}
+    mudados = []
+    for rel in sorted(agora):
+        if antes.get(rel) == agora[rel]:
+            continue
+        caminho = os.path.join(pasta_raiz, rel.replace("/", os.sep))
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                depois = f.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        pilha = (historico.get(caminho) or {}).get("undo") or []
+        if pilha and pilha[-1].get("depois") == depois:
+            continue
+        anterior = conhecido.get(rel)
+        mudados.append((rel, anterior.get("conteudo") if isinstance(anterior, dict) else None, depois))
+    return mudados
+
+def emitir_diffs_dos_scripts(teto_arquivos=200):
+    """Manda para o log da sessao o que os scripts do turno escreveram.
+
+    As ferramentas de edicao emitem o diff de cada arquivo; um trecho corrido por
+    tool_executar_python/js/php escreve direto no disco e nao emitia nada - foi por
+    isso que 51 XML reordenados por script ficaram de fora do card da rodada, com a
+    lista dizendo '1 arquivo'. Aqui o que mudou no disco entra no card como qualquer
+    outra edicao.
+    """
+    mudados = escritas_por_script()
+    nomes = []
+    for rel, anterior, depois in mudados[:teto_arquivos]:
+        emit_event("action_diff", actionName=f"Alterado por script: {rel}",
+                   diff=gerar_diff(anterior if isinstance(anterior, str) else "", depois))
+        nomes.append(rel)
+    return nomes
 
 def snapshot_sessao_anterior(pasta_logs, ignorar_session_id, antes_de=0):
     """Carrega o checkpoint final da sessão mais recente (exceto a atual) na pasta.

@@ -192,6 +192,7 @@ def session_log_save():
         **capturar_snapshot(),
     }
     _registrar_segredos(snapshot_cumulativo, pasta_raiz)
+    estado["snapshot_sessao"] = snapshot_cumulativo
 
     filenames = []
     for dia, grupos_dia in grupos_por_dia.items():

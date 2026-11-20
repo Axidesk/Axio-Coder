@@ -11,7 +11,8 @@ logging.getLogger("google.genai").setLevel(logging.ERROR)
 from src.backend.state import estado, emit_event, set_turn_id, caminho_estado_projeto, consumir_pedido_de_reinicio
 from src.backend.tools.registry import register
 from src.backend.memory.vector import wing_da_pasta, espelhar_notas_existentes, minerar_em_segundo_plano
-from src.backend.services.session import carregar_checkpoint, formatar_checkpoint, salvar_checkpoint
+from src.backend.services.session import (carregar_checkpoint, emitir_diffs_dos_scripts,
+                                          formatar_checkpoint, salvar_checkpoint)
 from src.backend.ai.context import ErroContextoExcedido, compactar_historico, contar_tokens, texto_de_ferramentas, medir_contexto, podar_historico_global, truncar_mensagem_historico
 from src.backend.ai.coleta import coletar_contexto
 from src.backend.ai.atrito import registrar_uso_ferramenta, fechar_rodada
@@ -443,6 +444,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
     set_turn_id(turn_id)
     estado["bloquear_edicao"] = (modo == "semi")
     estado["urls_navegadas_turno"] = set()
+    estado["indice_antes_do_script"] = None
 
     emit_event("status", message="Coletando memória...")
 
@@ -673,6 +675,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                         texto_exibicao += bloco_fontes
                 emit_event("ai_response", message=texto_exibicao)
                 emit_event("ai_question", text=prompt_usuario)
+                emitir_diffs_dos_scripts()
                 emit_event("done", reiniciar=consumir_pedido_de_reinicio())
 
                 threading.Thread(
