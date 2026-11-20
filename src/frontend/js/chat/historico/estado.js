@@ -61,7 +61,7 @@ import { state } from '../state.js';
             commit: g.commit || '',
             duration: g.duration || 0,
             nFerramentas: (g.tools || []).length || g.nFerramentas || 0,
-            sessao: g.__session || '',
+            sessao: g.__session || (g.__saved && g.__saved.__session) || '',
             arquivos: (g.files || []).map(f => ({ name: f.name, deleted: !!f.deleted }))
         };
     }

@@ -617,6 +617,7 @@ let cacheDoUltimoEnviadoValida = false;
     }
     async function hidratarGroup(group) {
         if (!group || !group.__saved) return group;
+        if (!group.__session && group.__saved.__session) group.__session = group.__saved.__session;
         const saved = await carregarRodadaCompleta(group.__saved);
         if (!saved || saved.__leve) return group;
         group.snapshot = saved.snapshot || {};
