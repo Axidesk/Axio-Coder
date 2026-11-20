@@ -780,6 +780,29 @@ def _faltas_de_separacao(texto):
     return faltas
 
 
+_ORDEM_DOS_BLOCOS = ('flags', 'attacks', 'defenses', 'immunities', 'summons', 'loot', 'voices')
+_ORDEM_DO_CABECALHO = ('health', 'look', 'targetchange', 'strategy')
+
+
+def _fora_de_ordem(texto, nomes, referencia, rotulo):
+    vistos = []
+    for achado in re.finditer(r'<\s*(' + '|'.join(nomes) + r')\b', texto):
+        if not vistos or vistos[-1] != achado.group(1):
+            vistos.append(achado.group(1))
+    for antes, depois in zip(vistos, vistos[1:]):
+        if referencia.index(antes) > referencia.index(depois):
+            return [f'{rotulo}: {antes} aparece antes de {depois} e devia vir depois - a ordem e '
+                    + ' -> '.join(referencia) + f' (atual: {" -> ".join(vistos)})']
+    return []
+
+
+def _ordem_do_xml(texto):
+    """O XML segue o padrao do ficheiro: cabecalho e depois flags -> ... -> loot -> voices."""
+    faltas = _fora_de_ordem(texto, _ORDEM_DO_CABECALHO, _ORDEM_DO_CABECALHO, 'cabecalho')
+    faltas.extend(_fora_de_ordem(texto, _ORDEM_DOS_BLOCOS, _ORDEM_DOS_BLOCOS, 'blocos'))
+    return faltas
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -910,9 +933,7 @@ def validar_monstro(base, monstro):
     if 'Tibia - graphical' not in texto:
         problemas.append('sem o cabecalho "# Tibia - graphical Multi-User-Dungeon" no inicio do ficheiro')
 
-    ordem = [m.group(1) for m in re.finditer(r'<(flags|attacks|defenses|immunities|summons|loot|voices)>', texto)]
-    if 'voices' in ordem and ordem[-1] != 'voices':
-        problemas.append(f'voices nao fica por ultimo (ordem atual: {ordem})')
+    problemas.extend(_ordem_do_xml(texto))
 
     problemas.extend(_faltas_de_separacao(texto))
 
