@@ -91,8 +91,12 @@ CORPO: Armor, Food, gold, joias/colares, pedras, runas, osso/chifre/ervas.
 Food e gold podem cair no corpo E na bag; o .mon tem UMA entrada e as duas do XML sao aproximacao
 nossa - confirmar monstro a monstro.
 saco vazio nao cai (o motor apaga container sem itens): a linha da bag vai a chance="100000".
-ORDEM: bag = primeira linha do <loot> (vai para o ultimo slot) | corpo = ordem do .mon (alfabetica),
-aparece decrescente | dentro da bag escrever INVERTIDO, aparece crescente.
+ORDEM (a do FICHEIRO - a ferramenta acusa quando falha): a bag e a PRIMEIRA linha do <loot> e, por
+baixo dela, o corpo vem em ordem ALFABETICA CRESCENTE; DENTRO da bag a ordem e ALFABETICA
+DECRESCENTE. Container que esteja dentro da bag conta como um item da bag, pelo seu proprio nome,
+e o que ele traz dentro segue a mesma regra decrescente. Ordena-se pelo NOME do items.xml COM
+espacos: "gold ring" vem antes de "golden legs". No ecra sai ao contrario (corpo decrescente, bag
+crescente) - nunca inverter o ficheiro por causa disso.
 
 O ID DO ITEM - a cadeia que NUNCA se atalha
   1. o .mon guarda o TypeID do objects.srv, que vive em
@@ -803,6 +807,92 @@ def _ordem_do_xml(texto):
     return faltas
 
 
+def _itens_do_loot(linhas):
+    """Cada item do loot como bloco de linhas, ja com o que traz dentro."""
+    itens, i = [], 0
+    while i < len(linhas):
+        linha = linhas[i]
+        if not linha.strip().startswith('<item'):
+            i += 1
+            continue
+        inicio = i
+        if '/>' in linha:
+            fim = i
+        else:
+            profundidade, fim = 0, len(linhas) - 1
+            while i < len(linhas):
+                if linhas[i].lstrip().startswith('<item') and '/>' not in linhas[i]:
+                    profundidade += 1
+                if '</item>' in linhas[i]:
+                    profundidade -= 1
+                if profundidade == 0:
+                    fim = i
+                    break
+                i += 1
+        itens.append(linhas[inicio:fim + 1])
+        i = fim + 1
+    return itens
+
+
+def _id_do_item(bloco):
+    achado = re.search('[^a-z]id="([0-9]+)"', " " + bloco[0])
+    return int(achado.group(1)) if achado else None
+
+
+def _limites_do_inside(bloco):
+    abre = fecha = None
+    for posicao, linha in enumerate(bloco):
+        if abre is None and '<inside>' in linha:
+            abre = posicao
+        elif abre is not None and '</inside>' in linha:
+            fecha = posicao
+            break
+    return (abre, fecha) if abre is not None and fecha is not None else None
+
+
+def _ordem_do_loot(texto, nomes):
+    """No corpo crescente e o saco primeiro; dentro de cada saco, decrescente."""
+    bloco = re.search(r'<loot[^>]*>(.*?)</loot>', texto, re.S)
+    if not bloco:
+        return []
+    faltas = []
+
+    def nome_de(item):
+        return nomes.get(_id_do_item(item), '')
+
+    def conferir(linhas, rotulo, descendente):
+        itens = _itens_do_loot(linhas)
+        vistos = [nome_de(item) for item in itens]
+        if descendente:
+            if vistos != sorted(vistos, reverse=True):
+                faltas.append(f'{rotulo}: dentro do saco a ordem e decrescente'
+                              f' ({" | ".join(vistos)})')
+        else:
+            sacos = [item for item in itens if _limites_do_inside(item)]
+            corpo = [item for item in itens if not _limites_do_inside(item)]
+            if itens and itens[:len(sacos)] != sacos:
+                faltas.append(f'{rotulo}: o saco tem de ser o primeiro item do loot')
+            do_corpo = [nome_de(item) for item in corpo]
+            if do_corpo != sorted(do_corpo):
+                faltas.append(f'{rotulo}: no corpo a ordem e alfabetica crescente'
+                              f' ({" | ".join(do_corpo)})')
+        for item in itens:
+            limites = _limites_do_inside(item)
+            if limites:
+                conferir(item[limites[0] + 1:limites[1]], f'{rotulo}>saco', True)
+
+    conferir(bloco.group(1).split(chr(10)), 'loot', False)
+    return faltas
+
+
+@lru_cache(maxsize=4)
+def nomes_do_servidor(base=BASE_PADRAO):
+    """id -> nome como o servidor o escreve, com espacos: e assim que o loot se ordena."""
+    texto = open(f'{base}/Server/data/items/items.xml', encoding='latin-1').read()
+    achados = re.findall(r'<item[ ]+id="([0-9]+)"[^>]*name="([^"]*)"', texto)
+    return {int(ident): nome.strip().lower() for ident, nome in achados}
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -934,6 +1024,8 @@ def validar_monstro(base, monstro):
         problemas.append('sem o cabecalho "# Tibia - graphical Multi-User-Dungeon" no inicio do ficheiro')
 
     problemas.extend(_ordem_do_xml(texto))
+
+    problemas.extend(_ordem_do_loot(texto, nomes_do_servidor(base)))
 
     problemas.extend(_faltas_de_separacao(texto))
 
