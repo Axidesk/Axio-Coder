@@ -1297,6 +1297,19 @@ def _gravar_indice(indice, caminho):
         pass
 
 
+def _nome_simples(nome):
+    """Nome do corpo sem o prefixo de estado: 'remains of a ghost' -> 'ghost'."""
+    texto = re.sub(r"\s+", " ", str(nome or "").strip().lower())
+    if texto.startswith(PREFIXOS_DE_CORPO):
+        texto = texto.split(" ", 1)[1]
+        if texto.startswith("of "):
+            texto = texto[3:]
+        for artigo in ("a ", "an ", "the "):
+            if texto.startswith(artigo):
+                return texto[len(artigo):]
+    return texto
+
+
 def _corpos_do_nome(procurado):
     """Ids de corpo cujo monstro casa com o nome - o 'varrer' aceita o monstro, nao so o corpo.
 
@@ -1309,7 +1322,21 @@ def _corpos_do_nome(procurado):
     exatos, parecidos = set(), set()
     for corpo, nomes in (_CACHE.get("corpos") or {}).items():
         for nome in nomes:
-            simples = re.sub(r"^(dead|slain|remains)\s+", "", str(nome).strip().lower())
+            simples = _nome_simples(nome)
+            if simples == procurado:
+                exatos.add(corpo)
+            elif procurado in simples:
+                parecidos.add(corpo)
+    indice, _nota = indexar_gravacoes()
+    for dados in indice.values():
+        if dados.get("erro"):
+            continue
+        for identificador, achado in (dados.get("corpos") or {}).items():
+            simples = _nome_simples(str(achado.get("nome") or ""))
+            try:
+                corpo = int(identificador)
+            except (TypeError, ValueError):
+                continue
             if simples == procurado:
                 exatos.add(corpo)
             elif procurado in simples:

@@ -535,7 +535,8 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
                     f'{cabecalho["lose_target"]} -> devia ser "{cabecalho["lose_target"]}"'
                 )
 
-    de_dano = [magia for magia in cabecalho['magias'] if magia['efeito'] == 'Damage']
+    de_dano = [magia for magia in cabecalho['magias']
+               if magia['quem'] != 'Actor' and magia['efeito'] != 'Summon']
     ataques = [nome for nome in re.findall(r'<attack\s+name="(\w+)"', texto) if nome != 'melee']
     if len(ataques) > len(de_dano):
         divergencias.append(
