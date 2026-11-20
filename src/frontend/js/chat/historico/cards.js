@@ -10,6 +10,11 @@ import { svgDoPonto, svgDoAviao, svgDoRestauro } from '../icones.js';
 
 const { historyLogsWrapper } = dom;
 
+const TENTATIVAS_DA_RODADA = 8;
+const ESPERA_DA_RODADA_MS = 500;
+const ESPERA_DO_SERVIDOR_MS = 400;
+const ESPERA_MAXIMA_DO_SERVIDOR_MS = 20000;
+
 let sincronizacaoDoEnvio = null;
 let apiDeRestauro = null;
 let cacheDoUltimoEnviado = '';
@@ -42,6 +47,7 @@ let cacheDoUltimoEnviadoValida = false;
         return (saved.files || []).map(f => ({
             name: f.name,
             deleted: !!f.deleted,
+            pendente: !!f.pendente,
             diffElements: (f.diffs || []).map(d => createChildBalloon(
                 d.title, d.htmlContent, d.snippetHtml, d.rawTextOld, d.rawTextNew, d.fileName,
                 null, d.fullOriginalText, d.fullNewText, d.deletedLines, d.addedLines, d.origToMod, d.modToOrig, d.subtitle
@@ -71,10 +77,10 @@ let cacheDoUltimoEnviadoValida = false;
             }
             document.querySelectorAll('.log-card').forEach(el => el.classList.remove('log-card-active'));
             card.classList.add('log-card-active');
-            if (group.__saved && group.__saved.__session && !group.__hidratado) {
+            if (_precisaHidratar(group) && group.__saved.__session) {
                 try {
                     await hidratarGroup(group);
-                    group.__hidratado = true;
+                    group.__hidratado = !group.__saved.__leve;
                 } catch (e) {
                     console.error('Falha ao carregar a rodada restaurada:', e);
                 }
@@ -584,21 +590,29 @@ let cacheDoUltimoEnviadoValida = false;
         }
     }
     async function _buscarRodadaCompleta(saved) {
-        try {
-            const resp = await fetch(`/api/session_round?file=${encodeURIComponent(saved.__session)}&id=${encodeURIComponent(saved.id)}`);
-            const data = await resp.json();
-            if (data && !data.error) {
-                saved.files = data.files || [];
-                saved.snapshot = data.snapshot || {};
-                saved.tools = data.tools || [];
-                saved.thoughts = data.thoughts || [];
-                saved.questions = data.questions || saved.questions || [];
-                saved.aiResponse = data.aiResponse || saved.aiResponse || '';
-                delete saved.__leve;
+        for (let tentativa = 0; tentativa < TENTATIVAS_DA_RODADA; tentativa++) {
+            try {
+                const resp = await fetch(`/api/session_round?file=${encodeURIComponent(saved.__session)}&id=${encodeURIComponent(saved.id)}`);
+                if (resp.status === 404) return saved;
+                const data = await resp.json();
+                if (data && !data.error) {
+                    saved.files = data.files || [];
+                    saved.snapshot = data.snapshot || {};
+                    saved.tools = data.tools || [];
+                    saved.thoughts = data.thoughts || [];
+                    saved.questions = data.questions || saved.questions || [];
+                    saved.aiResponse = data.aiResponse || saved.aiResponse || '';
+                    delete saved.__leve;
+                    return saved;
+                }
+            } catch (e) {
+                // servidor ainda a arrancar: o retry cobre
             }
-        } catch (e) {
-            console.error('Erro ao carregar a tarefa completa:', e);
+            if (tentativa < TENTATIVAS_DA_RODADA - 1) {
+                await new Promise(r => setTimeout(r, ESPERA_DA_RODADA_MS * (tentativa + 1)));
+            }
         }
+        console.error('Nao foi possivel carregar a rodada ' + saved.id + ' do disco.');
         return saved;
     }
     async function hidratarGroup(group) {
@@ -631,26 +645,47 @@ let cacheDoUltimoEnviadoValida = false;
         state.mapaRodadasPorSessao = mapa;
         return mapa;
     }
+    function _precisaHidratar(group) {
+        return !!(group && group.__saved && (!group.__hidratado || group.__saved.__leve));
+    }
+    async function _esperarServidor(limiteMs) {
+        const fim = Date.now() + limiteMs;
+        while (Date.now() < fim) {
+            try {
+                const resp = await fetch('/api/env_info', { cache: 'no-store' });
+                if (resp.ok) return true;
+            } catch (e) {
+                // servidor ainda a arrancar: espera e repete
+            }
+            await new Promise(r => setTimeout(r, ESPERA_DO_SERVIDOR_MS));
+        }
+        return false;
+    }
     async function hidratarGruposRestaurados(grupos) {
-        const pendentes = (grupos || []).filter(g => g && g.__saved && !g.__hidratado);
+        const pendentes = (grupos || []).filter(_precisaHidratar);
         if (!pendentes.length) return;
+        await _esperarServidor(ESPERA_MAXIMA_DO_SERVIDOR_MS);
         const semSessao = pendentes.filter(g => !g.__saved.__session);
         if (semSessao.length) {
             const mapa = await _mapaDeRodadasPorSessao();
             semSessao.forEach(g => {
                 const arquivo = mapa.get(String(g.id));
-                if (arquivo) g.__saved = { id: g.id, __leve: true, __session: arquivo };
+                if (arquivo) {
+                    g.__session = arquivo;
+                    g.__saved = { id: g.id, __leve: true, __session: arquivo };
+                }
             });
         }
         for (const grupo of pendentes) {
             if (!grupo.__saved.__session) continue;
             try {
                 await hidratarGroup(grupo);
-                grupo.__hidratado = true;
             } catch (e) {
                 console.error('Falha ao carregar a rodada restaurada:', e);
                 continue;
             }
+            if (grupo.__saved.__leve) continue;
+            grupo.__hidratado = true;
             const vista = vistaDe('dock');
             const painelAberto = vista.col2 && !vista.col2.classList.contains('panel-col-closed');
             if (painelAberto && window.currentActiveLogGroup === grupo) openFilesPanel(grupo, vista);

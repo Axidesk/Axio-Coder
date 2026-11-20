@@ -295,7 +295,10 @@ function restaurarLogsDaLimite(guardados) {
             nFerramentas: salvo.nFerramentas,
             files: (salvo.arquivos || []).map((f) => ({ name: f.name, deleted: !!f.deleted, pendente: true }))
         });
-        if (salvo.sessao) grupo.__saved = { id: salvo.id, __leve: true, __session: salvo.sessao };
+        if (salvo.sessao) {
+            grupo.__session = salvo.sessao;
+            grupo.__saved = { id: salvo.id, __leve: true, __session: salvo.sessao };
+        }
         const card = createLogGroupCard(grupo);
         grupo.timeSpan.textContent = grupo.timestamp || '';
         grupo.titleSpan.innerHTML = roundMetaHtml(grupo);
