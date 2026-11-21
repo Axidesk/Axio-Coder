@@ -1071,6 +1071,23 @@ def nomes_do_servidor(base=BASE_PADRAO):
     return {int(ident): nome.strip().lower() for ident, nome in achados}
 
 
+def _padronizacao_do_loot(texto):
+    avisos = []
+    com_chance1 = len(re.findall(r'\bchance1=', texto))
+    com_chancemax = len(re.findall(r'\bchancemax=', texto))
+    if com_chance1:
+        avisos.append(
+            f'PADRONIZAR: {com_chance1} item(ns) com chance1= - o motor le igual a chance,'
+            f' mas o padrao do projeto e chance=; trocar'
+        )
+    if com_chancemax:
+        avisos.append(
+            f'PADRONIZAR: {com_chancemax} item(ns) com chancemax= - atributo INERTE,'
+            f' nenhum leitor do motor o consulta; remover'
+        )
+    return avisos
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -1242,6 +1259,8 @@ def validar_monstro(base, monstro):
     problemas.extend(_ordem_do_loot(texto, nomes_do_servidor(base)))
 
     problemas.extend(_faltas_de_separacao(texto))
+
+    divergencias.extend(_padronizacao_do_loot(texto))
 
     return {
         'monstro': monstro,
