@@ -173,6 +173,20 @@ _CLIENTES = {}
             "no tile do monstro pode ser dano elemental de outra fonte, nao a race dele.",
             "padrao": "",
         },
+        "dano": {
+            "tipo": "STRING",
+            "desc": "Mede o dano que o JOGADOR LEVA, separado por AUTOR e por TIPO (a cor do numero), "
+            "com os valores e o ritmo de cada um. E o caminho para saber o que um monstro faz de "
+            "verdade sem escrever um leitor de log: com 'green djinn' responde de uma vez quais "
+            "magias ele tem, de quanto e de quanto em quanto tempo. Nome do monstro filtra por "
+            "autor; 'todos' mostra a gravacao inteira. O autor '(sem autor)' e o dano de CONDICAO "
+            "(energia, veneno, fogo), que o cliente NAO atribui a ninguem - e onde a maioria dos "
+            "enganos nasce. O numero e casado com a mensagem por VALOR EXATO e menos de 300ms: "
+            "sem isso, dois numeros no mesmo instante (fogo + dreno) trocam-se e o tipo sai errado. "
+            "As cores sao as do motor (game.cpp): 30 veneno, 35 energia, 198 fogo, 180 sangue/dreno, "
+            "129 undead. Use 2-3 gravacoes antes de concluir: amostra pequena engana.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -180,7 +194,7 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
             emit_event("executing", function=f"Somando o loot de: {varrer}")
@@ -233,6 +247,10 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
         linhas.append("  OUTRAS COM ESSE NOME: " + " | ".join(alternativas))
     if str(raca or "").strip():
         linhas += _raca_das_criaturas(blocos, str(raca).strip().lower())
+        return "\n".join(linhas)
+    if str(dano or "").strip():
+        emit_event("executing", function=f"Medindo o dano de: {dano}")
+        linhas += _perfil_de_dano(blocos, str(dano).strip())
         return "\n".join(linhas)
     if str(loot or "").strip():
         linhas += _loot_dos_corpos(blocos, str(loot).strip())
@@ -636,6 +654,80 @@ def _veredito_da_raca(efeitos, cores):
             f"{raca} com amostra pequena ({detalhe}): rode noutra gravacao antes de mexer no XML"
         )
     return f"{raca} ({detalhe})"
+
+
+def _perfil_de_dano(blocos, alvo=""):
+    """Dano que o jogador leva, por autor e por cor, casando a mensagem com o numero de MESMO valor."""
+    eventos = list(_eventos(blocos))
+    numeros = [
+        (evento.get("_quando") or 0, evento.get("Color"), evento.get("Value"))
+        for evento in eventos
+        if evento.get("Event") == "NumberEffectPopped" and evento.get("Color") != 215
+    ]
+    pedido = (alvo or "").strip().lower()
+    if pedido in ("todos", "todas", "tudo"):
+        pedido = ""
+    autores = {}
+    sem_numero = 0
+    for evento in eventos:
+        if evento.get("Event") != "StatusMessageReceived":
+            continue
+        casou = re.match(
+            r"You lose (\d+) hitpoints?(?: due to an attack by (?:an? )?(.+?))?\.?$",
+            (evento.get("Message") or "").strip(),
+        )
+        if not casou:
+            continue
+        valor = int(casou.group(1))
+        autor = (casou.group(2) or "").strip().lower() or "(sem autor)"
+        quando = evento.get("_quando") or 0
+        cor = None
+        for instante, cor_do_numero, valor_do_numero in numeros:
+            if valor_do_numero == valor and abs(instante - quando) < 300:
+                cor = cor_do_numero
+                break
+        if cor is None:
+            sem_numero += 1
+            continue
+        autores.setdefault(autor, {}).setdefault(cor, []).append((quando / 1000.0, valor))
+
+    if not autores:
+        return ["  nenhum dano com numero casado nesta gravacao"]
+
+    linhas = []
+    for autor in sorted(autores, key=lambda nome: -sum(len(v) for v in autores[nome].values())):
+        if pedido and pedido not in autor and autor != "(sem autor)":
+            continue
+        golpes = autores[autor]
+        total = sum(len(lista) for lista in golpes.values())
+        linhas.append(f"  {autor} - {total} golpe(s)")
+        for cor in sorted(golpes, key=lambda tom: -len(golpes[tom])):
+            lista = sorted(golpes[cor])
+            valores = [v for _, v in lista]
+            tipo = CORES_DE_NUMERO.get(cor, f"cor {cor}")
+            distintos = sorted(set(valores))
+            if len(distintos) <= 8:
+                amostra = ", ".join(str(v) for v in distintos)
+            else:
+                amostra = f"{distintos[0]}..{distintos[-1]} ({len(distintos)} valores)"
+            razoes = [round(lista[i + 1][0] - lista[i][0], 1) for i in range(len(lista) - 1)]
+            curtos = collections.Counter(d for d in razoes if 0.5 < d < 25)
+            ritmo = ""
+            if curtos:
+                intervalo, quantos = curtos.most_common(1)[0]
+                ritmo = f" | ritmo {intervalo}s ({quantos}x)"
+            linhas.append(
+                f"      {tipo:18s} x{len(valores):3d}  valores {amostra}"
+                f"  media {sum(valores) / len(valores):.1f}{ritmo}"
+            )
+    if not linhas:
+        return [f"  nenhum dano de '{alvo}' nesta gravacao - os autores sao: " + ", ".join(sorted(autores))]
+    if sem_numero:
+        linhas.append(f"  ({sem_numero} dano(s) sem numero casado - fora da janela de 300ms)")
+    linhas.append(
+        "  '(sem autor)' e o dano de CONDICAO (energia, veneno, fogo): o cliente nao o atribui a ninguem."
+    )
+    return linhas
 
 
 def _eventos(blocos):
