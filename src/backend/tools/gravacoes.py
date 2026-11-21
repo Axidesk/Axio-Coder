@@ -11,6 +11,7 @@ from src.backend.state import emit_event
 from src.backend.tools.registry import register
 
 VERSAO_PADRAO = "7.40"
+VERSAO_DOS_ITENS = "7.4"
 RECEITA_DA_LEITURA = """=== COMO LER A GRAVACAO (a receita .mon -> XML completa esta na descricao de tool_validar_monstro) ===
 Nem o .mon, nem o video, nem a wiki sao a verdade sozinhos: cruzar sempre e dizer de onde veio cada facto.
 
@@ -32,7 +33,17 @@ do mesmo bicho - se aparecerem, o ciclo e 1s. O motor tem contadores separados p
 por isso o mesmo monstro pode atirar a 1s e curar a 2s.
 
 NOME DO MONSTRO: usar o nome exato. Nomes que sao prefixo de outros (elf/elf scout/elf arcanist,
-dragon/dragon lord, demon/demon skeleton) somam dois bichos numa tabela so quando casam por pedaco."""
+dragon/dragon lord, demon/demon skeleton) somam dois bichos numa tabela so quando casam por pedaco.
+
+VERSAO DA GRAVACAO: as pastas TibiCAM/7.3 tem numeracao de ITEM diferente da 7.4. Ler uma 7.3 com a
+tabela do 7.4 inventa item (saiu 'cot', 'counter', 'pool', 'teddy bear' em corpos de goblin). As 7.3
+ficam fora de qualquer soma; numa gravacao 7.3 isolada o loot nem e lido.
+
+ONDE ESTA CADA COISA: corpo = ContainerOpened com nome 'dead/slain/remains'. Saco do monstro = o
+primeiro SACO DE LOOT (1987/1993) aberto depois do corpo, antes do proximo corpo, usado UMA vez.
+Mochila do jogador e container de cenario (armario, cama, bau do depot, caixa) NUNCA sao saco - o
+relatorio diz quantos foram ignorados. Item que o items.otb marca como FIXO e lixo de leitura e cai
+fora com o nome dito."""
 SACO_DE_LOOT = 1987
 SACOS_DE_LOOT = frozenset({1987, 1993})
 OURO = 2148
@@ -205,6 +216,19 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
 
     blocos = bruto if isinstance(bruto, list) else []
     linhas = _cabecalho(caminho, blocos, usado)
+    versao_da_gravacao = _normalizar_versao(usado) or _normalizar_versao(_versao_da_gravacao(caminho))
+    if versao_da_gravacao and versao_da_gravacao != VERSAO_DOS_ITENS:
+        linhas.append(
+            f"  ATENCAO: gravacao do cliente {versao_da_gravacao} (lida com o cliente {usado}). "
+            f"A numeracao dos itens dela NAO e "
+            f"a do items.xml {VERSAO_DOS_ITENS}: lida com esta tabela, ela inventa item "
+            f"(foi assim que apareceu mobilia dentro do loot). Nao serve para decidir item, "
+            f"chance nem lugar."
+        )
+        if str(loot or "").strip():
+            linhas.append("  O loot desta gravacao nao foi lido - use uma gravacao do 7.4, ou o "
+                          "'varrer', que ja exclui as de 7.3.")
+            return "\n".join(linhas)
     if alternativas:
         linhas.append("  OUTRAS COM ESSE NOME: " + " | ".join(alternativas))
     if str(raca or "").strip():
@@ -707,20 +731,30 @@ def _loot_dos_corpos(blocos, alvo):
     posicoes = {id(e): i for i, e in enumerate(abertos)}
     em_eventos = {id(e): i for i, e in enumerate(eventos)}
 
-    def itens_de(evento):
-        return [item for linha in (evento.get("Items") or []) for item in linha]
+    fixos = _itens_que_nao_se_pegam()
+    descartados = collections.Counter()
+    sacos_usados = set()
+    cenario = collections.Counter()
+    for abertura in abertos:
+        nome_aberto = str(abertura.get("ContainerName") or "").strip()
+        if not nome_aberto or _nome_de_corpo(abertura):
+            continue
+        que_item = (abertura.get("ContainerItem") or {}).get("ItemId")
+        if que_item in SACOS_DE_LOOT or que_item in MOCHILAS_DO_JOGADOR:
+            continue
+        cenario[nome_aberto.lower()] += 1
 
-    def saco_depois(posicao, evento):
-        abertura = (evento.get("_quando") or 0) / 1000.0
-        for seguinte in abertos[posicao + 1:posicao + 8]:
-            if _nome_de_corpo(seguinte):
-                break
-            if (seguinte.get("_quando") or 0) / 1000.0 - abertura > JANELA_DO_CORPO:
-                break
-            if (seguinte.get("ContainerItem") or {}).get("ItemId") in MOCHILAS_DO_JOGADOR:
-                continue
-            return seguinte
-        return None
+    def itens_de(evento):
+        limpos = []
+        for linha in (evento.get("Items") or []):
+            for item in linha:
+                if fixos and item.get("ItemId") in fixos:
+                    descartados[item.get("ItemId")] += 1
+                    continue
+                limpos.append(item)
+        return limpos
+
+
 
     nome_do_monstro = alvo
     if por_id:
@@ -734,6 +768,7 @@ def _loot_dos_corpos(blocos, alvo):
     com_saco = 0
     sacos_vazios = 0
     sacos_alheios = 0
+    sacos_fora = 0
     total_corpo = 0
     total_saco = 0
     com_ouro_corpo = 0
@@ -756,7 +791,10 @@ def _loot_dos_corpos(blocos, alvo):
         if not tem_saco:
             continue
         posicao = posicoes.get(id(evento), -1)
-        saco = saco_depois(posicao, evento) if posicao >= 0 else None
+        saco, onde_do_saco = _achar_saco(abertos, posicao, evento.get("ContainerId"),
+                                         _segundos(evento), sacos_usados, declarado_ids)
+        if onde_do_saco.startswith("aberto fora"):
+            sacos_fora += 1
         if saco is None:
             sacos_vazios += 1
             continue
@@ -793,6 +831,9 @@ def _loot_dos_corpos(blocos, alvo):
     linhas = ["", f"LOOT: {len(corpos)} corpos de '{alvo}'{nota} · {com_saco} com saco "
               f"({100.0 * com_saco / len(corpos):.1f}%) · {sacos_vazios} saco(s) vazio(s) "
               f"· {vazios} corpo(s) sem nada"]
+    if sacos_fora:
+        linhas.append(f"  ({sacos_fora} saco(s) contados porque estavam abertos noutra janela mas "
+                      f"traziam item que o monstro declara - bag guardada e aberta na mochila)")
     if sacos_alheios:
         linhas.append(f"  (descartados {sacos_alheios} saco(s) sem NENHUM item do monstro - "
                       f"e a mochila de loot do jogador aberta logo depois do corpo, nao a do monstro)")
@@ -828,6 +869,17 @@ def _loot_dos_corpos(blocos, alvo):
                   f"{(total_corpo + total_saco) / len(corpos):.2f} (sem ouro) · "
                   f"ouro {len(ouro_corpo) / len(corpos):.2f} pilhas fora + "
                   f"{len(ouro_saco) / len(corpos):.2f} no saco")
+    if cenario:
+        linhas.append("")
+        linhas.append("  IGNORADO (containers que NAO sao loot de monstro - movel, armario, bau do "
+                      "depot, caixa; o que estava la dentro nao entra em tabela nenhuma):")
+        linhas.append("    " + ", ".join(f"{nome} x{vezes}" for nome, vezes in cenario.most_common(8)))
+    if descartados:
+        linhas.append("")
+        linhas.append("  DESCARTADO (o items.otb marca como FIXO, logo nao pode estar dentro de um "
+                      "corpo nem de um saco - e lixo de leitura):")
+        for identificador, vezes in descartados.most_common(8):
+            linhas.append(f"    {(nomes.get(identificador) or '?')[:30]} ({identificador}) · {vezes}")
 
     if not todos and nome_do_monstro:
         declarado = _loot_do_monstro(nome_do_monstro)
@@ -896,6 +948,50 @@ def _nome_de_corpo(evento):
     if not nome.lower().startswith(PREFIXOS_DE_CORPO):
         return ""
     return nome
+
+
+def _versao_da_gravacao(caminho):
+    """Versao do cliente pela pasta (TibiCAM/7.3, 7.4): o id de item muda de uma para a outra."""
+    for parte in reversed(os.path.normpath(os.path.abspath(str(caminho))).split(os.sep)[:-1]):
+        texto = parte.strip().lower()
+        if re.fullmatch(r"7\.\d+", texto):
+            return texto
+    return ""
+
+
+def _normalizar_versao(texto):
+    """'7.40' e '7.4' sao a mesma versao; '7.30' e '7.3' tambem."""
+    limpo = str(texto or "").strip()
+    if re.fullmatch(r"7\.\d0", limpo):
+        return limpo[:-1]
+    return limpo
+
+
+def _itens_que_nao_se_pegam():
+    """Ids que o items.otb deixa fixos: nao podem estar dentro de um corpo nem de um saco."""
+    if "nao_pega" in _CACHE:
+        return _CACHE["nao_pega"]
+    fixos = frozenset()
+    try:
+        from src.backend.tools.otbm import _itens_do_otb
+        for alvo in ("docs/projetos/Tibia74/Server/data/items/items.otb",
+                     "Server/data/items/items.otb"):
+            try:
+                devolvido = resolver_caminho(alvo)
+            except Exception:
+                continue
+            caminho = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+            if not caminho or not os.path.isfile(caminho):
+                continue
+            with open(caminho, "rb") as fh:
+                itens = _itens_do_otb(fh.read())
+            if itens:
+                fixos = frozenset(i for i, (_cliente, flags) in itens.items() if not flags & 0x20)
+                break
+    except Exception:
+        fixos = frozenset()
+    _CACHE["nao_pega"] = fixos
+    return fixos
 
 
 def _assinatura_do_corpo(evento):
@@ -1169,25 +1265,79 @@ def _gravacoes_no_disco():
     return achadas
 
 
+def _segundos(evento):
+    if evento.get("__t") is not None:
+        return float(evento["__t"])
+    return (evento.get("_quando") or 0) / 1000.0
+
+
+def _achar_saco(abertos, posicao, cid_do_corpo, quando, usados, declarados):
+    """O saco de loot que pertence a um corpo aberto, e de mais ninguem.
+
+    Primeiro o que tem o MESMO ContainerId do corpo - e assim que o cliente abre a bag que
+    esta dentro dele. So se nao houver nenhum, aceita uma bag aberta noutra janela quando o
+    conteudo dela traz item que o monstro declara (o caso de a bag ter sido guardada e aberta
+    na mochila). Devolve (evento, onde) ou (None, motivo).
+    """
+    if posicao < 0:
+        return None, ""
+    candidata = None
+    viu_outra = False
+    for indice, seguinte in enumerate(abertos[posicao + 1:posicao + 12], posicao + 1):
+        if _nome_de_corpo(seguinte):
+            break
+        if _segundos(seguinte) - quando > JANELA_DO_CORPO:
+            break
+        if indice in usados:
+            continue
+        if (seguinte.get("ContainerItem") or {}).get("ItemId") not in SACOS_DE_LOOT:
+            continue
+        if seguinte.get("ContainerId") == cid_do_corpo:
+            usados.add(indice)
+            return seguinte, "dentro do corpo"
+        viu_outra = True
+        if candidata is None and declarados:
+            dentro = {item.get("ItemId") for linha in (seguinte.get("Items") or [])
+                      for item in linha}
+            if dentro & declarados:
+                candidata = (indice, seguinte)
+    if candidata is not None:
+        usados.add(candidata[0])
+        return candidata[1], "aberto fora do corpo (tinha item do monstro)"
+    if viu_outra:
+        return None, "havia saco aberto noutra janela sem item do monstro"
+    return None, ""
+
+
 def _corpos_resumidos(blocos):
-    """id do corpo -> nome, quantos e o que caiu no corpo e no saco."""
+    """id do corpo -> nome, quantos e o que caiu no corpo e no saco.
+
+    O saco do monstro e o primeiro SACO DE LOOT aberto depois do corpo, antes do proximo
+    corpo e sem repetir um saco ja usado. Container de cenario (armario, cama, bau do
+    depot, caixote) NUNCA conta - era o que metia mobilia dentro do loot.
+    """
     eventos = _lista_de_eventos(blocos)
     abertos = [e for e in eventos if e.get("Event") == "ContainerOpened"]
     posicoes = {id(e): i for i, e in enumerate(abertos)}
+    fixos = _itens_que_nao_se_pegam()
 
     def itens_de(evento):
-        return [item for linha in (evento.get("Items") or []) for item in linha]
+        return [item for linha in (evento.get("Items") or []) for item in linha
+                if not (fixos and item.get("ItemId") in fixos)]
 
-    def saco_depois(posicao):
-        for seguinte in abertos[posicao + 1:posicao + 8]:
-            if _nome_de_corpo(seguinte):
-                break
-            if (seguinte.get("ContainerItem") or {}).get("ItemId") in MOCHILAS_DO_JOGADOR:
-                continue
-            return seguinte
-        return None
+    declarados = {}
+
+    def declarado_de(nome_corpo):
+        simples = _nome_simples(nome_corpo)
+        if simples not in declarados:
+            try:
+                declarados[simples] = set((_loot_do_monstro(simples) or {}))
+            except Exception:
+                declarados[simples] = set()
+        return declarados[simples]
 
     corpos = _sem_reaberturas([e for e in abertos if _nome_de_corpo(e)])
+    usados = set()
     resumo = {}
     for evento in corpos:
         identificador = (evento.get("ContainerItem") or {}).get("ItemId")
@@ -1206,7 +1356,9 @@ def _corpos_resumidos(blocos):
                 continue
             registo["corpo"][str(item.get("ItemId"))] += 1
         if any(item.get("ItemId") in SACOS_DE_LOOT for item in topos):
-            saco = saco_depois(posicoes.get(id(evento), -1))
+            saco, _onde = _achar_saco(abertos, posicoes.get(id(evento), -1),
+                                      evento.get("ContainerId"), _segundos(evento),
+                                      usados, declarado_de(_nome_de_corpo(evento)))
             if saco is not None:
                 for item in itens_de(saco):
                     if item.get("ItemId") == OURO:
@@ -1264,7 +1416,7 @@ def indexar_gravacoes(progresso=None, refazer=False):
         if progresso:
             progresso(posicao, len(por_ler), os.path.basename(caminho))
         try:
-            bruto, _ = _ler_bruto(caminho, miner, clientes, False)
+            bruto, cliente = _ler_bruto(caminho, miner, clientes, False)
         except RuntimeError:
             falhados += 1
             indice[chave] = {"mtime": stat.st_mtime, "bytes": stat.st_size,
@@ -1275,6 +1427,7 @@ def indexar_gravacoes(progresso=None, refazer=False):
             "mtime": stat.st_mtime,
             "bytes": stat.st_size,
             "nome": os.path.basename(caminho),
+            "cliente": cliente,
             "segundos": round(_duracao(blocos), 1),
             "corpos": _corpos_resumidos(blocos),
         }
@@ -1413,8 +1566,12 @@ def _contagens_do_loot(procurado):
     saco = collections.Counter()
     pilhas = []
     corpos = 0
-    for dados in indice.values():
+    fora = 0
+    for chave, dados in indice.items():
         if dados.get("erro"):
+            continue
+        if _normalizar_versao(dados.get("cliente") or _versao_da_gravacao(chave)) != VERSAO_DOS_ITENS:
+            fora += 1
             continue
         for identificador, achado in (dados.get("corpos") or {}).items():
             try:
@@ -1426,6 +1583,8 @@ def _contagens_do_loot(procurado):
             corpo.update(achado.get("corpo") or {})
             saco.update(achado.get("saco") or {})
             pilhas.extend(achado.get("pilhas") or [])
+    if fora:
+        nota = f"{nota}; {fora} gravacao(oes) de outro cliente (7.3) ficaram de fora"
     return corpo, saco, corpos, pilhas, nota
 
 
