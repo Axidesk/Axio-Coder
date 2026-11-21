@@ -801,6 +801,8 @@ def _ritmo_das_magias(cabecalho, texto):
             )
             rotulo = f'{alvo["nome"]} {faixa[0]}-{faixa[1]}' if alvo else ''
         elif magia['efeito'] == 'Speed':
+            if magia['quem'] == 'Actor':
+                continue
             alvo = next((a for a in ataques if not a['usado'] and a['nome'] == 'speed'), None)
             rotulo = 'speed'
         if alvo is None or not alvo['intervalo'] or not alvo['chance']:
