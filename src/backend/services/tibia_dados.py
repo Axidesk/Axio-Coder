@@ -56,6 +56,22 @@ A DEFESA DO MONSTRO (monster.cpp:513)
   Armadilhas: monstro SEM melee usa skill=42 (def 60 bloqueia 132, nao zero); defense<=0 devolve 0 e
   o ramo do escudo nem corre.
 
+IMUNIDADE E POR ELEMENTO - NAO EXISTE "DONO DO CAMPO"
+  O motor nao poupa quem lancou: combat.cpp onStepInField (dano de entrada) e
+  ConditionDamage::doDamage (periodico) passam os DOIS por combatBlockHit, que consulta
+  isImmune(combatType). Manda a imunidade ao ELEMENTO, nunca a propriedade do campo - o
+  CONDITIONPARAM_OWNER que o campo recebe serve so para atribuir o dano, nao para isentar.
+  Nas 159 criaturas (medido a 2026-11-21), TODO aquele que lanca um efeito de elemento centrado em
+  si e imune a esse elemento: ancient scarab/scarab/slime/giant spider no veneno, demon/dragon
+  lord/fire elemental/mahrdis/orshabaal/warlock no fogo, minotaur mage na energia.
+  A UNICA excecao e a WITCH: lanca firefield e nao e imune a fogo (o .mon dela so tem NoPoison e
+  NoEnergy, e o XML esta igual) - se ela pisar no proprio campo, queima. Nao ha gravacao disto.
+  No .mon a imunidade vem das flags NoPoison / NoBurning / NoEnergy / NoLifeDrain (FLAGS_DO_MON).
+  Criatura imune continua a RECEBER a condicao e a mostrar o efeito (addCondition nao consulta
+  imunidade; o bloqueado e o dano) - e o que se ve no video, o bicho com o brilho do veneno por
+  cima sem perder vida. Efeito com target="1" cai na VITIMA, logo nao depende da imunidade de quem
+  lanca; so target="0" com radius cai em cima do proprio, e e isso que o validador acusa.
+
 O MELEE DO MONSTRO (weapons.cpp getMaxMeleeDamage)
   ceil(skill*attack*0.05 + attack*0.5); o dano sai de 0 ate esse valor.
   O motor so ignora min/max quando a entrada traz skill+attack JUNTOS (monsters.cpp:415); sem os
@@ -706,6 +722,26 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
                 divergencias.append(
                     f'voz "{fala["frase"][:38]}" sai gritada no XML e o .mon nao tem #Y'
                 )
+
+    elemento_do_ataque = {
+        'poisonfield': 'poison', 'poison': 'poison', 'poisoncondition': 'poison',
+        'energyfield': 'energy', 'energy': 'energy', 'energycondition': 'energy',
+        'firefield': 'fire', 'fire': 'fire', 'firecondition': 'fire',
+    }
+    flag_da_imunidade = {'poison': 'NoPoison', 'energy': 'NoEnergy', 'fire': 'NoBurning'}
+    imunidades = dict(re.findall(r'<immunity\s+(\w+)="(\d)"', texto))
+    for achado in re.finditer(r'<attack\s+([^>]*)/?>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        elemento = elemento_do_ataque.get(atributos.get('name', ''))
+        if not elemento or atributos.get('target') != '0' or 'radius' not in atributos:
+            continue
+        if imunidades.get(elemento, '0') == '1':
+            continue
+        divergencias.append(
+            f'"{atributos.get("name")}" sai em area CENTRADA EM SI e o monstro nao e imune a '
+            f'{elemento}: cada lancamento acerta-o. A imunidade e por ELEMENTO e o .mon teria de '
+            f'trazer {flag_da_imunidade[elemento]}'
+        )
 
     return problemas, divergencias
 
