@@ -258,7 +258,8 @@ def cabecalho_do_mon(base, monstro):
     magias = []
     if bloco_spells:
         for achado in re.finditer(
-            r'(Actor|Victim|Origin|Angle|Destination)\s*\(([^)]*)\)\s*->\s*(\w+)\s*\(([^)]*)\)\s*:\s*(\d+)',
+            r'(Actor|Victim|Origin|Angle|Destination)\s*\(([^)]*)\)\s*->\s*(\w+)\s*'
+            r'\(((?:[^()]|\([^()]*\))*)\)\s*:\s*(\d+)',
             bloco_spells.group(1),
         ):
             magias.append({
@@ -975,6 +976,28 @@ def validar_monstro(base, monstro):
         divergencias.append(
             f'chance de "{nome}" difere: .mon {chave_mon} ({esperado:.1f} juntas) vs'
             f' xml {detalhe} ({junto:.1f} juntas)'
+        )
+
+    quantidades_do_xml = {}
+    for entrada in cruz['xml']:
+        if entrada['id'] == 1987:
+            continue
+        quantidades_do_xml.setdefault(entrada['id'], set()).add(entrada['countmax'])
+    for nome in do_mon_por_nome:
+        do_mon_qtd = {
+            produto['quantidade'] for produto in cruz['inventario']
+            if _normalizar(produto['nome']) == nome
+        }
+        do_xml_qtd = set()
+        for identificador, nome_do_xml in nomes.items():
+            if nome_do_xml == nome:
+                do_xml_qtd |= quantidades_do_xml.get(identificador, set())
+        if not do_xml_qtd or do_mon_qtd == do_xml_qtd:
+            continue
+        divergencias.append(
+            f'quantidade de "{rotulo_do_mon.get(nome, nome)}": .mon '
+            f'{" / ".join(str(q) for q in sorted(do_mon_qtd))} vs xml '
+            f'{" / ".join(str(q) for q in sorted(do_xml_qtd))} (countmax)'
         )
 
     cabecalho = cabecalho_do_mon(base, monstro)
