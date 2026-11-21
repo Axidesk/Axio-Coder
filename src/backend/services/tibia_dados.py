@@ -33,16 +33,19 @@ gravacao onde o jogador mata SO aquele monstro: morte em area soma varios de uma
 salto de xp) | defenses armor=Armor 1:1 | defenses defense=Defend 1:1 | blockValue=def*skill/19 |
 melee skill=FistFighting 1:1 | melee attack=Attack 1:1 | melee min/max=Damage(base,var) ->
 base-var..base+var | melee poison=Poison 1:1 | cura min/max=Healing(base,var) -> base-var..base+var |
-cura chance=Healing:N -> 100/N com interval="2000" | speed=GoStrength -> 2*GS+80 (as 41 fixadas a
+cura chance=Healing:N -> 100/N | speed=GoStrength -> 2*GS+80 (as 41 fixadas a
 olho nao se tocam) | speedchange=(a-b)*10, per-mil, nunca abaixo de -1000 | speedchange_max=(a+b)*10 |
-duration=c*1000 (c em segundos) | chance da magia speed=50/N com interval="1000" (ou 100/N com
-"2000") | outras magias=100/N com interval="2000".
+duration=c*1000 (c em segundos) | outras magias=100/N - e o interval de cada uma sai da gravacao.
 
-O INTERVALO NAO EXISTE NO .mon. O original rola as magias num ciclo de 2s, mas o motor tem DOIS
-contadores independentes (monster.cpp: attackTicks e defenseTicks), por isso um ataque pode sair a
-1s e a cura a 2s no mesmo bicho. Medido: a pedra do dwarf geomancer sai a 1s e a cura a 2s. O ritmo
-tira-se da gravacao (missil pela posicao de ORIGEM, cura pelo id de criatura da vida), nunca se
-adivinha - e entre 1s e 2s a diferenca e o dobro da frequencia.
+O INTERVALO NAO EXISTE NO .mon, E NAO HA CICLO UNIVERSAL. O motor corre a 1000ms (creature.h:
+EVENT_CREATURE_THINK_INTERVAL) e o interval do XML e o periodo daquela magia em ms: 1000 sai a cada
+segundo, 2000 a cada 2s. NAO existe a regra "todas as magias a 2s": medido no geomancers.rec, a pedra
+do dwarf geomancer sai a 1s e o XML dele esta com interval="1000", que e o certo - trocar para 2000
+partia o que estava bom. O motor tem DOIS contadores independentes (monster.cpp: attackTicks e
+defenseTicks), logo o ataque e a cura/speed nao se bloqueiam, e por isso o bicho parece "combar", com
+dois numeros em segundos seguidos. O periodo tira-se da gravacao (missil pela posicao de ORIGEM, cura
+pelo id de criatura da vida, e o ritmo modal que o tool_ler_rec com dano= devolve); sem video, o que o
+.mon permite conferir e so a REPARTICAO entre as magias (a magia com : 2 sai o dobro da que tem : 4).
 
 A DEFESA DO MONSTRO (monster.cpp:513)
   if(mType->defense <= 0) return 0;
@@ -653,7 +656,13 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
 
 
 def _ritmo_das_magias(cabecalho, texto):
-    """Confere o ritmo: o .mon rola as magias a cada 2s, logo : N vale 30/N por minuto."""
+    """Confere a REPARTICAO das magias do XML contra as chances declaradas no .mon.
+
+    O .mon nao guarda intervalo nenhum - o ritmo absoluto de rolagem sai do video, nunca
+    de la. O que ele declara e a chance de cada magia (: N), e por rolarem no mesmo ciclo
+    as chances sao comparaveis entre si: a magia com :2 sai o dobro da que tem :4. E isso
+    que se audita aqui, sem inventar um periodo.
+    """
     problemas = []
     divergencias = []
     ataques = []
@@ -684,11 +693,11 @@ def _ritmo_das_magias(cabecalho, texto):
         except ValueError:
             continue
 
+    pares = []
     for magia in cabecalho['magias']:
         if magia['n'] <= 0:
             continue
         numeros = magia['numeros']
-        esperado = 30.0 / magia['n']
         alvo = None
         rotulo = ''
         if magia['efeito'] == 'Healing':
@@ -703,26 +712,32 @@ def _ritmo_das_magias(cabecalho, texto):
         elif magia['efeito'] == 'Speed':
             alvo = next((a for a in ataques if not a['usado'] and a['nome'] == 'speed'), None)
             rotulo = 'speed'
-        if alvo is None or not alvo['intervalo']:
+        if alvo is None or not alvo['intervalo'] or not alvo['chance']:
             continue
         alvo['usado'] = True
-        real = 600.0 * alvo['chance'] / alvo['intervalo']
-        razao = real / esperado
-        if 0.7 <= razao <= 1.4:
+        pares.append({
+            'rotulo': rotulo,
+            'n': float(magia['n']),
+            'intervalo': float(alvo['intervalo']),
+            'chance': float(alvo['chance']),
+        })
+    if len(pares) < 2:
+        return problemas, divergencias
+    for par in pares:
+        par['ritmo'] = par['chance'] * 1000.0 / par['intervalo']
+    soma_real = sum(par['ritmo'] for par in pares)
+    soma_mon = sum(1.0 / par['n'] for par in pares)
+    for par in pares:
+        real = par['ritmo'] / soma_real
+        esperado = (1.0 / par['n']) / soma_mon
+        if 0.6 <= real / esperado <= 1.6:
             continue
-        if razao > 2.5:
-            veredito = f'{razao:.1f} VEZES o original'
-        elif razao > 1:
-            veredito = 'o DOBRO do original'
-        elif razao >= 0.45:
-            veredito = 'METADE do original'
-        else:
-            veredito = f'{1 / razao:.1f} VEZES mais lenta que o original'
         divergencias.append(
-            f'ritmo da magia "{rotulo}": {real:.1f} por minuto contra {esperado:.1f} do .mon'
-            f' (: {magia["n"]}, rolagem a cada 2s) - {veredito}; esta com interval='
-            f'"{alvo["intervalo"]}" e chance="{alvo["chance"]:.0f}", e o par certo e'
-            f' chance="{100 / magia["n"]:.0f}" com interval="2000"'
+            f'ritmo de "{par["rotulo"]}": {100 * real:.0f}% das magias do bicho contra '
+            f'{100 * esperado:.0f}% que o .mon reparte (: {par["n"]:.0f}); esta com '
+            f'interval="{par["intervalo"]:.0f}" e chance="{par["chance"]:.0f}", que da '
+            f'{600 * par["chance"] / par["intervalo"]:.1f} por minuto - o intervalo '
+            f'absoluto so se confirma na gravacao'
         )
     return problemas, divergencias
 
