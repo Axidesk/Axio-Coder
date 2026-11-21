@@ -713,12 +713,16 @@ def _perfil_de_dano(blocos, alvo=""):
             razoes = [round(lista[i + 1][0] - lista[i][0], 1) for i in range(len(lista) - 1)]
             curtos = collections.Counter(d for d in razoes if 0.5 < d < 25)
             ritmo = ""
+            cadeias = ""
             if curtos:
                 intervalo, quantos = curtos.most_common(1)[0]
                 ritmo = f" | ritmo {intervalo}s ({quantos}x)"
+                resumo = _resumo_das_cadeias(lista, intervalo)
+                if resumo:
+                    cadeias = " | " + resumo
             linhas.append(
                 f"      {tipo:18s} x{len(valores):3d}  valores {amostra}"
-                f"  media {sum(valores) / len(valores):.1f}{ritmo}"
+                f"  media {sum(valores) / len(valores):.1f}{ritmo}{cadeias}"
             )
     if not linhas:
         return [f"  nenhum dano de '{alvo}' nesta gravacao - os autores sao: " + ", ".join(sorted(autores))]
@@ -728,6 +732,26 @@ def _perfil_de_dano(blocos, alvo=""):
         "  '(sem autor)' e o dano de CONDICAO (energia, veneno, fogo): o cliente nao o atribui a ninguem."
     )
     return linhas
+
+
+def _resumo_das_cadeias(lista, intervalo):
+    """Quantos numeros seguidos uma condicao aplica, contando os passos do ritmo dela."""
+    tolerancia = max(0.5, intervalo * 0.25)
+    tamanhos, atual = [], 1
+    for indice in range(len(lista) - 1):
+        passo = lista[indice + 1][0] - lista[indice][0]
+        if abs(passo - intervalo) <= tolerancia:
+            atual += 1
+        else:
+            tamanhos.append(atual)
+            atual = 1
+    tamanhos.append(atual)
+    corridas = [n for n in tamanhos if n >= 2]
+    if not corridas:
+        return ""
+    contagem = collections.Counter(corridas)
+    detalhe = ", ".join(f"{n} x{v}" for n, v in sorted(contagem.items()))
+    return f"cadeias: {detalhe} (media {sum(corridas) / len(corridas):.2f} ticks)"
 
 
 def _eventos(blocos):

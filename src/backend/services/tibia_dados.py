@@ -700,6 +700,9 @@ def _ritmo_das_magias(cabecalho, texto):
                 (a for a in ataques if not a['usado'] and (a['min'], a['max']) == faixa), None
             )
             rotulo = f'{alvo["nome"]} {faixa[0]}-{faixa[1]}' if alvo else ''
+        elif magia['efeito'] == 'Speed':
+            alvo = next((a for a in ataques if not a['usado'] and a['nome'] == 'speed'), None)
+            rotulo = 'speed'
         if alvo is None or not alvo['intervalo']:
             continue
         alvo['usado'] = True
@@ -707,7 +710,14 @@ def _ritmo_das_magias(cabecalho, texto):
         razao = real / esperado
         if 0.7 <= razao <= 1.4:
             continue
-        veredito = 'o DOBRO do original' if razao > 1 else 'METADE do original'
+        if razao > 2.5:
+            veredito = f'{razao:.1f} VEZES o original'
+        elif razao > 1:
+            veredito = 'o DOBRO do original'
+        elif razao >= 0.45:
+            veredito = 'METADE do original'
+        else:
+            veredito = f'{1 / razao:.1f} VEZES mais lenta que o original'
         divergencias.append(
             f'ritmo da magia "{rotulo}": {real:.1f} por minuto contra {esperado:.1f} do .mon'
             f' (: {magia["n"]}, rolagem a cada 2s) - {veredito}; esta com interval='
