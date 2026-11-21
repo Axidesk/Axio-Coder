@@ -33,9 +33,11 @@ gravacao onde o jogador mata SO aquele monstro: morte em area soma varios de uma
 salto de xp) | defenses armor=Armor 1:1 | defenses defense=Defend 1:1 | blockValue=def*skill/19 |
 melee skill=FistFighting 1:1 | melee attack=Attack 1:1 | melee min/max=Damage(base,var) ->
 base-var..base+var | melee poison=Poison 1:1 | cura min/max=Healing(base,var) -> base-var..base+var |
-cura chance=Healing:N -> 100/N | speed=GoStrength -> 2*GS+80 (as 41 fixadas a
-olho nao se tocam) | speedchange=(a-b)*10, per-mil, nunca abaixo de -1000 | speedchange_max=(a+b)*10 |
-duration=c*1000 (c em segundos) | outras magias=100/N - e o interval de cada uma sai da gravacao.
+cura chance=Healing:N -> ceil(100/N) | speed=GoStrength -> 2*GS+80, CONFIRMADO no Tarsal (o marid
+estava 170 no datapack e sao 234 pelas DUAS fontes) | speedchange=(a-b)*10, per-mil, nunca abaixo de
+-1000 | speedchange_max=(a+b)*10 - o PAR so existe em 3 XML; nos outros o datapack poe um valor fixo
+sem fonte e nao se mexe sem a gravacao | duration=c*1000 (c em segundos) | outras magias=ceil(100/N)
+- e o interval de cada uma sai da gravacao.
 
 O INTERVALO NAO EXISTE NO .mon, E NAO HA CICLO UNIVERSAL. O motor corre a 1000ms (creature.h:
 EVENT_CREATURE_THINK_INTERVAL) e o interval do XML e o periodo daquela magia em ms: 1000 sai a cada
@@ -144,7 +146,28 @@ ORDEM DE VALIDACAO
 CRUZAR SEMPRE, NUNCA UMA FONTE SO
 Nem o .mon (e de 7.5), nem o video (amostra pequena), nem a wiki (erra data e chance) sao a verdade
 sozinhos: cruzar os quatro e dizer de onde veio cada facto. Analisar bloco a bloco: monster, health,
-look, targetchange, strategy, flags, attacks, defenses, immunities, summon, voices, loot."""
+look, targetchange, strategy, flags, attacks, defenses, immunities, summon, voices, loot.
+
+AS FONTES E O GRAU DE CONFIANCA (medido a 2026-11-21, lote marid->minotaur)
+1. A GRAVACAO e a mais verdadeira do COMPORTAMENTO - mas a amostra pode ser pequena e a LEITURA DOS
+   SACOS E INCOMPLETA. Medido: marid com 1 saco lido em 9 corpos. Logo item de saco NUNCA se apaga
+   por nao aparecer no video; o video confirma a POSICAO, e so quando o saco foi mesmo aberto.
+   Item de CORPO que some em centenas de corpos e prova; item de SACO que some nao e.
+2. O .mon e do CipSoft mas de OUTUBRO/2005 (7.5): traz item que o 7.4 nao tinha (tempest rod, wand
+   of cosmic energy) e pode ter cura/dano que mudou. E a melhor fonte de identidade, chance e dano
+   BASE - nao do comportamento.
+3. O DATAPACK (o que esta em Server/data/monster) NAO e fonte: e o que se corrige. Chance, posicao,
+   interval e dano escritos la a mao sao suspeitos ate outra fonte os confirmar. Medido neste lote:
+   bronze amulet do minotaur a 2.5% no datapack contra 0.1% no .mon e ZERO em 334 corpos.
+4. A WEB desempata, e a wiki moderna descreve 8.x+. O que serve do 7.4:
+   https://tibiantis-notes.github.io/Creature (Tarsal) - tabela MEDIDA
+   Name|HP|Exp|Armor|Max Hit|Max Block|Arm+Block|Speed. Confirmou o speed 234 do marid (datapack
+   dizia 170) e o max hit 112 (skill 55/attack 35). A wiki (tibia-wiki 8.60, tibiamobile) da o dano
+   FINAL, ja com a defesa do alvo - 0-80 no archer contra os 45-85 de dano BASE do .mon: nao e
+   discordancia, sao coisas diferentes.
+5. ORDEM: .rec (posicao e comportamento) > .mon (identidade, chance, dano base) > Tarsal 7.4 >
+   wiki antiga > datapack. Duas fontes do mesmo nivel discordando = buscar uma TERCEIRA de nivel
+   diferente, nunca escolher a que agrada. Sem a terceira, NAO SE MEXE e diz-se que ficou em duvida."""
 
 
 CORPO_DE = re.compile(r'^(dead|slain|remains)')
@@ -589,6 +612,35 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
         divergencias.append(
             f'o XML tem {len(ataques)} magia(s) de ataque ({", ".join(ataques)}) e o .mon '
             f'declara {len(de_dano)} - ataque que o original nao tem'
+        )
+
+    familias_do_tipo = {
+        1: 'physical', 2: 'poison', 4: 'fire', 8: 'energy',
+        32: 'poison', 64: 'fire', 128: 'energy', 256: 'lifedrain',
+    }
+    faixas_do_mon = []
+    for magia in cabecalho['magias']:
+        if magia['efeito'] != 'Damage' or len(magia['numeros']) < 3:
+            continue
+        tipo, dano_base, variacao = magia['numeros'][0], magia['numeros'][1], magia['numeros'][2]
+        faixas_do_mon.append((familias_do_tipo.get(tipo, ''), dano_base - variacao, dano_base + variacao))
+    for achado in re.finditer(r'<attack\s+([^>]*)/?>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        nome = atributos.get('name', '')
+        if nome == 'melee' or 'min' not in atributos or 'max' not in atributos:
+            continue
+        try:
+            faixa = tuple(sorted((abs(int(atributos['min'])), abs(int(atributos['max'])))))
+        except ValueError:
+            continue
+        familia = re.match(r'(fire|energy|lifedrain|physical|poison)', nome)
+        familia = familia.group(1) if familia else nome
+        rivais = [(lo, hi) for fam, lo, hi in faixas_do_mon if fam == familia]
+        if not rivais or faixa in rivais:
+            continue
+        declaradas = ', '.join(f'{lo}..{hi}' for lo, hi in rivais)
+        divergencias.append(
+            f'dano de "{nome}": xml {faixa[0]}..{faixa[1]} e o .mon declara {declaradas} para {familia}'
         )
 
     chances_do_mon = [ficha['chance'] for ficha in cabecalho['invoca']]
