@@ -90,6 +90,9 @@ STRATEGY - quatro numeros no .mon, tres no XML, e nao falta nada
 TABELA 2 - LOOT: onde vai e em que ordem
 chance: .mon por mil -> chance = por_mil*100 (motor MAX_LOOTCHANCE=100000); 800=80%.
 countmax 1:1 (o motor sorteia 1..countmax). chancemax e INERTE.
+chance1 e SINONIMO de chance: o motor le os dois (monsters.cpp:1312, readXMLInteger(node,"chance")
+|| readXMLInteger(node,"chance1")). Vem dos datapacks antigos, funciona igual e nao precisa de ser
+renomeado - nao e defeito nem codigo morto.
 gold: entradas separadas, cada uma com o seu sorteio - nunca um countmax grande.
 BAG: Weapon, Shield, Bow, Throw, Wand, Torch, aneis COM CARGA.
 CORPO: Armor, Food, gold, joias/colares, pedras, runas, osso/chifre/ervas.
