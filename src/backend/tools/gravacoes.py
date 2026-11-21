@@ -462,6 +462,8 @@ CORES_DE_NUMERO = {
     215: "experiencia (nao e dano)",
 }
 
+_TETO_DA_CADEIA = 24
+
 
 def _resumo(blocos):
     contagem = collections.Counter()
@@ -724,6 +726,12 @@ def _perfil_de_dano(blocos, alvo=""):
                 f"      {tipo:18s} x{len(valores):3d}  valores {amostra}"
                 f"  media {sum(valores) / len(valores):.1f}{ritmo}{cadeias}"
             )
+            if len(lista) <= _TETO_DA_CADEIA:
+                anterior = None
+                for quando, valor in lista:
+                    salto = "" if anterior is None else f"  (+{quando - anterior:.1f}s)"
+                    linhas.append(f"        {quando:8.1f}s  valor {valor}{salto}")
+                    anterior = quando
     if not linhas:
         return [f"  nenhum dano de '{alvo}' nesta gravacao - os autores sao: " + ", ".join(sorted(autores))]
     if sem_numero:
