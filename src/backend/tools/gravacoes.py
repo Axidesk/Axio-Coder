@@ -187,6 +187,18 @@ _CLIENTES = {}
             "129 undead. Use 2-3 gravacoes antes de concluir: amostra pequena engana.",
             "padrao": "",
         },
+        "area": {
+            "tipo": "STRING",
+            "desc": "Agrupa os numeros de dano pelo INSTANTE e responde 'esta magia sorteia o dano "
+            "uma vez por conjuracao ou uma por alvo?': mostra cada instante com 2+ criaturas feridas "
+            "ao mesmo tempo, os valores e se sao TODOS IGUAIS. Valor igual em todas as criaturas = "
+            "sorteio unico por conjuracao (e o que o original faz: a magia do minotaur mage deu 62 em "
+            "5 criaturas, a do demon 78 em 5); valores espalhados = sorteio por alvo. Aceita o id de "
+            "um efeito grafico ('7' = fogo em area, '5' = explosion) para olhar so os instantes "
+            "daquela magia, ou 'todos'. Ignora instantes com mais de uma cor, porque duas magias "
+            "diferentes caindo no mesmo segundo nao se comparam.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -194,7 +206,7 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
             emit_event("executing", function=f"Somando o loot de: {varrer}")
@@ -251,6 +263,11 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
     if str(dano or "").strip():
         emit_event("executing", function=f"Medindo o dano de: {dano}")
         linhas += _perfil_de_dano(blocos, str(dano).strip())
+        return "\n".join(linhas)
+    if str(area or "").strip():
+        emit_event("executing", function="Agrupando o dano por instante")
+        pedido = str(area).strip()
+        linhas += _grupos_de_area(blocos, "" if pedido.lower() in ("todos", "todas") else pedido)
         return "\n".join(linhas)
     if str(loot or "").strip():
         linhas += _loot_dos_corpos(blocos, str(loot).strip())
@@ -764,6 +781,60 @@ def _resumo_das_cadeias(lista, intervalo):
     contagem = collections.Counter(corridas)
     detalhe = ", ".join(f"{n} x{v}" for n, v in sorted(contagem.items()))
     return f"cadeias: {detalhe} (media {sum(corridas) / len(corridas):.2f} ticks)"
+
+
+def _grupos_de_area(blocos, efeito="", minimo=2):
+    """Agrupa os numeros de dano pelo INSTANTE: quantas criaturas levaram dano ao
+    mesmo tempo e se o valor e o mesmo. Numero igual em todas = a magia sorteia
+    UMA vez por conjuracao; numeros espalhados = sorteia por alvo."""
+    eventos = _lista_de_eventos(blocos)
+    marcas = collections.Counter()
+    numeros = collections.defaultdict(list)
+    for evento in eventos:
+        quando = round((evento.get("_quando") or 0) / 1000.0, 2)
+        tipo = evento.get("Event")
+        if tipo == "NumberEffectPopped":
+            posicao = evento.get("Position") or {}
+            numeros[quando].append((posicao.get("X"), posicao.get("Y"),
+                                    evento.get("Value"), evento.get("Color")))
+        elif tipo == "GraphicalEffectPopped" and (not efeito or str(evento.get("Id")) == str(efeito)):
+            marcas[quando] += 1
+
+    linhas = ["", "  DANO EM AREA - uma tiragem por conjuracao ou uma por alvo?"]
+    if efeito:
+        linhas.append(f"  (so os instantes em que o efeito {efeito} apareceu)")
+    iguais = diferentes = 0
+    for quando in sorted(numeros):
+        if efeito and not marcas.get(quando):
+            continue
+        por_posicao = collections.defaultdict(list)
+        for x, y, valor, cor in numeros[quando]:
+            por_posicao[(x, y)].append((valor, cor))
+        if len(por_posicao) < minimo or any(len(v) > 1 for v in por_posicao.values()):
+            continue
+        valores = [v[0][0] for v in por_posicao.values()]
+        cores = {v[0][1] for v in por_posicao.values()}
+        if len(cores) > 1:
+            continue
+        mesmo = len(set(valores)) == 1
+        if mesmo:
+            iguais += 1
+        else:
+            diferentes += 1
+        veredito = "TODOS IGUAIS" if mesmo else f"espalhados, {max(valores) - min(valores)} de diferenca"
+        linhas.append(
+            f"    {int(quando // 60)}:{quando % 60:05.2f}  {len(por_posicao)} criatura(s)"
+            f"  {sorted(valores)}  cor {cores.pop()}  {veredito}"
+        )
+    if not iguais and not diferentes:
+        linhas.append("    nenhum instante com 2+ criaturas levando dano ao mesmo tempo"
+                      " (sem 'efeito', isto olha a gravacao inteira)")
+    else:
+        linhas.append(f"    -> {iguais} conjuracao(oes) em que TODAS as criaturas levaram o MESMO valor"
+                      f" | {diferentes} com valores diferentes")
+        linhas.append("    valor igual em todas = sorteio unico por conjuracao;"
+                      " valores diferentes com o mesmo efeito no instante = sorteio por alvo.")
+    return linhas
 
 
 def _eventos(blocos):
