@@ -305,6 +305,30 @@ def _caminhos_no_repositorio(raiz, lista):
     return limpos
 
 
+def _repositorio_proprio_dentro(raiz, lista):
+    """A pasta propria (com .git seu) onde vivem TODOS os ficheiros pedidos, quando eles caem todos
+    na mesma - o caso de um projeto hospede que o repositorio de fora ignora. Devolve "" quando nao ha
+    uma so, ou quando o dono dos ficheiros e o proprio repositorio da raiz."""
+    raiz = os.path.abspath(raiz)
+    achados = set()
+    for bruto in lista:
+        alvo = os.path.normpath(os.path.join(raiz, bruto.replace("\\", "/").removeprefix("./")))
+        pasta = alvo if os.path.isdir(alvo) else os.path.dirname(alvo)
+        while _dentro_de(pasta, raiz) and os.path.abspath(pasta) != raiz:
+            if os.path.exists(os.path.join(pasta, ".git")):
+                achados.add(os.path.abspath(pasta))
+                break
+            pasta = os.path.dirname(pasta)
+    if len(achados) != 1:
+        return ""
+    proprio = achados.pop()
+    for bruto in lista:
+        alvo = os.path.normpath(os.path.join(raiz, bruto.replace("\\", "/").removeprefix("./")))
+        if not _dentro_de(alvo, proprio):
+            return ""
+    return proprio
+
+
 def _ficheiro_da_mensagem(mensagem):
     caminho = os.path.join(tempfile.gettempdir(), f"axio_git_msg_{os.getpid()}.txt")
     with open(caminho, "w", encoding="utf-8") as f:
@@ -356,6 +380,17 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
                     "da pasta do projeto nao entra neste commit."]
         return ["NADA A PUBLICAR: o repositorio esta limpo."]
     lista = _lista_de_ficheiros(raiz, ficheiros)
+    if lista:
+        proprio = _repositorio_proprio_dentro(raiz, lista)
+        if proprio:
+            dentro = []
+            for bruto in lista:
+                alvo = os.path.normpath(os.path.join(os.path.abspath(raiz),
+                                                     bruto.replace("\\", "/").removeprefix("./")))
+                dentro.append(os.path.relpath(alvo, proprio))
+            aviso = (f"REPOSITORIO PROPRIO: os ficheiros pedidos vivem em '{proprio}', que tem .git seu "
+                     f"(o repositorio de fora ignora essa pasta) - o commit vai para LA.")
+            return [aviso] + _linhas_da_publicacao(proprio, mensagem, "\n".join(dentro), tag, empurrar)
     motivo, proibidos = _proibidos_na_publicacao(nomes, bool(lista), raiz)
     if proibidos:
         return [_recusa_de_publicacao(proibidos, motivo) + " Nada foi posto em stage."]
