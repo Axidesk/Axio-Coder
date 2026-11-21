@@ -513,6 +513,45 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
         if achado and int(achado.group(1)) != do_mon:
             divergencias.append(f'{rotulo}: .mon {do_mon} vs xml {achado.group(1)}')
 
+    achado_speed = re.search(r'<monster[^>]*\bspeed="(-?\d+)"', texto)
+    if achado_speed and cabecalho['velocidade_base'] is not None:
+        base_speed = cabecalho['velocidade_base']
+        esperado_speed = 2 * base_speed + 80 if base_speed > 0 else 0
+        if int(achado_speed.group(1)) != esperado_speed:
+            motivo = 'GoStrength -1 quer dizer parado' if base_speed <= 0 else (
+                f'2*GoStrength+80 com GoStrength {base_speed}'
+            )
+            divergencias.append(
+                f'speed: xml {achado_speed.group(1)} e o .mon da {esperado_speed} ({motivo})'
+                f' - so mexer com o video: ha speeds fixados a mao que nao seguem a formula'
+            )
+
+    achado_look = re.search(r'<look\s+([^>]*?)/?>', texto)
+    if achado_look and cabecalho.get('outfit'):
+        look = dict(re.findall(r'(\w+)="([^"]*)"', achado_look.group(1)))
+        if 'type' in look and int(look['type']) != cabecalho['outfit'][0]:
+            divergencias.append(
+                f'look type="{look["type"]}" mas o Outfit do .mon e {cabecalho["outfit"][0]}'
+                f' - troca so visual: aplicar apenas se o outfit {cabecalho["outfit"][0]}'
+                f' existir no cliente, senao o monstro fica invisivel'
+            )
+
+    achado_melee = re.search(r'<attack name="melee"([^>]*)/>', texto)
+    if (
+        achado_melee
+        and 'skill=' not in achado_melee.group(1)
+        and 'min=' in achado_melee.group(1)
+        and cabecalho['ataque']
+        and cabecalho['skill_melee']
+    ):
+        bruto = cabecalho['skill_melee'] * cabecalho['ataque'] * 5 + cabecalho['ataque'] * 50
+        dano_max = -(-bruto // 100)
+        divergencias.append(
+            f'melee escrito por min/max: o .mon da FistFighting {cabecalho["skill_melee"]} e'
+            f' Attack {cabecalho["ataque"]} -> skill="{cabecalho["skill_melee"]}"'
+            f' attack="{cabecalho["ataque"]}" (dano 0..{dano_max})'
+        )
+
     querida = cabecalho['estrategia'][:3]
     if querida != [0, 0, 0] and not re.search(r'<strategy[^>]*\battack=', texto):
         divergencias.append(
