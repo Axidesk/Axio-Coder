@@ -1404,12 +1404,11 @@ def _varredura(termo):
     return "\n".join(linhas)
 
 
-def _loot_somado(procurado):
-    """Loot de um monstro somado em TODAS as gravacoes do indice, com a posicao que o XML declara."""
+def _contagens_do_loot(procurado):
+    """Soma em TODAS as gravacoes do indice quanto caiu no corpo e quanto caiu no saco."""
     indice, nota = indexar_gravacoes()
     termo = procurado.lower()
     ids = {int(termo)} if termo.isdigit() else _corpos_do_nome(termo)
-    nomes = _nomes_de_itens()
     corpo = collections.Counter()
     saco = collections.Counter()
     pilhas = []
@@ -1427,6 +1426,31 @@ def _loot_somado(procurado):
             corpo.update(achado.get("corpo") or {})
             saco.update(achado.get("saco") or {})
             pilhas.extend(achado.get("pilhas") or [])
+    return corpo, saco, corpos, pilhas, nota
+
+
+def posicoes_do_loot(procurado):
+    """Onde cada item caiu DE FACTO nas gravacoes: {id: 'corpo'|'saco'} pelo sitio onde aparece mais."""
+    corpo, saco, corpos, _pilhas, _nota = _contagens_do_loot(procurado)
+    if not corpos:
+        return {}
+    sitio = {}
+    for contagem, rotulo in ((corpo, "corpo"), (saco, "saco")):
+        for identificador, vezes in contagem.items():
+            try:
+                numero = int(identificador)
+            except (TypeError, ValueError):
+                continue
+            antes = sitio.get(numero)
+            if not antes or vezes > antes[1]:
+                sitio[numero] = (rotulo, vezes)
+    return {numero: lugar for numero, (lugar, _vezes) in sitio.items()}
+
+
+def _loot_somado(procurado):
+    """Loot de um monstro somado em TODAS as gravacoes do indice, com a posicao que o XML declara."""
+    corpo, saco, corpos, pilhas, nota = _contagens_do_loot(procurado)
+    nomes = _nomes_de_itens()
     if not corpos:
         return f"\nLOOT SOMADO: nenhum corpo de '{procurado}' no indice ({nota})."
 

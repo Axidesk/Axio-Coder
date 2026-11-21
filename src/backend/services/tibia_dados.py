@@ -886,6 +886,28 @@ def _ordem_do_loot(texto, nomes):
     return faltas
 
 
+def _sitios_do_xml(texto):
+    """id -> 'corpo' ou 'saco' conforme o <inside> em que o item aparece."""
+    bloco = re.search(r'<loot[^>]*>(.*?)</loot>', texto, re.S)
+    if not bloco:
+        return {}
+    sitios = {}
+    profundidade = 0
+    for achado in re.finditer(r'<inside\b|</inside\b|<item\s+id="(\d+)"', bloco.group(1)):
+        pedaco = achado.group(0)
+        if pedaco.startswith('<inside'):
+            profundidade += 1
+            continue
+        if pedaco.startswith('</inside'):
+            profundidade = max(0, profundidade - 1)
+            continue
+        ident = int(achado.group(1))
+        onde = 'saco' if profundidade else 'corpo'
+        if sitios.get(ident) != 'corpo':
+            sitios[ident] = onde
+    return sitios
+
+
 @lru_cache(maxsize=4)
 def nomes_do_servidor(base=BASE_PADRAO):
     """id -> nome como o servidor o escreve, com espacos: e assim que o loot se ordena."""
@@ -1047,6 +1069,20 @@ def validar_monstro(base, monstro):
         problemas.append('sem o cabecalho "# Tibia - graphical Multi-User-Dungeon" no inicio do ficheiro')
 
     problemas.extend(_ordem_do_xml(texto))
+
+    try:
+        from src.backend.tools.gravacoes import posicoes_do_loot
+        vistas = posicoes_do_loot(monstro)
+    except (ImportError, OSError, ValueError):
+        vistas = {}
+    if vistas:
+        for ident, sitio in _sitios_do_xml(texto).items():
+            if ident == 1987 or ident not in vistas or vistas[ident] == sitio:
+                continue
+            divergencias.append(
+                f'"{nomes.get(ident, ident)}" ({ident}) esta no {sitio} do XML e as'
+                f' gravacoes mostram-no no {vistas[ident]} - o video manda na posicao'
+            )
 
     problemas.extend(_ordem_do_loot(texto, nomes_do_servidor(base)))
 
