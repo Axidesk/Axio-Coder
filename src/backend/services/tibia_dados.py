@@ -25,6 +25,8 @@ FLAGS_DO_MON = {
 
 FLAGS_SEM_CAMPO = {'SeeInvisible'}
 
+CONTEINERES_DO_LOOT = {1987, 1988, 1989}
+
 RECEITA_DO_MON = """=== RECEITA .mon -> XML (conferida no codigo do motor; manda sobre qualquer nota antiga) ===
 
 ANTES DE MEXER NO MOTOR (regra dura, pedida a 2026-11-22)
@@ -446,7 +448,7 @@ def cruzar_monstro(base, monstro):
         do_mon_ids.update(produto['ids_740'])
     so_no_xml = []
     for entrada in entradas:
-        if entrada['id'] == 1987 or entrada['id'] in do_mon_ids:
+        if entrada['id'] in CONTEINERES_DO_LOOT or entrada['id'] in do_mon_ids:
             continue
         so_no_xml.append((entrada['id'], entrada['chance'], entrada['dentro']))
 
@@ -1495,7 +1497,7 @@ def validar_monstro(base, monstro):
     ja_avisado = set()
 
     for entrada in cruz['xml']:
-        if entrada['id'] == 1987:
+        if entrada['id'] in CONTEINERES_DO_LOOT:
             continue
         ident = entrada['id']
         if not 0 <= entrada['chance'] <= 100:
@@ -1532,7 +1534,7 @@ def validar_monstro(base, monstro):
 
     do_xml = {}
     for entrada in cruz['xml']:
-        if entrada['id'] == 1987:
+        if entrada['id'] in CONTEINERES_DO_LOOT:
             continue
         do_xml.setdefault(entrada['id'], []).append(entrada['chance'])
     do_mon_por_nome = {}
@@ -1572,7 +1574,7 @@ def validar_monstro(base, monstro):
 
     quantidades_do_xml = {}
     for entrada in cruz['xml']:
-        if entrada['id'] == 1987:
+        if entrada['id'] in CONTEINERES_DO_LOOT:
             continue
         quantidades_do_xml.setdefault(entrada['id'], set()).add(entrada['countmax'])
     for nome in do_mon_por_nome:
@@ -1660,7 +1662,7 @@ def validar_monstro(base, monstro):
             vistas = {}
         if vistas:
             for ident, sitio in _sitios_do_xml(texto).items():
-                if ident == 1987 or ident not in vistas or vistas[ident] == sitio:
+                if ident in CONTEINERES_DO_LOOT or ident not in vistas or vistas[ident] == sitio:
                     continue
                 divergencias.append(
                     f'"{nomes.get(ident, ident)}" ({ident}) esta no {sitio} do XML e as'
