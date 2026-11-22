@@ -482,7 +482,11 @@ def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
     },
 )
 def tool_validar_monstro(monstros, pasta=""):
-    base = pasta or tibia_dados.BASE_PADRAO
+    base = tibia_dados.BASE_PADRAO
+    if pasta:
+        candidato = pasta.replace("\\", "/").rstrip("/")
+        raiz = "/Server/data/monster"
+        base = candidato[:-len(raiz)] if candidato.endswith(raiz) else pasta
     linhas = []
     for nome in [linha.strip() for linha in (monstros or "").splitlines() if linha.strip()]:
         resultado = tibia_dados.validar_monstro(base, nome)
