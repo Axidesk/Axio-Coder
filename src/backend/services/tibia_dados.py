@@ -230,6 +230,8 @@ def items_740(base=BASE_PADRAO):
 
 def _ficheiro_do_mon(base, monstro):
     pasta = f'{base}/gerados/monstros/cipsoft'
+    if monstro.lower().endswith('.xml'):
+        monstro = monstro[:-4]
     nome = _normalizar(monstro)
     candidatos = [f for f in os.listdir(pasta) if f.endswith('.mon')]
     for ficheiro in candidatos:
@@ -240,6 +242,12 @@ def _ficheiro_do_mon(base, monstro):
         achado = re.search(r'Name\s*=\s*"([^"]*)"', texto)
         if achado and _normalizar(achado.group(1)) == nome:
             return f'{pasta}/{ficheiro}'
+    por_sufixo = [
+        f for f in candidatos
+        if len(nome) >= 4 and _normalizar(f[:-4]).endswith(nome)
+    ]
+    if len(por_sufixo) == 1:
+        return f'{pasta}/{por_sufixo[0]}'
     return None
 
 
@@ -349,6 +357,8 @@ def cabecalho_do_mon(base, monstro):
 
 def _texto_do_xml(base, monstro):
     pasta = f'{base}/Server/data/monster'
+    if monstro.lower().endswith('.xml'):
+        monstro = monstro[:-4]
     for ficheiro in os.listdir(pasta):
         if ficheiro.endswith('.xml') and _normalizar(ficheiro[:-4]) == _normalizar(monstro):
             return open(f'{pasta}/{ficheiro}', encoding='latin-1').read()
