@@ -725,10 +725,16 @@ def _velocidade_das_criaturas(blocos, pedido):
         medidas[nome].extend(valores)
     if not medidas:
         vistos = sorted({nome for nome in nomes.values() if nome})
+        com_leitura = sorted({nomes.get(chave) for chave in series if nomes.get(chave)})
         return [
             "",
             f"  Nenhuma leitura de velocidade para '{pedido}'. Criaturas com nome nesta gravacao: "
             + (", ".join(vistos[:20]) if vistos else "nenhuma"),
+            "  ATENCAO: o cliente so recebe CreatureSpeedUpdated quando a velocidade MUDA, logo um bicho"
+            " que nao levou haste nem paralyze nesta gravacao NUNCA aparece aqui - a ausencia nao quer"
+            " dizer que ele nao estava la.",
+            "  Quem teve leitura: "
+            + (", ".join(com_leitura[:12]) if com_leitura else "ninguem (a gravacao nao mudou velocidade de criatura nenhuma)"),
         ] + _paralisias_do_jogador(blocos) + _alcance_da_paralisia(blocos)
 
     linhas = [
@@ -2160,7 +2166,8 @@ def _loot_somado(procurado):
                 marca = "   (nao declarado no XML)"
             else:
                 marca = ""
-            linhas.append(f"    {str(nomes.get(numero, numero))[:26]:<26} {vezes:5d}  {100 * vezes / corpos:6.2f}%{marca}")
+            etiqueta = f"{nomes.get(numero) or 'item'} ({numero})"
+            linhas.append(f"    {etiqueta[:32]:<32} {vezes:5d}  {100 * vezes / corpos:6.2f}%{marca}")
     if pilhas:
         totais = [sum(p) for p in pilhas]
         linhas.append(f"  OURO: {len(pilhas)} de {corpos} corpos = {100 * len(pilhas) / corpos:.1f}%"
