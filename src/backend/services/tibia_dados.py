@@ -61,7 +61,14 @@ estava 170 no datapack e sao 234 pelas DUAS fontes) | speedchange=(a-b)*10, per-
 -1000 | speedchange_max=(a+b)*10 - O PAR VALE PARA TODOS: medido a 2026-11-22 nos 159 .mon, os 56
 Speed tem b diferente de zero, logo o original SORTEIA a faixa a cada lancamento; sem speedchange_max
 o motor faz speedChangeMax=speedChange (monsters.cpp:502) e a magia passa a dar sempre o mesmo - o
-validador acusa (_variacao_do_speed) | duration=c*1000 (c em segundos) | outras magias=ceil(100/N)
+validador acusa (_variacao_do_speed) | strength=Strength(a, b, c, d): o b e o delta em PERCENTAGEM
+(-50 = metade da forca) e o c e a VARIACAO, nao uma duracao - provado pelos vizinhos do mesmo .mon
+(Speed(-90,20,50), Drunken(6,0,60)) onde a duracao e sempre o ULTIMO argumento e um valor unico.
+skillchange = 100 + (b - c), skillchange_max = 100 + (b + c) e duration = d*1000. Ex.: dipthrah
+Strength(3,-50,10,40) -> skillchange="-60" skillchange_max="-40" duration="40000". O par e OBRIGATORIO:
+sem skillchange_max o motor aplica sempre o min. O d (1,2,3,5) NAO esta decifrado - 1 = so melee
+(morguthis, fernfang, apocalypse), 2/3/5 = debuff, e nao se inventa significado |
+duration=c*1000 (c em segundos) | outras magias=ceil(100/N)
 - e o interval de cada uma sai da gravacao.
 
 O INTERVALO NAO EXISTE NO .mon, E NAO HA CICLO UNIVERSAL. O motor corre a 1000ms (creature.h:

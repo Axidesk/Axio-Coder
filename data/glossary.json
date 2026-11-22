@@ -5080,8 +5080,8 @@
         "arquivo": "src/backend/tools/cpp_auditoria.py",
         "linha": 179,
         "conferido": [
-          1790920797.167,
-          10622
+          1795364925.934,
+          11129
         ]
       }
     },
@@ -6574,8 +6574,8 @@
         "arquivo": "src/backend/tools/browse.py",
         "linha": 151,
         "conferido": [
-          1791917163.272,
-          26772
+          1795364921.912,
+          27527
         ]
       }
     },
