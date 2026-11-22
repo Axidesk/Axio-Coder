@@ -199,6 +199,20 @@ _CLIENTES = {}
             "diferentes caindo no mesmo segundo nao se comparam.",
             "padrao": "",
         },
+        "velocidade": {
+            "tipo": "STRING",
+            "desc": "Mede a velocidade REAL das criaturas pela serie de CreatureSpeedUpdated da "
+            "gravacao - e o unico jeito de ver o speedchange a acontecer. Devolve, por criatura, a "
+            "velocidade sem efeito (a mais frequente), o minimo e o maximo e a variacao em percentagem "
+            "e por-mil. Nome do monstro filtra ('giant spider'); 'todos' mostra a gravacao inteira. "
+            "MEDIDO a 2026-11-22 e provado contra o .mon: a velocidade sem efeito e exatamente "
+            "2*GoStrength+80 (dragon 170, ghoul 144, cyclops 190, minotaur 168, gargoyle 200, "
+            "bonebeast 218, rotworm 116) e a criatura que usa haste sobe em faixa - giant spider "
+            "240 -> 336..352, behemoth 340 -> 444..470, scarab 160 -> 192..200. O valor da base "
+            "NAO muda com o piso do mapa: o piso entra no passo, nao na velocidade. So aparece a "
+            "criatura que o servidor mandou atualizar; sem leitura nao se conclui nada.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -206,7 +220,7 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area="", velocidade=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
             emit_event("executing", function=f"Somando o loot de: {varrer}")
@@ -264,6 +278,10 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
         emit_event("executing", function=f"Medindo o dano de: {dano}")
         linhas += _perfil_de_dano(blocos, str(dano).strip())
         return "\n".join(linhas)
+    if str(velocidade or "").strip():
+        emit_event("executing", function=f"Medindo a velocidade de: {velocidade}")
+        linhas += _velocidade_das_criaturas(blocos, str(velocidade).strip().lower())
+        return "\n".join(linhas)
     if str(area or "").strip():
         emit_event("executing", function="Agrupando o dano por instante")
         pedido = str(area).strip()
@@ -303,7 +321,7 @@ def eventos_da_gravacao(gravacao, pasta="", terreno=False):
     return eventos
 
 
-def _achar_gravacao(pedido, pasta):
+def _achar_gravacao(pedido, pasta=""):
     texto = str(pedido or "").strip().strip('"')
     if not texto:
         return "", []
@@ -327,7 +345,7 @@ def _achar_gravacao(pedido, pasta):
     return achadas[0], achadas[1:]
 
 
-def _pastas_de_gravacoes(pasta):
+def _pastas_de_gravacoes(pasta=""):
     vistas = _pastas_conhecidas()
     if str(pasta or "").strip():
         vistas.insert(0, str(pasta).strip().strip('"'))
@@ -673,6 +691,115 @@ def _veredito_da_raca(efeitos, cores):
             f"{raca} com amostra pequena ({detalhe}): rode noutra gravacao antes de mexer no XML"
         )
     return f"{raca} ({detalhe})"
+
+
+def _velocidade_das_criaturas(blocos, pedido):
+    """A velocidade que o servidor enviou, por criatura: a de base e a faixa que os feitiços abrem."""
+    nomes, tipos = {}, {}
+    for evento in _eventos(blocos):
+        if evento.get("Event") == "CreatureSeen":
+            nomes[evento.get("CreatureId")] = str(evento.get("Name") or "").strip().lower()
+            tipos[evento.get("CreatureId")] = evento.get("Type") or ""
+    series = collections.defaultdict(list)
+    for evento in _eventos(blocos):
+        if evento.get("Event") != "CreatureSpeedUpdated":
+            continue
+        valor = evento.get("Speed")
+        if isinstance(valor, int):
+            series[evento.get("CreatureId")].append(valor)
+    if not series:
+        return [
+            "",
+            f"  Nenhuma criatura teve a velocidade atualizada nesta gravacao ({pedido} pedido). "
+            "O cliente so recebe CreatureSpeedUpdated quando o servidor muda a velocidade - "
+            "numa gravacao curta ou parada isso pode nao acontecer nenhuma vez.",
+        ]
+
+    medidas = collections.defaultdict(list)
+    for chave, valores in series.items():
+        nome = nomes.get(chave)
+        if not nome:
+            continue
+        if pedido not in ("todos", "todas") and pedido not in nome:
+            continue
+        medidas[nome].extend(valores)
+    if not medidas:
+        vistos = sorted({nome for nome in nomes.values() if nome})
+        return [
+            "",
+            f"  Nenhuma leitura de velocidade para '{pedido}'. Criaturas com nome nesta gravacao: "
+            + (", ".join(vistos[:20]) if vistos else "nenhuma"),
+        ]
+
+    linhas = [
+        "",
+        "VELOCIDADE MEDIDA (o numero que o servidor enviou em CreatureSpeedUpdated):",
+        f"  {'criatura':22s} {'base':>5s} {'min':>5s} {'max':>5s} {'origem':6s} variacao            leituras",
+    ]
+    for nome in sorted(medidas, key=lambda n: -len(medidas[n])):
+        valores = medidas[nome]
+        menor, maior = min(valores), max(valores)
+        base, origem = _base_da_velocidade(nome), ".mon"
+        if not base:
+            base = collections.Counter(valores).most_common(1)[0][0]
+            origem = "vista"
+        if maior == menor:
+            variacao = "sem variacao (nunca levou haste nem paralyze nesta gravacao)"
+        else:
+            baixo = 100.0 * (menor - base) / base
+            alto = 100.0 * (maior - base) / base
+            variacao = (
+                f"{baixo:+.1f}% a {alto:+.1f}% "
+                f"({int(round((menor - base) * 1000 / base))} a {int(round((maior - base) * 1000 / base))} por mil)"
+            )
+        linhas.append(
+            f"  {nome[:22]:22s} {base:5d} {menor:5d} {maior:5d} {origem:6s} {variacao}  ({len(valores)})"
+        )
+    linhas.append(
+        "  'base' pelo .mon = 2*GoStrength+80 (provado ao digito em 7 monstros); 'vista' = a velocidade "
+        "mais frequente, quando o .mon nao esta ao alcance. O per-mil e o que o XML escreve em "
+        "speedchange/speedchange_max."
+    )
+    return linhas
+
+
+def _base_da_velocidade(nome):
+    """2*GoStrength+80 lido do .mon da CipSoft - a velocidade sem feitiço."""
+    chave = ("velocidade", nome)
+    if chave in _CACHE:
+        return _CACHE[chave]
+    base = 0
+    try:
+        devolvido = resolver_caminho("docs/projetos/Tibia74/gerados/monstros/cipsoft")
+    except Exception:
+        devolvido = None
+    pasta = (devolvido[0] if isinstance(devolvido, tuple) else devolvido) if devolvido else None
+    if pasta and os.path.isdir(pasta):
+        direto = os.path.join(pasta, re.sub(r"\s+", "", nome) + ".mon")
+        caminho = direto if os.path.isfile(direto) else ""
+        if not caminho:
+            for ficheiro in sorted(os.listdir(pasta)):
+                if not ficheiro.lower().endswith(".mon"):
+                    continue
+                try:
+                    with open(os.path.join(pasta, ficheiro), encoding="latin-1") as fh:
+                        texto = fh.read(2000)
+                except OSError:
+                    continue
+                achado = re.search(r'Name\s*=\s*"([^"]+)"', texto)
+                if achado and achado.group(1).strip().lower() == nome:
+                    caminho = os.path.join(pasta, ficheiro)
+                    break
+        if caminho:
+            try:
+                with open(caminho, encoding="latin-1") as fh:
+                    forca = re.search(r"\(GoStrength,\s*(-?\d+)", fh.read())
+            except OSError:
+                forca = None
+            if forca:
+                base = 2 * int(forca.group(1)) + 80
+    _CACHE[chave] = base
+    return base
 
 
 def _perfil_de_dano(blocos, alvo=""):

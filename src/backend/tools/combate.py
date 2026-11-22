@@ -14,8 +14,8 @@ _EFEITO_DEFESA = 3
 _EFEITO_BLOQUEIO = 4
 _CORES_DE_DANO = {180: "fisico", 129: "fisico", 198: "fogo", 30: "veneno", 35: "energia"}
 _CORES_SEM_DANO = {215, 5}
-_JANELA_DO_ALVO = 1.5
-_MEMORIA_DO_ALVO = 10.0
+_JANELA_DO_INSTANTE = 0.6
+_JANELA_DO_ATACANTE = 3.0
 _JANELA_DA_CURA = 5.0
 _SUBIDA_MINIMA = 2
 _PASTAS_DE_MONSTROS = (("Server", "data", "monster"), ("data", "monster"), ("data", "monsters"))
@@ -162,10 +162,13 @@ def _eventos_do_rec(caminho):
     maximos = _vidas_maximas(caminho)
 
     nomes, tipos = {}, {}
+    jogador_id = None
     for evento in bruto:
         if evento.get("Event") == "CreatureSeen":
             nomes[evento.get("CreatureId")] = str(evento.get("Name") or "").strip().lower()
             tipos[evento.get("CreatureId")] = evento.get("Type") or ""
+        elif evento.get("Event") == "WorldInitialized":
+            jogador_id = evento.get("PlayerId")
     monstros = {
         chave: nome
         for chave, nome in nomes.items()
@@ -188,7 +191,7 @@ def _eventos_do_rec(caminho):
 
     quedas = []
     for chave, amostras in series.items():
-        if chave not in monstros:
+        if chave not in tipos:
             continue
         for (_, antes), (quando, agora) in zip(amostras, amostras[1:]):
             if agora < antes:
@@ -203,16 +206,46 @@ def _eventos_do_rec(caminho):
             posicao = evento.get("Position") or {}
             numeros.add((round(evento["__t"], 2), posicao.get("X"), posicao.get("Y")))
 
-    def monstro_em(quando):
+    def quedas_em(quando, janela=None):
+        if not quedas:
+            return []
+        janela = _JANELA_DO_INSTANTE if janela is None else janela
+        inicio = bisect_left(instantes_das_quedas, quando - janela)
+        return quedas[inicio:bisect_right(instantes_das_quedas, quando + janela)]
+
+    def alvo_em(quando, x, y, z):
+        """Quem levou o dano: ('jogador'|'monstro'|'outro'|'?', nome do monstro)."""
+        perto = quedas_em(quando)
+        atingidos = {chave for _, chave in perto}
+        if jogador_id is not None and jogador_id in atingidos:
+            return "jogador", ""
+        if len(atingidos) == 1:
+            chave = next(iter(atingidos))
+            if tipos.get(chave) == "Player":
+                return ("jogador" if no_jogador(quando, x, y, z) else "outro"), ""
+            return "monstro", monstros.get(chave, "")
+        if atingidos:
+            vivos = {chave for chave in atingidos if tipos.get(chave) == "Monster"}
+            if len(vivos) == 1:
+                chave = next(iter(vivos))
+                return "monstro", monstros.get(chave, "")
+            if any(tipos.get(chave) == "Player" for chave in atingidos):
+                return "outro", ""
+            return "?", ""
+        if no_jogador(quando, x, y, z):
+            return "jogador", ""
+        return "?", ""
+
+    def atacante_em(quando):
+        """O monstro em combate: o unico que perdeu vida nos segundos anteriores."""
         if not quedas:
             return ""
-        indice = bisect_right(instantes_das_quedas, quando + _JANELA_DO_ALVO)
-        if indice == 0:
-            return ""
-        instante, chave = quedas[indice - 1]
-        if quando - instante > _MEMORIA_DO_ALVO:
-            return ""
-        return monstros.get(chave, "")
+        inicio = bisect_left(instantes_das_quedas, quando - _JANELA_DO_ATACANTE)
+        perto = quedas[inicio:bisect_right(instantes_das_quedas, quando)]
+        candidatos = {chave for _, chave in perto if tipos.get(chave) == "Monster"}
+        if len(candidatos) == 1:
+            return monstros.get(next(iter(candidatos)), "")
+        return ""
 
     def no_jogador(quando, x, y, z):
         if not passos:
@@ -271,20 +304,21 @@ def _eventos_do_rec(caminho):
             if cor in _CORES_SEM_DANO:
                 continue
             elemento = _CORES_DE_DANO.get(cor, "fisico")
-            nome = monstro_em(quando)
             valor = int(evento.get("Value") or 0)
-            if no_jogador(quando, x, y, z):
-                eventos.append((quando, ["sofrido", elemento, f"sofrido {valor} de {nome or 'monstro'}"]))
-            elif nome:
-                eventos.append((quando, ["melee", elemento, f"causado {valor} a {nome}"]))
+            alvo, dono = alvo_em(quando, x, y, z)
+            if alvo == "jogador":
+                atacante = atacante_em(quando)
+                eventos.append((quando, ["sofrido", elemento, f"sofrido {valor} de {atacante or 'nao identificado'}"]))
+            elif alvo == "monstro" and dono:
+                eventos.append((quando, ["melee", elemento, f"causado {valor} a {dono}"]))
         elif tipo == "GraphicalEffectPopped" and evento.get("Id") in (_EFEITO_DEFESA, _EFEITO_BLOQUEIO):
             if tem_numero(quando, x, y) or no_jogador(quando, x, y, z):
                 continue
-            nome = monstro_em(quando)
-            if not nome:
+            alvo, dono = alvo_em(quando, x, y, z)
+            if alvo != "monstro" or not dono:
                 continue
             rotulo = "defesa" if evento.get("Id") == _EFEITO_DEFESA else "bloqueio"
-            eventos.append((quando, [rotulo, nome]))
+            eventos.append((quando, [rotulo, dono]))
     eventos.extend(curas)
     eventos.sort(key=lambda par: par[0])
     return eventos
