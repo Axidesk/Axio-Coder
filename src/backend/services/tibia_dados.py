@@ -1444,6 +1444,41 @@ def _outfit_do_mon(base, cabecalho, texto):
     return problemas, divergencias
 
 
+def _corpo_partilhado(base, texto):
+    """Diz se outro monstro deste servidor usa o MESMO corpo, e qual.
+
+    A gravacao identifica o corpo pelo id do ITEM, nunca pelo nome do bicho. Quando dois
+    monstros usam o mesmo corpo - o orshabaal e o demon sao ambos 'a slain demon' (2916) -
+    os corpos lidos sao do outro e comparar a POSICAO do loot acusa uma troca que nao existe.
+    Medido a 2026-11-22: 318 corpos tidos como de orshabaal eram, todos, de demon.
+    """
+    achado = re.search(r'corpse="(\d+)"', texto)
+    if not achado:
+        return ""
+    corpo = achado.group(1)
+    pasta = os.path.join(base, 'Server', 'data', 'monster')
+    try:
+        ficheiros = sorted(os.listdir(pasta))
+    except OSError:
+        return ""
+    donos = []
+    for ficheiro in ficheiros:
+        if not ficheiro.lower().endswith('.xml') or ficheiro.lower() == 'monsters.xml':
+            continue
+        try:
+            with open(os.path.join(pasta, ficheiro), encoding='latin-1') as aberto:
+                outro = aberto.read()
+        except OSError:
+            continue
+        if f'corpse="{corpo}"' not in outro:
+            continue
+        nome = re.search(r'<monster\s+name="([^"]+)"', outro)
+        donos.append(nome.group(1).strip() if nome else ficheiro[:-4])
+    if len(donos) <= 1:
+        return ""
+    return f'{corpo} ({" / ".join(donos)})'
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -1604,19 +1639,27 @@ def validar_monstro(base, monstro):
 
     problemas.extend(_ordem_do_xml(texto))
 
-    try:
-        from src.backend.tools.gravacoes import posicoes_do_loot
-        vistas = posicoes_do_loot(monstro)
-    except (ImportError, OSError, ValueError):
-        vistas = {}
-    if vistas:
-        for ident, sitio in _sitios_do_xml(texto).items():
-            if ident == 1987 or ident not in vistas or vistas[ident] == sitio:
-                continue
-            divergencias.append(
-                f'"{nomes.get(ident, ident)}" ({ident}) esta no {sitio} do XML e as'
-                f' gravacoes mostram-no no {vistas[ident]} - o video manda na posicao'
-            )
+    partilha = _corpo_partilhado(base, texto)
+    if partilha:
+        divergencias.append(
+            f'corpo partilhado com outro monstro: {partilha} - a gravacao identifica o corpo'
+            f' pelo id do ITEM, logo os corpos lidos podem ser do outro bicho e a POSICAO do'
+            f' loot nao serve de prova aqui (nao mexer por isto)'
+        )
+    else:
+        try:
+            from src.backend.tools.gravacoes import posicoes_do_loot
+            vistas = posicoes_do_loot(monstro)
+        except (ImportError, OSError, ValueError):
+            vistas = {}
+        if vistas:
+            for ident, sitio in _sitios_do_xml(texto).items():
+                if ident == 1987 or ident not in vistas or vistas[ident] == sitio:
+                    continue
+                divergencias.append(
+                    f'"{nomes.get(ident, ident)}" ({ident}) esta no {sitio} do XML e as'
+                    f' gravacoes mostram-no no {vistas[ident]} - o video manda na posicao'
+                )
 
     problemas.extend(_ordem_do_loot(texto, nomes_do_servidor(base)))
     problemas.extend(_comentarios_do_loot(texto, nomes_do_servidor(base)))

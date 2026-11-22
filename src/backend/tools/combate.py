@@ -16,6 +16,7 @@ _CORES_DE_DANO = {180: "fisico", 129: "fisico", 198: "fogo", 30: "veneno", 35: "
 _CORES_SEM_DANO = {215, 5}
 _JANELA_DO_INSTANTE = 0.6
 _JANELA_DO_ATACANTE = 3.0
+_JANELA_DO_AUTOR = 3.0
 _JANELA_DA_CURA = 5.0
 _SUBIDA_MINIMA = 2
 _PASTAS_DE_MONSTROS = (("Server", "data", "monster"), ("data", "monster"), ("data", "monsters"))
@@ -29,6 +30,7 @@ _CURA_SERVIDOR = re.compile(r"^cura\s+(.+?)\s+\+(\d+)")
 _BLOQUEIO_SERVIDOR = re.compile(r"bloqueio=(\d+)")
 _CAUSADO_VIDEO = re.compile(r"causado\s+(\d+)\s+a\s+(.+)$")
 _SOFRIDO_VIDEO = re.compile(r"sofrido\s+(\d+)\s+de\s+(.+)$")
+_DANO_COM_AUTOR = re.compile(r"You lose (\d+) hitpoints? due to an attack by (?:an? )?(.+?)\.?$")
 
 
 def _caminho_ausente(caminho):
@@ -47,10 +49,26 @@ def _caminho_ausente(caminho):
     return f"o arquivo '{caminho}' nao existe. Parecidos em '{pasta}': " + ", ".join(parecidos) + "."
 
 
+def _e_nome_de_gravacao(caminho):
+    """Aceita o NOME de uma gravacao (sem o .rec), como o tool_ler_rec ja faz.
+
+    Sem isto, 'goethimorguthis' era lido como um log de texto e a ferramenta respondia que
+    o arquivo nao existe - quando a gravacao estava la, com outro nome de ficheiro.
+    """
+    try:
+        from src.backend.tools import gravacoes  # import-local: so quando o caminho nao existe
+        achado, _ = gravacoes._achar_gravacao(caminho, "")
+    except (ImportError, OSError, ValueError):
+        return False
+    return bool(achado)
+
+
 def _ler_eventos(caminho):
     if str(caminho).lower().endswith(".rec"):
         return _eventos_do_rec(caminho), "gravacao"
     if not os.path.isfile(caminho):
+        if _e_nome_de_gravacao(caminho):
+            return _eventos_do_rec(caminho), "gravacao"
         raise FileNotFoundError(_caminho_ausente(caminho))
     with open(caminho, encoding="utf-8", errors="replace") as ficheiro:
         linhas = [linha.rstrip("\n") for linha in ficheiro]
@@ -200,6 +218,16 @@ def _eventos_do_rec(caminho):
 
     instantes_das_quedas = [instante for instante, _ in quedas]
     instantes_dos_passos = [passo[0] for passo in passos]
+
+    autores = []
+    for evento in bruto:
+        if evento.get("Event") != "StatusMessageReceived":
+            continue
+        casou = _DANO_COM_AUTOR.search((evento.get("Message") or "").strip())
+        if casou:
+            autores.append((evento["__t"], int(casou.group(1)), casou.group(2).strip().lower()))
+    autores.sort()
+    instantes_dos_autores = [autor[0] for autor in autores]
     numeros = set()
     for evento in bruto:
         if evento.get("Event") == "NumberEffectPopped":
@@ -235,6 +263,20 @@ def _eventos_do_rec(caminho):
         if no_jogador(quando, x, y, z):
             return "jogador", ""
         return "?", ""
+
+    def autor_do_dano(quando, valor):
+        """Quem bateu, lido da mensagem 'You lose N hitpoints due to an attack by X'.
+
+        E o unico dado da gravacao que traz a autoria; a posicao e a vida nao a trazem, e por
+        isso o mesmo numero de dano aparecia sem dono quando dois monstros lutavam ao lado.
+        """
+        if not autores:
+            return ""
+        inicio = bisect_left(instantes_dos_autores, quando - _JANELA_DO_AUTOR)
+        for instante, numero, quem in autores[inicio:bisect_right(instantes_dos_autores, quando + _JANELA_DO_AUTOR)]:
+            if numero == valor:
+                return quem
+        return ""
 
     def atacante_em(quando):
         """O monstro em combate: o unico que perdeu vida nos segundos anteriores."""
@@ -305,9 +347,10 @@ def _eventos_do_rec(caminho):
                 continue
             elemento = _CORES_DE_DANO.get(cor, "fisico")
             valor = int(evento.get("Value") or 0)
-            alvo, dono = alvo_em(quando, x, y, z)
+            autor = autor_do_dano(quando, valor)
+            alvo, dono = ("jogador", "") if autor else alvo_em(quando, x, y, z)
             if alvo == "jogador":
-                atacante = atacante_em(quando)
+                atacante = autor or atacante_em(quando)
                 eventos.append((quando, ["sofrido", elemento, f"sofrido {valor} de {atacante or 'nao identificado'}"]))
             elif alvo == "monstro" and dono:
                 eventos.append((quando, ["melee", elemento, f"causado {valor} a {dono}"]))
@@ -511,11 +554,12 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
     if formato == "servidor":
         acertos, instantes, a_atacar = levados, instantes_levar, False
     else:
-        quer_atacar = direcao == "atacar"
-        if quer_atacar:
-            acertos, instantes, a_atacar = atacados, instantes_atacar, True
-        else:
-            acertos, instantes, a_atacar = levados, instantes_levar, False
+        quer_atacar = direcao == "atacar" if direcao in ("atacar", "levar") else len(atacados) > len(levados)
+        a_atacar = quer_atacar
+        acertos, instantes = (atacados, instantes_atacar) if quer_atacar else (levados, instantes_levar)
+        if not acertos and (levados if quer_atacar else atacados):
+            a_atacar = not quer_atacar
+            acertos, instantes = (levados, instantes_levar) if a_atacar is False else (atacados, instantes_atacar)
     tentativas = len(acertos) if a_atacar else len(acertos) + puffs + sparks
     if duracao is None:
         duracao = eventos[-1][0] - eventos[0][0] if len(eventos) > 1 else 0
@@ -533,6 +577,9 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         return 100.0 * total / len(acertos)
 
     ordenados = sorted(acertos)
+    saltos = [b - a for a, b in zip(ordenados, ordenados[1:])]
+    faixa = ordenados[-1] - ordenados[0]
+    salto_suspeito = faixa > 0 and len(ordenados) >= 8 and max(saltos) > 0.35 * faixa
     dano_total = sum(acertos)
     cura_total = sum(curas)
     magia_total = sum(magias)
@@ -575,6 +622,7 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         "magia_media": (magia_total / len(magias)) if magias else 0.0,
         "magia_max": max(magias) if magias else 0,
         "vida_min": min(vidas) if vidas else None,
+        "salto_suspeito": salto_suspeito,
         "ritmo_suspeito": formato == "video" and 60.0 * tentativas / duracao > 33,
     }
 
@@ -665,6 +713,11 @@ def _tabela(nomes, medidas):
         linhas.append("AVISO DE RITMO: mais de 33 tentativas/min (menos de 1,8s entre golpes).")
         linhas.append("O cliente 7.4 ataca de 2 em 2 segundos, logo a contagem esta inflada:")
         linhas.append("'defesa X' e 'bloqueio X' sao ambos X A DEFENDER - nao somar o bloqueio do oponente.")
+    if any(medida.get("salto_suspeito") for medida in medidas):
+        linhas.append("")
+        linhas.append("AVISO DE SALTO NO FISICO: os valores formam dois grupos bem separados.")
+        linhas.append("Numero vermelho NAO e so melee - o lifedrain tambem sai vermelho, logo o")
+        linhas.append("'golpe maximo' pode ser magia. O melee e o grupo de baixo (confirmar pelo ritmo).")
     return "\n".join(linhas)
 
 
