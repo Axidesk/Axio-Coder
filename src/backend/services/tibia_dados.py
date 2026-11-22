@@ -1488,6 +1488,7 @@ def validar_monstro(base, monstro):
     nomes = _nomes_por_id(base)
     servidor = objetos_do_srv(base)
     do_mon = {_normalizar(p['nome']) for p in cruz['inventario']}
+    partilha = _corpo_partilhado(base, texto)
 
     problemas = []
     divergencias = []
@@ -1510,9 +1511,15 @@ def validar_monstro(base, monstro):
                         f' provavel o mesmo item'
                     )
                 else:
+                    if partilha:
+                        prova = (
+                            'o corpo e partilhado com outro monstro, logo o video NAO'
+                            ' decide isto - sem uma fonte que o sustente, sai do XML'
+                        )
+                    else:
+                        prova = 'confirmar no video antes de apagar'
                     divergencias.append(
-                        f'"{nomes[ident]}" ({ident}) esta no XML e o .mon nao o tem -'
-                        f' confirmar no video antes de apagar'
+                        f'"{nomes[ident]}" ({ident}) esta no XML e o .mon nao o tem - {prova}'
                     )
             continue
         if ident in servidor:
@@ -1639,7 +1646,6 @@ def validar_monstro(base, monstro):
 
     problemas.extend(_ordem_do_xml(texto))
 
-    partilha = _corpo_partilhado(base, texto)
     if partilha:
         divergencias.append(
             f'corpo partilhado com outro monstro: {partilha} - a gravacao identifica o corpo'
