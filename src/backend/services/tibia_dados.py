@@ -1481,28 +1481,14 @@ def _corpo_partilhado(base, texto):
 
 
 def _conflito_de_container(inventario, texto):
-    do_mon = ''
-    for produto in inventario:
-        nome = _normalizar(produto['nome'])
-        if 'backpack' in nome:
-            do_mon = 'backpack'
-        elif nome.endswith('bag') and not do_mon:
-            do_mon = 'bag'
     achado = re.search(r'<loot>.*?<item id="(\d+)"', texto, re.S)
-    if not achado or int(achado.group(1)) not in CONTEINERES_DO_LOOT:
+    if not achado or int(achado.group(1)) != 1988:
         return ''
-    no_xml = 'backpack' if int(achado.group(1)) == 1988 else 'bag'
-    if not do_mon:
-        if no_xml == 'backpack':
-            return (
-                'o .mon nao declara container e o XML usa backpack (1988) - a bag'
-                ' (1987) e o que se ve no video'
-            )
-        return ''
-    if do_mon != no_xml:
-        certo = '1988' if do_mon == 'backpack' else '1987'
-        return f'o .mon traz {do_mon} e o XML usa {no_xml} - o container tem de ser {certo}'
-    return ''
+    return (
+        'o container do loot tem de ser a bag (1987): no video o que abre dentro do corpo'
+        ' com os itens e sempre uma bag, mesmo em monstros que o .mon nao da container'
+        ' nenhum (orc, valkyrie) - o item do .mon cai solto no corpo, nao guarda o loot'
+    )
 
 
 def validar_monstro(base, monstro):
