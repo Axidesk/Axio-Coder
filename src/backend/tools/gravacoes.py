@@ -783,9 +783,7 @@ def _paralisias_do_jogador(blocos):
     )
     if len(serie) < 2:
         return ["", "PARALISIA: a velocidade do jogador nao foi enviada nesta gravacao."]
-    frequente = collections.Counter(valor for _, valor in serie).most_common(1)[0][0]
-    mais_alta = max(valor for _, valor in serie)
-    repouso = frequente if frequente >= mais_alta * 0.8 else mais_alta
+    repouso = max(valor for _, valor in serie)
     if repouso <= 0:
         return []
     ataques = []
@@ -818,21 +816,17 @@ def _paralisias_do_jogador(blocos):
         duracoes.append((fim - inicio) / 1000.0)
     todas = [pct for pcts in por_autor.values() for pct in pcts]
     duracoes.sort()
+    menor = min(valor for _, valor in serie)
     linhas = [
         "",
-        f"PARALISIA (quedas de velocidade do jogador; base = repouso {repouso}"
-        + ("" if repouso == frequente else "; o valor mais frequente era uma velocidade paralisada")
-        + "):",
+        f"PARALISIA (quedas de velocidade do jogador; repouso = {repouso}, a maior velocidade que"
+        " o servidor enviou - o valor mais frequente pode ser uma velocidade ja paralisada):",
         f"  {len(episodios)} episodio(s); quedas de {min(todas)}% a {max(todas)}%; "
         f"duracao mediana ~{int(duracoes[len(duracoes) // 2])}s (a mais longa {int(duracoes[-1])}s)",
+        f"  a velocidade mais baixa atingida foi {menor} ({100.0 * (menor - repouso) / repouso:+.0f}%"
+        " do repouso). A percentagem do .mon incide sobre a velocidade INTEIRA do alvo e NAO ha piso"
+        " do servidor: -40% deixa 60%, -100% leva a zero.",
     ]
-    if min(valor for _, valor in serie) <= 80:
-        linhas.append(
-            "  a velocidade mais baixa atingida foi 80 - o PISO do original: nenhuma paralyze desce "
-            "abaixo de 80 (medido em tres gravacoes com jogadores de velocidade diferente: 298->80, "
-            "566->80 e 568->80). A percentagem do .mon incide sobre a velocidade INTEIRA - quem trava "
-            "a descida em 80 e o piso, e nao um desconto de 80."
-        )
     for quem in sorted(por_autor, key=lambda nome: -len(por_autor[nome])):
         pcts = por_autor[quem]
         linhas.append(f"    {quem[:22]:22s} n={len(pcts):3d}  {min(pcts):+d}% a {max(pcts):+d}%")

@@ -311,6 +311,7 @@ def cabecalho_do_mon(base, monstro):
         ):
             magias.append({
                 'quem': achado.group(1),
+                'alvo': [int(p) for p in re.findall(r'-?\d+', achado.group(2))],
                 'efeito': achado.group(3),
                 'numeros': [int(p) for p in re.findall(r'-?\d+', achado.group(4))],
                 'n': int(achado.group(5)),
@@ -1117,6 +1118,24 @@ def _haste_que_o_motor_entrega(cabecalho, texto, baixo, alto):
     return (int(round(baixo * fator)), int(round(alto * fator)))
 
 
+def _alvo_da_magia(magia):
+    """Tipo de alvo e valor, lidos da origem da linha do .mon.
+
+    O formato declara o alvo: `Victim (range, missile, efeito)` e de ALVO UNICO (o primeiro
+    numero e o alcance); `Origin (radius, efeito)` e EM AREA a partir do monstro (o primeiro
+    numero e o raio); `Actor (efeito)` cai no proprio monstro. Confirmado no tibia-rust:
+    state.rs:9093 le args.get(0) como radius do Origin e 9085 como range do Victim.
+    """
+    alvo = magia.get('alvo') or []
+    if not alvo:
+        return '', None
+    if magia['quem'] == 'Victim':
+        return 'range', alvo[0]
+    if magia['quem'] == 'Origin':
+        return 'radius', alvo[0]
+    return '', None
+
+
 def _variacao_do_speed(cabecalho, texto):
     """Confere a FAIXA do speedchange contra o Speed(a,b,c) do .mon.
 
@@ -1147,10 +1166,12 @@ def _variacao_do_speed(cabecalho, texto):
             convertido = _haste_que_o_motor_entrega(cabecalho, texto, baixo, alto)
             if convertido:
                 baixo, alto = convertido
+        tipo_alvo, valor_alvo = _alvo_da_magia(magia)
         disponiveis = [n for n in nos[tipo] if not n['usado']]
         if not disponiveis:
             continue
-        no = disponiveis[0]
+        certos = [n for n in disponiveis if tipo_alvo and tipo_alvo in n['atributos']]
+        no = (certos or disponiveis)[0]
         no['usado'] = True
         atributos = no['atributos']
         try:
@@ -1177,6 +1198,36 @@ def _variacao_do_speed(cabecalho, texto):
             divergencias.append(
                 f'duration do speed {intervalo}ms vs {duracao}ms do .mon (c={segundos} segundos)'
             )
+        if tipo_alvo == 'radius':
+            raio = atributos.get('radius')
+            if raio is None:
+                problemas.append(
+                    f'<{tipo} name="speed"> devia pegar em AREA: o .mon diz Origin ({valor_alvo}, ...),'
+                    f' logo radius="{valor_alvo}" target="0" - sem radius cai num alvo so'
+                )
+            elif int(raio) != valor_alvo:
+                divergencias.append(
+                    f'raio da area {raio} vs {valor_alvo} do .mon (Origin ({valor_alvo}, ...))'
+                )
+        elif tipo_alvo == 'range':
+            if 'radius' in atributos:
+                problemas.append(
+                    f'<{tipo} name="speed"> devia ser de ALVO UNICO: o .mon diz Victim ({valor_alvo}, ...),'
+                    f' logo range="{valor_alvo}" sem radius - com radius a magia pega em quem esta em volta'
+                )
+            elif int(atributos.get('range') or 0) != valor_alvo:
+                divergencias.append(
+                    f'range {atributos.get("range", 0)} vs {valor_alvo} do .mon'
+                    f' (Victim ({valor_alvo}, ...))'
+                )
+        chance = int(atributos.get('chance') or 100)
+        esperada = -(-100 // magia['n'])
+        if chance != esperada:
+            aviso = (
+                f'chance {chance} vs {esperada} do .mon (a magia sai ": {magia["n"]}",'
+                f' logo 100/{magia["n"]})'
+            )
+            (problemas if abs(chance - esperada) > 1 else divergencias).append(aviso)
     for tipo in ('attack', 'defense'):
         for sobra in nos[tipo]:
             if sobra['usado']:
