@@ -5,7 +5,9 @@ gravacao, todas passando por `gravar_edicao_com_diff` - o unico ponto onde se
 escreve um ficheiro (a cadeia de avisos/gates de escrita esta em tools/syntax_estrutural.py).
 """
 import difflib
+import glob
 import os
+import re
 
 from src.backend.state import estado, emit_event, notificar_mudanca_arquivos
 from src.backend.tools.registry import register
@@ -462,6 +464,88 @@ def tool_substituir_lote(caminho_relativo: str, substituicoes: str):
     if len(caminhos) == 1:
         return _lote_num_ficheiro(caminhos[0], itens)
     return _lote_em_varios(caminhos, itens)
+
+
+_PARAMS_REGEX = {
+    'caminho_relativo': {"tipo": "STRING", "obrig": True, "padrao": ""},
+    'padrao': {"tipo": "STRING", "obrig": True, "padrao": ""},
+    'substituicao': {"tipo": "STRING", "obrig": True, "padrao": ""},
+    'filtro': {"tipo": "STRING", "obrig": False, "padrao": "*.xml"},
+}
+
+
+def _ficheiros_do_padrao(caminho_relativo, filtro):
+    """Arquivos indicados a mao ou, para uma pasta, os que casam o filtro (recursivo)."""
+    padrao_do_filtro = (filtro or "*.xml").strip() or "*.xml"
+    raiz = estado.get("pasta_raiz") or os.getcwd()
+    encontrados = []
+    for linha in normalizar_unicode(caminho_relativo).splitlines():
+        linha = linha.strip()
+        if not linha:
+            continue
+        absoluto, erro = resolver_caminho(linha, permitir_extra=False, permitir_escrita=True)
+        if erro or not absoluto:
+            continue
+        if os.path.isfile(absoluto):
+            encontrados.append(linha)
+            continue
+        if not os.path.isdir(absoluto):
+            continue
+        for achado in sorted(glob.glob(os.path.join(absoluto, "**", padrao_do_filtro), recursive=True)):
+            if os.path.isfile(achado):
+                encontrados.append(os.path.relpath(achado, raiz).replace("\\", "/"))
+    vistos, unicos = set(), []
+    for caminho in encontrados:
+        chave = _chave_caminho(caminho)
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        unicos.append(caminho)
+    return unicos
+
+
+@register(
+    "tool_substituir_regex",
+    'Aplica uma EXPRESSAO REGULAR a um arquivo, a uma lista deles ou a uma pasta inteira, passando cada ficheiro pelo caminho normal de gravacao: o diff aparece na pilha do log da sessao, entra na pilha de desfazer e a sintaxe e validada. E o caminho para converter/limpar muitas linhas iguais em N ficheiros (comentarios, atributos, nomes) sem escrever um script - um script que grave ficheiros NAO aparece no log da sessao nem entra no desfazer. `caminho_relativo` aceita um caminho por linha; uma pasta e varrida recursivamente pelo `filtro` (padrao "*.xml"). `padrao` e a expressao (suporta grupos e flags inline, ex: "(?m)^\\s*<!--"); `substituicao` aceita retro-referencias (\\1). Ficheiros sem nenhum casamento ficam intactos. Se a expressao nao casar em nenhum, nada e gravado.',
+    _PARAMS_REGEX,
+    disponivel="edicao",
+)
+def tool_substituir_regex(caminho_relativo: str, padrao: str, substituicao: str, filtro: str = "*.xml"):
+    try:
+        expressao = re.compile(padrao)
+    except re.error as erro:
+        return f"ERRO: a expressao regular nao compila: {erro}"
+    ficheiros = _ficheiros_do_padrao(caminho_relativo, filtro)
+    if not ficheiros:
+        return (f"ERRO: nenhum arquivo encontrado em '{caminho_relativo}'"
+                f" com o filtro '{filtro or '*.xml'}'.")
+    feitos, iguais, falhas = [], [], []
+    for caminho in ficheiros:
+        dados, erro = _ler_para_edicao(caminho, "Substituindo por expressao")
+        if erro:
+            falhas.append((caminho, _resumir_motivo(erro)))
+            continue
+        caminho_absoluto, conteudo, conteudo_nfc = dados
+        novo, quantos = expressao.subn(substituicao, conteudo_nfc)
+        if not quantos:
+            continue
+        if novo == conteudo_nfc:
+            iguais.append((caminho, quantos))
+            continue
+        try:
+            gravar_edicao_com_diff(caminho, caminho_absoluto, conteudo, novo,
+                                   f"Modificado em lote: {caminho}")
+            feitos.append((caminho, quantos))
+        except Exception as erro_gravacao:
+            falhas.append((caminho, _resumir_motivo(erro_gravacao)))
+    linhas = [f"REGEX: {len(feitos)} de {len(ficheiros)} arquivos alterados."]
+    for caminho, quantos in feitos:
+        linhas.append(f"  ok: {caminho} ({quantos} substituicao(oes))")
+    for caminho, quantos in iguais:
+        linhas.append(f"  igual: {caminho} ({quantos} casaram, o texto ficava o mesmo)")
+    for caminho, motivo in falhas:
+        linhas.append(f"  falhou {caminho} -> {motivo}")
+    return "\n".join(linhas)
 
 
 def _eh_projeto_novo():

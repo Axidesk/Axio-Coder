@@ -1093,6 +1093,56 @@ def _padronizacao_do_loot(texto):
     return avisos
 
 
+def _nome_do_comentario(linha):
+    """O nome escrito depois da tag do item: `-- nome` ou, no formato antigo, `<!-- nome -->`."""
+    if '>' not in linha:
+        return ''
+    resto = linha.split('>', 1)[1].strip()
+    if resto.startswith('<!--'):
+        resto = resto[4:]
+        if resto.endswith('-->'):
+            resto = resto[:-3]
+    elif resto.startswith('--'):
+        resto = resto[2:]
+    else:
+        return ''
+    return resto.strip()
+
+
+def _comentarios_do_loot(texto, do_servidor):
+    """O nome ao lado do item tem de ser o nome que o items.xml DO SERVIDOR da aquele id.
+
+    O motor so le o id; o comentario e a unica leitura humana daquela linha. Um id
+    certo com o nome errado ao lado le-se como item confirmado e, na edicao seguinte,
+    ninguem volta a olhar - por isso e conferido aqui, id a id, contra o items.xml.
+    """
+    bloco = re.search(r'<loot[^>]*>(.*?)</loot>', texto, re.S)
+    if not bloco:
+        return []
+    faltas = []
+    for linha in bloco.group(1).splitlines():
+        if '<item' not in linha:
+            continue
+        ident = re.search(r'id="(\d+)"', linha)
+        if not ident:
+            continue
+        numero = int(ident.group(1))
+        escrito = _nome_do_comentario(linha)
+        oficial = do_servidor.get(numero)
+        if oficial is None:
+            faltas.append(
+                f'loot id {numero}: nao existe no items.xml do servidor'
+                + (f' (o comentario diz "{escrito}")' if escrito else '')
+            )
+            continue
+        if escrito and _normalizar(escrito) != _normalizar(oficial):
+            faltas.append(
+                f'loot id {numero}: o comentario diz "{escrito}" e o items.xml do servidor'
+                f' diz "{oficial}" para esse id - um dos dois esta trocado'
+            )
+    return faltas
+
+
 def _haste_que_o_motor_entrega(cabecalho, texto, baixo, alto):
     """Converte a percentagem de haste do .mon no per-mil que o NOSSO motor precisa.
 
@@ -1529,6 +1579,7 @@ def validar_monstro(base, monstro):
             )
 
     problemas.extend(_ordem_do_loot(texto, nomes_do_servidor(base)))
+    problemas.extend(_comentarios_do_loot(texto, nomes_do_servidor(base)))
 
     problemas.extend(_faltas_de_separacao(texto))
 

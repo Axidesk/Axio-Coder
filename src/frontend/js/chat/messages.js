@@ -606,7 +606,7 @@ function _diffDentroDoTeto(diff) {
 async function tratar_action_diff(data) {
     data = { ...data, diff: _diffDentroDoTeto(data.diff) };
     if (typeof atualizarBotoesUndoRedo === 'function') atualizarBotoesUndoRedo();
-    let fileName = data.actionName;
+    let fileName = data.actionName || data.name || 'arquivo';
     if (fileName.indexOf(' -> ') !== -1) {
         fileName = fileName.split(' -> ').pop();
     } else if (fileName.indexOf(': ') !== -1) {
