@@ -1092,6 +1092,31 @@ def _padronizacao_do_loot(texto):
     return avisos
 
 
+def _haste_que_o_motor_entrega(cabecalho, texto, baixo, alto):
+    """Converte a percentagem de haste do .mon no per-mil que o NOSSO motor precisa.
+
+    O original aplica a percentagem sobre 2*GoStrength, e o offset de +80 nunca e afetado;
+    o nosso motor aplica o per-mil sobre a velocidade que o XML declara (2*GS+80). Para o
+    bicho chegar a MESMA velocidade final, o per-mil leva o fator 2*GS/base.
+
+    Prova: ancient scarab (base 218) hasteia ate 342 medido em duas gravacoes, e 342 e
+    90% de 138 = 2*69; o giant spider (base 240) hasteia ate 352, que e 70% de 160 = 2*80.
+    Sem o fator, o scarab escrito a 800..900 chegaria a 414 - acima de tudo o que o
+    original faz. So a HASTE leva o fator: a paralyze cai sobre a velocidade do alvo, que
+    o XML nao conhece, logo fica na percentagem crua do .mon.
+
+    A base usada e SEMPRE 2*GoStrength+80, a do .mon. Se o speed do XML estiver por outro
+    valor, nenhuma percentagem reproduz o original - quem resolve isso e a divergencia de
+    'speed' (o XML contra 2*GS+80), e nao este par.
+    """
+    gs = cabecalho.get('velocidade_base')
+    if not gs:
+        return None
+    base = 2 * gs + 80
+    fator = (2.0 * gs) / base
+    return (int(round(baixo * fator)), int(round(alto * fator)))
+
+
 def _variacao_do_speed(cabecalho, texto):
     """Confere a FAIXA do speedchange contra o Speed(a,b,c) do .mon.
 
@@ -1118,6 +1143,10 @@ def _variacao_do_speed(cabecalho, texto):
         )
         duracao = segundos * 1000
         tipo = 'defense' if magia['quem'] == 'Actor' else 'attack'
+        if tipo == 'defense':
+            convertido = _haste_que_o_motor_entrega(cabecalho, texto, baixo, alto)
+            if convertido:
+                baixo, alto = convertido
         disponiveis = [n for n in nos[tipo] if not n['usado']]
         if not disponiveis:
             continue
@@ -1137,7 +1166,9 @@ def _variacao_do_speed(cabecalho, texto):
                 f' (Speed({centro},{variacao},{segundos})) e com valor unico o motor repete'
                 f' sempre o mesmo - por speedchange="{baixo}" speedchange_max="{alto}"'
             )
-        elif maximo is not None and sorted((atual, maximo)) != [baixo, alto]:
+        elif maximo is not None and (
+            abs(min(atual, maximo) - baixo) > 5 or abs(max(atual, maximo) - alto) > 5
+        ):
             divergencias.append(
                 f'faixa do speed no XML {sorted((atual, maximo))} nao bate com a do .mon'
                 f' [{baixo}, {alto}] (Speed({centro},{variacao},{segundos}))'

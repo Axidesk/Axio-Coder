@@ -713,7 +713,7 @@ def _velocidade_das_criaturas(blocos, pedido):
             f"  Nenhuma criatura teve a velocidade atualizada nesta gravacao ({pedido} pedido). "
             "O cliente so recebe CreatureSpeedUpdated quando o servidor muda a velocidade - "
             "numa gravacao curta ou parada isso pode nao acontecer nenhuma vez.",
-        ]
+        ] + _paralisias_do_jogador(blocos)
 
     medidas = collections.defaultdict(list)
     for chave, valores in series.items():
@@ -729,7 +729,7 @@ def _velocidade_das_criaturas(blocos, pedido):
             "",
             f"  Nenhuma leitura de velocidade para '{pedido}'. Criaturas com nome nesta gravacao: "
             + (", ".join(vistos[:20]) if vistos else "nenhuma"),
-        ]
+        ] + _paralisias_do_jogador(blocos)
 
     linhas = [
         "",
@@ -783,7 +783,9 @@ def _paralisias_do_jogador(blocos):
     )
     if len(serie) < 2:
         return ["", "PARALISIA: a velocidade do jogador nao foi enviada nesta gravacao."]
-    repouso = collections.Counter(valor for _, valor in serie).most_common(1)[0][0]
+    frequente = collections.Counter(valor for _, valor in serie).most_common(1)[0][0]
+    mais_alta = max(valor for _, valor in serie)
+    repouso = frequente if frequente >= mais_alta * 0.8 else mais_alta
     if repouso <= 0:
         return []
     ataques = []
@@ -818,10 +820,19 @@ def _paralisias_do_jogador(blocos):
     duracoes.sort()
     linhas = [
         "",
-        f"PARALISIA (quedas de velocidade do jogador; base = repouso {repouso}):",
+        f"PARALISIA (quedas de velocidade do jogador; base = repouso {repouso}"
+        + ("" if repouso == frequente else "; o valor mais frequente era uma velocidade paralisada")
+        + "):",
         f"  {len(episodios)} episodio(s); quedas de {min(todas)}% a {max(todas)}%; "
         f"duracao mediana ~{int(duracoes[len(duracoes) // 2])}s (a mais longa {int(duracoes[-1])}s)",
     ]
+    if min(valor for _, valor in serie) <= 80:
+        linhas.append(
+            "  a velocidade mais baixa atingida foi 80 - o PISO do original: nenhuma paralyze desce "
+            "abaixo de 80 (medido em tres gravacoes com jogadores de velocidade diferente: 298->80, "
+            "566->80 e 568->80). A percentagem do .mon incide sobre a velocidade INTEIRA - quem trava "
+            "a descida em 80 e o piso, e nao um desconto de 80."
+        )
     for quem in sorted(por_autor, key=lambda nome: -len(por_autor[nome])):
         pcts = por_autor[quem]
         linhas.append(f"    {quem[:22]:22s} n={len(pcts):3d}  {min(pcts):+d}% a {max(pcts):+d}%")
