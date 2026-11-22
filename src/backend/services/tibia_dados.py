@@ -1146,6 +1146,129 @@ def _variacao_do_speed(cabecalho, texto):
             divergencias.append(
                 f'duration do speed {intervalo}ms vs {duracao}ms do .mon (c={segundos} segundos)'
             )
+    for tipo in ('attack', 'defense'):
+        for sobra in nos[tipo]:
+            if sobra['usado']:
+                continue
+            problemas.append(
+                f'<{tipo} name="speed"> que o .mon nao declara (chance'
+                f' {sobra["atributos"].get("chance", "?")}, duration'
+                f' {sobra["atributos"].get("duration", "?")}, speedchange'
+                f' {sobra["atributos"].get("speedchange", "?")}) - a magia nao vem do .mon:'
+                f' apagar ou provar na gravacao'
+            )
+    return problemas, divergencias
+
+
+@lru_cache(maxsize=4)
+def _outfits_do_mon(base):
+    """Outfit de cada .mon -> nome da criatura, para conferir o monster="" das magias."""
+    pasta = f'{base}/gerados/monstros/cipsoft'
+    tabela = {}
+    for ficheiro in os.listdir(pasta):
+        if not ficheiro.endswith('.mon'):
+            continue
+        texto = open(f'{pasta}/{ficheiro}', encoding='latin-1').read(600)
+        achado = re.search(r'^Outfit\s*=\s*\((\d+)', texto, re.M)
+        nome = re.search(r'^Name\s*=\s*"([^"]*)"', texto, re.M)
+        if achado and nome:
+            tabela.setdefault(int(achado.group(1)), []).append(nome.group(1))
+    return tabela
+
+
+def _outfit_do_mon(base, cabecalho, texto):
+    """Confere as magias de Outfit contra o .mon e denuncia as que nao vem de la.
+
+    A conversao e a das outras magias - chance = 100/N e a duracao em segundos vai para
+    milissegundos -, medida em dois bichos que ja estavam certos: o efreet e o marid tem
+    `Outfit (..., 6) : 6` no .mon e chance="17" no XML. A direcao decide o bloco: 'Actor'
+    cai no <defenses>, 'Victim' no <attacks>.
+
+    Outfit 0 e INVISIBILIDADE no cliente - o corpo do bicho some, e o .rec mostra isso como
+    CreatureOutfitUpdated com Id 0 (medido no stalker) -, logo o par dele no XML e a magia
+    name="invisible", nao name="outfit".
+
+    A defesa de VOLTAR a forma de partida nao existe no .mon e nao precisa de existir: o
+    motor repoe o outfit sozinho quando a condicao acaba (condition.cpp:1649).
+    """
+    problemas = []
+    divergencias = []
+    por_id = _outfits_do_mon(base)
+    do_mon_por_tipo = {'attack': 0, 'defense': 0}
+    for magia in cabecalho['magias']:
+        if magia['efeito'] == 'Outfit':
+            do_mon_por_tipo['defense' if magia['quem'] == 'Actor' else 'attack'] += 1
+
+    nos = {'attack': [], 'defense': []}
+    for achado in re.finditer(r'<(attack|defense)\s+([^>]*)>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(2)))
+        if atributos.get('name') not in ('outfit', 'invisible'):
+            continue
+        nos[achado.group(1)].append(
+            {'nome': atributos.get('name'), 'atributos': atributos, 'usado': False}
+        )
+
+    for magia in cabecalho['magias']:
+        if magia['efeito'] != 'Outfit' or len(magia['numeros']) < 2:
+            continue
+        tipo = 'defense' if magia['quem'] == 'Actor' else 'attack'
+        invisivel = magia['numeros'][0] == 0
+        procurada = 'invisible' if invisivel else 'outfit'
+        duracao_do_mon = magia['numeros'][-1] * 1000
+        disponiveis = [n for n in nos[tipo] if not n['usado'] and n['nome'] == procurada]
+        no = next(
+            (n for n in disponiveis if int(n['atributos'].get('duration') or 0) == duracao_do_mon),
+            None,
+        )
+        if no is None and do_mon_por_tipo[tipo] == 1 and disponiveis:
+            no = disponiveis[0]
+        if no is None:
+            rotulo = 'invisibilidade' if invisivel else f'outfit {magia["numeros"][0]}'
+            aviso = (
+                f'o .mon declara {rotulo} ({magia["quem"]}, : {magia["n"]},'
+                f' {magia["numeros"][-1]}s) e o XML nao tem nenhum no <{tipo}> -'
+                f' se for decisao (versao posterior), deixar dito'
+            )
+            if aviso not in divergencias:
+                divergencias.append(aviso)
+            continue
+        no['usado'] = True
+        try:
+            chance = float(no['atributos'].get('chance') or 0)
+            duracao = int(no['atributos'].get('duration') or 0)
+        except ValueError:
+            continue
+        esperada = 100.0 / magia['n'] if magia['n'] else 0
+        if abs(chance - esperada) > 1.0:
+            divergencias.append(
+                f'chance da magia {procurada}: o .mon da : {magia["n"]} -> {esperada:.0f} e o'
+                f' XML tem {chance:.0f} cada {no["atributos"].get("interval", "?")}ms'
+            )
+        if duracao != duracao_do_mon:
+            divergencias.append(
+                f'duration da magia {procurada}: o .mon da {duracao_do_mon} ms e o XML tem'
+                f' {duracao} ms'
+            )
+        escrito = no['atributos'].get('monster', '')
+        if not invisivel and escrito:
+            nomes = por_id.get(magia['numeros'][0]) or []
+            if nomes and _normalizar(escrito) not in {_normalizar(n) for n in nomes}:
+                divergencias.append(
+                    f'Outfit {magia["numeros"][0]} e "{nomes[0]}" no .mon e o XML poe'
+                    f' monster="{escrito}"'
+                )
+
+    for tipo in ('attack', 'defense'):
+        for sobra in nos[tipo]:
+            if sobra['usado']:
+                continue
+            problemas.append(
+                f'<{tipo} name="{sobra["nome"]}"> que o .mon nao declara (chance'
+                f' {sobra["atributos"].get("chance", "?")}, duration'
+                f' {sobra["atributos"].get("duration", "?")}, monster'
+                f' {sobra["atributos"].get("monster", "?")}) - o motor repoe a forma de'
+                f' partida sozinho quando a condicao acaba: apagar'
+            )
     return problemas, divergencias
 
 
@@ -1284,6 +1407,9 @@ def validar_monstro(base, monstro):
         do_speed, divergencias_do_speed = _variacao_do_speed(cabecalho, texto)
         problemas.extend(do_speed)
         divergencias.extend(divergencias_do_speed)
+        do_outfit, divergencias_do_outfit = _outfit_do_mon(base, cabecalho, texto)
+        problemas.extend(do_outfit)
+        divergencias.extend(divergencias_do_outfit)
         combinado = f"{cabecalho.get('artigo', '')} {cabecalho['nome']}".strip().lower()
         achado_nome = re.search(r'nameDescription="([^"]*)"', texto)
         if achado_nome and combinado and achado_nome.group(1).strip().lower() != combinado:
