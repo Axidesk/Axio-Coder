@@ -3858,10 +3858,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 595,
+        "linha": 630,
         "conferido": [
-          1792189864.428,
-          40158
+          1795298891.437,
+          41982
         ]
       }
     },
@@ -3878,10 +3878,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 552,
+        "linha": 587,
         "conferido": [
-          1792189864.428,
-          40158
+          1795298891.437,
+          41982
         ]
       }
     },
@@ -3958,10 +3958,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 864,
+        "linha": 899,
         "conferido": [
-          1792189864.428,
-          40158
+          1795298891.437,
+          41982
         ]
       }
     },
@@ -3978,10 +3978,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 715,
+        "linha": 750,
         "conferido": [
-          1792189864.428,
-          40158
+          1795298891.437,
+          41982
         ]
       }
     },
@@ -3998,10 +3998,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 628,
+        "linha": 663,
         "conferido": [
-          1792189864.428,
-          40158
+          1795298891.437,
+          41982
         ]
       }
     },
@@ -7002,10 +7002,10 @@
       "descricao": "Lê um ficheiro .rec do TibiaCAM e devolve os eventos em texto com hora ao milésimo (dano com valor/cor/tile, efeito por id e tile, vida, fala, loot, magia), filtrável por intervalo de tempo e por grupo.",
       "localizacao": {
         "arquivo": "src/backend/tools/gravacoes.py",
-        "linha": 197,
+        "linha": 223,
         "conferido": [
-          1795292933.86,
-          79895
+          1795307465.218,
+          89823
         ]
       }
     }

@@ -760,6 +760,76 @@ def _velocidade_das_criaturas(blocos, pedido):
         "mais frequente, quando o .mon nao esta ao alcance. O per-mil e o que o XML escreve em "
         "speedchange/speedchange_max."
     )
+    linhas.extend(_paralisias_do_jogador(blocos))
+    return linhas
+
+
+def _paralisias_do_jogador(blocos):
+    """As quedas de velocidade do jogador: quanto, por quanto tempo e o provavel autor de cada uma."""
+    eventos = list(_eventos(blocos))
+    jogador = None
+    for evento in eventos:
+        if evento.get("Event") == "WorldInitialized":
+            jogador = evento.get("PlayerId")
+            break
+    if not jogador:
+        return []
+    serie = sorted(
+        (evento.get("_quando") or 0, evento.get("Speed"))
+        for evento in eventos
+        if evento.get("Event") == "CreatureSpeedUpdated"
+        and evento.get("CreatureId") == jogador
+        and isinstance(evento.get("Speed"), int)
+    )
+    if len(serie) < 2:
+        return ["", "PARALISIA: a velocidade do jogador nao foi enviada nesta gravacao."]
+    repouso = collections.Counter(valor for _, valor in serie).most_common(1)[0][0]
+    if repouso <= 0:
+        return []
+    ataques = []
+    for evento in eventos:
+        if evento.get("Event") != "StatusMessageReceived":
+            continue
+        casou = re.search(r"due to an attack by (?:an? )?(.+?)\.?$", (evento.get("Message") or "").strip())
+        if casou:
+            ataques.append((evento.get("_quando") or 0, casou.group(1).strip()))
+    ataques.sort()
+    episodios = []
+    inicio = pior = None
+    for instante, valor in serie:
+        if valor < repouso * 0.97:
+            if inicio is None:
+                inicio, pior = instante, valor
+            else:
+                pior = min(pior, valor)
+        elif inicio is not None:
+            episodios.append((inicio, instante, pior))
+            inicio = None
+    if not episodios:
+        return ["", f"PARALISIA: base do jogador = {repouso}; nenhuma queda de velocidade nesta gravacao."]
+    por_autor = collections.defaultdict(list)
+    duracoes = []
+    for inicio, fim, pior in episodios:
+        antes = [a for a in ataques if 0 <= inicio - a[0] <= 3000]
+        quem = antes[-1][1] if antes else "(sem dano antes)"
+        por_autor[quem].append(round(100.0 * (pior - repouso) / repouso))
+        duracoes.append((fim - inicio) / 1000.0)
+    todas = [pct for pcts in por_autor.values() for pct in pcts]
+    duracoes.sort()
+    linhas = [
+        "",
+        f"PARALISIA (quedas de velocidade do jogador; base = repouso {repouso}):",
+        f"  {len(episodios)} episodio(s); quedas de {min(todas)}% a {max(todas)}%; "
+        f"duracao mediana ~{int(duracoes[len(duracoes) // 2])}s (a mais longa {int(duracoes[-1])}s)",
+    ]
+    for quem in sorted(por_autor, key=lambda nome: -len(por_autor[nome])):
+        pcts = por_autor[quem]
+        linhas.append(f"    {quem[:22]:22s} n={len(pcts):3d}  {min(pcts):+d}% a {max(pcts):+d}%")
+    linhas.append(
+        "  atribuicao pelo ultimo dano nomeado nos 3s antes da queda: e INDICATIVA (uma criatura pode "
+        "paralisar sem causar dano no mesmo instante). Cruza-la com as criaturas que o .mon declara ter "
+        "feitiço de speed."
+    )
     return linhas
 
 
