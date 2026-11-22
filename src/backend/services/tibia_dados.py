@@ -35,8 +35,10 @@ melee skill=FistFighting 1:1 | melee attack=Attack 1:1 | melee min/max=Damage(ba
 base-var..base+var | melee poison=Poison 1:1 | cura min/max=Healing(base,var) -> base-var..base+var |
 cura chance=Healing:N -> ceil(100/N) | speed=GoStrength -> 2*GS+80, CONFIRMADO no Tarsal (o marid
 estava 170 no datapack e sao 234 pelas DUAS fontes) | speedchange=(a-b)*10, per-mil, nunca abaixo de
--1000 | speedchange_max=(a+b)*10 - o PAR so existe em 3 XML; nos outros o datapack poe um valor fixo
-sem fonte e nao se mexe sem a gravacao | duration=c*1000 (c em segundos) | outras magias=ceil(100/N)
+-1000 | speedchange_max=(a+b)*10 - O PAR VALE PARA TODOS: medido a 2026-11-22 nos 159 .mon, os 56
+Speed tem b diferente de zero, logo o original SORTEIA a faixa a cada lancamento; sem speedchange_max
+o motor faz speedChangeMax=speedChange (monsters.cpp:502) e a magia passa a dar sempre o mesmo - o
+validador acusa (_variacao_do_speed) | duration=c*1000 (c em segundos) | outras magias=ceil(100/N)
 - e o interval de cada uma sai da gravacao.
 
 O INTERVALO NAO EXISTE NO .mon, E NAO HA CICLO UNIVERSAL. O motor corre a 1000ms (creature.h:
@@ -1090,6 +1092,63 @@ def _padronizacao_do_loot(texto):
     return avisos
 
 
+def _variacao_do_speed(cabecalho, texto):
+    """Confere a FAIXA do speedchange contra o Speed(a,b,c) do .mon.
+
+    O .mon nunca declara um valor unico: o formato e sempre um centro `a` com variacao `b`,
+    logo o original sorteia entre (a-b)*10 e (a+b)*10 per-mil a cada lancamento - medido nos
+    56 Speed dos 159 .mon, b e diferente de zero em todos. Sem `speedchange_max` o motor faz
+    speedChangeMax = speedChange (monsters.cpp:502) e a magia passa a dar sempre o mesmo
+    efeito, que e um comportamento que o original nao tem.
+    """
+    problemas = []
+    divergencias = []
+    nos = {'attack': [], 'defense': []}
+    for achado in re.finditer(r'<(attack|defense)\s+([^>]*)>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(2)))
+        if atributos.get('name') == 'speed':
+            nos[achado.group(1)].append({'atributos': atributos, 'usado': False})
+
+    for magia in cabecalho['magias']:
+        if magia['efeito'] != 'Speed' or len(magia['numeros']) < 3:
+            continue
+        centro, variacao, segundos = magia['numeros'][:3]
+        baixo, alto = sorted(
+            (max(-1000, (centro - variacao) * 10), max(-1000, (centro + variacao) * 10))
+        )
+        duracao = segundos * 1000
+        tipo = 'defense' if magia['quem'] == 'Actor' else 'attack'
+        disponiveis = [n for n in nos[tipo] if not n['usado']]
+        if not disponiveis:
+            continue
+        no = disponiveis[0]
+        no['usado'] = True
+        atributos = no['atributos']
+        try:
+            atual = int(atributos.get('speedchange') or 0)
+            maximo = atributos.get('speedchange_max')
+            maximo = int(maximo) if maximo is not None else None
+            intervalo = int(atributos.get('duration') or 0)
+        except ValueError:
+            continue
+        if maximo is None and baixo != alto:
+            problemas.append(
+                f'sem speedchange_max no <{tipo} name="speed">: o .mon sorteia {baixo}..{alto}'
+                f' (Speed({centro},{variacao},{segundos})) e com valor unico o motor repete'
+                f' sempre o mesmo - por speedchange="{baixo}" speedchange_max="{alto}"'
+            )
+        elif maximo is not None and sorted((atual, maximo)) != [baixo, alto]:
+            divergencias.append(
+                f'faixa do speed no XML {sorted((atual, maximo))} nao bate com a do .mon'
+                f' [{baixo}, {alto}] (Speed({centro},{variacao},{segundos}))'
+            )
+        if intervalo != duracao:
+            divergencias.append(
+                f'duration do speed {intervalo}ms vs {duracao}ms do .mon (c={segundos} segundos)'
+            )
+    return problemas, divergencias
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -1222,6 +1281,9 @@ def validar_monstro(base, monstro):
         do_ritmo, divergencias_do_ritmo = _ritmo_das_magias(cabecalho, texto)
         problemas.extend(do_ritmo)
         divergencias.extend(divergencias_do_ritmo)
+        do_speed, divergencias_do_speed = _variacao_do_speed(cabecalho, texto)
+        problemas.extend(do_speed)
+        divergencias.extend(divergencias_do_speed)
         combinado = f"{cabecalho.get('artigo', '')} {cabecalho['nome']}".strip().lower()
         achado_nome = re.search(r'nameDescription="([^"]*)"', texto)
         if achado_nome and combinado and achado_nome.group(1).strip().lower() != combinado:
