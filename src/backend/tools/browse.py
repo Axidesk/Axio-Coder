@@ -220,10 +220,21 @@ def tool_localizar_arquivos(nome: str, pasta: str = "", excluir: str = "", inclu
     if no_sistema:
         aviso = f"Varredura FORA do projeto, em '{raiz_busca}' - " + aviso
     if incompleta:
-        aviso += (f" - VARREDURA PARADA no teto de {teto} resultado(s) por padrao (ou nos 20s): um padrao "
-                  "sem resultados aqui NAO prova que nao existe; repita com 'pasta' apontado a subpasta certa.")
+        aviso += (f" - VARREDURA INCOMPLETA: parou no teto de {teto} resultado(s) por padrao ou nos 20s. "
+                  "NAO CONCLUA QUE NAO EXISTE a partir daqui: repita com 'pasta' apontado a subpasta "
+                  "certa, ou com limite maior.")
     if excluidas:
         aviso += f" [pastas excluidas a pedido: {', '.join(sorted(excluidas))}]"
+    if not no_sistema and not any(achados):
+        aviso += (" - NADA encontrado DENTRO do projeto. Se o arquivo for de um programa instalado ou "
+                  "viver noutra unidade, isto nao diz nada: repita com no_sistema=true e 'pasta' "
+                  "apontado a raiz certa (ex: 'D:/').")
+    if no_sistema and not any(achados):
+        aviso = (f"VARREDURA VAZIA em '{raiz_busca}'. Isto NAO prova que o arquivo nao existe na "
+                 f"maquina: o perfil do utilizador nao cobre outras unidades nem pastas de backup. "
+                 f"Repita com 'pasta' apontado a raiz onde ele deve estar. - " + aviso)
+    if incompleta:
+        aviso = "*** VARREDURA INCOMPLETA *** " + aviso
     return "\n".join([aviso, ""] + linhas)
 
 

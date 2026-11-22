@@ -27,6 +27,29 @@ FLAGS_SEM_CAMPO = {'SeeInvisible'}
 
 RECEITA_DO_MON = """=== RECEITA .mon -> XML (conferida no codigo do motor; manda sobre qualquer nota antiga) ===
 
+ANTES DE MEXER NO MOTOR (regra dura, pedida a 2026-11-22)
+A peca que falta quase nunca falta: costuma estar escrita e so nao estar LIGADA. Medido no debuff de
+forca - o ConditionAttributes ja tinha percentagem por skill, aplicacao e reversao completas, e o
+'strength' era um branch vazio (monsters.cpp:664). A primeira pesquisa disse "nao existe" porque
+parou no nome do atributo do XML.
+Obrigatorio, por esta ordem: (1) varrer o projeto TODO, ficheiro a ficheiro, desde a raiz, pelo
+SIMBOLO e pelos nomes vizinhos - o mecanismo pode viver noutra classe (condition, combat, weapons,
+player); (2) procurar branch vazio, TODO, 'else if' sem corpo, e campo que se escreve e nunca se le;
+(3) seguir a cadeia inteira: quem ESCREVE -> quem LE -> quem DECIDE -> quem LIMPA; (4) so depois de
+PROVAR que nao existe e que se cria, e pedindo autorizacao ao dono com o custo dito numa linha.
+AUSENCIA NAO SE PROVA COM VARREDURA TRUNCADA: se a ferramenta disser que parou no teto ou cortou a
+saida, repetir antes de concluir que algo nao existe.
+
+O NUMERO DO EFEITO NO .mon E 1-BASED: efeito_do_XML = numero - 1.
+Provado em 39 defesas, 39 acertos, zero desvios - todo 'Actor (13) -> Healing' e blueshimmer,
+'Actor (14) -> Speed' e redshimmer, 'Actor (17)' e mortarea. E o 'Origin (r, efeito)' gasta o
+PRIMEIRO numero como raio e o SEGUNDO como efeito: ler ao contrario muda a magia de sitio.
+
+ONDE ESTAO AS GRAVACOES .rec - nunca dizer "nao ha gravacoes nesta maquina"
+Vivem FORA do projeto, em D:\\0. BACKUPS (TibiCAM\\7.4), e o tool_ler_rec acha-as sozinho com
+varrer=<monstro>. Procurar no perfil do utilizador NAO as encontra, porque estao noutra pasta:
+uma busca vazia no perfil nao prova ausencia.
+
 TABELA 1 - todos os campos
 health=HitPoints 1:1 | experience=Experience 1:1, MAS o video manda quando existe (so vale a
 gravacao onde o jogador mata SO aquele monstro: morte em area soma varios de uma vez e falseia o
