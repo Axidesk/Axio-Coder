@@ -713,7 +713,7 @@ def _velocidade_das_criaturas(blocos, pedido):
             f"  Nenhuma criatura teve a velocidade atualizada nesta gravacao ({pedido} pedido). "
             "O cliente so recebe CreatureSpeedUpdated quando o servidor muda a velocidade - "
             "numa gravacao curta ou parada isso pode nao acontecer nenhuma vez.",
-        ] + _paralisias_do_jogador(blocos)
+        ] + _paralisias_do_jogador(blocos) + _alcance_da_paralisia(blocos)
 
     medidas = collections.defaultdict(list)
     for chave, valores in series.items():
@@ -729,7 +729,7 @@ def _velocidade_das_criaturas(blocos, pedido):
             "",
             f"  Nenhuma leitura de velocidade para '{pedido}'. Criaturas com nome nesta gravacao: "
             + (", ".join(vistos[:20]) if vistos else "nenhuma"),
-        ] + _paralisias_do_jogador(blocos)
+        ] + _paralisias_do_jogador(blocos) + _alcance_da_paralisia(blocos)
 
     linhas = [
         "",
@@ -761,7 +761,42 @@ def _velocidade_das_criaturas(blocos, pedido):
         "speedchange/speedchange_max."
     )
     linhas.extend(_paralisias_do_jogador(blocos))
+    linhas.extend(_alcance_da_paralisia(blocos))
     return linhas
+
+
+def _quedas_de_velocidade(serie):
+    """Episodios de queda e a velocidade de repouso do jogador.
+
+    A percentagem de cada queda mede-se contra a velocidade do instante ANTERIOR a ela, nunca
+    contra um repouso unico da gravacao: quem calca umas botas de haste muda de velocidade a meio.
+    Medido no vampireswithnator: o jogador alterna entre 266 e 320 (266 x 1.2, as botas) e medir
+    contra o maior valor da gravacao dava -88% onde o original fez -50%. O repouso, esse, e a
+    velocidade a que ele volta - a mais frequente entre as leituras que nao sao um tombo.
+    """
+    calmos = [
+        valor
+        for indice, (_, valor) in enumerate(serie)
+        if indice == 0 or valor >= serie[indice - 1][1] * 0.97
+    ]
+    repouso = collections.Counter(calmos).most_common(1)[0][0] if calmos else 0
+    episodios = []
+    antes = pior = inicio = None
+    anterior = None
+    for instante, valor in serie:
+        if anterior is not None:
+            if valor < anterior * 0.97:
+                if antes is None:
+                    antes, inicio, pior = anterior, instante, valor
+                else:
+                    pior = min(pior, valor)
+            elif antes is not None:
+                episodios.append((inicio, instante, antes, pior))
+                antes = None
+        anterior = valor
+    if antes is not None:
+        episodios.append((inicio, None, antes, pior))
+    return repouso, episodios
 
 
 def _paralisias_do_jogador(blocos):
@@ -783,7 +818,7 @@ def _paralisias_do_jogador(blocos):
     )
     if len(serie) < 2:
         return ["", "PARALISIA: a velocidade do jogador nao foi enviada nesta gravacao."]
-    repouso = max(valor for _, valor in serie)
+    repouso, episodios = _quedas_de_velocidade(serie)
     if repouso <= 0:
         return []
     ataques = []
@@ -794,39 +829,52 @@ def _paralisias_do_jogador(blocos):
         if casou:
             ataques.append((evento.get("_quando") or 0, casou.group(1).strip()))
     ataques.sort()
-    episodios = []
-    inicio = pior = None
-    for instante, valor in serie:
-        if valor < repouso * 0.97:
-            if inicio is None:
-                inicio, pior = instante, valor
-            else:
-                pior = min(pior, valor)
-        elif inicio is not None:
-            episodios.append((inicio, instante, pior))
-            inicio = None
     if not episodios:
         return ["", f"PARALISIA: base do jogador = {repouso}; nenhuma queda de velocidade nesta gravacao."]
     por_autor = collections.defaultdict(list)
     duracoes = []
-    for inicio, fim, pior in episodios:
-        antes = [a for a in ataques if 0 <= inicio - a[0] <= 3000]
-        quem = antes[-1][1] if antes else "(sem dano antes)"
-        por_autor[quem].append(round(100.0 * (pior - repouso) / repouso))
-        duracoes.append((fim - inicio) / 1000.0)
+    sem_recuperacao = 0
+    for inicio, fim, antes, pior in episodios:
+        recentes = [a for a in ataques if 0 <= inicio - a[0] <= 3000]
+        quem = recentes[-1][1] if recentes else "(sem dano antes)"
+        por_autor[quem].append(round(100.0 * (pior - antes) / antes))
+        if fim is None:
+            sem_recuperacao += 1
+        else:
+            duracoes.append((fim - inicio) / 1000.0)
     todas = [pct for pcts in por_autor.values() for pct in pcts]
     duracoes.sort()
     menor = min(valor for _, valor in serie)
+    if duracoes:
+        quanto_durou = (
+            f"duracao mediana ~{int(duracoes[len(duracoes) // 2])}s"
+            f" (a mais longa {int(duracoes[-1])}s)"
+        )
+    else:
+        quanto_durou = "nenhuma recuperacao observada, logo a duracao nao se mede"
     linhas = [
         "",
-        f"PARALISIA (quedas de velocidade do jogador; repouso = {repouso}, a maior velocidade que"
-        " o servidor enviou - o valor mais frequente pode ser uma velocidade ja paralisada):",
-        f"  {len(episodios)} episodio(s); quedas de {min(todas)}% a {max(todas)}%; "
-        f"duracao mediana ~{int(duracoes[len(duracoes) // 2])}s (a mais longa {int(duracoes[-1])}s)",
+        f"PARALISIA (quedas de velocidade do jogador; repouso = {repouso}, a velocidade a que ele"
+        " volta - contada so nas leituras que NAO sao um tombo, porque quem calca umas botas de"
+        " haste muda de velocidade a meio da gravacao):",
+        f"  {len(episodios)} episodio(s); quedas de {min(todas)}% a {max(todas)}%; {quanto_durou}",
         f"  a velocidade mais baixa atingida foi {menor} ({100.0 * (menor - repouso) / repouso:+.0f}%"
-        " do repouso). A percentagem do .mon incide sobre a velocidade INTEIRA do alvo e NAO ha piso"
-        " do servidor: -40% deixa 60%, -100% leva a zero.",
+        " do repouso). Cada queda e medida contra a velocidade do instante ANTERIOR a ela, e a"
+        " percentagem do .mon incide sobre a velocidade INTEIRA do alvo: -40% deixa 60%, -100%"
+        " leva a zero.",
     ]
+    if sem_recuperacao:
+        linhas.append(
+            f"  {sem_recuperacao} episodio(s) acabaram sem o servidor enviar a recuperacao: a queda"
+            " e real, a duracao desses nao se mede."
+        )
+    pequenas = sum(1 for pct in todas if -20 < pct <= 0)
+    if pequenas:
+        linhas.append(
+            f"  {pequenas} de {len(todas)} queda(s) tiram menos de 20%: as botas de haste dao +20% e"
+            " sair delas tira ~17%, logo estas podem ser troca de equipamento e nao feitiço -"
+            " cruzar com o mínimo que o .mon declara."
+        )
     for quem in sorted(por_autor, key=lambda nome: -len(por_autor[nome])):
         pcts = por_autor[quem]
         linhas.append(f"    {quem[:22]:22s} n={len(pcts):3d}  {min(pcts):+d}% a {max(pcts):+d}%")
@@ -834,6 +882,86 @@ def _paralisias_do_jogador(blocos):
         "  atribuicao pelo ultimo dano nomeado nos 3s antes da queda: e INDICATIVA (uma criatura pode "
         "paralisar sem causar dano no mesmo instante). Cruza-la com as criaturas que o .mon declara ter "
         "feitiço de speed."
+    )
+    return linhas
+
+
+def _alcance_da_paralisia(blocos):
+    """Diz se as quedas de velocidade pegam UMA pessoa de cada vez ou varias no mesmo instante.
+
+    O .mon separa os dois casos pela origem da linha: `Victim` e de ALVO UNICO (o numero e o
+    alcance) e `Origin` e EM AREA (o numero e o raio). Aqui a prova vem do proprio servidor: numa
+    magia de area os jogadores que estao ao lado caem no MESMO milesimo; numa de alvo unico nunca
+    caem juntos. Medido a 2026-11-22: no AncientScarabs dois jogadores caem juntos 42 vezes
+    (scarab, Origin (4,...)) e no goethidipthrah nenhuma das 6x5 quedas coincide (farao, Victim).
+    """
+    eventos = list(_eventos(blocos))
+    tipo = {}
+    nome_de = {}
+    for evento in eventos:
+        if evento.get("Event") == "CreatureSeen":
+            tipo[evento.get("CreatureId")] = evento.get("Type")
+            nome_de[evento.get("CreatureId")] = evento.get("Name")
+    jogadores = {cid for cid, marca in tipo.items() if marca == "Player"}
+    if len(jogadores) < 2:
+        return []
+    series = collections.defaultdict(list)
+    for evento in eventos:
+        if (
+            evento.get("Event") == "CreatureSpeedUpdated"
+            and evento.get("CreatureId") in jogadores
+            and isinstance(evento.get("Speed"), int)
+        ):
+            series[evento.get("CreatureId")].append((evento.get("_quando") or 0, evento["Speed"]))
+    quedas = {}
+    for cid, serie in series.items():
+        serie.sort()
+        anterior = None
+        lista = []
+        for instante, valor in serie:
+            if anterior is not None and valor < anterior - 2:
+                lista.append(instante)
+            anterior = valor
+        if lista:
+            quedas[nome_de.get(cid, str(cid))] = lista
+    if len(quedas) < 2:
+        return [""]
+    por_instante = collections.defaultdict(set)
+    for quem, lista in quedas.items():
+        for instante in lista:
+            por_instante[round(instante / 100.0)].add(quem)
+    juntos = {chave: quem for chave, quem in por_instante.items() if len(quem) >= 2}
+    todas = sum(len(lista) for lista in quedas.values())
+    linhas = [
+        "",
+        "ALCANCE DA PARALISIA (jogadores que perdem velocidade no MESMO instante):",
+        f"  {len(quedas)} jogador(es) com queda, {todas} queda(s) no total, "
+        f"{len(juntos)} instante(s) com dois ou mais a cair juntos",
+    ]
+    if juntos:
+        pares = collections.Counter()
+        for quem in juntos.values():
+            ordenados = sorted(quem)
+            for i, um in enumerate(ordenados):
+                for outro in ordenados[i + 1:]:
+                    pares[(um, outro)] += 1
+        linhas.append(
+            "  => EM AREA: ha quedas simultaneas, e so uma magia centrada no monstro (Origin do "
+            ".mon) atinge quem esta em volta ao mesmo tempo."
+        )
+        for (um, outro), quantas in pares.most_common(4):
+            linhas.append(
+                f"    {um[:20]:20s} + {outro[:20]:20s} {quantas} vez(es) juntos"
+            )
+    else:
+        linhas.append(
+            "  => ALVO UNICO: nenhuma queda coincidiu com a de outro jogador, e uma magia em area "
+            "obrigaria a cair dois ao mesmo tempo. Bate com `Victim (alcance, ...)` do .mon."
+        )
+    linhas.append(
+        "  A janela e de 100ms: o servidor manda a velocidade de cada um no mesmo pacote, logo uma "
+        "magia em area cai no mesmo milesimo e duas conjuracoes separadas caem a segundos de "
+        "distancia."
     )
     return linhas
 
