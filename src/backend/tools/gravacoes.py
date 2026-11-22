@@ -213,6 +213,19 @@ _CLIENTES = {}
             "criatura que o servidor mandou atualizar; sem leitura nao se conclui nada.",
             "padrao": "",
         },
+        "projeteis": {
+            "tipo": "STRING",
+            "desc": "Responde 'de onde sai cada projetil' e 'de quem e': agrupa cada MissileFired pela "
+            "posicao de ORIGEM, diz qual criatura ocupava aquele tile naquele instante, e mede o "
+            "intervalo entre tiros consecutivos da MESMA origem (minimo, maximo e os mais comuns). "
+            "E o caminho para medir o ritmo de uma torre ou de um mago sem que o fogo de outro bicho "
+            "no mesmo tile contamine a conta - um numero de dano no alvo nao diz quem atirou, a origem "
+            "diz. Nome do monstro filtra por quem atira (ex: 'flamethrower'); vazio mostra todas as "
+            "origens da gravacao. Liga o terreno sozinho, porque e o TileObjectAdded que traz "
+            "CreatureId junto da posicao. Origem sem criatura aparece como '(origem sem dono)' e e "
+            "contada em separado: e campo ou armadilha, e nao se mistura com o que tem dono.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -220,14 +233,14 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area="", velocidade=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area="", velocidade="", projeteis=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
             emit_event("executing", function=f"Somando o loot de: {varrer}")
             return _loot_somado(str(varrer).strip())
         emit_event("executing", function=f"Varrendo as gravacoes por: {varrer}")
         return _varredura(str(varrer).strip())
-    if str(raca or "").strip():
+    if str(raca or "").strip() or str(projeteis or "").strip():
         terreno = True
     if not str(gravacao or "").strip():
         return "ERRO: diga qual gravacao abrir, ou use 'varrer' para procurar um monstro em todas."
@@ -281,6 +294,11 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
     if str(velocidade or "").strip():
         emit_event("executing", function=f"Medindo a velocidade de: {velocidade}")
         linhas += _velocidade_das_criaturas(blocos, str(velocidade).strip().lower())
+        return "\n".join(linhas)
+    if str(projeteis or "").strip():
+        pedido = str(projeteis).strip()
+        emit_event("executing", function="Ligando cada projetil a origem")
+        linhas += _quem_atira(blocos, "" if pedido.lower() in ("todos", "todas") else pedido.lower())
         return "\n".join(linhas)
     if str(area or "").strip():
         emit_event("executing", function="Agrupando o dano por instante")
@@ -1170,6 +1188,107 @@ def _grupos_de_area(blocos, efeito="", minimo=2):
                       f" | {diferentes} com valores diferentes")
         linhas.append("    valor igual em todas = sorteio unico por conjuracao;"
                       " valores diferentes com o mesmo efeito no instante = sorteio por alvo.")
+    return linhas
+
+
+def _criaturas_do_mapa():
+    if "spawn" in _CACHE:
+        return _CACHE["spawn"]
+    mapa = {}
+    for alvo in ("docs/projetos/Tibia74/Server/data/world/spawn.xml",
+                 "Server/data/world/spawn.xml"):
+        try:
+            devolvido = resolver_caminho(alvo)
+        except Exception:
+            continue
+        caminho = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+        if not caminho or not os.path.isfile(caminho):
+            continue
+        try:
+            with open(caminho, encoding="utf-8", errors="replace") as fh:
+                texto = fh.read()
+        except OSError:
+            continue
+        for bloco in re.finditer(r'<spawn\s+centerx="(-?\d+)"\s+centery="(-?\d+)"\s+centerz="(-?\d+)"[^>]*>(.*?)</spawn>',
+                                 texto, re.S):
+            cx, cy, cz = int(bloco.group(1)), int(bloco.group(2)), int(bloco.group(3))
+            for bicho in re.finditer(r'<(monster|npc)\s+name="([^"]+)"\s+x="(-?\d+)"\s+y="(-?\d+)"',
+                                     bloco.group(4)):
+                mapa[(cx + int(bicho.group(3)), cy + int(bicho.group(4)), cz)] = bicho.group(2).lower()
+        if mapa:
+            break
+    _CACHE["spawn"] = mapa
+    return mapa
+
+
+def _quem_atira(blocos, alvo=""):
+    nomes, ocupante, tiros = {}, {}, []
+    for evento in _eventos(blocos):
+        tipo = evento.get("Event")
+        if tipo == "CreatureSeen":
+            nomes[evento.get("CreatureId")] = str(evento.get("Name") or "").lower()
+        elif tipo == "TileObjectAdded":
+            objeto = evento.get("Object") or {}
+            criatura = objeto.get("CreatureId")
+            if criatura is None:
+                continue
+            ponto = evento.get("TilePosition") or {}
+            ocupante[(ponto.get("X"), ponto.get("Y"), ponto.get("Z"))] = criatura
+        elif tipo == "MissileFired":
+            origem = evento.get("Origin") or {}
+            tiros.append({
+                "quando": evento.get("_quando", 0),
+                "id": evento.get("Id"),
+                "origem_t": (origem.get("X"), origem.get("Y"), origem.get("Z")),
+                "destino": _ponto(evento.get("Target")),
+                "dono": ocupante.get((origem.get("X"), origem.get("Y"), origem.get("Z"))),
+            })
+    if not tiros:
+        return ["", "Nenhum missil nesta gravacao."]
+    mapa = _criaturas_do_mapa()
+    pedido = str(alvo or "").strip().lower()
+    grupos = collections.defaultdict(list)
+    no_mapa = sem_dono = 0
+    for tiro in tiros:
+        nome = nomes.get(tiro["dono"], "") if tiro["dono"] is not None else ""
+        de = "vista"
+        if not nome:
+            nome = mapa.get(tiro["origem_t"], "")
+            de = "spawn"
+            if nome:
+                no_mapa += 1
+        if pedido and pedido not in nome:
+            continue
+        if not nome:
+            sem_dono += 1
+            de = ""
+        grupos[(tiro["origem_t"], nome or "(origem sem dono)", tiro["id"], de)].append(tiro)
+    if not grupos:
+        return ["", f"Nenhum missil sai de '{alvo}' nesta gravacao."]
+    linhas = ["", f"PROJETEIS: {len(tiros)} tiro(s), {len(grupos)} origem(ns)",
+              f"  quem estava na origem: {len(tiros) - no_mapa - sem_dono} vista(s) na gravacao, "
+              f"{no_mapa} achada(s) no spawn.xml, {sem_dono} sem dono"]
+    if not mapa:
+        linhas.append("  (sem spawn.xml ao lado - so a criatura vista na gravacao identifica a origem)")
+    for (origem_t, nome, identificador, de), lista in sorted(grupos.items(), key=lambda x: -len(x[1])):
+        linhas.append("")
+        marca = f" [{de}]" if de else ""
+        linhas.append(f"  {nome} em {_ponto(dict(zip(('X', 'Y', 'Z'), origem_t)))} - "
+                      f"projetil id {identificador}, {len(lista)} tiro(s){marca}")
+        horas = [item["quando"] for item in lista]
+        vistos = collections.Counter(item["destino"] for item in lista)
+        linhas.append("     alvos: " + ", ".join(f"{ponto} ({n}x)" for ponto, n in vistos.most_common(3)))
+        linhas.append("     quando: " + ", ".join(_hora(h) for h in horas[:10])
+                      + (f" ... (+{len(horas) - 10})" if len(horas) > 10 else ""))
+        intervalos = [round((b - a) / 1000.0, 2) for a, b in zip(horas, horas[1:])]
+        if intervalos:
+            comuns = collections.Counter(intervalos).most_common(3)
+            ritmo = min(intervalos)
+            linhas.append(
+                f"     intervalos: min {ritmo:.2f}s max {max(intervalos):.2f}s | "
+                + ", ".join(f"{valor:.2f}s x{n}" for valor, n in comuns)
+                + f" | {sum(1 for i in intervalos if i <= ritmo * 1.15)}+ tiros no ritmo de {ritmo:.2f}s"
+            )
     return linhas
 
 
