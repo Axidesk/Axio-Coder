@@ -21,9 +21,8 @@ FLAGS_DO_MON = {
     'NoLifeDrain': ('immunities', 'lifedrain', '1'),
     'NoParalyze': ('immunities', 'paralyze', '1'),
     'NoHit': ('immunities', 'physical', '1'),
+    'SeeInvisible': ('immunities', 'invisible', '1'),
 }
-
-FLAGS_SEM_CAMPO = {'SeeInvisible'}
 
 CONTEINERES_DO_LOOT = {1987, 1988, 1989}
 
@@ -1481,6 +1480,31 @@ def _corpo_partilhado(base, texto):
     return f'{corpo} ({" / ".join(donos)})'
 
 
+def _conflito_de_container(inventario, texto):
+    do_mon = ''
+    for produto in inventario:
+        nome = _normalizar(produto['nome'])
+        if 'backpack' in nome:
+            do_mon = 'backpack'
+        elif nome.endswith('bag') and not do_mon:
+            do_mon = 'bag'
+    achado = re.search(r'<loot>.*?<item id="(\d+)"', texto, re.S)
+    if not achado or int(achado.group(1)) not in CONTEINERES_DO_LOOT:
+        return ''
+    no_xml = 'backpack' if int(achado.group(1)) == 1988 else 'bag'
+    if not do_mon:
+        if no_xml == 'backpack':
+            return (
+                'o .mon nao declara container e o XML usa backpack (1988) - a bag'
+                ' (1987) e o que se ve no video'
+            )
+        return ''
+    if do_mon != no_xml:
+        certo = '1988' if do_mon == 'backpack' else '1987'
+        return f'o .mon traz {do_mon} e o XML usa {no_xml} - o container tem de ser {certo}'
+    return ''
+
+
 def validar_monstro(base, monstro):
     """Confere o XML de um monstro contra o .mon, o items.xml e o motor, e diz o que esta errado."""
     cruz = cruzar_monstro(base, monstro)
@@ -1495,6 +1519,9 @@ def validar_monstro(base, monstro):
     problemas = []
     divergencias = []
     ja_avisado = set()
+    conflito_de_container = _conflito_de_container(cruz['inventario'], texto)
+    if conflito_de_container:
+        divergencias.append(conflito_de_container)
 
     for entrada in cruz['xml']:
         if entrada['id'] in CONTEINERES_DO_LOOT:
