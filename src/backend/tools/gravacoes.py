@@ -236,8 +236,11 @@ _CLIENTES = {}
 def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area="", velocidade="", projeteis=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
-            emit_event("executing", function=f"Somando o loot de: {varrer}")
-            return _loot_somado(str(varrer).strip())
+            alvo = str(loot).strip()
+            if alvo.lower() in ("1", "sim", "true", "todos", "todas"):
+                alvo = str(varrer).strip()
+            emit_event("executing", function=f"Somando o loot de: {alvo}")
+            return _loot_somado(alvo)
         emit_event("executing", function=f"Varrendo as gravacoes por: {varrer}")
         return _varredura(str(varrer).strip())
     if str(raca or "").strip() or str(projeteis or "").strip():
