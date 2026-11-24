@@ -767,6 +767,19 @@ def _curto(caminho):
     return base[:17]
 
 
+_SENTIDOS_DO_COMBATE = {
+    "atacar": "atacar", "ataca": "atacar", "sofrido": "atacar", "recebido": "atacar",
+    "levar": "levar", "leva": "levar", "causado": "levar", "feito": "levar",
+}
+
+
+def _sentido_do_combate(direcao):
+    texto = str(direcao or "").strip().lower()
+    if not texto:
+        return ""
+    return _SENTIDOS_DO_COMBATE.get(texto)
+
+
 @register(
     "tool_analisar_combate",
     "Le um log de combate e mede-o, sem contar nada a mao. Aceita os TRES formatos: o log do "
@@ -812,6 +825,11 @@ def _curto(caminho):
 
 
 def tool_analisar_combate(caminhos, alvo="", comparar_com="", direcao=""):
+    sentido = _sentido_do_combate(direcao)
+    if sentido is None:
+        return (f"ERRO: 'direcao' aceita 'atacar' (o alvo e quem bate) ou 'levar' (o alvo leva os "
+                f"golpes); recebi '{direcao}'. Deixe vazio para decidir pelo lado com mais eventos.")
+    direcao = sentido
     teste, erro = _medir_lista(caminhos, alvo, direcao)
     if erro:
         return erro
