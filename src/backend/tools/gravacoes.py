@@ -2219,6 +2219,7 @@ def _contagens_do_loot(procurado):
     corpo = collections.Counter()
     saco = collections.Counter()
     pilhas = []
+    por_corpo = collections.Counter()
     corpos = 0
     fora = 0
     for chave, dados in indice.items():
@@ -2234,17 +2235,21 @@ def _contagens_do_loot(procurado):
             except (TypeError, ValueError):
                 continue
             corpos += achado.get("n") or 0
+            try:
+                por_corpo[int(identificador)] += achado.get("n") or 0
+            except (TypeError, ValueError):
+                pass
             corpo.update(achado.get("corpo") or {})
             saco.update(achado.get("saco") or {})
             pilhas.extend(achado.get("pilhas") or [])
     if fora:
         nota = f"{nota}; {fora} gravacao(oes) de outro cliente (7.3) ficaram de fora"
-    return corpo, saco, corpos, pilhas, nota
+    return corpo, saco, corpos, pilhas, nota, por_corpo
 
 
 def posicoes_do_loot(procurado):
     """Onde cada item caiu DE FACTO nas gravacoes: {id: 'corpo'|'saco'} pelo sitio onde aparece mais."""
-    corpo, saco, corpos, _pilhas, _nota = _contagens_do_loot(procurado)
+    corpo, saco, corpos, _pilhas, _nota, _por_corpo = _contagens_do_loot(procurado)
     if not corpos:
         return {}
     sitio = {}
@@ -2262,13 +2267,23 @@ def posicoes_do_loot(procurado):
 
 def _loot_somado(procurado):
     """Loot de um monstro somado em TODAS as gravacoes do indice, com a posicao que o XML declara."""
-    corpo, saco, corpos, pilhas, nota = _contagens_do_loot(procurado)
+    corpo, saco, corpos, pilhas, nota, por_corpo = _contagens_do_loot(procurado)
     nomes = _nomes_de_itens()
     if not corpos:
         return f"\nLOOT SOMADO: nenhum corpo de '{procurado}' no indice ({nota})."
 
     declarado = _loot_do_monstro(procurado) or {}
     linhas = ["", f"LOOT SOMADO: '{procurado}' em todas as gravacoes · {corpos} corpo(s) · {nota}"]
+    if len(por_corpo) > 1:
+        linhas.append(
+            f"  ATENCAO: somou {len(por_corpo)} CORPOS diferentes - se algum for de outro bicho, "
+            f"os itens dele entram nesta tabela. Repita com loot=<id> para somar so um:"
+        )
+        for identificador, quantos in por_corpo.most_common():
+            linhas.append(
+                f"    id {identificador} · {quantos} corpo(s) · "
+                + (", ".join(_monstros_do_corpo(identificador)) or "corpo sem nome no items.xml")
+            )
     for rotulo, contagem in (("CORPO", corpo), ("SACO", saco)):
         if not contagem:
             continue
