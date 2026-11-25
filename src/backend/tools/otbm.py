@@ -470,8 +470,9 @@ def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
     {
         "monstros": {
             "tipo": "STRING",
-            "desc": "Nome do monstro (o do ficheiro, ex: 'minotaur archer'), um por linha.",
-            "obrig": True,
+            "desc": "Nome do monstro (o do ficheiro, ex: 'minotaur archer'), um por linha. "
+            "VAZIO devolve o CENSO DA OUTFIT da pasta inteira (iguais, placeholder, a corrigir) "
+            "- e o caminho para decidir o proximo lote sem validar bicho a bicho.",
             "padrao": "",
         },
         "pasta": {
@@ -487,8 +488,11 @@ def tool_validar_monstro(monstros, pasta=""):
         candidato = pasta.replace("\\", "/").rstrip("/")
         raiz = "/Server/data/monster"
         base = candidato[:-len(raiz)] if candidato.endswith(raiz) else pasta
+    nomes = [linha.strip() for linha in (monstros or "").splitlines() if linha.strip()]
+    if not nomes:
+        return _censo_da_outfit(base)
     linhas = []
-    for nome in [linha.strip() for linha in (monstros or "").splitlines() if linha.strip()]:
+    for nome in nomes:
         resultado = tibia_dados.validar_monstro(base, nome)
         if "erro" in resultado:
             linhas.append(f"{nome}: {resultado['erro']}")
@@ -503,6 +507,28 @@ def tool_validar_monstro(monstros, pasta=""):
         for divergencia in resultado.get("divergencias", []):
             linhas.append(f"  divergencia: {divergencia}")
     return "\n".join(linhas) if linhas else "ERRO: diga ao menos um monstro."
+
+
+def _censo_da_outfit(base):
+    iguais, convencao, corrigir, sem_par = tibia_dados.censo_da_outfit(base)
+    linhas = [
+        f"outfit contra o .mon: {len(iguais)} iguais | {len(convencao)} em placeholder"
+        f" | {len(corrigir)} a corrigir | {len(sem_par)} sem par"
+    ]
+    if corrigir:
+        linhas.append("")
+        linhas.append("A CORRIGIR PELO .mon:")
+        for nome, motivo in corrigir:
+            linhas.append(f"  {nome}: {motivo}")
+    if sem_par:
+        linhas.append("")
+        linhas.append(f"SEM PAR no .mon ({len(sem_par)}): {', '.join(sem_par)}")
+    linhas.append("")
+    linhas.append(f"EM PLACEHOLDER ({len(convencao)}) - os 15 do proximo lote:")
+    linhas.extend(f"  {nome}" for nome in convencao[:15])
+    if len(convencao) > 15:
+        linhas.append(f"  ... restam {len(convencao) - 15} para os lotes seguintes")
+    return "\n".join(linhas)
 
 
 def _ids_por_nome_do_servidor(base):

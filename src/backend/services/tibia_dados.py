@@ -1394,6 +1394,39 @@ def _look_do_mon(base, monstro, texto):
     return [], []
 
 
+def censo_da_outfit(base):
+    """Passa a pasta dos monstros pelo _look_do_mon e separa o que cada lote resolve.
+
+    A leitura e barata de proposito: o _look_do_mon so abre os primeiros 1000 bytes do
+    .mon, logo varrer os 108 XML nao custa o que custa uma validacao inteira. Devolve
+    quatro listas - iguais, placeholder, a corrigir (com o motivo) e sem par - e e isso
+    que decide o proximo lote sem uma leitura a mao por ficheiro.
+    """
+    pasta = os.path.join(base, 'Server', 'data', 'monster')
+    if not os.path.isdir(pasta):
+        return [], [], [], []
+    iguais, convencao, corrigir, sem_par = [], [], [], []
+    for nome_ficheiro in sorted(os.listdir(pasta)):
+        if not nome_ficheiro.lower().endswith('.xml'):
+            continue
+        nome = nome_ficheiro[:-4]
+        if nome.lower() == 'monsters':
+            continue
+        try:
+            with open(os.path.join(pasta, nome_ficheiro), encoding='utf-8', errors='replace') as f:
+                texto = f.read()
+        except OSError:
+            continue
+        _, divergencias = _look_do_mon(base, nome, texto)
+        if not divergencias:
+            (iguais if _ficheiro_do_mon(base, nome) else sem_par).append(nome)
+        elif 'convencao do datapack' in divergencias[0]:
+            convencao.append(nome)
+        else:
+            corrigir.append((nome, divergencias[0]))
+    return iguais, convencao, corrigir, sem_par
+
+
 def _outfit_do_mon(base, cabecalho, texto):
     """Confere as magias de Outfit contra o .mon e denuncia as que nao vem de la.
 
