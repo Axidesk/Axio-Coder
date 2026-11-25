@@ -615,6 +615,7 @@ def _medir(eventos, alvo, formato, direcao="", duracao=None):
         "dano_total": dano_total,
         "cura_total": cura_total,
         "intervalo": statistics.median(intervalos) if intervalos else 0.0,
+        "intervalo_moda": statistics.mode([round(i, 1) for i in intervalos]) if intervalos else 0.0,
         "pausas_longas": pausas_longas,
         "pausa_max": pausa_max,
         "perdidos": perdidos,
@@ -644,6 +645,8 @@ def _numero(chave, valor):
         return f"{valor:.0f}"
     if chave == "pausa_max":
         return f"{valor:.2f}s"
+    if chave == "intervalo_moda":
+        return f"{valor:.1f}s"
     return f"{valor:.1f}"
 
 
@@ -675,6 +678,7 @@ _ROTULOS = [
     ("dano_s", "dano/s"),
     ("cura_s", "cura/s"),
     ("intervalo", "intervalo entre tentativas"),
+    ("intervalo_moda", "ritmo dominante"),
     ("pausas_longas", "pausas > 2.6s"),
     ("pausa_max", "maior pausa"),
     ("perdidos", "golpes a menos que 2s"),
