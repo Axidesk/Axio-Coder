@@ -226,6 +226,15 @@ _CLIENTES = {}
             "contada em separado: e campo ou armadilha, e nao se mistura com o que tem dono.",
             "padrao": "",
         },
+        "texto": {
+            "tipo": "STRING",
+            "desc": "Filtra a listagem pelo TEXTO de cada evento, um termo por linha (ou separados por "
+            "'|'), sem distinguir maiusculas. E o caminho para achar uma mensagem do cliente dentro de "
+            "uma gravacao longa - 'You are poisoned', 'due to an attack by a scorpion', 'You lose' - em "
+            "vez de despejar milhares de linhas e cortar no 'limite'. Combina com 'grupo' (ex: "
+            "grupo='chat' para so as mensagens) e com 'inicio'/'fim'.",
+            "padrao": "",
+        },
         "terreno": {
             "tipo": "BOOLEAN",
             "desc": "Ler tambem o terreno do mapa (muito mais lento e o dobro do tamanho). Normalmente nao.",
@@ -233,7 +242,7 @@ _CLIENTES = {}
         },
     },
 )
-def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area="", velocidade="", projeteis=""):
+def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", limite=TETO_DE_LINHAS, terreno=False, loot="", varrer="", raca="", dano="", area="", velocidade="", projeteis="", texto=""):
     if str(varrer or "").strip():
         if str(loot or "").strip():
             alvo = str(loot).strip()
@@ -313,10 +322,10 @@ def tool_ler_rec(gravacao="", pasta="", inicio="", fim="", grupo="", evento="", 
         return "\n".join(linhas)
     filtro = _filtro(grupo, evento)
     de, ate = _janela(inicio, fim)
-    if not filtro and de is None and ate is None:
+    if not filtro and de is None and ate is None and not str(texto or "").strip():
         linhas += _resumo(blocos)
         return "\n".join(linhas)
-    linhas += _listar(blocos, filtro, de, ate, _teto(limite))
+    linhas += _listar(blocos, filtro, de, ate, _teto(limite), texto)
     return "\n".join(linhas)
 
 
@@ -549,9 +558,10 @@ def _resumo(blocos):
     return linhas
 
 
-def _listar(blocos, filtro, de, ate, limite):
+def _listar(blocos, filtro, de, ate, limite, texto=""):
     nomes = _nomes(blocos)
     jogador = _quem_grave(blocos)
+    procurado = [termo.strip().lower() for termo in str(texto or "").replace("|", "\n").split("\n") if termo.strip()]
     linhas = []
     total = 0
     for evento in _eventos(blocos):
@@ -563,10 +573,16 @@ def _listar(blocos, filtro, de, ate, limite):
         tipo = evento.get("Event", "")
         if filtro and tipo not in filtro:
             continue
+        descricao = _descrever(evento, nomes, jogador)
+        if procurado and not any(termo in descricao.lower() for termo in procurado):
+            continue
         total += 1
         if len(linhas) < limite:
-            linhas.append(f"  {_hora(evento.get('_quando', 0))} {_descrever(evento, nomes, jogador)}")
+            linhas.append(f"  {_hora(evento.get('_quando', 0))} {descricao}")
     if not total:
+        if procurado:
+            return ["", f"Nenhuma linha com {', '.join(procurado)} nesta gravacao"
+                        + (" no intervalo pedido." if (de is not None or ate is not None) else ".")]
         return ["", _motivo_do_vazio(blocos, filtro, de, ate)]
     if total > len(linhas):
         linhas.append(f"  ... e mais {total - len(linhas)} evento(s) fora do 'limite'.")
