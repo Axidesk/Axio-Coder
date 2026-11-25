@@ -94,7 +94,11 @@ _CLIENTES = {}
     "texto: o resumo por tipo de evento, os nomes das criaturas, o jogador, e - com 'inicio'/'fim' ou "
     "'grupo' - a lista de eventos do momento que interessa. E o caminho para responder 'o que aconteceu "
     "no 3:10 daquela gravacao' sem abrir o Painel de Controlo: dano (valor, cor e tile), efeito grafico "
-    "(id e tile), vida, fala, loot e magia, todos com hora ao milesimo. O motor e o miner.exe do "
+    "(id e tile), vida, fala, loot e magia, todos com hora ao milesimo. Com grupo='chat' vem a "
+    "conversa inteira pela ordem do tempo: os avisos do cliente (dano, 'You are poisoned', mana, "
+    "'Target lost') E as falas do jogador, juntos - e assim que se sabe se ele CUROU (exana pox, "
+    "exura) antes de concluir que um efeito terminou. Ler so os numeros sem as falas ja levou a "
+    "atribuir ao algoritmo um fim de veneno que era uma cura. O motor e o miner.exe do "
     "TibiaCAM que o painel ja usa, mas chamado pelo caminho certo: a gravacao e copiada para uma pasta "
     "temporaria sem acentos, porque textos como '2. Utilitarios' no caminho fazem o miner responder "
     "'IO failure'. Nao serve para concluir o tipo de dano sozinha - ela mostra a cor do numero e o id do "
@@ -232,7 +236,8 @@ _CLIENTES = {}
             "'|'), sem distinguir maiusculas. E o caminho para achar uma mensagem do cliente dentro de "
             "uma gravacao longa - 'You are poisoned', 'due to an attack by a scorpion', 'You lose' - em "
             "vez de despejar milhares de linhas e cortar no 'limite'. Combina com 'grupo' (ex: "
-            "grupo='chat' para so as mensagens) e com 'inicio'/'fim'.",
+            "grupo='chat' para avisos E falas, 'dano' para os numeros) e com 'inicio'/'fim'. Para "
+            "saber se o jogador curou a meio, procure 'exana pox|exura' com grupo='chat'.",
             "padrao": "",
         },
         "terreno": {
