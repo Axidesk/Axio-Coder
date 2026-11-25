@@ -635,7 +635,15 @@ def _descrever(evento, nomes, jogador):
     if tipo == "StatusMessageReceived":
         return f"aviso ({evento.get('Mode')}): {evento.get('Message')}"
     if tipo in ("CreatureSeen", "CreatureRemoved"):
-        return f"{tipo} {evento.get('Name') or _nome(nomes, evento.get('CreatureId'))}"
+        return f"{tipo} {evento.get('Name') or _nome(nomes, evento.get('CreatureId'))} (id {evento.get('CreatureId')})"
+    if tipo == "CreatureOutfitUpdated":
+        traje = evento.get("Outfit")
+        traje = traje if isinstance(traje, dict) else {}
+        return (
+            f"outfit {_nome(nomes, evento.get('CreatureId'))} tipo {traje.get('Id')}"
+            f" cores {traje.get('HeadColor')}-{traje.get('PrimaryColor')}"
+            f"-{traje.get('SecondaryColor')}-{traje.get('DetailColor')}"
+        )
     if tipo in ("CreatureMoved", "PlayerMoved"):
         alvo = evento.get("To") if tipo == "CreatureMoved" else evento.get("Position")
         return f"{tipo} para {_ponto(alvo)}"
