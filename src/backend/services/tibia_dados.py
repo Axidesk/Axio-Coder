@@ -1445,6 +1445,131 @@ def _outfit_do_mon(base, cabecalho, texto):
     return problemas, divergencias
 
 
+_EFEITO_DO_MON_POR_ID = {
+    1: 'redspark', 2: 'bluebubble', 3: 'poff', 4: 'yellowspark', 5: 'explosionarea',
+    6: 'explosion', 7: 'firearea', 8: 'yellowbubble', 9: 'greenbubble', 10: 'blackspark',
+    11: 'energyarea', 12: 'energy', 13: 'blueshimmer', 14: 'redshimmer', 15: 'greenshimmer',
+    16: 'fire', 17: 'greenspark', 18: 'mortarea', 21: 'poison',
+}
+
+_TIRO_DO_MON_POR_ID = {
+    1: 'spear', 2: 'bolt', 3: 'arrow', 4: 'fire', 5: 'energy', 6: 'poisonarrow',
+    7: 'burstarrow', 8: 'throwingstar', 9: 'throwingknife', 15: 'poison',
+}
+
+_DANO_DO_MON_POR_TIPO = {
+    1: 'physical', 4: 'fire', 8: 'energy', 256: 'lifedrain', 512: 'manadrain',
+}
+
+
+def _elementos_de_magia(texto):
+    """Cada <attack>/<defense> do XML com os atributos e as <attribute> de dentro."""
+    elementos = []
+    for achado in re.finditer(r'<(attack|defense)\b([^>]*?)(/>|>(.*?)</\1\s*>)', texto, re.S):
+        atributos = dict(re.findall(r'(\w+)\s*=\s*"([^"]*)"', achado.group(2)))
+        do_corpo = dict(
+            re.findall(r'key\s*=\s*"(\w+)"\s+value\s*=\s*"([^"]*)"', achado.group(4) or '')
+        )
+        elementos.append({
+            'tag': achado.group(1),
+            'nome': atributos.get('name', ''),
+            'area': do_corpo.get('areaEffect', ''),
+            'tiro': do_corpo.get('shootEffect', ''),
+        })
+    return elementos
+
+
+def _pedido_da_magia(magia):
+    """Traduz uma magia do .mon no nome do XML e no efeito/projetil que ela declara.
+
+    As shapes do .mon tem parametros diferentes e o indice do efeito muda com a shape
+    (crnonpl.cc:2598-2644): `Actor (efeito)`, `Victim (range, projetil, efeito)`,
+    `Origin (raio, efeito)`, `Destination (range, projetil, RAIO, efeito)` e
+    `Angle (angulo, range, efeito)`. O numero do efeito e o id que o CLIENTE desenha -
+    provado na mesma gravacao em dois sitios: `Destination (..., 7)` aparece como
+    `efeito id 7` (firearea) nos vizinhos da vitima e `Angle (0, 8, 12)` como
+    `efeito id 12` (energy) ao longo do feixe.
+    """
+    alvo = magia.get('alvo') or []
+    numeros = magia.get('numeros') or []
+    quem = magia.get('quem')
+    if magia['efeito'] == 'Healing':
+        nome = 'healing'
+    elif magia['efeito'] == 'Outfit':
+        nome = 'invisible' if numeros and numeros[0] == 0 else 'outfit'
+    elif magia['efeito'] == 'Speed':
+        nome = 'speed'
+    elif magia['efeito'] == 'Field':
+        nome = {1: 'firefield'}.get(numeros[0]) if numeros else None
+    elif magia['efeito'] == 'Damage':
+        nome = _DANO_DO_MON_POR_TIPO.get(numeros[0]) if numeros else None
+    else:
+        return None
+    if not nome:
+        return None
+    if quem == 'Actor':
+        efeito, tiro = alvo[0] if alvo else 0, 0
+    elif quem == 'Victim':
+        tiro = alvo[1] if len(alvo) > 1 else 0
+        efeito = alvo[2] if len(alvo) > 2 else 0
+    elif quem == 'Origin':
+        efeito, tiro = alvo[1] if len(alvo) > 1 else 0, 0
+    elif quem == 'Destination':
+        tiro = alvo[1] if len(alvo) > 1 else 0
+        efeito = alvo[3] if len(alvo) > 3 else 0
+    elif quem == 'Angle':
+        efeito, tiro = alvo[2] if len(alvo) > 2 else 0, 0
+    else:
+        return None
+    return nome, _EFEITO_DO_MON_POR_ID.get(efeito, ''), _TIRO_DO_MON_POR_ID.get(tiro, '')
+
+
+def _efeitos_do_mon(cabecalho, texto):
+    """Confere o areaEffect e o shootEffect de cada magia contra o que o .mon declara.
+
+    So acusa quando os DOIS lados tem valor e eles diferem - o XML que nao declara efeito
+    nenhum fica em paz, porque omitir e' legitimo em varias magias. Foi esta falta de
+    conferencia que deixou passar tres erros de uma vez no warlock: o fogo com
+    shootEffect `burstarrow` (o .mon pede `fire`), o raio 3 em vez de 2 e a invisibilidade
+    com `redshimmer` (o .mon pede `blueshimmer`).
+    """
+    divergencias = []
+    elementos = _elementos_de_magia(texto)
+    usados = set()
+
+    for magia in cabecalho.get('magias') or []:
+        pedido = _pedido_da_magia(magia)
+        if pedido is None:
+            continue
+        nome, efeito, tiro = pedido
+        candidatos = [
+            i for i, elemento in enumerate(elementos)
+            if i not in usados and (
+                elemento['nome'] == nome
+                or (nome == 'outfit' and elemento['nome'] == 'invisible')
+            )
+        ]
+        if not candidatos:
+            continue
+        tag_esperada = 'defense' if magia['quem'] == 'Actor' else 'attack'
+        indice = next(
+            (i for i in candidatos if elementos[i]['tag'] == tag_esperada), candidatos[0]
+        )
+        usados.add(indice)
+        no = elementos[indice]
+        if efeito and no['area'] and no['area'] != efeito:
+            divergencias.append(
+                f'<{no["tag"]} name="{no["nome"]}"> areaEffect "{no["area"]}" e o .mon'
+                f' pede "{efeito}" ({magia["quem"]} {magia["alvo"]})'
+            )
+        if tiro and no['tiro'] and no['tiro'] != tiro:
+            divergencias.append(
+                f'<{no["tag"]} name="{no["nome"]}"> shootEffect "{no["tiro"]}" e o .mon'
+                f' pede "{tiro}" ({magia["quem"]} {magia["alvo"]})'
+            )
+    return [], divergencias
+
+
 def _corpo_partilhado(base, texto):
     """Diz se outro monstro deste servidor usa o MESMO corpo, e qual.
 
@@ -1639,6 +1764,8 @@ def validar_monstro(base, monstro):
         do_outfit, divergencias_do_outfit = _outfit_do_mon(base, cabecalho, texto)
         problemas.extend(do_outfit)
         divergencias.extend(divergencias_do_outfit)
+        _, divergencias_do_efeito = _efeitos_do_mon(cabecalho, texto)
+        divergencias.extend(divergencias_do_efeito)
         combinado = f"{cabecalho.get('artigo', '')} {cabecalho['nome']}".strip().lower()
         achado_nome = re.search(r'nameDescription="([^"]*)"', texto)
         if achado_nome and combinado and achado_nome.group(1).strip().lower() != combinado:
