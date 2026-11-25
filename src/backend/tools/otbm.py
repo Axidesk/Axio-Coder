@@ -505,6 +505,70 @@ def tool_validar_monstro(monstros, pasta=""):
     return "\n".join(linhas) if linhas else "ERRO: diga ao menos um monstro."
 
 
+def _ids_por_nome_do_servidor(base):
+    caminho = f"{base}/Server/data/items/items.xml"
+    nomes = {}
+    with open(caminho, encoding="utf-8", errors="replace") as f:
+        texto = f.read()
+    for achado in re.finditer(r'<item\s+id="(\d+)"[^>]*name="([^"]*)"', texto):
+        chave = tibia_dados._normalizar(achado.group(2))
+        nomes.setdefault(chave, []).append(int(achado.group(1)))
+    return nomes
+
+
+@register(
+    "tool_mapear_loot_mon",
+    "Traduz o Inventory de um .mon da CipSoft para o que se escreve no <loot> do XML do monstro: o "
+    "nome do item (como vem no objects.srv), a quantidade, a chance ja na escala do motor "
+    "(por_mil*100, o MAX_LOOTCHANCE=100000) e os ids que esse NOME tem no items.xml do SERVIDOR e no "
+    "do RME 740. Use ANTES de escrever ou de conferir um loot: poupa o cruzamento "
+    "TypeID->nome->id feito a mao, que erra em tres pontos conhecidos - ler so a PRIMEIRA entrada de "
+    "ouro (o demon tem QUATRO, e simplificar para uma destroi o loot), casar o .mon pelo campo Name "
+    "(o illusion.mon declara Name = \"demon\" e sobrescreve o demon) e aceitar o monsters.xml como se "
+    "fosse um monstro. Devolve TODAS as entradas, na ordem do ficheiro, com a chance pronta a colar.",
+    {
+        "monstros": {
+            "tipo": "STRING",
+            "desc": "Nome do monstro (o do arquivo .mon, ex: 'stone golem'), um por linha.",
+            "obrig": True,
+            "padrao": "",
+        },
+        "pasta": {
+            "tipo": "STRING",
+            "desc": "Opcional: a pasta do projeto Tibia74, quando nao for a de origem.",
+            "padrao": "",
+        },
+    },
+)
+def tool_mapear_loot_mon(monstros, pasta=""):
+    base = tibia_dados.BASE_PADRAO
+    if pasta:
+        candidato = pasta.replace("\\", "/").rstrip("/")
+        raiz = "/Server/data/monster"
+        base = candidato[:-len(raiz)] if candidato.endswith(raiz) else pasta
+    servidor = _ids_por_nome_do_servidor(base)
+    linhas = []
+    for nome in [linha.strip() for linha in (monstros or "").splitlines() if linha.strip()]:
+        inventario = tibia_dados.inventario_do_mon(base, nome)
+        if inventario is None:
+            linhas.append(f"{nome}: .mon nao encontrado")
+            continue
+        if not inventario:
+            linhas.append(f"{nome}: o .mon nao tem Inventory - este monstro nao dropa nada")
+            continue
+        linhas.append(f"{nome}: {len(inventario)} entrada(s) no .mon")
+        for item in inventario:
+            chave = tibia_dados._normalizar(item["nome"])
+            srv = servidor.get(chave, [])
+            rme = item["ids_740"]
+            linhas.append(
+                f"  {item['nome']:22s} x{item['quantidade']:<3d} chance=\"{int(item['chance'] * 1000):6d}\""
+                f"   servidor={srv if srv else '*** NAO EXISTE ***'}"
+                f"   rme={rme if rme else '-'}"
+            )
+    return "\n".join(linhas) if linhas else "ERRO: diga ao menos um monstro."
+
+
 def _itens_do_items_xml(caminho_relativo):
     alvo, erro = resolver_caminho(caminho_relativo, permitir_extra=True)
     if erro:
