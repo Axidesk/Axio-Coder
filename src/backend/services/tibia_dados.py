@@ -1349,6 +1349,51 @@ def _outfits_do_mon(base):
     return tabela
 
 
+def _look_do_mon(base, monstro, texto):
+    """Confere o <look> do XML contra o Outfit do .mon: o looktype e as quatro cores.
+
+    Duas coisas medidas antes de escrever isto. O looktype 128-139 e tambem outfit de
+    JOGADOR (129 hunter, 139 valkyrie), logo o par certo vem do FICHEIRO do .mon e nunca
+    do campo Name - o illusion.mon declara Name = "demon" e roubava o demon.xml, que
+    aparecia com o looktype 107 dele. E o `20-30-40-50` e convencao do datapack para o
+    `0-0-0-0` do .mon (77 dos 107 pares em 2026-11-25), nao erro de um monstro: sai
+    rotulado de convencao, para se tratar em lote.
+    """
+    caminho = _ficheiro_do_mon(base, monstro)
+    if not caminho:
+        return [], []
+    try:
+        bruto = open(caminho, encoding='latin-1').read(1000)
+    except OSError:
+        return [], []
+    achado = re.search(r'^Outfit\s*=\s*\((\d+)(?:,\s*([\d\-]+))?\)', bruto, re.M)
+    if not achado:
+        return [], []
+    tipo_do_mon = int(achado.group(1))
+    cores_do_mon = [int(x) for x in (achado.group(2) or '0').split('-')]
+    if len(cores_do_mon) == 1:
+        cores_do_mon = [0, 0, 0, 0]
+    look = re.search(r'<look\s+([^/>]*)', texto)
+    if not look:
+        return ['sem <look ...> para comparar com o Outfit do .mon'], []
+    atributos = dict(re.findall(r'(\w+)="(\d+)"', look.group(1)))
+    tipo = int(atributos.get('type', -1))
+    cores = [int(atributos.get(campo) or 0) for campo in ('head', 'body', 'legs', 'feet')]
+    if tipo != tipo_do_mon:
+        return [], [
+            f'look type {tipo} e o .mon diz Outfit ({tipo_do_mon}, '
+            f'{"-".join(str(c) for c in cores_do_mon)})'
+        ]
+    if cores != cores_do_mon:
+        convencao = cores == [20, 30, 40, 50] and cores_do_mon == [0, 0, 0, 0]
+        rotulo = 'convencao do datapack, tratar em lote' if convencao else 'corrigir pelo .mon'
+        return [], [
+            f'look {tipo} com cores {cores} e o .mon diz '
+            f'{"-".join(str(c) for c in cores_do_mon)} ({rotulo})'
+        ]
+    return [], []
+
+
 def _outfit_do_mon(base, cabecalho, texto):
     """Confere as magias de Outfit contra o .mon e denuncia as que nao vem de la.
 
@@ -1764,6 +1809,8 @@ def validar_monstro(base, monstro):
         do_outfit, divergencias_do_outfit = _outfit_do_mon(base, cabecalho, texto)
         problemas.extend(do_outfit)
         divergencias.extend(divergencias_do_outfit)
+        _, divergencias_do_look = _look_do_mon(base, monstro, texto)
+        divergencias.extend(divergencias_do_look)
         _, divergencias_do_efeito = _efeitos_do_mon(cabecalho, texto)
         divergencias.extend(divergencias_do_efeito)
         combinado = f"{cabecalho.get('artigo', '')} {cabecalho['nome']}".strip().lower()
