@@ -1532,7 +1532,8 @@ _EFEITO_DO_MON_POR_ID = {
 
 _TIRO_DO_MON_POR_ID = {
     1: 'spear', 2: 'bolt', 3: 'arrow', 4: 'fire', 5: 'energy', 6: 'poisonarrow',
-    7: 'burstarrow', 8: 'throwingstar', 9: 'throwingknife', 15: 'poison',
+    7: 'burstarrow', 8: 'throwingstar', 9: 'throwingknife', 10: 'smallstone',
+    11: 'suddendeath', 12: 'largerock', 13: 'snowball', 14: 'powerbolt', 15: 'poison',
 }
 
 _DANO_DO_MON_POR_TIPO = {
@@ -1553,6 +1554,12 @@ def _elementos_de_magia(texto):
             'nome': atributos.get('name', ''),
             'area': do_corpo.get('areaEffect', ''),
             'tiro': do_corpo.get('shootEffect', ''),
+            'forma': {
+                'length': atributos.get('length', ''),
+                'spread': atributos.get('spread', ''),
+                'radius': atributos.get('radius', ''),
+                'matriz': atributos.get('areaMatrix', ''),
+            },
         })
     return elementos
 
@@ -1602,6 +1609,87 @@ def _pedido_da_magia(magia):
     return nome, _EFEITO_DO_MON_POR_ID.get(efeito, ''), _TIRO_DO_MON_POR_ID.get(tiro, '')
 
 
+def _perfil_de_larguras(lista, linhas):
+    """Largura acertada em cada linha da area, contada do alvo para tras (a 1a e a do alvo)."""
+    if not lista or linhas <= 0 or len(lista) % linhas:
+        return []
+    colunas = len(lista) // linhas
+    matriz = [lista[i * colunas:(i + 1) * colunas] for i in range(linhas)]
+    centro_y = next(
+        (y for y, linha in enumerate(matriz) if any(v in (2, 3) for v in linha)), linhas - 1
+    )
+    return [sum(1 for v in matriz[y] if v in (1, 3)) for y in range(centro_y, -1, -1)]
+
+
+def _matriz_do_gerador(length, spread):
+    """Transcreve AreaCombat::setupArea(length, spread) (combat.cpp:1320) numa lista."""
+    colunas = 1
+    if spread != 0:
+        colunas = ((length - length % spread) // spread) * 2 + 1
+    col_spread = colunas
+    centro = ((colunas - colunas % 2) // 2) + 1
+    lista = []
+    for y in range(1, length + 1):
+        menor = colunas - col_spread + 1
+        maior = colunas - (colunas - col_spread)
+        for x in range(1, colunas + 1):
+            if y == length and x == centro:
+                lista.append(3)
+            elif menor <= x <= maior:
+                lista.append(1)
+            else:
+                lista.append(0)
+        if spread > 0 and y % spread == 0:
+            col_spread -= 1
+    return lista, length
+
+
+def _perfil_da_shape(magia):
+    """Larguras que a shape `Angle (angulo, alcance, efeito)` do .mon desenha.
+
+    Transcrito de magic.cc:551 (`AngleShapeSpell`): a largura da linha `Forward` e
+    `2 * (Forward * angulo / 90) + 1`, com a divisao a truncar como o C. Com (30, 3) da
+    1, 1, 3 - o T que o 7.4 desenha e que o gerador `length`/`spread` do motor NAO
+    consegue produzir (ele alarga sempre a partir da linha do alvo). Confere so a shape
+    `Angle`: a `Origin`/`Destination` usa circulo (`radius`) e fica para quando for preciso.
+    """
+    alvo = magia.get('alvo') or []
+    if magia.get('quem') != 'Angle' or len(alvo) < 2:
+        return []
+    angulo, alcance = alvo[0], alvo[1]
+    if angulo < 0 or alcance <= 0:
+        return []
+    return [2 * (d * angulo // 90) + 1 for d in range(1, alcance + 1)]
+
+
+def _perfil_da_area(forma):
+    """Larguras que o XML desenha: a matriz explicita (areaMatrix) ou o gerador length/spread."""
+    if not forma:
+        return []
+    if forma.get('matriz'):
+        try:
+            linhas = forma['matriz'].split(';')
+            lista = [
+                max(0, min(3, int(valor)))
+                for linha in linhas
+                for valor in linha.split(',')
+            ]
+        except ValueError:
+            return []
+        return _perfil_de_larguras(lista, len(linhas))
+    if not forma.get('length'):
+        return []
+    try:
+        length = int(forma['length'])
+        spread = int(forma['spread']) if forma.get('spread') else 3
+    except ValueError:
+        return []
+    if length <= 0:
+        return []
+    lista, linhas = _matriz_do_gerador(length, spread)
+    return _perfil_de_larguras(lista, linhas)
+
+
 def _efeitos_do_mon(cabecalho, texto):
     """Confere o areaEffect e o shootEffect de cada magia contra o que o .mon declara.
 
@@ -1644,6 +1732,14 @@ def _efeitos_do_mon(cabecalho, texto):
             divergencias.append(
                 f'<{no["tag"]} name="{no["nome"]}"> shootEffect "{no["tiro"]}" e o .mon'
                 f' pede "{tiro}" ({magia["quem"]} {magia["alvo"]})'
+            )
+        esperado = _perfil_da_shape(magia)
+        atual = _perfil_da_area(no['forma'])
+        if esperado and atual and esperado != atual:
+            divergencias.append(
+                f'<{no["tag"]} name="{no["nome"]}"> area acerta '
+                f'{"-".join(str(v) for v in atual)} por linha e a shape do .mon'
+                f' pede {"-".join(str(v) for v in esperado)} ({magia["quem"]} {magia["alvo"]})'
             )
     return [], divergencias
 
