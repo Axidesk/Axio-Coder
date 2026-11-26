@@ -656,23 +656,31 @@ def _descrever(evento, nomes, jogador):
     return f"{tipo} {json.dumps(evento, ensure_ascii=False)[:180]}"
 
 
-SANGUE_POR_EFEITO = {0: ('blood ou fire', 'draw_blood'), 9: ('undead', 'hit_area'), 16: ('venom', 'poison')}
-SANGUE_POR_COR = {180: 'blood', 129: 'undead', 30: 'venom', 198: 'fire'}
+EFEITO_DO_FISICO = {1: "sangue ou fogo", 10: "undead", 17: "venom"}
+COR_DA_RACE = {180: "blood", 198: "fire", 129: "undead", 30: "venom"}
 
 
 def _raca_das_criaturas(blocos, pedido):
-    """Atribui cada numero e cada efeito a criatura do tile e vota na race pelo que o motor pinta."""
+    """Vota a race pelo efeito E pela cor que caem no mesmo tile, no mesmo bloco do acerto fisico.
+
+    O miner reporta o id do CLIENTE, que e o do servidor + 1: o sangue (NM_ME_DRAW_BLOOD = 0)
+    chega como 1, o acerto undead (NM_ME_HIT_AREA = 9) como 10 e o veneno (NM_ME_POISON = 16)
+    como 17. Ler os ids do servidor direto (0/9/16) casa com efeito de outra coisa - o 16 do
+    cliente e dano de fogo (NM_ME_HITBY_FIRE = 15) - e faz um behemoth sair venom.
+    """
+    procurado = str(pedido or "").lower()
     nomes, posicao, ocupante = {}, {}, {}
-    efeitos = collections.defaultdict(collections.Counter)
     cores = collections.defaultdict(collections.Counter)
+    votos = collections.Counter()
+    fisicos = collections.Counter()
     for bloco in blocos:
+        efeitos, numeros = collections.defaultdict(list), collections.defaultdict(list)
         for evento in bloco.get("Events", []):
             tipo = evento.get("Event")
             if tipo == "CreatureSeen":
                 nomes[evento.get("CreatureId")] = str(evento.get("Name") or "").lower()
             elif tipo == "TileObjectAdded":
-                objeto = evento.get("Object") or {}
-                criatura = objeto.get("CreatureId")
+                criatura = (evento.get("Object") or {}).get("CreatureId")
                 if criatura is None:
                     continue
                 ponto = _ponto(evento.get("TilePosition"))
@@ -681,65 +689,66 @@ def _raca_das_criaturas(blocos, pedido):
                     ocupante.pop(anterior, None)
                 posicao[criatura] = ponto
                 ocupante[ponto] = criatura
-            elif tipo in ("GraphicalEffectPopped", "NumberEffectPopped"):
-                criatura = ocupante.get(_ponto(evento.get("Position")))
-                if criatura is None:
+            elif tipo == "GraphicalEffectPopped":
+                efeitos[_ponto(evento.get("Position"))].append(evento.get("Id"))
+            elif tipo == "NumberEffectPopped":
+                numeros[_ponto(evento.get("Position"))].append(evento.get("Color"))
+        for tile, identificadores in efeitos.items():
+            criatura = ocupante.get(tile)
+            if criatura is None:
+                continue
+            nome = nomes.get(criatura, "")
+            if not nome or (procurado and procurado not in nome):
+                continue
+            presentes = numeros.get(tile) or []
+            if len(presentes) != 1:
+                continue
+            cor = presentes[0]
+            for identificador in identificadores:
+                if identificador not in EFEITO_DO_FISICO:
                     continue
-                nome = nomes.get(criatura, "")
-                if not nome or (pedido and pedido not in nome):
-                    continue
-                if tipo == "GraphicalEffectPopped":
-                    efeitos[nome][evento.get("Id")] += 1
-                else:
-                    cores[nome][evento.get("Color")] += 1
+                fisicos[nome] += 1
+                cores[nome][cor] += 1
+                if identificador == 17:
+                    votos[nome, "venom"] += 1
+                elif identificador == 10:
+                    votos[nome, "undead"] += 1
+                elif identificador == 1 and cor == 180:
+                    votos[nome, "blood"] += 1
+                elif identificador == 1 and cor == 198:
+                    votos[nome, "fire"] += 1
 
-    if not efeitos and not cores:
+    if not fisicos:
         return [
             "",
-            f"  Nenhum numero nem efeito atribuido a '{pedido}' nesta gravacao.",
+            f"  Nenhum acerto fisico atribuido a '{pedido}' nesta gravacao.",
             "  Confirme o nome exato do monstro (elf, elf scout e elf arcanist sao bichos diferentes)",
-            "  e que a gravacao tem mesmo uma luta com ele.",
+            "  e que a gravacao tem mesmo uma luta corpo a corpo com ele.",
         ]
-    linhas = ["", "  RACE PELA COR DO DANO E PELO EFEITO (game.cpp:4251)"]
-    for nome in sorted(set(efeitos) | set(cores)):
+    linhas = ["", "  RACE PELO EFEITO E PELA COR DO ACERTO FISICO (game.cpp:4245)"]
+    for nome in sorted(cores):
+        total = fisicos[nome]
+        meus = collections.Counter(
+            {raca: quantos for (quem, raca), quantos in votos.items() if quem == nome})
         linhas.append(f"  {nome}:")
-        if cores[nome]:
-            total = sum(cores[nome].values())
-            linhas.append("    numeros: " + ", ".join(
-                f"cor {cor} {SANGUE_POR_COR.get(cor, '?')}={quantos} ({100 * quantos / total:.0f}%)"
-                for cor, quantos in cores[nome].most_common(4)))
-        if efeitos[nome]:
-            linhas.append("    efeitos: " + ", ".join(
-                f"{identificador} {SANGUE_POR_EFEITO.get(identificador, ('', 'outro'))[1]}={quantos}"
-                for identificador, quantos in efeitos[nome].most_common(4)))
-        linhas.append("    veredito: " + _veredito_da_raca(efeitos[nome], cores[nome]))
+        linhas.append("    cores: " + ", ".join(
+            f"{cor} {COR_DA_RACE.get(cor, '?')}={quantos}"
+            for cor, quantos in cores[nome].most_common(4)))
+        linhas.append("    votos: " + (", ".join(f"{raca}={q}" for raca, q in meus.most_common()) or "-"))
+        linhas.append("    veredito: " + _veredito_da_raca(meus, total))
     linhas.append("  O .mon manda quando nao ha gravacao; com gravacao, e este veredito que vale.")
     return linhas
 
 
-def _veredito_da_raca(efeitos, cores):
-    """O efeito 9/16 vale o dobro da cor: so a race o produz, enquanto a cor de dano elemental engana."""
-    votos = collections.Counter()
-    for identificador, quantos in efeitos.items():
-        if identificador == 9:
-            votos['undead'] += 2 * quantos
-        elif identificador == 16:
-            votos['venom'] += 2 * quantos
-    for cor, quantos in cores.items():
-        if cor in SANGUE_POR_COR:
-            votos[SANGUE_POR_COR[cor]] += quantos
+def _veredito_da_raca(votos, total):
+    """O efeito manda: ele separa undead e venom, que a cor sozinha confunde com dano elemental."""
     if not votos:
-        return "sem sinal de acerto fisico (so dano elemental) - nao da para concluir a race"
+        return "acerto fisico sem cor legivel no mesmo tile - nao da para concluir a race"
     raca, peso = votos.most_common(1)[0]
-    total = sum(votos.values())
-    detalhe = (
-        f"{peso} de {total} pontos, {100 * peso / total:.0f}%"
-        f" - efeito 9/16 pesa o dobro da cor, porque so a race o produz"
-    )
-    if peso < 3:
-        return (
-            f"{raca} com amostra pequena ({detalhe}): rode noutra gravacao antes de mexer no XML"
-        )
+    soma = sum(votos.values())
+    detalhe = f"{peso} de {soma} votos ({100 * peso / soma:.0f}%) em {total} acerto(s) fisico(s)"
+    if peso < 5:
+        return f"{raca} com amostra pequena ({detalhe}): rode noutra gravacao antes de mexer no XML"
     return f"{raca} ({detalhe})"
 
 
