@@ -906,40 +906,75 @@ def _indice_de_gravacoes():
 
 def _saltos_casados_com_a_morte(blocos, procurado):
     """Saltos de experiencia que tem UMA morte conhecida na janela logo antes deles."""
-    nomes, mortes, saltos = {}, [], []
+    return _saltos_por_criatura(blocos).get(procurado, [])
+
+
+def _saltos_por_criatura(blocos):
+    """Salto de experiencia -> nome da criatura cuja morte cai na janela logo antes dele."""
+    vistos, mortes, saltos = {}, [], []
     anterior = None
     for evento in blocos:
         tipo = evento.get('Event')
+        quando = evento.get('__t') or 0.0
         if tipo == 'CreatureSeen':
             nome = (evento.get('Name') or '').strip().lower()
-            if nome:
-                nomes[evento.get('CreatureId')] = nome
+            if nome and evento.get('CreatureId'):
+                vistos.setdefault(evento.get('CreatureId'), []).append((quando, nome))
         elif tipo == 'CreatureHealthUpdated':
             if evento.get('Health') == 0 and evento.get('CreatureId'):
-                mortes.append((evento.get('__t') or 0.0, evento.get('CreatureId')))
+                mortes.append((quando, evento.get('CreatureId')))
         elif tipo == 'PlayerDataUpdated':
             valor = evento.get('Experience')
             if valor is None:
                 continue
             if anterior is not None and valor > anterior:
-                saltos.append((evento.get('__t') or 0.0, valor - anterior))
+                saltos.append((quando, valor - anterior))
             anterior = valor
     mortes.sort()
-    meus = []
+
+    def nome_ate(cid, quando):
+        achado = None
+        for instante, nome in vistos.get(cid, ()):
+            if instante > quando + 0.3:
+                break
+            achado = nome
+        return achado
+
+    por_nome = {}
     for instante, delta in saltos:
         ids = {cid for (quando, cid) in mortes if instante - 2.0 <= quando <= instante + 0.3}
-        if len(ids) == 1 and nomes.get(next(iter(ids))) == procurado:
-            meus.append(delta)
-    return meus
+        if len(ids) != 1:
+            continue
+        nome = nome_ate(next(iter(ids)), instante)
+        if nome:
+            por_nome.setdefault(nome, []).append(delta)
+    return por_nome
+
+
+_CACHE_XP_DA_GRAVACAO = {}
+
+
+def _xp_da_gravacao(caminho):
+    """Saltos por criatura de uma gravacao, lidos UMA vez por processo."""
+    try:
+        marca = os.path.getmtime(caminho)
+    except OSError:
+        return {}
+    guardado = _CACHE_XP_DA_GRAVACAO.get(caminho)
+    if guardado and guardado[0] == marca:
+        return guardado[1]
+    try:
+        from src.backend.tools.gravacoes import eventos_da_gravacao
+        por_nome = _saltos_por_criatura(eventos_da_gravacao(caminho))
+    except Exception:
+        por_nome = {}
+    _CACHE_XP_DA_GRAVACAO[caminho] = (marca, por_nome)
+    return por_nome
 
 
 def xp_do_video(base, monstro, corpo):
     """XP real de um abate: o salto de experiencia casado com a morte daquela criatura."""
     if not monstro:
-        return None
-    try:
-        from src.backend.tools.gravacoes import eventos_da_gravacao
-    except ImportError:
         return None
     procurado = monstro.strip().lower()
     alvo = str(corpo) if corpo else None
@@ -955,10 +990,7 @@ def xp_do_video(base, monstro, corpo):
     candidatas.sort(key=lambda c: (-c[0], c[1]))
     amostras, gravacoes = [], []
     for _, _, caminho, nome in candidatas[:4]:
-        try:
-            achados = _saltos_casados_com_a_morte(eventos_da_gravacao(caminho), procurado)
-        except Exception:
-            continue
+        achados = _xp_da_gravacao(caminho).get(procurado, [])
         if achados:
             gravacoes.append(nome)
             amostras += achados

@@ -7024,7 +7024,11 @@
       "descricao": "Atributo do <voice> que faz a fala sair como grito. yell=\"1\" (ou qualquer valor != 0, incluindo \"2\") = SPEAK_MONSTER_YELL, que chega a 18 tiles; sem yell ou yell=\"0\" = SPEAK_MONSTER_SAY, que so chega ao que esta na tela. Vem dos prefixos #Y, #y e #W do campo Talk do .mon (os tres sao grito).",
       "localizacao": {
         "arquivo": "docs/projetos/Tibia74/Solution/src/monster.cpp",
-        "linha": 949
+        "linha": 949,
+        "conferido": [
+          1795373352.575,
+          41452
+        ]
       }
     }
   ]
