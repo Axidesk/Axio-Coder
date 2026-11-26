@@ -339,7 +339,7 @@ def cabecalho_do_mon(base, monstro):
     falas = []
     if bloco_talk:
         for achado in re.finditer(r'"(#[yY])?\s*([^"]*)"', bloco_talk.group(1)):
-            falas.append({'grita': achado.group(1) == '#Y', 'frase': achado.group(2).strip()})
+            falas.append({'grita': (achado.group(1) or '').lower() == '#y', 'frase': achado.group(2).strip()})
 
     magias = []
     if bloco_spells:
@@ -744,28 +744,7 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
                 f'maxSummons="{teto.group(1)}" nao chega ao max={maior} que o .mon da a invocacao'
             )
 
-    vozes = []
-    for achado in re.finditer(r'<voice\s+([^>]*)/>', texto):
-        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
-        vozes.append((html.unescape(atributos.get('sentence', '')), atributos.get('yell')))
-    if vozes:
-        if len(vozes) < len(cabecalho['falas']):
-            divergencias.append(
-                f'o .mon tem {len(cabecalho["falas"])} fala(s) e o XML tem {len(vozes)}'
-            )
-        por_frase = dict(vozes)
-        for fala in cabecalho['falas']:
-            if fala['frase'] not in por_frase:
-                continue
-            grita = por_frase[fala['frase']] == '1'
-            if fala['grita'] and not grita:
-                divergencias.append(
-                    f'voz "{fala["frase"][:38]}" comeca por #Y (grito) e o XML nao tem yell="1"'
-                )
-            elif not fala['grita'] and grita:
-                divergencias.append(
-                    f'voz "{fala["frase"][:38]}" sai gritada no XML e o .mon nao tem #Y'
-                )
+    divergencias.extend(_comparar_vozes(cabecalho['falas'], texto))
 
     elemento_do_ataque = {
         'poisonfield': 'poison', 'poison': 'poison', 'poisoncondition': 'poison',
@@ -788,6 +767,39 @@ def _comparar_identidade(base, cabecalho, texto, xp_do_video=None):
         )
 
     return problemas, divergencias
+
+
+def _comparar_vozes(falas_do_mon, texto):
+    divergencias = []
+    vozes = []
+    for achado in re.finditer(r'<voice\s+([^>]*)/>', texto):
+        atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
+        vozes.append((html.unescape(atributos.get('sentence', '')), atributos.get('yell') == '1'))
+    esperadas = [(fala['frase'], fala['grita']) for fala in falas_do_mon]
+    if not esperadas and not vozes:
+        return divergencias
+    if len(vozes) != len(esperadas):
+        divergencias.append(f'o .mon tem {len(esperadas)} fala(s) e o XML tem {len(vozes)}')
+    restantes = list(vozes)
+    faltando = []
+    for fala in esperadas:
+        if fala in restantes:
+            restantes.remove(fala)
+        else:
+            faltando.append(fala)
+    for frase, grita in faltando:
+        gemea = next((v for v in restantes if v[0] == frase), None)
+        if gemea:
+            restantes.remove(gemea)
+            divergencias.append(
+                f'voz "{frase[:40]}": o .mon {"grita" if grita else "nao grita"} e o XML '
+                f'{"grita" if gemea[1] else "nao grita"}'
+            )
+        else:
+            divergencias.append(f'voz "{frase[:40]}" esta no .mon e falta no XML')
+    for frase, _ in restantes:
+        divergencias.append(f'voz "{frase[:40]}" esta no XML e o .mon nao a tem')
+    return divergencias
 
 
 def _ritmo_das_magias(cabecalho, texto):
