@@ -1558,7 +1558,7 @@ def _elementos_de_magia(texto):
                 'length': atributos.get('length', ''),
                 'spread': atributos.get('spread', ''),
                 'radius': atributos.get('radius', ''),
-                'matriz': atributos.get('areaMatrix', ''),
+                'angle': atributos.get('angle', ''),
             },
         })
     return elementos
@@ -1644,6 +1644,29 @@ def _matriz_do_gerador(length, spread):
     return lista, length
 
 
+def _matriz_do_angulo(angulo, alcance):
+    """Transcreve a area que o motor monta para `angle`/`length` (monsters.cpp).
+
+    A linha mais LONGE fica em primeiro na lista e a do alvo em ultimo, porque o centro da
+    matriz cai na tile a frente do bicho (`AreaCombat::getList`, combat.cpp:1131). A largura
+    de cada linha e a de `AngleShapeSpell` (magic.cc:551) e cresce com a distancia.
+    """
+    larguras = [2 * (d * angulo // 90) + 1 for d in range(1, alcance + 1)]
+    maior = max(larguras)
+    lista = []
+    for indice in range(alcance - 1, -1, -1):
+        largura = larguras[indice]
+        inicio = (maior - largura) // 2
+        for coluna in range(maior):
+            if not inicio <= coluna < inicio + largura:
+                lista.append(0)
+            elif indice == 0 and coluna == inicio + largura // 2:
+                lista.append(3)
+            else:
+                lista.append(1)
+    return lista, alcance
+
+
 def _perfil_da_shape(magia):
     """Larguras que a shape `Angle (angulo, alcance, efeito)` do .mon desenha.
 
@@ -1681,10 +1704,22 @@ def _perfil_da_area(forma):
         return []
     try:
         length = int(forma['length'])
-        spread = int(forma['spread']) if forma.get('spread') else 3
     except ValueError:
         return []
     if length <= 0:
+        return []
+    if forma.get('angle'):
+        try:
+            angulo = int(forma['angle'])
+        except ValueError:
+            return []
+        if angulo < 0:
+            return []
+        lista, linhas = _matriz_do_angulo(angulo, length)
+        return _perfil_de_larguras(lista, linhas)
+    try:
+        spread = int(forma['spread']) if forma.get('spread') else 3
+    except ValueError:
         return []
     lista, linhas = _matriz_do_gerador(length, spread)
     return _perfil_de_larguras(lista, linhas)
