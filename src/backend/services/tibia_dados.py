@@ -338,8 +338,8 @@ def cabecalho_do_mon(base, monstro):
 
     falas = []
     if bloco_talk:
-        for achado in re.finditer(r'"(#[yY])?\s*([^"]*)"', bloco_talk.group(1)):
-            falas.append({'grita': (achado.group(1) or '').lower() == '#y', 'frase': achado.group(2).strip()})
+        for achado in re.finditer(r'"(#[yYwW])?\s*([^"]*)"', bloco_talk.group(1)):
+            falas.append({'grita': bool(achado.group(1)), 'frase': achado.group(2).strip()})
 
     magias = []
     if bloco_spells:
@@ -774,7 +774,7 @@ def _comparar_vozes(falas_do_mon, texto):
     vozes = []
     for achado in re.finditer(r'<voice\s+([^>]*)/>', texto):
         atributos = dict(re.findall(r'(\w+)="([^"]*)"', achado.group(1)))
-        vozes.append((html.unescape(atributos.get('sentence', '')), atributos.get('yell') == '1'))
+        vozes.append((html.unescape(atributos.get('sentence', '')), atributos.get('yell', '0') not in ('0', '')))
     esperadas = [(fala['frase'], fala['grita']) for fala in falas_do_mon]
     if not esperadas and not vozes:
         return divergencias

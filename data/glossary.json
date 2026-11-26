@@ -7004,9 +7004,27 @@
         "arquivo": "src/backend/tools/gravacoes.py",
         "linha": 250,
         "conferido": [
-          1795645964.766,
-          108812
+          1795723941.032,
+          109390
         ]
+      }
+    },
+    {
+      "termo": "yell",
+      "aliases": [
+        "grito",
+        "gritar",
+        "yell 1",
+        "yell 0",
+        "fala gritada",
+        "monstro grita",
+        "sussurro do monstro"
+      ],
+      "identificador": "vb.yellText / SPEAK_MONSTER_YELL",
+      "descricao": "Atributo do <voice> que faz a fala sair como grito. yell=\"1\" (ou qualquer valor != 0, incluindo \"2\") = SPEAK_MONSTER_YELL, que chega a 18 tiles; sem yell ou yell=\"0\" = SPEAK_MONSTER_SAY, que so chega ao que esta na tela. Vem dos prefixos #Y, #y e #W do campo Talk do .mon (os tres sao grito).",
+      "localizacao": {
+        "arquivo": "docs/projetos/Tibia74/Solution/src/monster.cpp",
+        "linha": 949
       }
     }
   ]
