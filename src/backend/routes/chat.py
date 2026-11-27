@@ -47,7 +47,8 @@ def set_folder():
     pasta = data.get("folder")
     if pasta:
         pasta_anterior = estado.get("pasta_raiz", "")
-        atualizar_settings({"projeto": {"ultima_pasta": pasta}})
+        if chave_do_workspace() == CHAVE_DO_PRINCIPAL:
+            atualizar_settings({"projeto": {"ultima_pasta": pasta}})
         registar_projeto_aberto(pasta)
         if pasta == pasta_anterior:
             preaquecer_info_projeto(pasta)

@@ -1,6 +1,8 @@
 import { state } from './state.js';
+import { pastaDoProjeto, definirPastaDaArea } from '../chat/files.js';
 
 const CABECALHO = 'X-Axio-Workspace';
+const ELEMENTOS_DA_CENA = ['chat-inner-left', 'chat-inner-right', 'current-logs-wrapper'];
 const CHAVE_GUARDADA = 'axio-workspaces';
 const PRINCIPAL = 'principal';
 const NOME_DE_PARTIDA = 'Novo projeto';
@@ -10,10 +12,52 @@ let ativa = PRINCIPAL;
 const cenas = {};
 const pendentes = {};
 let fetchOriginal = null;
+let emTroca = false;
 
 function basename(caminho) {
     const partes = String(caminho || '').replace(/\\/g, '/').split('/').filter(Boolean);
     return partes.length ? partes[partes.length - 1] : '';
+}
+
+function normalizar(caminho) {
+    return String(caminho || '').replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase();
+}
+
+function pastaViva() {
+    const rotulo = document.getElementById('lbl-folder');
+    return rotulo ? (rotulo.textContent || '').trim() : '';
+}
+
+function ponteElectron() {
+    try {
+        const { ipcRenderer } = window.require('electron');
+        return ipcRenderer || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function pastaNoTemporario(pasta) {
+    const alvo = normalizar(pasta);
+    if (!alvo) return false;
+    let raiz = '';
+    try {
+        raiz = normalizar(require('os').tmpdir());
+    } catch (e) {
+        return false;
+    }
+    return !!raiz && (alvo === raiz || alvo.startsWith(raiz + '\\'));
+}
+
+function nomeDaArea(area) {
+    if (!area) return NOME_DE_PARTIDA;
+    if (area.nome) return area.nome;
+    if (area.pasta) return basename(area.pasta);
+    if (area.chave === PRINCIPAL && area.chave === ativa) {
+        const viva = pastaViva();
+        if (viva) return basename(viva);
+    }
+    return NOME_DE_PARTIDA;
 }
 
 function lerGuardado() {
@@ -31,7 +75,7 @@ function lerGuardado() {
     if (!areas.some(a => a.chave === PRINCIPAL)) {
         areas.unshift({ chave: PRINCIPAL, nome: '', pasta: '' });
     }
-    if (!areas.some(a => a.chave === ativa)) ativa = areas[0].chave;
+    ativa = PRINCIPAL;
 }
 
 function guardar() {
@@ -70,10 +114,11 @@ function desenhar() {
     areas.forEach(area => {
         const aba = document.createElement('div');
         aba.className = 'ws-aba' + (area.chave === ativa ? ' ativa' : '');
-        aba.title = area.pasta || area.nome || NOME_DE_PARTIDA;
+        const rotulo = nomeDaArea(area);
+        aba.title = area.pasta || rotulo;
         const nome = document.createElement('span');
         nome.className = 'ws-aba-nome';
-        nome.textContent = area.nome || NOME_DE_PARTIDA;
+        nome.textContent = rotulo;
         aba.appendChild(nome);
         if (areas.length > 1) {
             const fechar = document.createElement('button');
@@ -122,42 +167,88 @@ function rolarLista(lista, sentido) {
     }, 260);
 }
 
+function campoDeEntrada() {
+    return document.getElementById('input-text');
+}
+
 function guardarCena(chave) {
-    const inner = document.getElementById('chat-inner-right');
+    const nos = {};
+    ELEMENTOS_DA_CENA.forEach(id => {
+        const el = document.getElementById(id);
+        nos[id] = el ? Array.from(el.children) : [];
+        if (el) el.replaceChildren();
+    });
+    const entrada = campoDeEntrada();
     cenas[chave] = {
-        nos: inner ? Array.from(inner.children) : [],
+        nos,
+        texto: entrada ? entrada.value : '',
         abas: Array.isArray(state.openTabs) ? [...state.openTabs] : [],
         abaAtiva: state.abaAtiva || '',
         atual: state.currentFile || '',
         turnId: state.turnId,
+        logs: Array.isArray(window.sessionLogsData) ? [...window.sessionLogsData] : [],
+        turnoLogs: Array.isArray(state.currentTurnLogs) ? [...state.currentTurnLogs] : [],
     };
-    if (inner) inner.replaceChildren();
 }
 
 function restaurarCena(chave) {
     const cena = cenas[chave];
-    const inner = document.getElementById('chat-inner-right');
-    if (inner) inner.replaceChildren(...(cena ? cena.nos : []));
+    ELEMENTOS_DA_CENA.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.replaceChildren(...((cena && cena.nos && cena.nos[id]) || []));
+    });
+    const entrada = campoDeEntrada();
+    if (entrada) {
+        entrada.value = cena && typeof cena.texto === 'string' ? cena.texto : '';
+        entrada.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    window.sessionLogsData = cena && cena.logs ? cena.logs : [];
+    state.currentTurnLogs = cena && cena.turnoLogs ? cena.turnoLogs : [];
     state.openTabs = cena ? [...cena.abas] : [];
-    state.abaAtiva = '';
-    state.currentFile = '';
+    state.abaAtiva = cena ? cena.abaAtiva : '';
+    state.currentFile = cena ? cena.atual : '';
     if (cena && 'turnId' in state) state.turnId = cena.turnId;
     const wv = window.WorkspaceView;
     if (wv && typeof wv.renderTabs === 'function') wv.renderTabs();
     setTimeout(atualizarSetasDasAbas, 30);
 }
 
-function atualizarRodape() {
-    const area = areaDe(ativa);
-    const pasta = area ? area.pasta : '';
-    const rotulo = document.getElementById('lbl-folder');
-    if (rotulo) rotulo.textContent = pasta;
-    const botao = document.getElementById('btn-select-folder');
-    if (botao) {
-        botao.classList.toggle('folder-selected', !!pasta);
-        botao.classList.toggle('text-[var(--oliva)]', !!pasta);
-        botao.classList.toggle('text-[var(--text-branco)]', false);
-        botao.title = pasta || 'Selecionar Pasta';
+function aplicarPastaDaArea(chave) {
+    const area = areaDe(chave);
+    definirPastaDaArea(area ? area.pasta : '');
+}
+
+function pastaDoBackend() {
+    return fetch('/api/env_info')
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => (d && d.folder) || '')
+        .catch(() => '');
+}
+
+async function garantirPastaNoBackend(chave) {
+    const area = areaDe(chave);
+    if (!area) return false;
+    const querida = area.pasta;
+    const atual = await pastaDoBackend();
+    if (normalizar(querida) === normalizar(atual)) return true;
+    if (!querida) {
+        if (atual && chave === PRINCIPAL) {
+            area.pasta = atual;
+            area.nome = basename(atual);
+            guardar();
+        }
+        return false;
+    }
+    try {
+        const resposta = await fetch('/api/set_folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: querida }),
+        });
+        return resposta.ok;
+    } catch (e) {
+        return false;
     }
 }
 
@@ -167,22 +258,38 @@ function recarregarVista() {
     if (wv && typeof wv.loadVenvName === 'function') wv.loadVenvName();
 }
 
-async function trocarPara(chave) {
-    if (!chave || chave === ativa) return;
-    guardarCena(ativa);
+async function aplicarArea(chave) {
     ativa = chave;
     guardar();
     desenhar();
+    await garantirPastaNoBackend(chave);
+    aplicarPastaDaArea(chave);
     restaurarCena(chave);
-    atualizarRodape();
     recarregarVista();
+    envolverEventos();
     document.dispatchEvent(new CustomEvent('workspace:mudou', { detail: { chave } }));
     despacharPendentes(chave);
+}
+
+async function trocarPara(chave) {
+    if (!chave || chave === ativa || emTroca) return;
+    emTroca = true;
+    try {
+        guardarCena(ativa);
+        await aplicarArea(chave);
+    } finally {
+        emTroca = false;
+    }
 }
 
 async function definirPasta(chave, pasta) {
     const area = areaDe(chave);
     if (!area || !pasta) return false;
+    if (pastaNoTemporario(pasta)) {
+        const aviso = document.getElementById('lbl-status');
+        if (aviso) aviso.textContent = 'Essa pasta é temporária do sistema. Escolha a pasta do projeto.';
+        return false;
+    }
     const anterior = ativa;
     ativa = chave;
     let ok = false;
@@ -206,14 +313,14 @@ async function definirPasta(chave, pasta) {
     guardar();
     desenhar();
     if (chave === ativa) {
-        atualizarRodape();
+        aplicarPastaDaArea(chave);
         recarregarVista();
     }
     return true;
 }
 
 async function escolherPastaDaArea() {
-    const ponte = window.ipcRenderer || (typeof ipcRenderer !== 'undefined' ? ipcRenderer : null);
+    const ponte = ponteElectron();
     if (!ponte) return;
     let pasta = '';
     try {
@@ -225,15 +332,16 @@ async function escolherPastaDaArea() {
 }
 
 async function novoWorkspace() {
+    if (emTroca) return;
     const chave = 'ws' + Date.now().toString(36);
-    areas.push({ chave, nome: NOME_DE_PARTIDA, pasta: '' });
-    guardarCena(ativa);
-    ativa = chave;
-    guardar();
-    desenhar();
-    restaurarCena(chave);
-    atualizarRodape();
-    recarregarVista();
+    emTroca = true;
+    try {
+        guardarCena(ativa);
+        areas.push({ chave, nome: '', pasta: '' });
+        await aplicarArea(chave);
+    } finally {
+        emTroca = false;
+    }
     await escolherPastaDaArea();
 }
 
@@ -253,17 +361,15 @@ async function fecharArea(chave) {
     areas.splice(indice, 1);
     delete cenas[chave];
     delete pendentes[chave];
-    if (eraAtiva) {
-        ativa = areas[Math.min(indice, areas.length - 1)].chave;
+    if (!eraAtiva) {
         guardar();
         desenhar();
-        restaurarCena(ativa);
-        atualizarRodape();
-        recarregarVista();
-    } else {
-        guardar();
-        desenhar();
+        return;
     }
+    guardarCena('');
+    delete cenas[''];
+    const destino = areas[Math.min(indice, areas.length - 1)].chave;
+    await aplicarArea(destino);
 }
 
 function envolverEventos() {
@@ -379,23 +485,22 @@ async function reidratarPastaDaAreaAtiva() {
     if (ativa === PRINCIPAL) return;
     const area = areaDe(ativa);
     if (!area || !area.pasta) return;
-    try {
-        await fetch('/api/set_folder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ folder: area.pasta }),
-        });
-    } catch (e) {
-        return;
-    }
+    await garantirPastaNoBackend(ativa);
+    aplicarPastaDaArea(ativa);
     recarregarVista();
 }
 
 function iniciar() {
     lerGuardado();
     instalarFetch();
+    const principal = areaDe(PRINCIPAL);
+    const viva = pastaViva() || pastaDoProjeto();
+    if (principal && !principal.pasta && viva) {
+        principal.pasta = viva;
+        principal.nome = basename(viva);
+        guardar();
+    }
     desenhar();
-    atualizarRodape();
     const novo = document.getElementById('btn-novo-workspace');
     if (novo) novo.addEventListener('click', novoWorkspace);
     const antes = document.getElementById('btn-ws-anterior');

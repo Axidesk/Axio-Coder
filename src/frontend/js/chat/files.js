@@ -667,6 +667,27 @@ const NL = String.fromCharCode(10);
         }
     }
 
+    function pastaDoProjeto() {
+        return pastaSelecionada;
+    }
+
+    function definirPastaDaArea(folder) {
+        pastaSelecionada = folder || '';
+        lblFolder.textContent = pastaSelecionada;
+        if (!btnSelectFolder) return;
+        if (pastaSelecionada) {
+            btnSelectFolder.classList.remove('text-[var(--text-branco)]');
+            btnSelectFolder.classList.add('text-[var(--oliva)]');
+            btnSelectFolder.classList.add('folder-selected');
+            btnSelectFolder.title = pastaSelecionada;
+        } else {
+            btnSelectFolder.classList.remove('text-[var(--oliva)]');
+            btnSelectFolder.classList.remove('folder-selected');
+            btnSelectFolder.classList.add('text-[var(--text-branco)]');
+            btnSelectFolder.title = 'Selecionar Pasta';
+        }
+    }
+
     async function abrirPasta(folderPath, recarregando) {
         lblStatus.textContent = 'Carregando diretório...';
         for (let i = 0; i < 20; i++) {
@@ -880,6 +901,8 @@ export {
     executarUndoRedo,
     selectFolder,
     restaurarPastaSelecionada,
+    pastaDoProjeto,
+    definirPastaDaArea,
     normalizeFsPath,
     gerarSnippetHtml,
     atualizarIconeOlho,
