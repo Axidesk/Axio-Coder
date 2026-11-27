@@ -15,6 +15,7 @@ from src.backend.services.busca_texto import EXTS_TEXTO, ordem_da_varredura, pes
 
 LIMITE_BYTES_LIDOS = 8 * 1024 * 1024
 LIMITE_EXCERTO = 200
+TETO_DA_LISTAGEM = 200
 _TETO_CANDIDATOS = 8
 _RE_DEFINICAO = re.compile(r"(?:function|def|class|sub)\s+([A-Za-z_][A-Za-z0-9_.:]*)")
 
@@ -35,7 +36,7 @@ def _formato_tamanho(num):
 
 @register(
     "tool_listar_pasta",
-    "Lista o conteúdo de uma pasta. Use sem argumentos para a raiz ou passe 'caminho_relativo' para explorar subpastas. Ignora por predefinicao pastas de build/sistema (Release, Debug, obj, node_modules, .git, nomes com ponto inicial) e binarios, mas DIZ quantos ficaram de fora: com incluir_ocultos=true lista-os tambem, marcados.",
+    "Lista o conteúdo de uma pasta. Use sem argumentos para a raiz ou passe 'caminho_relativo' para explorar subpastas. Ignora por predefinicao pastas de build/sistema (Release, Debug, obj, node_modules, .git, nomes com ponto inicial) e binarios, mas DIZ quantos ficaram de fora: com incluir_ocultos=true lista-os tambem, marcados. Uma pasta com mais de 200 itens mostra os primeiros 200 e diz quantos ficaram de fora - para achar um ficheiro numa pasta enorme use tool_localizar_arquivos.",
     {
         'caminho_relativo': {"tipo": "STRING", "desc": 'Subpasta opcional', "padrao": ""},
         'incluir_ocultos': {"tipo": "BOOLEAN", "obrig": False, "padrao": False, "desc": "Mostra tambem o que a listagem esconde por predefinicao (pastas de build/sistema, nomes com ponto inicial, binarios), cada item marcado com (oculto). E o caminho para auditar uma pasta de build sem ela deixar de estar fora das varreduras normais."},
@@ -59,6 +60,10 @@ def tool_listar_pasta(caminho_relativo="", incluir_ocultos=False):
             resumo += f" (+{ocultos} oculto(s) fora da listagem: pastas de build/sistema e binarios - repita com incluir_ocultos=true para os ver)"
         elif ocultos:
             resumo += f" ({ocultos} ocultos por predefinicao, marcados)"
+        total = len(entradas)
+        if total > TETO_DA_LISTAGEM:
+            entradas = entradas[:TETO_DA_LISTAGEM]
+            resumo += f" - mostrando os primeiros {TETO_DA_LISTAGEM}; {total - TETO_DA_LISTAGEM} ficaram de fora (para achar um ficheiro pelo nome use tool_localizar_arquivos, para procurar conteudo use tool_pesquisar_no_projeto)"
         linhas = [f"Caminho: {caminho_relativo or os.path.basename(caminho_alvo.rstrip(os.sep)) or caminho_alvo}",
                   resumo]
         for e in entradas:
