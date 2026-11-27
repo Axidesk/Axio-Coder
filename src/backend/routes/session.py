@@ -385,7 +385,7 @@ def _tocado_desde_ponto(pasta_raiz, rel, ts_ponto):
     """
     if not ts_ponto:
         return True
-    alvo = os.path.abspath(os.path.join(pasta_raiz, rel.replace("/", os.sep)))
+    alvo = _alvo_do_snapshot(pasta_raiz, rel)
     if not os.path.exists(alvo):
         return True
     try:
@@ -403,6 +403,66 @@ def _snapshot_do_ponto(pasta_raiz, snapshot, ts_ponto):
         rel: meta for rel, meta in snapshot.items()
         if _tocado_desde_ponto(pasta_raiz, rel, ts_ponto)
     }
+
+def _alvo_do_snapshot(pasta_raiz, rel):
+    return os.path.abspath(os.path.join(pasta_raiz, rel.replace("/", os.sep)))
+
+def _chave_deste_projeto(pasta_raiz, rel, nome):
+    """O caminho de `rel` visto de dentro de `pasta_raiz`, ou None se for de outro projeto.
+
+    Um snapshot gravado com outra pasta aberta guarda os caminhos a partir daquela
+    raiz: aberto o projeto no lugar dele, `docs/projetos/Tibia74/Server/x.xml`
+    aponta para uma pasta que nao existe dentro do proprio projeto. A marca e o
+    NOME da pasta do projeto no meio do caminho -- o que vem depois dele e o
+    caminho verdadeiro. Chave sem a marca e de outro projeto e sai.
+    """
+    direto = _alvo_do_snapshot(pasta_raiz, rel)
+    if os.path.exists(direto):
+        return rel
+    marca = "/" + nome + "/"
+    if marca in rel:
+        resto = rel.split(marca, 1)[1]
+        alvo = _alvo_do_snapshot(pasta_raiz, resto)
+        if os.path.exists(alvo) or os.path.isdir(os.path.dirname(alvo)):
+            return resto
+    return None
+
+def _traduzir_chaves(pasta_raiz, snapshot, aparicoes):
+    """Reescreve as chaves de um snapshot gravado com OUTRA raiz.
+
+    Devolve (snapshot, aparicoes) com a MESMA traducao: se so o snapshot fosse
+    traduzido, a classificacao dos criados-depois veria chaves que o snapshot ja
+    nao tem e mandaria para a lixeira ficheiros do proprio projeto.
+
+    So age quando a traducao resolve MAIS ficheiros do que as chaves cruas -- nos
+    logs gravados com esta raiz as chaves ja estao certas e ficam intactas.
+    """
+    if not snapshot:
+        return snapshot, aparicoes
+    nome = os.path.basename(os.path.normpath(pasta_raiz))
+    marca = "/" + nome + "/"
+    com_marca = [k for k in snapshot if marca in k]
+    if not com_marca:
+        return snapshot, aparicoes
+    diretas = sum(1 for k in com_marca if os.path.exists(_alvo_do_snapshot(pasta_raiz, k)))
+    traduzidas = 0
+    for k in com_marca:
+        resto = k.split(marca, 1)[1]
+        if os.path.exists(_alvo_do_snapshot(pasta_raiz, resto)):
+            traduzidas += 1
+    if traduzidas <= diretas:
+        return snapshot, aparicoes
+    novo = {}
+    for rel, meta in snapshot.items():
+        chave = _chave_deste_projeto(pasta_raiz, rel, nome)
+        if chave:
+            novo[chave] = meta
+    novas_aparicoes = {}
+    for rel, ts in (aparicoes or {}).items():
+        chave = _chave_deste_projeto(pasta_raiz, rel, nome)
+        if chave:
+            novas_aparicoes[chave] = ts
+    return novo, novas_aparicoes
 
 def _preparar_restauracao():
     """Valida pasta/filename e carrega o snapshot para as rotas de restauracao.
@@ -432,6 +492,8 @@ def _preparar_restauracao():
     if erro:
         codigo = 404 if erro == "Sessão não encontrada" else 500
         return None, None, None, None, None, (jsonify({"status": "error", "message": erro}), codigo)
+    snapshot, aparicoes = _traduzir_chaves(pasta_raiz, snapshot, varredura[0])
+    varredura = (aparicoes, varredura[1])
     snapshot = _snapshot_do_ponto(pasta_raiz, snapshot, _ts_do_ponto(data))
     return pasta_raiz, data, pasta_logs, snapshot, varredura, None
 
@@ -452,7 +514,7 @@ def _iter_itens_snapshot(pasta_raiz, snapshot):
     """
     for rel, info in snapshot.items():
         conteudo = info.get("conteudo") if isinstance(info, dict) else None
-        alvo = os.path.abspath(os.path.join(pasta_raiz, rel.replace("/", os.sep)))
+        alvo = _alvo_do_snapshot(pasta_raiz, rel)
         yield rel, conteudo, alvo, _ler_conteudo_atual(alvo)
 
 def _quebras_da_restauracao(pasta_raiz, criados_depois, snapshot):
