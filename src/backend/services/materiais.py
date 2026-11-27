@@ -50,17 +50,26 @@ def raiz_do_projeto():
     return estado.get("pasta_raiz", "") or ""
 
 
+def raiz_do_gerados():
+    """O gerados/ do Axio, em ABSOLUTO: casa de todo o material, em qualquer projeto.
+
+    E o unico caminho fixo desta materia. Nao depende do projeto aberto nem do
+    nome dele, e por isso continua a ser alcançavel de fora do Axio.
+    """
+    return os.path.join(APP_ROOT, PASTA_DE_MATERIAL)
+
+
 def raiz_do_material():
-    """Pasta ABSOLUTA onde nasce todo o material gerado: o gerados/ do Axio.
+    """Pasta ABSOLUTA onde nasce o material DA VEZ: gerados/<projeto>/.
 
     Dentro do Axio e o gerados/ da raiz. Com OUTRO projeto aberto e
     gerados/<projeto>/ do Axio: a pasta do projeto fica limpa, sem um gerados/
     dentro dela, e o material continua ao alcance porque o caminho e absoluto.
     """
     if no_diretorio_do_axio() or not raiz_do_projeto():
-        return os.path.join(APP_ROOT, PASTA_DE_MATERIAL)
+        return raiz_do_gerados()
     nome = os.path.basename(os.path.normpath(raiz_do_projeto())) or "projeto"
-    return os.path.join(APP_ROOT, PASTA_DE_MATERIAL, slug(nome))
+    return os.path.join(raiz_do_gerados(), slug(nome))
 
 
 def pasta_do_material(assunto):
@@ -110,7 +119,7 @@ def aviso_de_destino(caminho_relativo):
         return ""
     raiz = raiz_do_projeto()
     absoluto = caminho if os.path.isabs(caminho) else os.path.join(raiz, caminho)
-    if caminho_contido(absoluto, raiz_do_material()):
+    if caminho_contido(absoluto, raiz_do_gerados()):
         return ""
     try:
         relativo = os.path.relpath(os.path.abspath(absoluto), os.path.abspath(raiz)).replace("\\", "/")

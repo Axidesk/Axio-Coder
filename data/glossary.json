@@ -959,10 +959,10 @@
       "descricao": "Nucleo do restauro de um item da lixeira para a pasta do projeto (caminho original do manifesto, ou um destino novo). Usado pela ferramenta tool_restaurar_lixeira (tools/trash.py) e pela rota /api/trash_restore. Para ler um ficheiro da lixeira sem o restaurar existe tool_ler_lixeira.",
       "localizacao": {
         "arquivo": "src/backend/services/file_service.py",
-        "linha": 638,
+        "linha": 640,
         "conferido": [
-          1791918920.41,
-          34007
+          1795785049.245,
+          34102
         ]
       }
     },
@@ -3650,7 +3650,11 @@
       "descricao": "Pasta padrao de tudo o que se gera, uma subpasta por assunto, criada sozinha. Dentro do Axio e o gerados/ da raiz; com OUTRO projeto aberto e gerados/<projeto>/ do Axio (ex: gerados/tibia74/monstros/), para a pasta do projeto ficar limpa. O tool_iniciar_plano grava em gerados/planos/ e reescreve a cada tarefa concluida; o tool_gerar_modelo usa gerados/<modelo>/. Provado.",
       "localizacao": {
         "arquivo": "src/backend/services/materiais.py",
-        "linha": 53
+        "linha": 53,
+        "conferido": [
+          1795785274.778,
+          4681
+        ]
       }
     },
     {
@@ -7001,8 +7005,8 @@
         "arquivo": "src/backend/tools/gravacoes.py",
         "linha": 250,
         "conferido": [
-          1795723941.032,
-          109390
+          1795785088.636,
+          109319
         ]
       }
     },
