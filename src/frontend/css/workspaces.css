@@ -1,7 +1,9 @@
 #ws-barra {
     display: flex;
-    align-items: center;
+    align-items: stretch;
+    align-self: stretch;
     gap: 2px;
+    height: 100%;
     margin-left: 12px;
     min-width: 0;
     max-width: 46vw;
@@ -15,8 +17,9 @@
 
 #ws-abas {
     display: flex;
-    align-items: center;
-    gap: 2px;
+    align-items: stretch;
+    gap: 0;
+    height: 100%;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -30,28 +33,37 @@
 .ws-aba {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex: 0 0 auto;
-    height: 22px;
-    padding: 0 10px;
-    border-radius: 9999px;
+    align-self: stretch;
+    height: 100%;
+    padding: 0 12px 0 8px;
+    border-radius: 0;
     background: transparent;
     color: var(--text-suave);
-    font-size: 12px;
+    font-size: 12.5px;
+    font-weight: 500;
     line-height: 1;
     white-space: nowrap;
-    cursor: default;
-    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: color var(--dur-1) ease, background var(--dur-1) ease, opacity var(--dur-1) ease;
 }
 
 .ws-aba:hover {
-    color: var(--text-branco);
+    color: var(--text-suave);
     background: var(--bg-hover-suave);
+    opacity: 1;
 }
 
 .ws-aba.ativa {
     color: var(--text-branco);
-    background: var(--bg-selecao);
+    background: transparent;
+    opacity: 1;
+}
+
+.ws-aba.ativa:hover {
+    color: var(--text-branco);
 }
 
 .ws-aba-nome {

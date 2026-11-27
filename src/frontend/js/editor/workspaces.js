@@ -1,11 +1,28 @@
 import { state } from './state.js';
+import { state as chatState } from '../chat/state.js';
 import { pastaDoProjeto, definirPastaDaArea } from '../chat/files.js';
 
 const CABECALHO = 'X-Axio-Workspace';
-const ELEMENTOS_DA_CENA = ['chat-inner-left', 'chat-inner-right', 'current-logs-wrapper'];
+const ELEMENTOS_DA_CENA = ['chat-inner-left', 'chat-inner-right', 'current-logs-wrapper', 'history-logs-wrapper'];
 const CHAVE_GUARDADA = 'axio-workspaces';
 const PRINCIPAL = 'principal';
 const NOME_DE_PARTIDA = 'Novo projeto';
+const BASE = {
+    isGenerating: false, currentTurnId: null, currentTurnLogs: [], currentTurnSummary: '',
+    isShowingSessionHistory: false, sessionHistoryList: [], sessionHistoryLoaded: false,
+    sessionDetailCache: {}, sessionLogArquivo: '', sessionIndiceEmCurso: null,
+    commitsDosTurnos: {}, commitsPorSubir: [], porSubirTruncado: false, porSubirLido: false,
+    porSubirEmCurso: null, temRemotoGit: false, gitRemoto: '', versoesGit: null, versoesEmCurso: null,
+    currentCheckpointId: null, checkpointRestoredAt: 0, restoreEvents: [],
+    currentViewingTools: [], currentViewingThoughts: [], currentViewingQuestions: [],
+    isShowingTools: false, isShowingGit: false, isShowingThoughts: false, isShowingQuestions: false,
+    thoughtsExpanded: false, currentActiveFileBalloonHtml: '', undoRedoFiles: [], currentUndoFile: null,
+    currentFileDataRef: null, isEyeMode: false, currentOpenedDiff: null,
+    codigoDoHistoricoNoEditor: false, vistaDocAtual: 'chat', currentViewingAiResponse: '',
+    attachedImages: [], imageCounter: 1, currentSelectedHistoryGroup: null,
+    currentSelectedHistoryEl: null,
+};
+const CHAVES_DO_ESTADO = Object.keys(BASE);
 
 let areas = [];
 let ativa = PRINCIPAL;
@@ -21,6 +38,37 @@ function basename(caminho) {
 
 function normalizar(caminho) {
     return String(caminho || '').replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase();
+}
+
+function copiarValor(valor) {
+    if (Array.isArray(valor)) return valor.slice();
+    if (valor instanceof Set) return new Set(valor);
+    if (valor instanceof Map) return new Map(valor);
+    if (valor && typeof valor === 'object' && Object.getPrototypeOf(valor) === Object.prototype) {
+        return Object.assign({}, valor);
+    }
+    return valor;
+}
+
+function fotoDoEstado() {
+    const foto = {};
+    CHAVES_DO_ESTADO.forEach(k => { foto[k] = copiarValor(chatState[k]); });
+    return foto;
+}
+
+function aplicarEstado(foto) {
+    const origem = foto || BASE;
+    CHAVES_DO_ESTADO.forEach(k => { chatState[k] = copiarValor(origem[k]); });
+}
+
+function lerEstadoDoTurno() {
+    const gancho = window.__axioEstadoDoTurno;
+    return gancho && typeof gancho.ler === 'function' ? gancho.ler() : null;
+}
+
+function aplicarEstadoDoTurno(foto) {
+    const gancho = window.__axioEstadoDoTurno;
+    if (gancho && typeof gancho.por === 'function') gancho.por(foto || {});
 }
 
 function pastaViva() {
@@ -51,13 +99,12 @@ function pastaNoTemporario(pasta) {
 
 function nomeDaArea(area) {
     if (!area) return NOME_DE_PARTIDA;
-    if (area.nome) return area.nome;
     if (area.pasta) return basename(area.pasta);
-    if (area.chave === PRINCIPAL && area.chave === ativa) {
-        const viva = pastaViva();
+    if (area.chave === PRINCIPAL) {
+        const viva = pastaViva() || pastaDoProjeto();
         if (viva) return basename(viva);
     }
-    return NOME_DE_PARTIDA;
+    return area.nome || NOME_DE_PARTIDA;
 }
 
 function lerGuardado() {
@@ -66,7 +113,7 @@ function lerGuardado() {
         if (bruto && Array.isArray(bruto.areas) && bruto.areas.length) {
             areas = bruto.areas
                 .filter(a => a && a.chave)
-                .map(a => ({ chave: a.chave, nome: a.nome || '', pasta: a.pasta || '' }));
+                .map(a => ({ chave: a.chave, nome: a.nome || '', pasta: a.pasta || '', rascunho: a.rascunho || '' }));
             ativa = bruto.ativa && areas.some(a => a.chave === bruto.ativa) ? bruto.ativa : areas[0].chave;
         }
     } catch (e) {
@@ -119,7 +166,6 @@ function desenhar() {
         const nome = document.createElement('span');
         nome.className = 'ws-aba-nome';
         nome.textContent = rotulo;
-        aba.appendChild(nome);
         if (areas.length > 1) {
             const fechar = document.createElement('button');
             fechar.type = 'button';
@@ -132,6 +178,7 @@ function desenhar() {
             });
             aba.appendChild(fechar);
         }
+        aba.appendChild(nome);
         aba.addEventListener('click', () => trocarPara(area.chave));
         lista.appendChild(aba);
     });
@@ -182,12 +229,12 @@ function guardarCena(chave) {
     cenas[chave] = {
         nos,
         texto: entrada ? entrada.value : '',
+        estado: fotoDoEstado(),
+        turno: lerEstadoDoTurno(),
         abas: Array.isArray(state.openTabs) ? [...state.openTabs] : [],
         abaAtiva: state.abaAtiva || '',
         atual: state.currentFile || '',
-        turnId: state.turnId,
         logs: Array.isArray(window.sessionLogsData) ? [...window.sessionLogsData] : [],
-        turnoLogs: Array.isArray(state.currentTurnLogs) ? [...state.currentTurnLogs] : [],
     };
 }
 
@@ -198,17 +245,19 @@ function restaurarCena(chave) {
         if (!el) return;
         el.replaceChildren(...((cena && cena.nos && cena.nos[id]) || []));
     });
+    aplicarEstado(cena ? cena.estado : null);
+    aplicarEstadoDoTurno(cena ? cena.turno : null);
+    window.sessionLogsData = cena && cena.logs ? [...cena.logs] : [];
     const entrada = campoDeEntrada();
+    const area = areaDe(chave);
+    const rascunho = cena ? (cena.texto || '') : (area ? (area.rascunho || '') : '');
     if (entrada) {
-        entrada.value = cena && typeof cena.texto === 'string' ? cena.texto : '';
+        entrada.value = rascunho;
         entrada.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    window.sessionLogsData = cena && cena.logs ? cena.logs : [];
-    state.currentTurnLogs = cena && cena.turnoLogs ? cena.turnoLogs : [];
     state.openTabs = cena ? [...cena.abas] : [];
     state.abaAtiva = cena ? cena.abaAtiva : '';
     state.currentFile = cena ? cena.atual : '';
-    if (cena && 'turnId' in state) state.turnId = cena.turnId;
     const wv = window.WorkspaceView;
     if (wv && typeof wv.renderTabs === 'function') wv.renderTabs();
     setTimeout(atualizarSetasDasAbas, 30);
@@ -266,7 +315,7 @@ async function aplicarArea(chave) {
     aplicarPastaDaArea(chave);
     restaurarCena(chave);
     recarregarVista();
-    envolverEventos();
+    filtrarSSE(chatState.eventSource);
     document.dispatchEvent(new CustomEvent('workspace:mudou', { detail: { chave } }));
     despacharPendentes(chave);
 }
@@ -372,14 +421,12 @@ async function fecharArea(chave) {
     await aplicarArea(destino);
 }
 
-function envolverEventos() {
-    const fonte = state.eventSource;
-    if (!fonte || fonte.__axioWorkspaces) return Boolean(fonte);
-    const original = fonte.onmessage;
-    if (typeof original !== 'function') return false;
-    fonte.__axioWorkspaces = true;
-    fonte.__axioOriginal = original;
-    fonte.onmessage = (evento) => {
+function filtrarSSE(fonte) {
+    if (!fonte || typeof fonte.onmessage !== 'function') return false;
+    if (fonte.onmessage.__axioWrapper) return true;
+    const base = fonte.onmessage;
+    fonte.__axioBase = base;
+    const embrulho = (evento) => {
         let dados = null;
         try {
             dados = JSON.parse(evento.data);
@@ -387,11 +434,13 @@ function envolverEventos() {
             dados = null;
         }
         const dono = (dados && dados.workspace) || PRINCIPAL;
-        if (dono === ativa) return original.call(fonte, evento);
+        if (dono === ativa) return base.call(fonte, evento);
         if (!pendentes[dono]) pendentes[dono] = [];
         pendentes[dono].push(evento.data);
         return undefined;
     };
+    embrulho.__axioWrapper = true;
+    fonte.onmessage = embrulho;
     return true;
 }
 
@@ -399,10 +448,10 @@ function despacharPendentes(chave) {
     const fila = pendentes[chave];
     if (!fila || !fila.length) return;
     delete pendentes[chave];
-    const fonte = state.eventSource;
-    const original = fonte && fonte.__axioOriginal;
-    if (!original) return;
-    fila.forEach(texto => original.call(fonte, { data: texto }));
+    const fonte = chatState.eventSource;
+    const base = fonte && fonte.__axioBase;
+    if (!base) return;
+    fila.forEach(texto => base.call(fonte, { data: texto }));
 }
 
 function ligarMenuDasAbas() {
@@ -481,6 +530,16 @@ function interceptarPastaForaDoPrincipal() {
     }, true);
 }
 
+function ligarRascunho() {
+    const entrada = campoDeEntrada();
+    if (!entrada) return;
+    entrada.addEventListener('input', () => {
+        const area = areaDe(ativa);
+        if (!area) return;
+        area.rascunho = entrada.value;
+    });
+}
+
 async function reidratarPastaDaAreaAtiva() {
     if (ativa === PRINCIPAL) return;
     const area = areaDe(ativa);
@@ -522,10 +581,12 @@ function iniciar() {
     ligarObservadorDaPasta();
     ligarMenuDasAbas();
     interceptarPastaForaDoPrincipal();
+    ligarRascunho();
+    window.__axioFiltrarSSE = filtrarSSE;
     let tentativas = 0;
     const relogio = setInterval(() => {
         tentativas += 1;
-        if (envolverEventos() || tentativas > 40) clearInterval(relogio);
+        if (filtrarSSE(chatState.eventSource) || tentativas > 40) clearInterval(relogio);
     }, 250);
     reidratarPastaDaAreaAtiva();
 }

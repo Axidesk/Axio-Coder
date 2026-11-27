@@ -175,10 +175,10 @@ async function sendMessage() {
         }
     }
 function startSSE() {
-    if (state.eventSource) {
-        state.eventSource.close();
-    }
-    state.eventSource = new EventSource('/api/stream');
+    const anterior = state.eventSource;
+    const viva = anterior && anterior.readyState !== EventSource.CLOSED;
+    if (anterior && !viva) anterior.close();
+    if (!viva) state.eventSource = new EventSource('/api/stream');
     resetEstadoDoTurno();
     iniciarDespertador();
     state.eventSource.onmessage = async function(event) {
@@ -217,6 +217,7 @@ function startSSE() {
         resetSendButton();
         setLogsLoading(false);
     };
+    if (window.__axioFiltrarSSE) window.__axioFiltrarSSE(state.eventSource);
 }
 
 let currentAIMessageDiv = null;
@@ -243,6 +244,16 @@ if (!window._statusLinkListener) {
         }
     });
 }
+
+document.addEventListener('workspace:mudou', () => {
+    if (state.isGenerating) {
+        setStopButton();
+        setLogsLoading(true);
+    } else {
+        resetSendButton();
+        setLogsLoading(false);
+    }
+});
 
 
 function _initCurrentGroupBalloon(titleText, isAnalysis) {
@@ -830,6 +841,48 @@ function resetEstadoDoTurno() {
     wsProcessosIA.clear();
     wsAutoMostrado = false;
 }
+
+function estadoDoTurno() {
+    return {
+        aiDiv: currentAIMessageDiv,
+        balao: currentGroupBalloon,
+        arquivos: currentGroupFiles.slice(),
+        ferramentas: currentSessionTools.slice(),
+        pensamentos: currentSessionThoughts.slice(),
+        perguntas: currentSessionQuestions.slice(),
+        resposta: currentSessionAiResponse,
+        plano: currentSessionPlano.slice(),
+        planoTotal: currentSessionPlanoTotal,
+        processos: Array.from(wsProcessosIA),
+        autoMostrado: wsAutoMostrado,
+        ultimaDiv: window.lastUserMessageDiv || null,
+        ultimoTexto: window.lastUserMessageText || '',
+        pergunta: window.pendingUserQuestion || null,
+        inicio: window.currentRoundStartedAt || 0,
+    };
+}
+
+function aplicarEstadoDoTurno(estado) {
+    const e = estado || {};
+    currentAIMessageDiv = e.aiDiv || null;
+    currentGroupBalloon = e.balao || null;
+    currentGroupFiles = Array.isArray(e.arquivos) ? e.arquivos.slice() : [];
+    currentSessionTools = Array.isArray(e.ferramentas) ? e.ferramentas.slice() : [];
+    currentSessionThoughts = Array.isArray(e.pensamentos) ? e.pensamentos.slice() : [];
+    currentSessionQuestions = Array.isArray(e.perguntas) ? e.perguntas.slice() : [];
+    currentSessionAiResponse = e.resposta || '';
+    currentSessionPlano = Array.isArray(e.plano) ? e.plano.slice() : [];
+    currentSessionPlanoTotal = e.planoTotal || 0;
+    wsProcessosIA.clear();
+    (e.processos || []).forEach(p => wsProcessosIA.add(p));
+    wsAutoMostrado = !!e.autoMostrado;
+    window.lastUserMessageDiv = e.ultimaDiv || null;
+    window.lastUserMessageText = e.ultimoTexto || '';
+    window.pendingUserQuestion = e.pergunta || null;
+    window.currentRoundStartedAt = e.inicio || 0;
+}
+
+window.__axioEstadoDoTurno = { ler: estadoDoTurno, por: aplicarEstadoDoTurno };
 
 
     function addMessage(role, text) {
