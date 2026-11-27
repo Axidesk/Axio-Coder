@@ -1,6 +1,6 @@
 import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogTheme, enterLogMode, enterLogModeWithLines, enterReadonlyLogMode, exitLogMode, updateLineNumbersButton } from './themes.js';
 import { VISTAS_DE_TRABALHO, fecharPreview, garantirVistaVisivel, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
-import { agendarReconciliacaoDeAbas, caminhoRelativoAoProjeto, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
+import { agendarRecargaDaAbaAberta, agendarReconciliacaoDeAbas, caminhoRelativoAoProjeto, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
 import { ALTURA_LINHA } from './metricas.js';
 import { iniciarBarrasDoEditor, reavaliarBarrasDoEditor } from './barras.js';
 import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
@@ -45,6 +45,7 @@ export function handleSSE(data) {
     } else if (data.type === 'files_changed') {
         scheduleExplorerReload();
         agendarReconciliacaoDeAbas();
+        agendarRecargaDaAbaAberta();
         if (state.trashOpen) loadTrash(true);
         loadVenvName();
     }

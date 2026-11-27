@@ -318,8 +318,8 @@ export function renderTabs() {
         closeBtn.className = 'editor-tab-close';
         closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
         closeBtn.title = 'Fechar';
-        tab.appendChild(nameSpan);
         tab.appendChild(closeBtn);
+        tab.appendChild(nameSpan);
         tab.addEventListener('click', (e) => {
             if (e.target.closest('.editor-tab-close')) return;
             if (path === state.currentFile) { setView('editor'); return; }
@@ -367,6 +367,44 @@ export function agendarReconciliacaoDeAbas() {
         reconciliacaoTimer = null;
         reconciliarAbas();
     }, ESPERA_DA_RECONCILIACAO_MS);
+}
+
+let recargaTimer = null;
+const ESPERA_DA_RECARGA_MS = 200;
+
+export function agendarRecargaDaAbaAberta() {
+    if (recargaTimer) clearTimeout(recargaTimer);
+    recargaTimer = setTimeout(() => {
+        recargaTimer = null;
+        recarregarAbaAberta();
+    }, ESPERA_DA_RECARGA_MS);
+}
+
+function recarregarAbaAberta() {
+    const caminho = state.currentFile;
+    if (!caminho || !state.editor || !state.monaco) return;
+    if (state.currentFileIsImage || state.logMode || state.diffMode) return;
+    if (state.autoSaveTimer || state.suppressAutoSave) return;
+    const modelo = state.editorModels[caminho];
+    if (!modelo) return;
+    fetch(state.API + '/api/file_content?caminho=' + encodeURIComponent(caminho))
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                if (_ficheiroSumiu(data.error)) _largarAbaFantasma(caminho);
+                return;
+            }
+            if (data.tipo === 'imagem' || data.tipo === 'binario') return;
+            if (state.currentFile !== caminho || state.editorModels[caminho] !== modelo) return;
+            const novo = data.conteudo || '';
+            if (modelo.getValue() === novo) return;
+            const vista = state.editor.saveViewState();
+            state.suppressAutoSave = true;
+            modelo.setValue(novo);
+            state.suppressAutoSave = false;
+            if (vista) state.editor.restoreViewState(vista);
+        })
+        .catch(() => {});
 }
 
 export async function reconciliarAbas() {

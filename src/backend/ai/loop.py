@@ -442,6 +442,7 @@ def _partes_das_imagens(imagens):
 
 def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepseek=False, turn_id=None, ai_model="gemini"):
     set_turn_id(turn_id)
+    texto_da_rodada = ""
     estado["bloquear_edicao"] = (modo == "semi")
     estado["urls_navegadas_turno"] = set()
     estado["indice_antes_do_script"] = None
@@ -639,6 +640,7 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
                 texto_final, resumo_semantico = _extrair_resumo(texto_final)
                 if resumo_semantico and not texto_final:
                     texto_final = "Processamento concluído."
+                texto_da_rodada = texto_final
 
                 texto_usuario_final = prompt_usuario
                 linhas_sistema = []
@@ -702,4 +704,4 @@ def loop_raciocinio_ia(prompt_usuario, modo="auto", imagens_b64=None, use_deepse
             emit_event("done")
             break
 
-    fechar_rodada()
+    fechar_rodada(texto_da_rodada)

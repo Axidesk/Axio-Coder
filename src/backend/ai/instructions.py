@@ -426,6 +426,7 @@ def _bloco_modo_projeto():
     nota o agente tenta melhorar-se a si mesmo durante um trabalho que nada tem a
     ver com ele, e ainda procura ficheiros do Axio que nao consegue abrir.
     """
+    from src.backend.ai.atrito import caminho_do_caderno
     from src.backend.config import APP_ROOT
     from src.backend.state import estado, no_diretorio_do_axio
     raiz = estado.get("pasta_raiz", "")
@@ -448,8 +449,8 @@ def _bloco_modo_projeto():
         "procurar ficheiros do Axio (src/backend, src/frontend, data) e NAO prometa melhorias nas minhas "
         "ferramentas.\n"
         "O atrito NAO se perde: o radar continua a medir e o que ele apanha vai para o caderno de melhorias "
-        f"adiadas do Axio ({APP_ROOT}\\.axio\\melhorias_pendentes.json), que me e devolvido sozinho na primeira "
-        "rodada em que eu voltar a abrir a pasta do Axio - sem eu ter de levar nota nenhuma a mao. Aqui basta "
+        f"do Axio ({caminho_do_caderno()}), que me e devolvido sozinho ao voltar a abrir a pasta do Axio - sem "
+        "eu ter de levar nota nenhuma a mao. Aqui basta "
         "uma linha no fim da resposta: 'AUTO-MELHORIA (adiada): <o que faltou, numa frase>'.\n"
         "Bom lado do que isto significa: o projeto do utilizador NAO recebe ficheiro meu nenhum, nem .axio, nem "
         "notas. Toda a contabilidade do meu desgaste vive na minha pasta, nao na dele.\n"
@@ -775,9 +776,11 @@ def build_system_instructions(modo, contexto_memoria, contexto_ai_memory, bloco_
         "porque so entao as tuas ferramentas (src/backend/, src/frontend/, data/) estao ao teu alcance. Noutro projeto elas "
         "ficam FORA do alcance de escrita (resolver_caminho recusa) e a regra fica SUSPENSA: nao tentes editar nem procurar "
         "codigo do Axio, nao prometas melhorias e nao escrevas o bloco AUTO-MELHORIA - mas NAO perdes o atrito: o radar "
-        "continua a medir e guarda o que apanhou no caderno de melhorias adiadas do Axio, que te e devolvido sozinho na "
-        "primeira rodada em que voltares a abrir a pasta do Axio. Aqui basta a linha 'AUTO-MELHORIA (adiada): <o que "
-        "faltou, numa frase>'. A tarefa pedida vem SEMPRE primeiro; a "
+        "continua a medir e o que ele apanha vai para o caderno legivel do Axio "
+        "(gerados/coder/auto-melhoria/pendentes.md). Aqui basta a linha 'AUTO-MELHORIA (adiada): <o que faltou, numa "
+        "frase>', que o fim da rodada grava no caderno sozinho. Quando voltares a abrir a pasta do Axio o caderno e "
+        "injetado: atende primeiro o pedido novo, diz no fim que ha N melhorias pendentes e aplica-as a partir da "
+        "rodada seguinte, apagando do ficheiro cada linha resolvida. A tarefa pedida vem SEMPRE primeiro; a "
         "melhoria entra SEMPRE no FIM DA MESMA RODADA quando houver algo real a melhorar - e nao basta IDENTIFICAR a melhoria "
         "e conta-la ao utilizador: o que for realmente melhoravel CONSERTA-SE na mesma rodada, porque o que fica so escrito "
         "esquece-se e a memoria nao substitui a correcao. Nao e para mexer em toda a rodada: so quando houver melhoria real. "

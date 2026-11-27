@@ -844,10 +844,10 @@
       "descricao": "Acao acao='compactar' de tool_gerenciar_banco_vetorial. Roda sqlite3 VACUUM no chroma.sqlite3 sob memoria_lock para devolver ao disco o espaco das drawers apagadas: o SQLite marca as paginas como livres mas NAO encolhe o ficheiro sem VACUUM. Precisa de ate 2x o tamanho do ficheiro em espaco livre.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 856,
+        "linha": 867,
         "conferido": [
-          1795791994.668,
-          40621
+          1795816339.869,
+          41219
         ]
       }
     },
@@ -858,10 +858,10 @@
       "descricao": "Progresso textual das operacoes pesadas do vetor (varredura, limpeza, reparo, compactacao). Gravado por _marcar_progresso em estado[\"vetor_ocupado\"][\"progresso\"] e exibido por _ocupacao_atual no acao='status'. E o unico sinal que sobrevive ao timeout da tool: como a operacao continua em background, o resultado da ferramenta perde-se, mas a marca de ocupacao (com o progresso) continua em RAM ate terminar. A mesma marca serve o minerador de memorias (sem campo de progresso), que a grava enquanto minera - ver o termo \"trava da memoria\".",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 562,
+        "linha": 573,
         "conferido": [
-          1795791994.668,
-          40621
+          1795816339.869,
+          41219
         ]
       }
     },
@@ -881,8 +881,8 @@
         "arquivo": "src/backend/memory/manutencao.py",
         "linha": 741,
         "conferido": [
-          1791593536.296,
-          41428
+          1795816340.096,
+          42670
         ]
       }
     },
@@ -900,8 +900,8 @@
         "arquivo": "src/backend/memory/manutencao.py",
         "linha": 846,
         "conferido": [
-          1791593536.296,
-          41428
+          1795816340.096,
+          42670
         ]
       }
     },
@@ -932,19 +932,17 @@
         "modo projeto",
         "auto-melhoria suspensa",
         "bloco modo projeto",
+        "auto melhoria adiada",
+        "caderno de melhorias",
         "editando outro projeto",
         "trabalhar noutro projeto",
         "noutro diretorio"
       ],
       "identificador": "no_diretorio_do_axio",
-      "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. ATENCAO, isto MUDOU a 2026-09-19: o radar de atrito ja NAO ignora a rodada fora do Axio - continua a medir e grava o que apanhou no caderno de melhorias adiadas (APP_ROOT/.axio/melhorias_pendentes.json, via _acumular_pendentes em ai/atrito.py), que volta a ser injetado UMA vez por arranque quando a pasta aberta e outra vez a do Axio (_bloco_pendentes). O projeto do utilizador nao recebe ficheiro nenhum.",
+      "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. O atrito NAO se perde: o radar continua a medir e o que ele apanha, mais as linhas 'AUTO-MELHORIA (adiada): ...' que eu escrevo na resposta, vai para o caderno LEGIVEL APP_ROOT/gerados/coder/auto-melhoria/pendentes.md (ai/atrito.py:_registar_no_caderno, gravado no fim da rodada por fechar_rodada(texto_final) via _anotar_melhorias). O caderno e injetado ao abrir a pasta do Axio e depois fica uma linha por rodada ate ficar vazio (_bloco_pendentes); ao_abrir_projeto reabre a janela quando a pasta muda sem reiniciar o backend. O projeto do utilizador nao recebe ficheiro nenhum.",
       "localizacao": {
         "arquivo": "src/backend/state.py",
-        "linha": 189,
-        "conferido": [
-          1795791976.695,
-          6820
-        ]
+        "linha": 189
       }
     },
     {
@@ -1103,10 +1101,10 @@
       "descricao": "Recusa (texto) quando ja ha operacao pesada no vetor; a marca de ocupacao (estado[\"vetor_ocupado\"]) inclui agora o minerador de memorias, e as gravacoes/exclusoes de notas adiam-se numa fila (_fila_vetor, drenada por esvaziar_fila_do_vetor) em vez de disputarem o memoria_lock.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 586,
+        "linha": 597,
         "conferido": [
-          1795791994.668,
-          40621
+          1795816339.869,
+          41219
         ]
       }
     },
@@ -5958,7 +5956,11 @@
       "descricao": "Bool do configmanager que faz a runa de cura escolher UMA criatura por tile (a de cima) em vez do conjurador; sem ela quem esta por baixo cura-se sempre.",
       "localizacao": {
         "arquivo": "Solution/src/configmanager.h",
-        "linha": ""
+        "linha": 164,
+        "conferido": [
+          1792632688.505,
+          4778
+        ]
       }
     },
     {
