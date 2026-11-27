@@ -303,6 +303,28 @@ try {
 
 const importarProjeto = (rel) => import(__paraUrl(__juntar(process.cwd(), rel)));
 
+// Carrega um modulo do PROJETO sem os imports dele: as dependencias entram como
+// argumentos e o corpo corre em new Function. Substitui o passo manual (tirar as
+// linhas de import e a palavra export) que se repetia em cada harness de UI.
+//   const m = moduloDoDisco("src/frontend/js/editor/x.js",
+//       { state: estadoFalso, dom: meuDom }, ["iniciar", "trocarPara"]);
+// Os nomes pedidos volvem num objeto; o que o corpo DECLARA nao pode vir por
+// dependencia (sombreia o argumento) - ver a armadilha do cabecalho.
+const moduloDoDisco = (rel, deps = {}, devolver = []) => {
+    const alvo = path.isAbsolute(rel) ? rel : path.join(process.cwd(), rel);
+    let texto = fs.readFileSync(alvo, "utf8");
+    texto = texto
+        .replace(/^[ \\t]*import\\s+[\\s\\S]*?from\\s*["'][^"']+["'];?[ \\t]*$/gm, "")
+        .replace(/^[ \\t]*import\\s*["'][^"']+["'];?[ \\t]*$/gm, "")
+        .replace(/^[ \\t]*export\\s*\\{[\\s\\S]*?\\};?[ \\t]*$/gm, "")
+        .replace(/^[ \\t]*export\\s+default\\s+/gm, "const __padrao = ")
+        .replace(/^([ \\t]*)export\\s+(?=(async\\s+)?(const|let|var|function|class))/gm, "$1");
+    const nomes = Object.keys(deps);
+    const pedidos = Array.isArray(devolver) ? devolver : Object.keys(devolver);
+    const corpo = texto + "\\nreturn { " + pedidos.join(", ") + " };";
+    return new Function(...nomes, corpo)(...nomes.map((n) => deps[n]));
+};
+
 // Extrai do disco o corpo EXATO de uma funcao nomeada, pronto para new Function.
 // Inclui o 'async' quando existe (esquece-lo da um SyntaxError que nao aponta para
 // a causa) e equilibra chaves - nao distingue chaves dentro de strings.
@@ -2021,6 +2043,10 @@ def tool_executar_python(codigo, timeout=60, rotulo="", filtro="", teto_saida=0,
     "a reescrever de memoria. Para uma funcao que fecha por cima de uma variavel de MODULO (module-local) "
     "use declaracoesDoDisco('src/x.js', 'arvoreAgrupada', 'raizDoDock'): devolve essas linhas de topo "
     "verbatim do disco - e recusa as que nao cabem numa linha - em vez de as reescrever a mao no teste. "
+    "Para o CORPO INTEIRO de um modulo que tem imports (testar as funcoes de um ficheiro do frontend) use "
+    "moduloDoDisco('src/frontend/js/editor/x.js', { state: estadoFalso, dom: meuDom }, ['iniciar', "
+    "'trocarPara']): le o ficheiro do disco, tira as linhas de import e a palavra export, e devolve os nomes "
+    "pedidos num objeto - e o passo que antes se refazia a mao em cada harness. "
     "O cabecalho ja injeta criarDomFalso() - um document/window minimos prontos a usar em vez de "
     "reescrever o stub de DOM a mao (as armadilhas conhecidas ja vem resolvidas: insertBefore/"
     "appendChild soltam o no do pai, a chave de props que ja existe no no cai em PROPRIEDADE "
