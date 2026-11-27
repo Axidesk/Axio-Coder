@@ -844,10 +844,10 @@
       "descricao": "Acao acao='compactar' de tool_gerenciar_banco_vetorial. Roda sqlite3 VACUUM no chroma.sqlite3 sob memoria_lock para devolver ao disco o espaco das drawers apagadas: o SQLite marca as paginas como livres mas NAO encolhe o ficheiro sem VACUUM. Precisa de ate 2x o tamanho do ficheiro em espaco livre.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 834,
+        "linha": 858,
         "conferido": [
-          1789909295.919,
-          39601
+          1795789468.465,
+          40753
         ]
       }
     },
@@ -858,10 +858,10 @@
       "descricao": "Progresso textual das operacoes pesadas do vetor (varredura, limpeza, reparo, compactacao). Gravado por _marcar_progresso em estado[\"vetor_ocupado\"][\"progresso\"] e exibido por _ocupacao_atual no acao='status'. E o unico sinal que sobrevive ao timeout da tool: como a operacao continua em background, o resultado da ferramenta perde-se, mas a marca de ocupacao (com o progresso) continua em RAM ate terminar. A mesma marca serve o minerador de memorias (sem campo de progresso), que a grava enquanto minera - ver o termo \"trava da memoria\".",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 540,
+        "linha": 564,
         "conferido": [
-          1789909295.919,
-          39601
+          1795789468.465,
+          40753
         ]
       }
     },
@@ -1103,10 +1103,10 @@
       "descricao": "Recusa (texto) quando ja ha operacao pesada no vetor; a marca de ocupacao (estado[\"vetor_ocupado\"]) inclui agora o minerador de memorias, e as gravacoes/exclusoes de notas adiam-se numa fila (_fila_vetor, drenada por esvaziar_fila_do_vetor) em vez de disputarem o memoria_lock.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 564,
+        "linha": 588,
         "conferido": [
-          1789909295.919,
-          39601
+          1795789468.465,
+          40753
         ]
       }
     },

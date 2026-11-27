@@ -441,7 +441,6 @@ def _pastas_de_fontes():
             axio_do_projeto = os.path.join(projetos, nome, ".axio")
             candidatas.append(os.path.join(axio_do_projeto, "chats"))
             candidatas.append(os.path.join(axio_do_projeto, "knowledge"))
-            candidatas.append(os.path.join(axio_do_projeto, "conversas_arquivadas"))
     vistas = []
     for base in candidatas:
         if base and os.path.isdir(base) and base not in vistas:
