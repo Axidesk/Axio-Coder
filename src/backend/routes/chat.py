@@ -5,7 +5,8 @@ import queue
 
 from flask import Blueprint, request, jsonify, Response
 
-from src.backend.state import estado, emit_event, caminho_estado_projeto, registrar_subscriber, remover_subscriber, limpar_eventos
+from src.backend.state import (estado, emit_event, caminho_estado_projeto, registrar_subscriber,
+                               remover_subscriber, limpar_eventos, registar_projeto_aberto)
 from src.backend.services.process_manager import pty_lock, pty_kill_locked
 from src.backend.tools.process import parar_processo_reg
 from src.backend.services.session import criar_sessao_vazia, migrar_session_logs_antigos
@@ -43,6 +44,7 @@ def set_folder():
     if pasta:
         pasta_anterior = estado.get("pasta_raiz", "")
         atualizar_settings({"projeto": {"ultima_pasta": pasta}})
+        registar_projeto_aberto(pasta)
         if pasta == pasta_anterior:
             preaquecer_info_projeto(pasta)
             return jsonify({"folder": pasta, "status": "ready"})

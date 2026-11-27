@@ -7,22 +7,29 @@ from functools import lru_cache
 from src.backend.config import APP_ROOT
 from src.backend.services.materiais import slug
 
-BASE_PADRAO = os.path.join(APP_ROOT, 'docs', 'projetos', 'Tibia74')
-
-
 def base_do_projeto():
-    """A pasta do Tibia74 em uso: a que esta aberta, ou a copia dentro do Axio."""
-    from src.backend.state import estado
+    """A pasta do Tibia74: a que esta aberta ou outra que o Axio ja abriu."""
+    from src.backend.state import estado, projetos_ja_abertos
     raiz = str(estado.get("pasta_raiz") or "")
-    if raiz and (os.path.isdir(os.path.join(raiz, 'Server'))
-                 or os.path.isdir(os.path.join(raiz, 'Solution'))):
+    if _e_projeto_tibia(raiz):
         return raiz
-    return BASE_PADRAO
+    for candidata in projetos_ja_abertos():
+        if _e_projeto_tibia(candidata):
+            return candidata
+    return ''
+
+
+def _e_projeto_tibia(raiz):
+    """A pasta traz o servidor ou a solucao do Tibia74."""
+    return bool(raiz) and (os.path.isdir(os.path.join(raiz, 'Server'))
+                           or os.path.isdir(os.path.join(raiz, 'Solution')))
 
 
 def pasta_cipsoft(base=None):
     """Pasta dos .mon e do objects.srv: vive no gerados/ do Axio (gerados/tibia74)."""
     base = base or base_do_projeto()
+    if not base:
+        return ''
     guardada = os.path.join(APP_ROOT, 'gerados', slug(os.path.basename(os.path.normpath(str(base)))),
                             'monstros', 'cipsoft')
     if os.path.isdir(guardada):
@@ -261,7 +268,8 @@ def _normalizar(nome):
 
 
 @lru_cache(maxsize=4)
-def objetos_do_srv(base=BASE_PADRAO):
+def objetos_do_srv(base=None):
+    base = base or base_do_projeto()
     caminho = f'{pasta_cipsoft(base)}/objects.srv'
     texto = open(caminho, encoding='latin-1').read()
     tabela = {}
@@ -273,7 +281,8 @@ def objetos_do_srv(base=BASE_PADRAO):
 
 
 @lru_cache(maxsize=4)
-def items_740(base=BASE_PADRAO):
+def items_740(base=None):
+    base = base or base_do_projeto()
     caminho = f'{base}/Tools/Map Editor/data/740/items.xml'
     texto = open(caminho, encoding='latin-1').read()
     tabela = {}
@@ -501,13 +510,15 @@ def _nomes_por_id(base):
 
 
 @lru_cache(maxsize=4)
-def _monstros_registados(base=BASE_PADRAO):
+def _monstros_registados(base=None):
+    base = base or base_do_projeto()
     texto = open(f'{base}/Server/data/monster/monsters.xml', encoding='latin-1').read()
     return {_normalizar(nome) for nome in re.findall(r'<monster\s+name="([^"]+)"', texto)}
 
 
 @lru_cache(maxsize=4)
-def nomes_crus_740(base=BASE_PADRAO):
+def nomes_crus_740(base=None):
+    base = base or base_do_projeto()
     caminho = f'{base}/Tools/Map Editor/data/740/items.xml'
     texto = open(caminho, encoding='latin-1').read()
     return {
@@ -927,11 +938,6 @@ def _indice_de_gravacoes():
         return {}
 
 
-def _saltos_casados_com_a_morte(blocos, procurado):
-    """Saltos de experiencia que tem UMA morte conhecida na janela logo antes deles."""
-    return _saltos_por_criatura(blocos).get(procurado, [])
-
-
 def _saltos_por_criatura(blocos):
     """Salto de experiencia -> nome da criatura cuja morte cai na janela logo antes dele."""
     vistos, mortes, saltos = {}, [], []
@@ -1177,8 +1183,9 @@ def _sitios_do_xml(texto):
 
 
 @lru_cache(maxsize=4)
-def nomes_do_servidor(base=BASE_PADRAO):
+def nomes_do_servidor(base=None):
     """id -> nome como o servidor o escreve, com espacos: e assim que o loot se ordena."""
+    base = base or base_do_projeto()
     texto = open(f'{base}/Server/data/items/items.xml', encoding='latin-1').read()
     achados = re.findall(r'<item[ ]+id="([0-9]+)"[^>]*name="([^"]*)"', texto)
     return {int(ident): nome.strip().lower() for ident, nome in achados}

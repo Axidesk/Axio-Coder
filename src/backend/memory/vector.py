@@ -6,7 +6,8 @@ import threading
 import time
 
 from src.backend.config import APP_ROOT
-from src.backend.state import estado, emit_event, memoria_lock, mineracao_em_andamento, caminho_estado_projeto
+from src.backend.state import (estado, emit_event, memoria_lock, mineracao_em_andamento,
+                               caminho_estado_projeto, projetos_ja_abertos)
 from src.backend.memory.store import garantir_pasta_knowledge, nome_arquivo_seguro
 
 _patch_mempalace_aplicado = False
@@ -427,20 +428,18 @@ def _basenames_fontes():
 def _pastas_de_fontes():
     """Toda a casa de chats e knowledge que uma drawer pode citar.
 
-    Nao basta a pasta do projeto aberto: o material de um projeto pode ter
-    sido separado no .axio dele (docs/projetos/<nome>/.axio) enquanto a
-    sessao corre noutro. Olhar so a pasta atual marcaria essas conversas
-    como orfas e a limpeza apagaria memoria viva de outro projeto.
+    Nao basta a pasta do projeto aberto: o material de um projeto vive no
+    .axio DELE, e a sessao pode estar a correr noutro. Olhar so a pasta atual
+    marcaria essas conversas como orfas e a limpeza apagaria memoria viva de
+    outro projeto - por isso entram tambem as pastas que o Axio ja abriu.
     """
     candidatas = [caminho_estado_projeto("chats"), garantir_pasta_knowledge(),
                   os.path.join(APP_ROOT, ".axio", "chats"),
                   os.path.join(APP_ROOT, ".axio", "knowledge")]
-    projetos = os.path.join(APP_ROOT, "docs", "projetos")
-    if os.path.isdir(projetos):
-        for nome in os.listdir(projetos):
-            axio_do_projeto = os.path.join(projetos, nome, ".axio")
-            candidatas.append(os.path.join(axio_do_projeto, "chats"))
-            candidatas.append(os.path.join(axio_do_projeto, "knowledge"))
+    for raiz in projetos_ja_abertos():
+        axio_do_projeto = os.path.join(raiz, ".axio")
+        candidatas.append(os.path.join(axio_do_projeto, "chats"))
+        candidatas.append(os.path.join(axio_do_projeto, "knowledge"))
     vistas = []
     for base in candidatas:
         if base and os.path.isdir(base) and base not in vistas:

@@ -147,6 +147,45 @@ def caminho_estado_projeto(*partes):
         return ""
     return os.path.join(raiz, ".axio", *partes)
 
+def _ficheiro_de_projetos():
+    return os.path.join(APP_ROOT, "data", "projetos_abertos.json")
+
+def projetos_ja_abertos():
+    """As pastas de projeto que o Axio ja abriu, da mais recente para a mais antiga.
+
+    Existe porque o material de um projeto vive no .axio DELE: com outro projeto
+    aberto, o Axio precisa de saber onde estao as conversas e as notas do
+    primeiro para nao as tomar por orfas e para as alcancar a partir daqui.
+    So devolve pastas que ainda existem no disco.
+    """
+    try:
+        with open(_ficheiro_de_projetos(), encoding="utf-8") as fh:
+            guardadas = json.load(fh)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(guardadas, list):
+        return []
+    vistas = []
+    for pasta in guardadas:
+        if isinstance(pasta, str) and pasta and os.path.isdir(pasta):
+            if os.path.normcase(pasta) not in [os.path.normcase(v) for v in vistas]:
+                vistas.append(pasta)
+    return vistas
+
+def registar_projeto_aberto(pasta):
+    """Guarda a pasta de projeto aberta, para o Axio a recordar quando correr noutra."""
+    if not pasta:
+        return
+    alvo = os.path.abspath(pasta)
+    lista = [p for p in projetos_ja_abertos()
+             if os.path.normcase(os.path.abspath(p)) != os.path.normcase(alvo)]
+    lista.insert(0, alvo)
+    try:
+        with open(_ficheiro_de_projetos(), "w", encoding="utf-8") as fh:
+            json.dump(lista[:20], fh, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+
 def no_diretorio_do_axio():
     """True quando a pasta de projeto aberta e a raiz do proprio Axio.
 

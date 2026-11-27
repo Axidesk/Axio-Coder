@@ -5739,7 +5739,7 @@
       "identificador": "SQL_DB",
       "descricao": "O ficheiro .sql da raiz do projeto (hoje database.sql, nome livre) e a base dentro do MySQL sao coisas diferentes: o nome da base vive num sitio so, o SQL_DB do config.lua do servidor. O site le-o por axio_db_nome() (xampp/htdocs/data_dir.php) e o Server/backup.bat le-o por findstr ao config.lua ao lado dele. Renomear o ficheiro nao toca em nada; renomear a BASE e editar essa unica linha.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Server/config.lua",
+        "arquivo": "Server/config.lua",
         "linha": 17,
         "conferido": [
           1794664099.379,
@@ -5798,7 +5798,7 @@
       "identificador": "#barra-aplicar / pintarBarra / servidor: false no ESQUEMA",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
+        "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 771,
         "conferido": [
           1794664595.534,
@@ -5819,7 +5819,7 @@
       "identificador": "botaoLigar",
       "descricao": "Pilula verde que aparece so na linha da opcao que esta comentada no config.lua ('desligada no ficheiro'). Clicar reescreve a linha sem os --, com o valor e o comentario que ja la estavam. O Rust ja sabia faze-lo (a 'marca' do gravar_config); faltava o controle no frontend.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
+        "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 407,
         "conferido": [
           1794664595.534,
@@ -5838,7 +5838,7 @@
       "identificador": "chavesRepetidas",
       "descricao": "Deteccao dinamica de uma chave escrita mais de uma vez no config.lua com linhas VIVAS - as comentadas nao contam, senao o bloco antigo do servidor remoto (8 chaves) dava 8 avisos mentirosos.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
+        "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 580,
         "conferido": [
           1794664595.534,
@@ -5858,7 +5858,7 @@
       "identificador": "LARGURA_DE_PARTIDA",
       "descricao": "Partida 45% de dados a esquerda / 55% de vista a direita. A largura e a da VISTA (--largura-vista no style.css). O valor guardado leva a partida de que veio ('62|55') e e ignorado se a partida mudou.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 193,
         "conferido": [
           1794783076.119,
@@ -5880,7 +5880,7 @@
       "identificador": "montarAcordeao",
       "descricao": "Grupo do painel que abre com o + e desliza. section.recolhivel com .recolhivel-topo (h3 + conta + .mais) e o corpo dentro de um .explica (grid-template-rows 0fr->1fr). Um aberto de cada vez; com a busca ativa abrem todos os que tem resultados.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/interface.js",
+        "arquivo": "Tools/CPanel/frontend/interface.js",
         "linha": 327,
         "conferido": [
           1793465223.727,
@@ -5924,7 +5924,7 @@
       "identificador": "#btn-busca-config",
       "descricao": "A lupa na linha do titulo das Configuracoes, ao lado do contador de opcoes. Abre a largura como as outras buscas do painel; procura pelo rotulo, pela chave, pela seccao e pela descricao, e abre os grupos que tem resultados.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 100,
         "conferido": [
           1794780677.671,
@@ -5938,7 +5938,7 @@
       "identificador": ".i",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
+        "arquivo": "Tools/CPanel/frontend/style.css",
         "linha": 5,
         "conferido": [
           1794782188.191,
@@ -5955,10 +5955,10 @@
         "usar uh com alguem em cima"
       ],
       "identificador": "ConfigManager::UH_TRAP",
-      "descricao": "Chave do config.lua que decide quem a runa de cura atinge quando ha mais de uma criatura no mesmo tile: ligada, o alvo e quem esta em cima (quem esta por baixo nao se cura); desligada, cada um cura-se sempre a si proprio. Lida em Solution/src/configmanager.cpp e usada no ramo targetCasterOrTopMost de Solution/src/combat.cpp.</descricao>\n<｜｜DSML｜｜ parameter name=\"localizacao_arquivo\" string=\"true\">docs/projetos/Tibia74/Solution/src/configmanager.h",
+      "descricao": "Chave `UHTrap` do config.lua (lida em configmanager.cpp:136) que decide quem a runa de cura atinge quando ha mais de uma criatura no mesmo tile: ligada, o alvo e quem esta em cima.",
       "localizacao": {
-        "arquivo": "",
-        "linha": 149
+        "arquivo": "Solution/src/configmanager.h",
+        "linha": 164
       }
     },
     {
@@ -5967,7 +5967,7 @@
       "identificador": "aplicarVista",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 369,
         "conferido": [
           1794783076.119,
@@ -6004,7 +6004,7 @@
       "identificador": "abrir_vista / args_do_motor",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 2377,
         "conferido": [
           1794751026.246,
@@ -6018,7 +6018,7 @@
       "identificador": "#luz (classes .verde / .pulsando / .vermelha, decididas em pintarEstado)",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 2951,
         "conferido": [
           1794783076.119,
@@ -6037,7 +6037,7 @@
       "identificador": "criarContador",
       "descricao": "O numero entre parenteses ao lado do nome da pasta na arvore de ficheiros do painel do Tibia74 - so na pasta de topo (a pasta data), nunca nas subpastas. Sem filtro mostra o total; com filtro mostra quantos de quantos.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/conteudo.js",
+        "arquivo": "Tools/CPanel/frontend/conteudo.js",
         "linha": 83,
         "conferido": [
           1791245421.256,
@@ -6067,7 +6067,7 @@
       "identificador": "base_retrato / base_listar / base_ficha / base_guardar / base_limpar",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 633,
         "conferido": [
           1794756285.633,
@@ -6081,7 +6081,7 @@
       "identificador": "correr_dump / base_backup / pasta_dos_backups",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1702,
         "conferido": [
           1794756285.633,
@@ -6100,7 +6100,7 @@
       "identificador": "agendarReinicio",
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 2907,
         "conferido": [
           1794783076.119,
@@ -6120,7 +6120,7 @@
       "identificador": "#busca-base (botao #btn-busca-base + campo #base-filtro, montados por montarBuscaGlobal)",
       "descricao": "A lupa do cabecalho da aba Banco de dados: so o icone aparece; o campo abre deslizando e procura por nome de personagem, email ou numero de conta.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 228,
         "conferido": [
           1794780677.671,
@@ -6140,7 +6140,7 @@
       "identificador": "escolhaDoPersonagem / nomeDaConta",
       "descricao": "A combobox que substituiu a lista de personagens recolhidos: fechada diz \"selecionar personagem (N)\", cada opcao e \"nome . lvl N\" e o primeiro item e \"criar personagem\". Ao lado da combobox das contas, que mostra o email (ou \"conta id . senha\" quando nao ha email).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
+        "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1012,
         "conferido": [
           1793465223.799,
@@ -6160,7 +6160,7 @@
       "identificador": "botaoDaTabela / base_limpar",
       "descricao": "A lixeira que vive ao lado do contador de cada tabela no bloco Manutencao: o 1o clique mostra no recado o que sai e o 2o esvazia (DELETE com a guarda do God). Antes de apagar, grava sempre uma copia so daquela tabela.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
+        "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1217,
         "conferido": [
           1793465223.799,
@@ -6174,7 +6174,7 @@
       "identificador": "base_restaurar",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/base.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1734,
         "conferido": [
           1794756285.633,
@@ -6194,7 +6194,7 @@
       "identificador": "marcaDeBloqueio",
       "descricao": "Cadeado que aparece encostado a combobox da conta quando a conta esta bloqueada, com o nome da conta em vermelho na lista. Substituiu o bloco \"Bloqueada\" escrito no corpo.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
+        "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1039,
         "conferido": [
           1793465223.799,
@@ -6208,7 +6208,7 @@
       "identificador": "abrir_no_navegador",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 1513,
         "conferido": [
           1794751026.246,
@@ -6230,7 +6230,7 @@
       "identificador": "olhoDaSenha",
       "descricao": "Botao do olho ao lado de um campo de senha do painel do banco: o campo nasce VISIVEL (type=text) e o clique oculta (type=password) trocando o desenho para OLHO_RISCADO e acendendo o botao (aria-pressed). Usado no campo da senha da conta escolhida e no da conta nova.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
+        "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1096,
         "conferido": [
           1793465223.799,
@@ -6271,7 +6271,7 @@
       "identificador": "axio_contar_online / axio_esta_online / axio_servidor_no_ar",
       "descricao": "Quem conta e mostra quem esta online no site. Vive no htdocs da raiz do projeto (o site saiu de xampp/htdocs a 2026-10-02).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/htdocs/data_dir.php",
+        "arquivo": "htdocs/data_dir.php",
         "linha": 110,
         "conferido": [
           1791039596.176,
@@ -6285,7 +6285,7 @@
       "identificador": "montar / publicar (site.js) e site_publicar (site.rs)",
       "descricao": "",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/site.js",
+        "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 155,
         "conferido": [
           1791568332.074,
@@ -6305,7 +6305,7 @@
       "identificador": "blocoDeTexto (letter_martel_&lt;LETRA&gt;.gif) / barraDaNoticia (maureske_&lt;cor&gt;)",
       "descricao": "A letra grande que abre a noticia: o gerador troca a primeira letra pela imagem letter_martel_<LETRA>.gif da pasta images do site. A lista de letras que existem e lida da pasta (hoje faltam V, X e Y), e sem imagem a letra fica texto normal. As cores da barra saem do mesmo desenho: maureske_<cor>_left/body/right.gif.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/site.js",
+        "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 819,
         "conferido": [
           1791568332.074,
@@ -6325,7 +6325,7 @@
       "identificador": "abrirNaEdicao",
       "descricao": "Ícone ao lado da lixeira em cada notícia publicada: põe aquela notícia no editor (título, data, cor e texto), o Publicar passa a \"Salvar\" e o site_publicar substitui a notícia no lugar em vez de criar outra.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/site.js",
+        "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 1027,
         "conferido": [
           1791568332.074,
@@ -6388,7 +6388,7 @@
       "identificador": "livrar_do_aviso / abrir_no_firewall",
       "descricao": "Regra de entrada que o painel cria para o mysqld e o httpd antes de os ligar, para o Windows nao abrir o alerta de seguranca a pedir autorizacao.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/xampp.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/xampp.rs",
         "linha": 472,
         "conferido": [
           1791144908.224,
@@ -6428,7 +6428,7 @@
       "identificador": "#barra-preparo",
       "descricao": "Barra fininha na base da consola do painel, enquanto o Preparar instala o xampp e liga as pecas. Alimentada pelo evento `painel:progresso` (avisar_progresso em xampp.rs) e escondida no fim do comando.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 525,
         "conferido": [
           1794780677.671,
@@ -6448,7 +6448,7 @@
       "identificador": "textoDaPorta / .ambiente-nota.avariada",
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/app.js",
+        "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 2997,
         "conferido": [
           1794783076.119,
@@ -6468,7 +6468,7 @@
       "identificador": "estado_do_site / reapontar",
       "descricao": "Como o painel diz que o htdocs do xampp está publicado e como repara uma junção pendurada (rmdir + mklink /J pelo cmd).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/xampp.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/xampp.rs",
         "linha": 791,
         "conferido": [
           1791144908.224,
@@ -6490,7 +6490,7 @@
       "identificador": "pasta_do_painel / pasta_do_aplicativo (main.rs) e NOME_DOS_AJUSTES em base.rs",
       "descricao": "A pasta onde o painel guarda o que e dele, dentro do proprio CPanel (Tools/CPanel/estado): os ajustes em painel.json e o registo dos valores originais do cliente em cliente_original.json. Ja nao vive em Server/data/painel - so a fila da mensagem global continua dentro do servidor, em data/anuncio.lua.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 780,
         "conferido": [
           1794751026.246,
@@ -6512,7 +6512,7 @@
       "identificador": "garantir (cliente.rs) e abrir_cliente (main.rs)",
       "descricao": "A copia do cliente com 127.0.0.1 gravado nos campos do endereco, guardada em Tools/CPanel/estado/Tibia (servidor local).exe. E sempre ela que o painel abre - `garantir` cria-a/atualiza e `Cliente::abrir` lanca-a com o diretorio de trabalho na pasta do cliente original (senao o cliente nao acha o Tibia.dat), por isso o jogo entra sempre neste computador mesmo com o DNS gravado no exe.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/cliente.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/cliente.rs",
         "linha": 141,
         "conferido": [
           1791253344.736,
@@ -6532,7 +6532,7 @@
       "identificador": "ficheiro_da_fila / ROTEIRO_DO_CANAL / instalar_canal",
       "descricao": "O unico ficheiro do painel que fica dentro do servidor: data/anuncio.lua, porque e o canal Lua (data/globalevents/scripts/painel_anuncio.lua) que o le e o apaga. O roteiro do canal e reescrito a cada abertura do painel.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 190,
         "conferido": [
           1794751026.246,
@@ -6552,7 +6552,7 @@
       "identificador": "ligarAbrirPasta",
       "descricao": "Botao do guia que abre uma pasta no Explorador. O texto e escrito no guia entre [[...]] e o `rico` de tutorial.js monta o botao; o caminho e resolvido no Rust por `abrir_caminho`, contra a RAIZ DO PROJETO (raiz(None)), e nao contra pasta_do_projeto (a pasta do servidor).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/interface.js",
+        "arquivo": "Tools/CPanel/frontend/interface.js",
         "linha": 213,
         "conferido": [
           1793465223.727,
@@ -6593,7 +6593,7 @@
       "identificador": "ramoDaRaiz / linhaDaArvore / filaDeFilhos",
       "descricao": "A arvore de pastas do cartao Diretorios: raiz do projeto, as pastas principais e, so no Tools, as subpastas. As etiquetas de cada pasta ficam na coluna da direita (.guia-tag) e o fio vertical/horizontal e o cotovelo sao os pseudo-elementos do .guia-clip.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
+        "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 1149,
         "conferido": [
           1791568338.441,
@@ -6612,7 +6612,7 @@
       "identificador": "abrir_editor_do_mapa",
       "descricao": "O comando que acha o Editor_x64.exe dentro da pasta Tools (procurar_editores) e o abre. Botao no cartao Editar mapa do guia.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/main.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 880,
         "conferido": [
           1794751026.246,
@@ -6634,7 +6634,7 @@
       "identificador": ".guia-tag.cortada / ajustarDescricoes",
       "descricao": "A descricao de cada pasta da arvore vive em UMA linha; quando nao cabe, o Chromium poe o \"...\" e a classe `.cortada` (posta por `ajustarDescricoes`, que mede `scrollHeight > clientHeight`) da cursor de mao; clicar poe `.aberta`, tira o `-webkit-line-clamp` e a linha desce. A deteccao SALTA as linhas com `.aberta`, senao o texto deixa de transbordar ao abrir e a propria rotina fecha-o.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
+        "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 125,
         "conferido": [
           1791568338.441,
@@ -6654,7 +6654,7 @@
       "identificador": ".compilar-acao[aria-pressed=\"true\"] / editor_do_mapa_aberto",
       "descricao": "Botao pill sem fundo (o `--bg-selecao` so entra no hover/active ou com `aria-pressed=\"true\"`). O \"Abrir editor\" fica aceso enquanto o Editor_x64.exe corre: quem responde e o comando `editor_do_mapa_aberto` (tasklist por IMAGENAME) e o vigia e um setTimeout recursivo de 2,5 s que so roda com o editor aberto, mais uma verificacao ao voltar a pagina a vista.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/style.css",
+        "arquivo": "Tools/CPanel/frontend/style.css",
         "linha": 2232,
         "conferido": [
           1794782188.191,
@@ -6693,7 +6693,7 @@
       "identificador": "#btn-jogar",
       "descricao": "Botao de largura total que sobe com fade quando o servidor fica no ar; abre o cliente do jogo e, depois da primeira vez, passa a \"Abrir outro cliente\" (abre mais uma instancia). Vive em .jogo > .jogo-clip, o estado e decidido por pintarJogo em app.js:549.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 84,
         "conferido": [
           1794780677.671,
@@ -6712,7 +6712,7 @@
       "identificador": "#btn-fechar-editor",
       "descricao": "Botao X ao lado do Salvar, no cabecalho do editor de codigo do painel; fecha o arquivo aberto e volta a mensagem \"Escolha um arquivo...\". Com alteracoes por gravar nao fecha: deixa o recado \"grava ou descarta antes de fechar\" (fechar em conteudo.js:308).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/index.html",
+        "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 540,
         "conferido": [
           1794780677.671,
@@ -6732,7 +6732,7 @@
       "identificador": "vivos",
       "descricao": "A contagem de clientes vivos do jogo: o motor tira os que ja fecharam e devolve o tamanho da lista; o botao Jogar decide o rotulo por ela (0 = Jogar).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/src-tauri/src/cliente.rs",
+        "arquivo": "Tools/CPanel/src-tauri/src/cliente.rs",
         "linha": 628,
         "conferido": [
           1791253344.736,
@@ -6750,7 +6750,7 @@
       "identificador": "RED_SKULL_BAN_LENGTH_1",
       "descricao": "Duração do primeiro ban automático por mortes injustificadas, em segundos no config.lua e em dias no painel. O segundo e o terceiro são RED_SKULL_BAN_LENGTH_2 e _3.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Solution/src/configmanager.h",
+        "arquivo": "Solution/src/configmanager.h",
         "linha": 121,
         "conferido": [
           1792632688.505,
@@ -6769,7 +6769,7 @@
       "identificador": "perda",
       "descricao": "Percentuais de exp, habilidades/magias e loot que o personagem perde ao morrer, lidos do config.lua pelo login.lua; cada bênção tira 1 ponto.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Server/data/creaturescripts/scripts/login.lua",
+        "arquivo": "Server/data/creaturescripts/scripts/login.lua",
         "linha": 5,
         "conferido": [
           1791247338.64,
@@ -6789,7 +6789,7 @@
       "identificador": "r: 'Endereço do servidor (IP Dinâmico)'",
       "descricao": "A chave IP do config.lua: a fonte unica do endereco que o servidor anuncia a quem entra de fora. Vazio, o servidor usa o IP local. O guia mostra-o so de leitura e o instalador so e montado com ele preenchido.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/config.js",
+        "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 140,
         "conferido": [
           1794664595.534,
@@ -6809,7 +6809,7 @@
       "identificador": "pintarPorta / acesso::retrato / medir_com_ouvinte",
       "descricao": "A marca (aberto)/(fechado) verde ou vermelha ao lado do 7171, no cartao Conexao do guia. Sonda SEMPRE, mesmo com o servidor desligado: sem ninguem a responder na porta, o painel abre um ouvinte temporario (acesso::retrato -> medir_com_ouvinte) e prova se o router encaminha essa porta. Com o servidor no ar mede-se como antes. Sem DNS no config, o alvo e o IP publico (alvo_da_sonda); endereco de casa (127/192.168) nao gera sonda.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/tutorial.js",
+        "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 254,
         "conferido": [
           1791568338.441,
@@ -6830,7 +6830,7 @@
       "identificador": "bencaosDoPersonagem / BENCAOS",
       "descricao": "As cinco bênçãos do servidor, marcáveis na ficha do personagem do painel. Vivem na tabela player_storage (chaves 95004, 95005, 95007, 95009, 95013, value=1) e é o login.lua do servidor que as conta.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/CPanel/frontend/base.js",
+        "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 750,
         "conferido": [
           1793465223.799,
@@ -6873,7 +6873,7 @@
       "identificador": "overrideWalk / walkTicks",
       "descricao": "O walkinterval do XML so vale se o npc tiver overrideWalk=\"1\" (ou true/yes): sem isso o servidor usa o npcWalkInterval global do config.lua (2000) e o npc da passos aleatorios sozinho. overrideWalk=\"1\" + walkinterval=\"0\" -> walkTicks=0 -> getNextStep devolve false e o npc nunca sai do tile.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Solution/src/npc.cpp",
+        "arquivo": "Solution/src/npc.cpp",
         "linha": 216,
         "conferido": [
           1790559629.622,
@@ -6893,7 +6893,7 @@
       "identificador": "comparar_npc.py (modo normal = fidelidade da fala; --itens = id de item que o items.xml nao tem)",
       "descricao": "Le o .npc real da CipSoft e compara palavra a palavra com o nosso XML: o que falta, o que esta desalinhado e o que tem texto diferente. Aceita nomes para filtrar (ex: 'python Tools/comparar_npc.py Umar Gabel') e mostra o detalhe de cada falha. Com '--itens' faz a outra pergunta: confere o shop_buyable do XML e os Create/Delete/Count do .npc contra os ids que existem no items.xml.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Tools/comparar_npc.py",
+        "arquivo": "Tools/comparar_npc.py",
         "linha": 4,
         "conferido": [
           1791768095.107,
@@ -6917,7 +6917,7 @@
       "identificador": "gotoWaypoints / teleportTo / strToPosition",
       "descricao": "Comandos de GM que teletransportam, em Solution/src/commands.cpp (a lista registada em ~80, as assinaturas em commands.h). /gw <nome> le um waypoint da tabela `waypoints` do banco; /goto <nome> aceita waypoint OU nome de criatura. Desde 2026-10-13 os dois aceitam tambem coordenada direta (x,y,z ou x y z), pelo parser strToPosition em tools.h/tools.cpp — sem passar pelo banco.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Solution/src/commands.cpp",
+        "arquivo": "Solution/src/commands.cpp",
         "linha": 129,
         "conferido": [
           1791847787.419,
@@ -6980,7 +6980,7 @@
       "identificador": "MonsterViewRange",
       "descricao": "Quantos tiles o monstro continua a ver e a perseguir depois de o jogador sair da borda da tela do cliente. Padrao 2, teto 3.",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Server/config.lua",
+        "arquivo": "Server/config.lua",
         "linha": 98,
         "conferido": [
           1794664099.379,
@@ -7005,8 +7005,8 @@
         "arquivo": "src/backend/tools/gravacoes.py",
         "linha": 250,
         "conferido": [
-          1795785088.636,
-          109319
+          1795790838.89,
+          109169
         ]
       }
     },
@@ -7024,7 +7024,7 @@
       "identificador": "vb.yellText / SPEAK_MONSTER_YELL",
       "descricao": "Atributo do <voice> que faz a fala sair como grito. yell=\"1\" (ou qualquer valor != 0, incluindo \"2\") = SPEAK_MONSTER_YELL, que chega a 18 tiles; sem yell ou yell=\"0\" = SPEAK_MONSTER_SAY, que so chega ao que esta na tela. Vem dos prefixos #Y, #y e #W do campo Talk do .mon (os tres sao grito).",
       "localizacao": {
-        "arquivo": "docs/projetos/Tibia74/Solution/src/monster.cpp",
+        "arquivo": "Solution/src/monster.cpp",
         "linha": 949,
         "conferido": [
           1795373352.575,

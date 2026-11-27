@@ -1233,18 +1233,26 @@ def _grupos_de_area(blocos, efeito="", minimo=2):
     return linhas
 
 
+def _caminhos_do_tibia(*partes):
+    """Os sitios onde um ficheiro do Tibia74 pode estar: no projeto aberto e nos ja abertos."""
+    from src.backend.state import estado, projetos_ja_abertos
+    raiz = str(estado.get("pasta_raiz") or "")
+    candidatos = [os.path.join(raiz, *partes)] if raiz else []
+    for outra in projetos_ja_abertos():
+        candidatos.append(os.path.join(outra, *partes))
+    vistos = []
+    for caminho in candidatos:
+        if os.path.normcase(caminho) not in [os.path.normcase(v) for v in vistos]:
+            vistos.append(caminho)
+    return vistos
+
+
 def _criaturas_do_mapa():
     if "spawn" in _CACHE:
         return _CACHE["spawn"]
     mapa = {}
-    for alvo in ("docs/projetos/Tibia74/Server/data/world/spawn.xml",
-                 "Server/data/world/spawn.xml"):
-        try:
-            devolvido = resolver_caminho(alvo)
-        except Exception:
-            continue
-        caminho = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-        if not caminho or not os.path.isfile(caminho):
+    for caminho in _caminhos_do_tibia("Server", "data", "world", "spawn.xml"):
+        if not os.path.isfile(caminho):
             continue
         try:
             with open(caminho, encoding="utf-8", errors="replace") as fh:
@@ -1670,14 +1678,8 @@ def _itens_que_nao_se_pegam():
     fixos = frozenset()
     try:
         from src.backend.tools.otbm import _itens_do_otb
-        for alvo in ("docs/projetos/Tibia74/Server/data/items/items.otb",
-                     "Server/data/items/items.otb"):
-            try:
-                devolvido = resolver_caminho(alvo)
-            except Exception:
-                continue
-            caminho = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-            if not caminho or not os.path.isfile(caminho):
+        for caminho in _caminhos_do_tibia("Server", "data", "items", "items.otb"):
+            if not os.path.isfile(caminho):
                 continue
             with open(caminho, "rb") as fh:
                 itens = _itens_do_otb(fh.read())
@@ -1723,14 +1725,8 @@ def _nomes_de_itens():
     if "itens" in _CACHE:
         return _CACHE["itens"]
     nomes = {}
-    for alvo in ("docs/projetos/Tibia74/Server/data/items/items.xml",
-                 "Server/data/items/items.xml"):
-        try:
-            devolvido = resolver_caminho(alvo)
-        except Exception:
-            continue
-        caminho = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-        if not caminho or not os.path.isfile(caminho):
+    for caminho in _caminhos_do_tibia("Server", "data", "items", "items.xml"):
+        if not os.path.isfile(caminho):
             continue
         try:
             with open(caminho, encoding="utf-8", errors="replace") as fh:
@@ -1746,14 +1742,9 @@ def _nomes_de_itens():
 
 
 def _pasta_de_monstros():
-    """A pasta dos XML de monstro do projeto aberto, ou a do Tibia dentro do Axio."""
-    for alvo in ("Server/data/monster", "docs/projetos/Tibia74/Server/data/monster"):
-        try:
-            devolvido = resolver_caminho(alvo)
-        except Exception:
-            continue
-        pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-        if pasta and os.path.isdir(pasta):
+    """A pasta dos XML de monstro do projeto aberto, ou a de um projeto que o Axio ja abriu."""
+    for pasta in _caminhos_do_tibia("Server", "data", "monster"):
+        if os.path.isdir(pasta):
             return pasta
     return None
 

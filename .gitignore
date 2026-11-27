@@ -71,10 +71,14 @@ data/despertador.json
 # Cache dos modelos convertidos do visualizador (IFC -> Fragments)
 data/cache_modelos/
 
+# Pastas de projeto que o Axio ja abriu nesta maquina (caminhos absolutos):
+# estado local, nao faz parte do codigo
+data/projetos_abertos.json
+
 # Material gerado pelo agente: cada geracao vive na sua subpasta no disco,
 # no git fica o codigo que a reproduz
 gerados/
 
-# Projetos externos abertos pelo agente em docs/projetos/ (o DRAFTCAD e o
-# servidor Tibia74): o codigo deles vive no repositorio de cada um, nunca neste
+# Qualquer projeto de fora que venha a viver dentro de docs/projetos/: o codigo
+# dele pertence ao repositorio dele, nunca a este
 docs/projetos/
