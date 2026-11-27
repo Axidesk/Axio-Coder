@@ -90,10 +90,6 @@ const NL = String.fromCharCode(10);
             rolarParaDestaque(vistaDock);
             atualizarBotoesUndoRedo();
 
-            if (window.WorkspaceView && typeof window.WorkspaceView.revealAndSelectFile === 'function') {
-                window.WorkspaceView.revealAndSelectFile(caminhoAlvo);
-            }
-
             vistaDock.marcarCaminhoEntrega(caminhoAlvo);
             vistaDock.marcarCaminhoOriginal(caminhoAlvo);
             syncDocTopBar();

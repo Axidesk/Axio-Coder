@@ -55,6 +55,8 @@ state.btnDockRight = document.getElementById('btn-dock-right');
 state.editorWatermark = document.getElementById('editor-watermark');
 state.btnTrash = document.getElementById('btn-trash');
 state.btnLineNumbers = document.getElementById('btn-line-numbers');
+state.btnSeguirArvore = document.getElementById('btn-seguir-arvore');
+state.seguirArvore = (() => { try { return localStorage.getItem('axio-seguir-arvore') !== '0'; } catch (e) { return true; } })();
 state.btnExplorerOcultos = document.getElementById('btn-explorer-ocultos');
 state.btnCreateFile = document.getElementById('btn-create-file');
 state.editorTabs = document.getElementById('editor-tabs');

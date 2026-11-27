@@ -1,6 +1,6 @@
-import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogTheme, enterLogMode, enterLogModeWithLines, enterReadonlyLogMode, exitLogMode, updateLineNumbersButton } from './themes.js';
+import { applyLineGutterState, defineDiffTheme, defineEditorTheme, defineLogTheme, enterLogMode, enterLogModeWithLines, enterReadonlyLogMode, exitLogMode, updateLineNumbersButton, updateSeguirArvoreButton } from './themes.js';
 import { VISTAS_DE_TRABALHO, fecharPreview, garantirVistaVisivel, getLanguage, loadExplorerOnce, selectEntry, setView } from './explorer.js';
-import { agendarRecargaDaAbaAberta, agendarReconciliacaoDeAbas, caminhoRelativoAoProjeto, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, revealAndSelectFile, setLimpezaLixeira, startRename, trashPath } from './editor.js';
+import { agendarRecargaDaAbaAberta, agendarReconciliacaoDeAbas, caminhoRelativoAoProjeto, closeActiveTab, closeTrash, createFs, doDeleteTrashPermanent, doPurgeTrash, doRestoreTrash, doTrashSelected, findExplorerRow, focarAba, loadTrash, openFileInEditor, openFsConfirm, openTrash, renderTabs, seguirNaArvore, setLimpezaLixeira, startRename, trashPath } from './editor.js';
 import { ALTURA_LINHA } from './metricas.js';
 import { iniciarBarrasDoEditor, reavaliarBarrasDoEditor } from './barras.js';
 import { caminhoDoDepurador, marcarLinhaDoDepurador, mesmoFicheiro } from './linha_depurador.js';
@@ -205,7 +205,7 @@ export async function transferirDaCamada(path, linha, arquivoOriginal) {
     const recarregar = state.diffMode || state.logModeNeedsReload || state.currentFile !== alvo;
     if (state.logMode || state.diffMode) exitLogMode(true);
     if (recarregar) await openFileInEditor(alvo, { semFade: true, recarregar: true });
-    if (!path) revealAndSelectFile(alvo);
+    if (!path) seguirNaArvore(alvo);
     if (linha == null) return true;
     return alinharComLinha(linha);
 }
@@ -382,7 +382,7 @@ export function openFileFromLog(path, snippet, diffData, asReadonly) {
     setActive(true);
     setTopBarHidden(false);
     setView('editor');
-    if (typeof revealAndSelectFile === 'function') revealAndSelectFile(path);
+    seguirNaArvore(path);
     if (!state.monaco) {
         state.pendingFile = path;
         state.pendingSnippet = snippet || null;
@@ -804,6 +804,16 @@ if (state.btnLineNumbers) {
             applyLineGutterState();
             updateLineNumbersButton();
         });
+    });
+}
+
+updateSeguirArvoreButton();
+
+if (state.btnSeguirArvore) {
+    state.btnSeguirArvore.addEventListener('click', () => {
+        state.seguirArvore = !state.seguirArvore;
+        try { localStorage.setItem('axio-seguir-arvore', state.seguirArvore ? '1' : '0'); } catch (e) {}
+        updateSeguirArvoreButton();
     });
 }
 

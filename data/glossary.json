@@ -701,10 +701,10 @@
       "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 865,
+        "linha": 903,
         "conferido": [
-          1795816149.833,
-          35201
+          1795816793.898,
+          36700
         ]
       }
     },
@@ -942,7 +942,11 @@
       "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. O atrito NAO se perde: o radar continua a medir e o que ele apanha, mais as linhas 'AUTO-MELHORIA (adiada): ...' que eu escrevo na resposta, vai para o caderno LEGIVEL APP_ROOT/gerados/coder/auto-melhoria/pendentes.md (ai/atrito.py:_registar_no_caderno, gravado no fim da rodada por fechar_rodada(texto_final) via _anotar_melhorias). O caderno e injetado ao abrir a pasta do Axio e depois fica uma linha por rodada ate ficar vazio (_bloco_pendentes); ao_abrir_projeto reabre a janela quando a pasta muda sem reiniciar o backend. O projeto do utilizador nao recebe ficheiro nenhum.",
       "localizacao": {
         "arquivo": "src/backend/state.py",
-        "linha": 189
+        "linha": 189,
+        "conferido": [
+          1795791976.695,
+          6820
+        ]
       }
     },
     {
@@ -1085,8 +1089,8 @@
         "arquivo": "src/backend/routes/chat.py",
         "linha": 38,
         "conferido": [
-          1795792001.771,
-          7892
+          1795816744.959,
+          7976
         ]
       }
     },
@@ -3329,8 +3333,8 @@
         "arquivo": "src/frontend/js/editor/editor.js",
         "linha": 299,
         "conferido": [
-          1795816149.833,
-          35201
+          1795816793.898,
+          36700
         ]
       }
     },
@@ -5172,10 +5176,10 @@
       "descricao": "Troca a doc para a vertical sozinha quando a raiz aberta tem arvore agrupada (projeto CMake/MSBuild ou pasta so de codigo C/C++). O campo `agrupada` chega no /api/explorer apenas na chamada da raiz; projetos Python/JS e a raiz do Axio continuam na horizontal. Uma raiz so e tratada uma vez (raizDoDock): se o utilizador voltar a horizontal, a funcao nao desfaz.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/workspace.js",
-        "linha": 316,
+        "linha": 317,
         "conferido": [
-          1790915612.79,
-          39425
+          1795816793.989,
+          39490
         ]
       }
     },
@@ -5194,8 +5198,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 334,
         "conferido": [
-          1791637374.395,
-          29600
+          1795816798.951,
+          29606
         ]
       }
     },
@@ -5213,8 +5217,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 373,
         "conferido": [
-          1791637374.395,
-          29600
+          1795816798.951,
+          29606
         ]
       }
     },
@@ -5251,8 +5255,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 391,
         "conferido": [
-          1791637374.395,
-          29600
+          1795816798.951,
+          29606
         ]
       }
     },
@@ -5376,8 +5380,8 @@
         "arquivo": "src/frontend/css/editor.css",
         "linha": 317,
         "conferido": [
-          1791637374.395,
-          29600
+          1795816798.951,
+          29606
         ]
       }
     },
@@ -6678,8 +6682,8 @@
         "arquivo": "src/backend/ai/loop.py",
         "linha": 310,
         "conferido": [
-          1795192677.807,
-          32957
+          1795816736.606,
+          33045
         ]
       }
     },

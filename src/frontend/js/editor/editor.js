@@ -121,6 +121,7 @@ function _prepararTrocaDeFicheiro(path) {
     }
     state.currentFile = path;
     state.abaAtiva = path;
+    seguirNaArvore(path);
 }
 
 function _abrirAbaApagada(path, conteudo, opts) {
@@ -252,6 +253,24 @@ export function focarAba(path) {
     addTab(path, false);
     state.abaAtiva = path;
     renderTabs();
+    seguirNaArvore(path);
+}
+export async function seguirNaArvore(path) {
+    if (!path || state.seguirArvore === false) return;
+    if (!state.explorerLoaded || !state.explorerTree) return;
+    const relativo = caminhoRelativoAoProjeto(path);
+    if (!relativo || relativo.includes(':') || relativo.startsWith('/')) return;
+    const segments = relativo.split('/').filter(Boolean);
+    const parent = segments.length > 1 ? segments.slice(0, -1).join('/') : '';
+    const atual = state.explorerRenderPath != null ? state.explorerRenderPath : state.currentCwdRel;
+    try {
+        if (parent !== atual) await loadExplorer(parent);
+        selectEntry(relativo, 'file');
+        const row = findExplorerRow(relativo);
+        if (row && typeof row.scrollIntoView === 'function') {
+            row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    } catch (e) {}
 }
 export function pinPreview(path) {
     const target = path || state.previewTabPath || state.currentFile;
@@ -322,7 +341,7 @@ export function renderTabs() {
         tab.appendChild(nameSpan);
         tab.addEventListener('click', (e) => {
             if (e.target.closest('.editor-tab-close')) return;
-            if (path === state.currentFile) { setView('editor'); return; }
+            if (path === state.currentFile) { setView('editor'); seguirNaArvore(path); return; }
             loadFileIntoEditor(path).then(ok => { if (ok) updateTabsActive(); });
         });
         tab.addEventListener('dblclick', () => {

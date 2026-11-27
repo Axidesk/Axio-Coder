@@ -1,5 +1,5 @@
 import { abrirDoc, activate, collapseDockForFocus, expandDockForFocus, getView, handleSSE, isDockCollapsedForFocus, loadVenvName, openFileAtLine, openFileFromLog, preloadMonaco, setActive, setTopBarHidden, showEditor, transferirDaCamada } from './workspace.js';
-import { focarAba, renderTabs, revealAndSelectFile, revealPath, updateExplorerToolbar } from './editor.js';
+import { focarAba, renderTabs, revealAndSelectFile, revealPath, seguirNaArvore, updateExplorerToolbar } from './editor.js';
 import { alternarDoc, currentDir, fecharPreview, reloadExplorer, selectEntry, setView } from './explorer.js';
 import { appendLine } from './terminal.js';
 import { ensureTerminal, termFit } from './xterm.js';
@@ -240,6 +240,7 @@ window.WorkspaceView = {
     openFileFromLog: openFileFromLog,
     openFileAtLine: openFileAtLine,
     revealAndSelectFile: revealAndSelectFile,
+    seguirNaArvore: seguirNaArvore,
     focarAba: focarAba,
     transferirDaCamada: transferirDaCamada,
     setFocusMode: setFocusMode,

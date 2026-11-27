@@ -132,6 +132,16 @@ export function updateLineNumbersButton() {
         state.btnLineNumbers.title = 'Exibir numeração e linhas de identação';
     }
 }
+export function updateSeguirArvoreButton() {
+    if (!state.btnSeguirArvore) return;
+    if (state.seguirArvore) {
+        state.btnSeguirArvore.className = 'transition-colors text-[var(--oliva)] hover:text-[var(--oliva-hover)]';
+        state.btnSeguirArvore.title = 'Seguir o arquivo aberto na árvore (ligado)';
+    } else {
+        state.btnSeguirArvore.className = 'transition-colors text-[var(--text-mutado)] hover:text-[var(--oliva)]';
+        state.btnSeguirArvore.title = 'Seguir o arquivo aberto na árvore (desligado)';
+    }
+}
 export function applyLogEditorOptions() {
 
     state.editor.updateOptions(Object.assign(opcoesBase(), {
