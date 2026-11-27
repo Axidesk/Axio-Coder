@@ -51,6 +51,23 @@ for _stream in (sys.stdout, sys.stderr):
 
 from src.backend.extensions import app, socketio
 
+from flask import request as _request
+from src.backend.state import ligar_workspace as _ligar_workspace
+
+_CABECALHO_DO_WORKSPACE = "X-Axio-Workspace"
+
+
+@app.before_request
+def _prender_workspace_do_pedido():
+    """Cada pedido trabalha no workspace que o pediu.
+
+    A janela manda a chave no cabecalho; sem ela (o caso de sempre, uma area de
+    trabalho so) o pedido cai no principal. E o que deixa duas areas abertas ao
+    mesmo tempo sem uma ver os arquivos da outra.
+    """
+    _ligar_workspace(_request.headers.get(_CABECALHO_DO_WORKSPACE) or "principal")
+
+
 app.register_blueprint(static_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(terminal_bp)

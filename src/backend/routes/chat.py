@@ -6,7 +6,10 @@ import queue
 from flask import Blueprint, request, jsonify, Response
 
 from src.backend.state import (estado, emit_event, caminho_estado_projeto, registrar_subscriber,
-                               remover_subscriber, limpar_eventos, registar_projeto_aberto)
+                               remover_subscriber, limpar_eventos, registar_projeto_aberto,
+                               ligar_workspace, desligar_workspace, chave_do_workspace,
+                               listar_workspaces, fechar_workspace, nomear_workspace,
+                               CHAVE_DO_PRINCIPAL)
 from src.backend.services.process_manager import pty_lock, pty_kill_locked
 from src.backend.tools.process import parar_processo_reg
 from src.backend.services.session import criar_sessao_vazia, migrar_session_logs_antigos
@@ -51,6 +54,7 @@ def set_folder():
             return jsonify({"folder": pasta, "status": "ready"})
         ao_abrir_projeto()
         estado["pasta_raiz"] = pasta
+        nomear_workspace(chave_do_workspace(), os.path.basename(os.path.normpath(pasta)))
         for linha in preparar_ao_abrir(pasta):
             print(f"[projeto] {linha}")
         agendar_envio()
@@ -106,14 +110,15 @@ def set_folder():
                     except Exception as e:
                         print(f"Erro ao carregar histórico {arq}: {e}")
 
-        limpar_eventos()
+        if chave_do_workspace() == CHAVE_DO_PRINCIPAL:
+            limpar_eventos()
         preaquecer_info_projeto(pasta)
         preaquecer_indices_de_sessao()
         return jsonify({"folder": pasta, "status": "ready", "processos_parados": parados,
                         "arvore_morta": arvore_morta, "sobreviventes": sobreviventes})
     return jsonify({"error": "Nenhuma pasta fornecida"}), 400
 
-def _correr_loop(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model="gemini"):
+def _correr_loop(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model="gemini", chave_ws=CHAVE_DO_PRINCIPAL):
     """Corre o loop do turno com a marca de ocupacao, limpa em QUALQUER saida.
 
     O loop tem varios returns antecipados (cancelamento) e pode estourar excecao:
@@ -122,11 +127,13 @@ def _correr_loop(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model="g
     """
     from src.backend.ai.loop import loop_raciocinio_ia
 
+    ligar_workspace(chave_ws)
     estado["turno_ocupado"] = True
     try:
         loop_raciocinio_ia(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model)
     finally:
         estado["turno_ocupado"] = False
+        desligar_workspace()
 
 
 @chat_bp.route('/api/chat', methods=['POST'])
@@ -157,7 +164,10 @@ def chat():
             return jsonify({"error": "Defina a chave do modelo nas Configurações."}), 400
 
     estado["ultimo_modelo"] = {"use_deepseek": bool(use_deepseek), "ai_model": ai_model}
-    threading.Thread(target=_correr_loop, args=(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model), daemon=True).start()
+    chave_ws = chave_do_workspace()
+    threading.Thread(target=_correr_loop,
+                     args=(mensagem, modo, imagens_b64, use_deepseek, turn_id, ai_model, chave_ws),
+                     daemon=True).start()
     return jsonify({"status": "processing", "turn_id": turn_id})
 
 @chat_bp.route('/api/cancel', methods=['POST'])
@@ -171,4 +181,26 @@ def clear_context():
     estado["memorias_injetadas"] = {}
     estado["compactacoes_contexto"] = 0
     medir_contexto()
+    return jsonify({"status": "ok"})
+
+
+@chat_bp.route('/api/workspaces', methods=['GET'])
+def workspaces():
+    return jsonify({"workspaces": listar_workspaces()})
+
+
+@chat_bp.route('/api/workspaces/renomear', methods=['POST'])
+def renomear_workspace():
+    data = request.json or {}
+    chave = data.get("chave") or chave_do_workspace()
+    nomear_workspace(chave, data.get("nome") or "")
+    return jsonify({"status": "ok"})
+
+
+@chat_bp.route('/api/workspaces/fechar', methods=['POST'])
+def encerrar_workspace():
+    data = request.json or {}
+    chave = data.get("chave") or ""
+    if not fechar_workspace(chave):
+        return jsonify({"error": "O workspace principal nao pode ser fechado."}), 400
     return jsonify({"status": "ok"})

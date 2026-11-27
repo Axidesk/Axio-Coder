@@ -242,6 +242,7 @@ window.WorkspaceView = {
     revealAndSelectFile: revealAndSelectFile,
     seguirNaArvore: seguirNaArvore,
     focarAba: focarAba,
+    renderTabs: renderTabs,
     transferirDaCamada: transferirDaCamada,
     setFocusMode: setFocusMode,
     setView: setView,
@@ -258,3 +259,5 @@ window.WorkspaceView = {
 
 updateExplorerToolbar();
 setView('chat');
+
+import('./workspaces.js').catch(() => {});

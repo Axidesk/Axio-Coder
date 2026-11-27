@@ -8,29 +8,182 @@ from src.backend.config import APP_ROOT
 
 ARRANQUE = time.time()
 
-estado = {
-    "pasta_raiz": "",
-    "stats": {"rpd": 0},
-    "uso_minuto": [],
-    "historico_chat": [],
-    "file_history": {},
-    "arquivos_tocados": set(),
-    "edicoes_rodada": [],
-    "memorias_injetadas": {},
-    "session_id_atual": "",
-    "bloquear_edicao": False,
-    "processos": {},
-    "compactacoes_contexto": 0,
-    "cwd_terminal": "",
-    "terminal_shell": "",
-    "projeto_planejado": False,
-    "urls_navegadas_turno": set(),
-    "vetor_ocupado": {},
-    "turno_ocupado": False,
-    "etiquetando": False,
-    "etiquetando_progresso": "",
-    "traducao": {"estado": "livre", "texto": "", "erro": ""}
-}
+CHAVE_DO_PRINCIPAL = "principal"
+
+
+def _estado_novo():
+    """Um estado de trabalho em branco - a copia de partida de cada workspace."""
+    return {
+        "pasta_raiz": "",
+        "stats": {"rpd": 0},
+        "uso_minuto": [],
+        "historico_chat": [],
+        "file_history": {},
+        "arquivos_tocados": set(),
+        "edicoes_rodada": [],
+        "memorias_injetadas": {},
+        "session_id_atual": "",
+        "bloquear_edicao": False,
+        "processos": {},
+        "compactacoes_contexto": 0,
+        "cwd_terminal": "",
+        "terminal_shell": "",
+        "projeto_planejado": False,
+        "urls_navegadas_turno": set(),
+        "vetor_ocupado": {},
+        "turno_ocupado": False,
+        "etiquetando": False,
+        "etiquetando_progresso": "",
+        "traducao": {"estado": "livre", "texto": "", "erro": ""},
+    }
+
+
+class Workspace:
+    """Uma area de trabalho: a pasta do projeto e a conversa DELA.
+
+    Duas areas abertas ao mesmo tempo nao se veem: o que muda de uma para outra
+    e a pasta, o historico do chat, a sessao, os processos e o cwd do terminal.
+    """
+
+    def __init__(self, chave, nome=""):
+        self.chave = chave
+        self.nome = nome
+        self.dados = _estado_novo()
+
+    def retrato(self):
+        return {
+            "chave": self.chave,
+            "nome": self.nome or os.path.basename(os.path.normpath(self.dados.get("pasta_raiz") or "")) or "",
+            "pasta": self.dados.get("pasta_raiz") or "",
+            "ocupado": bool(self.dados.get("turno_ocupado")),
+        }
+
+
+_workspaces = {}
+_workspaces_lock = threading.Lock()
+_ws_local = threading.local()
+
+
+def _criar_workspace(chave, nome=""):
+    ws = Workspace(chave, nome)
+    with _workspaces_lock:
+        _workspaces[chave] = ws
+    return ws
+
+
+_criar_workspace(CHAVE_DO_PRINCIPAL)
+
+
+def ligar_workspace(chave):
+    """Prende esta thread a um workspace - tudo o que ela ler/escrever e dele.
+
+    Um turno corre na propria thread e chama isto ao comecar. Sem isto, dois
+    pedidos simultaneos de projetos diferentes escreviam no mesmo estado (a
+    pasta, o historico e a sessao de um atropelavam os do outro).
+    """
+    chave = chave or CHAVE_DO_PRINCIPAL
+    with _workspaces_lock:
+        ws = _workspaces.get(chave)
+    if ws is None:
+        ws = _criar_workspace(chave)
+    _ws_local.workspace = ws
+    return ws
+
+
+def desligar_workspace():
+    _ws_local.workspace = None
+
+
+def workspace_atual():
+    """O workspace preso a esta thread, ou o principal quando nao ha nenhum."""
+    ws = getattr(_ws_local, "workspace", None)
+    if ws is not None:
+        return ws
+    with _workspaces_lock:
+        return _workspaces.get(CHAVE_DO_PRINCIPAL)
+
+
+def chave_do_workspace():
+    return workspace_atual().chave
+
+
+def nomear_workspace(chave, nome):
+    with _workspaces_lock:
+        ws = _workspaces.get(chave)
+    if ws is not None:
+        ws.nome = nome or ""
+    return ws
+
+
+def listar_workspaces():
+    with _workspaces_lock:
+        return [ws.retrato() for ws in _workspaces.values()]
+
+
+def fechar_workspace(chave):
+    """Descarta um workspace. O principal fica sempre - e para onde tudo volta."""
+    if not chave or chave == CHAVE_DO_PRINCIPAL:
+        return False
+    with _workspaces_lock:
+        return _workspaces.pop(chave, None) is not None
+
+
+class _Estado:
+    """O `estado` de sempre, agora resolvido para o workspace desta thread.
+
+    A interface e a de um dicionario (leitura, escrita, get, setdefault, pop,
+    update, items...) e por isso as centenas de chamadas espalhadas pelo
+    backend nao mudam: quem decide de que projeto e o estado e a thread.
+    """
+
+    @staticmethod
+    def _alvo():
+        return workspace_atual().dados
+
+    def __getitem__(self, chave):
+        return self._alvo()[chave]
+
+    def __setitem__(self, chave, valor):
+        self._alvo()[chave] = valor
+
+    def __delitem__(self, chave):
+        del self._alvo()[chave]
+
+    def __contains__(self, chave):
+        return chave in self._alvo()
+
+    def __len__(self):
+        return len(self._alvo())
+
+    def __iter__(self):
+        return iter(self._alvo())
+
+    def get(self, chave, padrao=None):
+        return self._alvo().get(chave, padrao)
+
+    def setdefault(self, chave, padrao=None):
+        return self._alvo().setdefault(chave, padrao)
+
+    def pop(self, chave, *args):
+        return self._alvo().pop(chave, *args)
+
+    def update(self, *args, **kwargs):
+        return self._alvo().update(*args, **kwargs)
+
+    def clear(self):
+        return self._alvo().clear()
+
+    def keys(self):
+        return self._alvo().keys()
+
+    def values(self):
+        return self._alvo().values()
+
+    def items(self):
+        return self._alvo().items()
+
+
+estado = _Estado()
 
 MSG_SEM_PASTA = "ERRO: Nenhuma pasta de projeto selecionada."
 
@@ -92,6 +245,9 @@ def emit_event(event_type, **kwargs):
     turn_id = getattr(_turn_local, "turn_id", None)
     if turn_id is not None:
         data["turn_id"] = turn_id
+    ws = getattr(_ws_local, "workspace", None)
+    if ws is not None:
+        data["workspace"] = ws.chave
     msg = f"data: {json.dumps(data)}\n\n"
     with _subscribers_lock:
         filas = list(_event_subscribers)

@@ -1,0 +1,192 @@
+#ws-barra {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 12px;
+    min-width: 0;
+    max-width: 46vw;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+
+#ws-barra.hidden {
+    display: none;
+}
+
+#ws-abas {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+#ws-abas::-webkit-scrollbar {
+    display: none;
+}
+
+.ws-aba {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-suave);
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: default;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.ws-aba:hover {
+    color: var(--text-branco);
+    background: var(--bg-hover-suave);
+}
+
+.ws-aba.ativa {
+    color: var(--text-branco);
+    background: var(--bg-selecao);
+}
+
+.ws-aba-nome {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ws-aba-fechar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-suave);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--dur-3) ease, color var(--dur-3) ease;
+}
+
+.ws-aba:hover .ws-aba-fechar {
+    opacity: 0.8;
+}
+
+.ws-aba-fechar:hover {
+    color: var(--perigo);
+    opacity: 1;
+}
+
+.ws-seta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 22px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-suave);
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.ws-seta:hover {
+    color: var(--text-branco);
+    background: var(--bg-hover-suave);
+}
+
+#btn-ws-anterior.hidden,
+#btn-ws-seguinte.hidden {
+    display: none;
+}
+
+#btn-novo-workspace {
+    width: 22px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.tabs-seta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 100%;
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-suave);
+    cursor: pointer;
+    transition: color var(--dur-3) ease, background-color var(--dur-3) ease;
+}
+
+.tabs-seta:hover {
+    color: var(--text-branco);
+    background: var(--bg-hover-suave);
+}
+
+.tabs-seta.hidden {
+    display: none;
+}
+
+#editor-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#editor-tabs .editor-tab {
+    flex-shrink: 0;
+}
+
+#tabs-context-menu {
+    position: fixed;
+    z-index: 90;
+    min-width: 170px;
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--bg-flutuante, var(--bg-panel));
+    box-shadow: var(--sombra-card);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-3) ease;
+}
+
+#tabs-context-menu.aberto {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#tabs-context-menu button {
+    display: block;
+    width: 100%;
+    padding: 7px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-claro);
+    font-size: 12.5px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#tabs-context-menu button:hover {
+    background: var(--bg-hover-suave);
+    color: var(--text-branco);
+}
