@@ -7,6 +7,7 @@ O progresso sai impresso como '[feitos/total]', que e o sinal que o Axio ja sabe
 
 import os
 import shutil
+import stat
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -317,19 +318,43 @@ def _entrar_da_passagem(conteudo, destino):
 
 
 def _renomear(origem, destino):
+    """Rename no mesmo disco; quando o Windows o recusa (pasta em uso, Dropbox a sincronizar,
+    vigia com o cabo aberto) cai para copiar-conferir-apagar em vez de rebentar."""
     if os.path.isdir(origem) and os.path.isdir(destino):
         _entrar_da_passagem(origem, destino)
         _apagar(origem)
         return
-    os.makedirs(os.path.dirname(os.path.abspath(destino)), exist_ok=True)
-    os.replace(origem, destino)
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(destino)), exist_ok=True)
+        os.replace(origem, destino)
+    except OSError as recusa:
+        total = sum(len(f) for _, _, f in os.walk(origem)) if os.path.isdir(origem) else 1
+        print(f"[0/{total}] o rename foi recusado ({recusa.__class__.__name__}): a copiar e a conferir", flush=True)
+        anuncio = _Anuncio(max(1, total))
+        erros = _copiar(origem, destino, anuncio)
+        if erros:
+            raise OSError(f"o rename foi recusado e a copia falhou em {len(erros)} ficheiro(s)") from recusa
+        faltam = conferir({"origem": origem, "destino": destino})
+        if faltam:
+            raise OSError(f"o rename foi recusado e a copia nao confere: faltam {len(faltam)} ficheiro(s)") from recusa
+        anuncio.fechar("copiado e conferido; a apagar a origem")
+        _apagar(origem)
+        if os.path.exists(origem):
+            raise OSError("a copia esta completa mas a origem nao pode ser apagada (ficheiro em uso)")
 
 
 def _apagar(caminho):
     if os.path.isdir(caminho):
+        for raiz, pastas, ficheiros in os.walk(caminho):
+            for nome in ficheiros + pastas:
+                try:
+                    os.chmod(os.path.join(raiz, nome), stat.S_IWRITE)
+                except OSError:
+                    pass
         shutil.rmtree(caminho, ignore_errors=True)
     elif os.path.exists(caminho):
         try:
+            os.chmod(caminho, stat.S_IWRITE)
             os.remove(caminho)
         except OSError:
             pass
