@@ -39,8 +39,13 @@ function guardarLista(chave, dados) {
     }
 }
 
+function projetoDaArvore() {
+    const rotulo = document.getElementById('lbl-folder');
+    return rotulo ? String(rotulo.textContent || '').trim().toLowerCase() : '';
+}
+
 function chaveDaLista(caminho) {
-    return caminho;
+    return projetoDaArvore() + '::' + (caminho || '');
 }
 
 function pedirLista(caminho) {
@@ -162,9 +167,9 @@ export function loadExplorerOnce() {
         loadTrash();
     }
 }
-export function reloadExplorer() {
+export function reloadExplorer(limparCache = true) {
     state.explorerLoaded = true;
-    listasDePastas.clear();
+    if (limparCache) listasDePastas.clear();
     return loadExplorer();
 }
 

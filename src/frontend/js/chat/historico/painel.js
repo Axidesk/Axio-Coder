@@ -93,14 +93,13 @@ const { historyLogsWrapper, panelTitle } = dom;
         setHistoryActionButtonsVisible(true);
         if (panelTitle) panelTitle.textContent = 'Historico';
         syncMenuIcons();
-        if (state.sessionHistoryLoaded) {
+        const temListaEmCache = state.sessionHistoryList.length > 0;
+        if (temListaEmCache) {
             renderHistoryCards();
-        } else {
-            if (historyLogsWrapper) {
-                historyLogsWrapper.innerHTML = '<div class="p-4 text-sm text-[var(--text-mutado)] font-mono">Carregando histórico...</div>';
-            }
-            await loadSessionHistoryList();
+        } else if (historyLogsWrapper) {
+            historyLogsWrapper.innerHTML = '<div class="p-4 text-sm text-[var(--text-mutado)] font-mono">Carregando histórico...</div>';
         }
+        await loadSessionHistoryList({ silent: temListaEmCache });
     }
     function preloadSessionHistory() {
         if (state.sessionHistoryLoaded) return;
@@ -119,6 +118,7 @@ const { historyLogsWrapper, panelTitle } = dom;
 
 
 export {
+    loadSessionHistoryList,
     preloadSessionHistory,
     toggleSessionHistory,
     prefetchSessionDetails

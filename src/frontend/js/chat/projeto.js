@@ -35,6 +35,7 @@ const NOMES_LINGUAGEM = {
 };
 
 let carregando = false;
+let pedidoPendente = false;
 
 document.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('.projeto-pacote')) return;
@@ -328,19 +329,23 @@ function _esperar(ms) {
     return new Promise(function (resolve) { setTimeout(resolve, ms); });
 }
 
-async function _pedir(rota) {
+function _areaAtiva() {
+    return window.__axioAreaAtiva ? window.__axioAreaAtiva() : '';
+}
+
+async function _pedir(rota, area) {
     try {
-        const resp = await fetch(rota);
+        const resp = await fetch(rota, area ? { __area: area } : undefined);
         return await resp.json();
     } catch (e) {
         return null;
     }
 }
 
-async function _insistir(rota, estaPronto, aoProgresso, tentativas, espera) {
+async function _insistir(rota, estaPronto, aoProgresso, tentativas, espera, area) {
     let dados = null;
     for (let tentativa = 0; tentativa < tentativas; tentativa++) {
-        dados = await _pedir(rota);
+        dados = await _pedir(rota, area);
         if (!dados) return null;
         if (aoProgresso) aoProgresso(dados);
         if (estaPronto(dados)) return dados;
@@ -351,13 +356,15 @@ async function _insistir(rota, estaPronto, aoProgresso, tentativas, espera) {
 
 async function carregarDesatualizados() {
     const minha = ++consultaDesatualizados;
+    const area = _areaAtiva();
     await _insistir('/api/projeto/outdated',
         function (d) { return d.estado !== 'a_verificar'; },
         function (d) {
             if (minha !== consultaDesatualizados) return;
+            if (area && _areaAtiva() !== area) return;
             marcarPacotesDesatualizados(d.pacotes, d.versoes);
         },
-        20, 3000);
+        20, 3000, area);
 }
 
 
@@ -365,8 +372,14 @@ let retratoDesenhado = null;
 
 export async function carregarProjetoInfo() {
     const corpo = dom.projectInfoBody;
-    if (!corpo || carregando) return;
+    if (!corpo) return;
+    if (carregando) {
+        pedidoPendente = true;
+        return;
+    }
     carregando = true;
+    const area = _areaAtiva();
+    const areaMudou = function () { return !!area && _areaAtiva() !== area; };
     try {
 
         if (!corpo.childElementCount) corpo.replaceChildren(_esqueleto());
@@ -376,15 +389,16 @@ export async function carregarProjetoInfo() {
             _insistir(rota,
                 function (d) { return d.estado !== 'a_medir' || !!d.erro; },
                 function (d) {
-                    if (!_temSecoes(d) || d.erro) return;
+                    if (areaMudou() || !_temSecoes(d) || d.erro) return;
                     const parcial = JSON.stringify(d);
                     if (parcial === retratoDesenhado) return;
                     _render(corpo, d);
                     retratoDesenhado = parcial;
                 },
-                40, 500),
-            _pedir('/api/projeto/etiquetas')
+                40, 500, area),
+            _pedir('/api/projeto/etiquetas', area)
         ]);
+        if (areaMudou()) return;
         if (!dados) {
             corpo.replaceChildren(_el('div', 'projeto-vazio', 'Nao foi possivel falar com o servidor.'));
             retratoDesenhado = null;
@@ -405,9 +419,20 @@ export async function carregarProjetoInfo() {
         carregarDesatualizados();
     } finally {
         carregando = false;
+        if (pedidoPendente) {
+            pedidoPendente = false;
+            carregarProjetoInfo();
+        }
     }
 }
 
 aoMudarOcultos(function () {
     if (projetoInfoAberto()) carregarProjetoInfo();
+});
+
+document.addEventListener('workspace:mudou', function () {
+    if (!projetoInfoAberto()) return;
+    retratoDesenhado = null;
+    if (dom.projectInfoBody) dom.projectInfoBody.replaceChildren(_esqueleto());
+    carregarProjetoInfo();
 });

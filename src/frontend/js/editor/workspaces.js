@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { state as chatState } from '../chat/state.js';
-import { pastaDoProjeto, definirPastaDaArea } from '../chat/files.js';
+import { definirPastaDaArea } from '../chat/files.js';
 
 const CABECALHO = 'X-Axio-Workspace';
 const ELEMENTOS_DA_CENA = ['chat-inner-left', 'chat-inner-right', 'current-logs-wrapper', 'history-logs-wrapper'];
@@ -128,10 +128,6 @@ function pastaNoTemporario(pasta) {
 function nomeDaArea(area) {
     if (!area) return NOME_DE_PARTIDA;
     if (area.pasta) return basename(area.pasta);
-    if (area.chave === PRINCIPAL) {
-        const viva = pastaViva() || pastaDoProjeto();
-        if (viva) return basename(viva);
-    }
     return area.nome || NOME_DE_PARTIDA;
 }
 
@@ -322,8 +318,8 @@ function aplicarPastaDaArea(chave) {
     definirPastaDaArea(area ? area.pasta : '');
 }
 
-function pastaDoBackend() {
-    return fetch('/api/env_info')
+function pastaDoBackend(area) {
+    return fetch('/api/env_info', { __area: area })
         .then(r => (r.ok ? r.json() : null))
         .then(d => (d && d.folder) || '')
         .catch(() => '');
@@ -333,8 +329,8 @@ async function garantirPastaNoBackend(chave) {
     const area = areaDe(chave);
     if (!area) return false;
     const querida = area.pasta;
-    const atual = await pastaDoBackend();
-    if (normalizar(querida) === normalizar(atual)) return true;
+    const atual = await pastaDoBackend(chave);
+    if (normalizar(querida) === normalizar(atual)) return false;
     if (!querida) {
         if (atual && chave === PRINCIPAL) {
             area.pasta = atual;
@@ -348,6 +344,7 @@ async function garantirPastaNoBackend(chave) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folder: querida }),
+            __area: chave,
         });
         return resposta.ok;
     } catch (e) {
@@ -355,29 +352,45 @@ async function garantirPastaNoBackend(chave) {
     }
 }
 
-function recarregarVista() {
+function arvoreNaPasta(chave) {
+    const area = areaDe(chave);
+    const querida = normalizar(area ? area.pasta : '');
+    return !!querida && querida === normalizar(state.rootPath || '');
+}
+
+function recarregarVista(semLimparCache) {
     const wv = window.WorkspaceView;
-    if (wv && typeof wv.reloadExplorer === 'function') wv.reloadExplorer();
+    if (wv && typeof wv.reloadExplorer === 'function') wv.reloadExplorer(!semLimparCache);
     if (wv && typeof wv.loadVenvName === 'function') wv.loadVenvName();
 }
 
-async function aplicarArea(chave) {
+function aplicarArea(chave) {
     ativa = chave;
     guardar();
     desenhar();
-    await garantirPastaNoBackend(chave);
-    aplicarPastaDaArea(chave);
     restaurarCena(chave);
+    filtrarSSE(chatState.eventSource);
+    document.dispatchEvent(new CustomEvent('workspace:mudou', { detail: { chave } }));
+    despacharPendentes(chave);
+    atualizarAreaEmSegundoPlano(chave);
+}
+
+async function atualizarAreaEmSegundoPlano(chave) {
+    let mudou = false;
+    try {
+        mudou = await garantirPastaNoBackend(chave);
+    } catch (e) {
+        mudou = false;
+    }
+    if (ativa !== chave) return;
+    aplicarPastaDaArea(chave);
+    if (mudou || !arvoreNaPasta(chave)) recarregarVista(true);
     chatState.sessionHistoryLoaded = false;
     if (chatState.isShowingSessionHistory) {
         import('../chat/historico/painel.js')
             .then(mod => (typeof mod.loadSessionHistoryList === 'function' ? mod.loadSessionHistoryList({ silent: true }) : null))
             .catch(() => {});
     }
-    recarregarVista();
-    filtrarSSE(chatState.eventSource);
-    document.dispatchEvent(new CustomEvent('workspace:mudou', { detail: { chave } }));
-    despacharPendentes(chave);
 }
 
 async function trocarPara(chave) {
@@ -399,20 +412,18 @@ async function definirPasta(chave, pasta) {
         if (aviso) aviso.textContent = 'Essa pasta é temporária do sistema. Escolha a pasta do projeto.';
         return false;
     }
-    const anterior = ativa;
-    ativa = chave;
     let ok = false;
     try {
         const resposta = await fetch('/api/set_folder', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folder: pasta }),
+            __area: chave,
         });
         ok = resposta.ok;
     } catch (e) {
         ok = false;
     }
-    ativa = anterior;
     if (!ok) {
         desenhar();
         return false;
@@ -528,7 +539,17 @@ function despacharPendentes(chave) {
     const fonte = chatState.eventSource;
     const base = fonte && fonte.__axioBase;
     if (!base) return;
-    fila.forEach(texto => base.call(fonte, { data: texto }));
+    let i = 0;
+    const passo = () => {
+        if (ativa !== chave) {
+            pendentes[chave] = fila.slice(i).concat(pendentes[chave] || []);
+            return;
+        }
+        const fim = Math.min(i + 60, fila.length);
+        for (; i < fim; i++) base.call(fonte, { data: fila[i] });
+        if (i < fila.length) requestAnimationFrame(passo);
+    };
+    passo();
 }
 
 function ligarMenuDasAbas() {
@@ -587,6 +608,7 @@ function ligarObservadorDaPasta() {
     if (!rotulo || typeof MutationObserver !== 'function') return;
     const observador = new MutationObserver(() => {
         const pasta = (rotulo.textContent || '').trim();
+        if (pasta === (rotulo.dataset.pastaAplicada || '')) return;
         const area = areaDe(ativa);
         if (!area || pasta === area.pasta) return;
         area.pasta = pasta;
@@ -618,25 +640,29 @@ function ligarRascunho() {
 }
 
 async function reidratarPastaDaAreaAtiva() {
-    if (ativa === PRINCIPAL) return;
-    const area = areaDe(ativa);
+    const chave = ativa;
+    const area = areaDe(chave);
     if (!area || !area.pasta) return;
-    await garantirPastaNoBackend(ativa);
-    aplicarPastaDaArea(ativa);
-    recarregarVista();
+    await garantirPastaNoBackend(chave);
+    if (ativa !== chave) return;
+    aplicarPastaDaArea(chave);
+    if (!arvoreNaPasta(chave)) recarregarVista(true);
 }
 
 function iniciar() {
     lerGuardado();
     instalarFetch();
     const principal = areaDe(PRINCIPAL);
-    const viva = pastaViva() || pastaDoProjeto();
-    if (principal && !principal.pasta && viva) {
-        principal.pasta = viva;
-        principal.nome = basename(viva);
-        guardar();
+    if (principal && !principal.pasta) {
+        const viva = pastaViva();
+        if (viva) {
+            principal.pasta = viva;
+            principal.nome = basename(viva);
+            guardar();
+        }
     }
     desenhar();
+    aplicarPastaDaArea(ativa);
     const novo = document.getElementById('btn-novo-workspace');
     if (novo) novo.addEventListener('click', novoWorkspace);
     const antes = document.getElementById('btn-ws-anterior');

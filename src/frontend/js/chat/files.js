@@ -645,11 +645,12 @@ const NL = String.fromCharCode(10);
     let pastaSelecionada = '';
     let restauracaoEmCurso = null;
 
-    function aplicarPastaSelecionada(folder) {
+    function aplicarPastaSelecionada(folder, escolhidaPeloUtilizador) {
         const jaEra = pastaSelecionada === folder;
         const primeiraVez = !pastaSelecionada;
         pastaSelecionada = folder;
         lblFolder.textContent = folder;
+        lblFolder.dataset.pastaAplicada = escolhidaPeloUtilizador ? '' : folder;
         if (btnSelectFolder) {
             btnSelectFolder.classList.remove('text-[var(--text-branco)]');
             btnSelectFolder.classList.add('text-[var(--oliva)]');
@@ -674,6 +675,7 @@ const NL = String.fromCharCode(10);
     function definirPastaDaArea(folder) {
         pastaSelecionada = folder || '';
         lblFolder.textContent = pastaSelecionada;
+        lblFolder.dataset.pastaAplicada = pastaSelecionada;
         if (!btnSelectFolder) return;
         if (pastaSelecionada) {
             btnSelectFolder.classList.remove('text-[var(--text-branco)]');
@@ -702,7 +704,7 @@ const NL = String.fromCharCode(10);
                     if (data.folder) {
                         const trocouDeProjeto = !recarregando && !!pastaSelecionada
                             && normalizeFsPath(pastaSelecionada) !== normalizeFsPath(data.folder);
-                        aplicarPastaSelecionada(data.folder);
+                        aplicarPastaSelecionada(data.folder, !recarregando);
                         if (trocouDeProjeto) {
                             await reiniciarInterfaceDaPasta();
                             return true;
