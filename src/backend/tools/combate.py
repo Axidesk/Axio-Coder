@@ -121,20 +121,14 @@ def _eventos_do_servidor(uteis):
 
 
 def _pastas_de_monstros(caminho):
-    """As pastas de XML de monstro ao alcance: subindo da gravacao e do proprio Axio."""
+    """As pastas de XML de monstro ao alcance: subindo da gravacao, do Axio e dos projetos abertos."""
+    from src.backend.state import projetos_ja_abertos
     raizes = [os.path.abspath(caminho or "."), os.path.abspath(__file__)]
     achadas = []
     for raiz in raizes:
         atual = raiz if os.path.isdir(raiz) else os.path.dirname(raiz)
         for _ in range(9):
             candidatas = [os.path.join(atual, *partes) for partes in _PASTAS_DE_MONSTROS]
-            projetos = os.path.join(atual, "docs", "projetos")
-            if os.path.isdir(projetos):
-                candidatas += [
-                    os.path.join(projetos, nome, *partes)
-                    for nome in sorted(os.listdir(projetos))
-                    for partes in _PASTAS_DE_MONSTROS
-                ]
             for candidata in candidatas:
                 if os.path.isdir(candidata) and candidata not in achadas:
                     achadas.append(candidata)
@@ -142,6 +136,11 @@ def _pastas_de_monstros(caminho):
             if pai == atual:
                 break
             atual = pai
+    for raiz in projetos_ja_abertos():
+        for partes in _PASTAS_DE_MONSTROS:
+            candidata = os.path.join(raiz, *partes)
+            if os.path.isdir(candidata) and candidata not in achadas:
+                achadas.append(candidata)
     return achadas
 
 
