@@ -506,7 +506,7 @@ def _juntar_imagens(resultados):
         },
         "destino": {
             "tipo": "STRING",
-            "desc": "Caminho de destino DENTRO do projeto (ex: docs/interface/preview.jpg). Vazio = so medir, nao grava nada.",
+            "desc": "Caminho de destino DENTRO do projeto (ex: gerados/imagens/preview.jpg). Vazio = so medir, nao grava nada.",
             "padrao": "",
         },
         "caixa": {

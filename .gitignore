@@ -47,7 +47,6 @@ src/frontend/vendor/viewer/pptx.browser.es.js
 
 # Custom
 .axio/
-.ai_memory/
 CANVAS/
 BACKUP/
 teste/
@@ -76,9 +75,6 @@ data/cache_modelos/
 # no git fica o codigo que a reproduz
 gerados/
 
-# Documentos internos de planeamento (arquivados em docs/planos/)
-docs/planos/
-
-# Projetos externos guardados como referencia em docs/projetos/ (o DRAFTCAD e o
+# Projetos externos abertos pelo agente em docs/projetos/ (o DRAFTCAD e o
 # servidor Tibia74): o codigo deles vive no repositorio de cada um, nunca neste
 docs/projetos/

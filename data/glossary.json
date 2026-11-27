@@ -4063,14 +4063,10 @@
         "logo da marca"
       ],
       "identificador": "axidesk-logo.jpg",
-      "descricao": "Logos da Axidesk para cabecalhos, capas, citacoes e avatar. O ORIGINAL vive FORA do repositorio, em D:/Dropbox/2 - Startup/CODER/INSTITUCIONAL/REFATORADO/logos, e a tabela do que cada ficheiro e - com as copias ja tratadas e publicaveis - esta no fim de docs/material-institucional.md (seccao \"As logos da marca\"). Dentro do repositorio: docs/interface/axidesk-logo.jpg (1408x640, monograma AD + AXIDESK, sem a marca de agua do gerador, para cabecalhos e capas) e docs/interface/axidesk-avatar.png (512x512, sem a moldura, e o avatar do perfil). O cartaz.png NAO se usa: e o cartaz da marca Axidesk (limpeza de desktop, cloud e IA) e fala de outro produto. Toda imagem so se publica depois de OLHADA com tool_ver_imagem.",
+      "descricao": "Material de marca do repositorio: onde estao as logos e a paleta institucional. Vive em docs/repositorio/, ao lado das capturas que o README mostra.",
       "localizacao": {
-        "arquivo": "docs/material-institucional.md",
-        "linha": 57,
-        "conferido": [
-          1790292513.616,
-          7147
-        ]
+        "arquivo": "docs/repositorio/material-institucional.md",
+        "linha": 57
       }
     },
     {
@@ -6572,10 +6568,10 @@
       "descricao": "Acha arquivo ou pasta pelo NOME no projeto inteiro (nome simples ou curinga), com tamanho e data, sem navegar pasta a pasta. E o caminho para nao voltar a adivinhar caminhos a partir da estrutura lida.",
       "localizacao": {
         "arquivo": "src/backend/tools/browse.py",
-        "linha": 151,
+        "linha": 156,
         "conferido": [
-          1795364921.912,
-          27527
+          1795783075.735,
+          28062
         ]
       }
     },

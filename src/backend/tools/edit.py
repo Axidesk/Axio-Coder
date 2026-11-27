@@ -13,6 +13,7 @@ from src.backend.state import estado, emit_event, notificar_mudanca_arquivos
 from src.backend.tools.registry import register
 from src.backend.services.file_service import resolver_caminho, normalizar_unicode, registrar_edicao, codificacao_do_ficheiro
 from src.backend.services.diff import gerar_diff
+from src.backend.services.materiais import aviso_de_destino
 from src.backend.tools.syntax import validar_arquivo_apos_edicao
 from src.backend.tools.syntax_estrutural import aviso_estrutural_pos_edicao, aviso_import_local, bloquear_import_local
 
@@ -635,7 +636,7 @@ def tool_salvar_arquivo(caminho_relativo: str, conteudo: str):
             emit_event("action_diff", actionName=f"Criado: {caminho_relativo}", actionType="created", diff=diff)
         notificar_mudanca_arquivos()
         
-        aviso = validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto, texto_antigo) + aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, conteudo) + aviso_import_local(caminho_relativo, texto_antigo or "", conteudo)
+        aviso = validar_arquivo_apos_edicao(caminho_relativo, caminho_absoluto, texto_antigo) + aviso_estrutural_pos_edicao(caminho_relativo, texto_antigo, conteudo) + aviso_import_local(caminho_relativo, texto_antigo or "", conteudo) + aviso_de_destino(caminho_relativo)
         return f"SUCESSO: Arquivo '{caminho_relativo}' salvo.{aviso}"
     except Exception as e: return f"ERRO: {str(e)}"
 

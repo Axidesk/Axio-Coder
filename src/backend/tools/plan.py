@@ -7,7 +7,9 @@ por isso inventar URL ali continua a ser recusado.
 """
 import json
 import re
+from datetime import datetime
 
+from src.backend.services.materiais import destino_datado, pasta_do_material
 from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register
 
@@ -77,12 +79,41 @@ def tool_iniciar_plano(plano_json: str):
             etapa["tarefas_concluidas"] = []
             etapa["revelada"] = (i == 0)
         estado["plano_atual"] = plano
+        guardado = _gravar_plano(plano)
         primeira = plano[0] if plano else None
         emit_event("executing", function="Iniciando plano de execução")
         emit_event("plan_started", plan=[primeira] if primeira else [], stack=estado.get("plano_stack"), total=len(plano))
-        return "SUCESSO: Plano iniciado e exibido na interface."
+        return f"SUCESSO: Plano iniciado e exibido na interface.{guardado}"
     except Exception as e:
         return f"ERRO ao iniciar plano: {str(e)}"
+
+
+def _markdown_do_plano(plano):
+    """O plano em markdown, com as tarefas ja concluidas riscadas como caixas marcadas."""
+    partes = [f"# Plano de execução\n\n_Atualizado a {datetime.now().strftime('%Y-%m-%d %H:%M')}_\n\n"]
+    for numero, etapa in enumerate(plano, 1):
+        partes.append(f"## {numero}. {etapa.get('titulo', 'Etapa')}\n\n")
+        feitas = set(etapa.get("tarefas_concluidas", []))
+        for tarefa in etapa.get("tarefas", []):
+            partes.append(f"- [{'x' if tarefa in feitas else ' '}] {tarefa}\n")
+        partes.append("\n")
+    return "".join(partes)
+
+
+def _gravar_plano(plano):
+    """Grava o plano em gerados/planos/ e devolve a linha a juntar a resposta."""
+    try:
+        if not estado.get("pasta_raiz"):
+            return ""
+        caminho = estado.get("plano_arquivo") or destino_datado(
+            "plano", (plano[0].get("titulo") if plano else "") or "plano")
+        estado["plano_arquivo"] = caminho
+        pasta_do_material("plano")
+        with open(f"{estado['pasta_raiz']}/{caminho}", "w", encoding="utf-8") as f:
+            f.write(_markdown_do_plano(plano))
+        return f" Gravado em {caminho}."
+    except Exception as falha:
+        return f" (o plano nao pode ser gravado em disco: {falha})"
 
 
 @register(
@@ -117,7 +148,7 @@ def tool_atualizar_plano(id_etapa: str, tarefa_concluida: str, etapa_concluida: 
     emit_event("plan_updated", id_etapa=id_etapa, tarefa_concluida=tarefa_concluida, etapa_concluida=etapa_concluida)
     if proxima:
         emit_event("plan_step_added", step=proxima, total=len(plano))
-    return "SUCESSO: Plano atualizado na interface."
+    return f"SUCESSO: Plano atualizado na interface.{_gravar_plano(plano or [])}"
 
 
 @register(
@@ -138,6 +169,6 @@ def tool_adicionar_etapa_plano(nova_etapa_json: str):
             plano.append(etapa)
         emit_event("executing", function="Adicionando etapa ao plano")
         emit_event("plan_step_added", step=etapa, total=len(plano) if isinstance(plano, list) else 0)
-        return "SUCESSO: Nova etapa adicionada ao plano na interface."
+        return f"SUCESSO: Nova etapa adicionada ao plano na interface.{_gravar_plano(plano if isinstance(plano, list) else [])}"
     except Exception as e:
         return f"ERRO ao adicionar etapa: {str(e)}"
