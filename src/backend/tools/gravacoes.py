@@ -1037,11 +1037,12 @@ def _base_da_velocidade(nome):
     if chave in _CACHE:
         return _CACHE[chave]
     base = 0
+    pasta = None
     try:
-        devolvido = resolver_caminho("docs/projetos/Tibia74/gerados/monstros/cipsoft")
+        from src.backend.services.tibia_dados import pasta_cipsoft
+        pasta = pasta_cipsoft()
     except Exception:
-        devolvido = None
-    pasta = (devolvido[0] if isinstance(devolvido, tuple) else devolvido) if devolvido else None
+        pasta = None
     if pasta and os.path.isdir(pasta):
         direto = os.path.join(pasta, re.sub(r"\s+", "", nome) + ".mon")
         caminho = direto if os.path.isfile(direto) else ""

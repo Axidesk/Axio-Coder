@@ -6,7 +6,7 @@ Não é um chat com uma caixa de texto ao lado do código. É uma janela de trab
 
 A janela é escura e sem ruído — sem molduras nem caixas a contornar, só o trabalho da vez. Uma barra de ícones à esquerda troca de ferramenta, o trabalho fica ao centro e a conversa à direita; e nada aparece aos saltos, tudo entra e sai por transição.
 
-![A janela de trabalho do Axio Coder](docs/repositorio/interface.jpg)
+![A janela de trabalho do Axio Coder](data/repositorio/interface.jpg)
 
 ## A atualização que o VS Code nunca teve
 
@@ -16,7 +16,7 @@ Imagine criar software completo com um único comando — o Axio Coder foi const
 
 Tudo o que o agente mexeu fica registado, e a comparação abre lado a lado: o que saiu a vermelho, o que entrou a verde, as linhas evidenciadas e a linha exata onde a mudança aconteceu. Chega-se lá com **um clique** — pelo cartão do **log da sessão**, que lista cada ficheiro tocado naquela rodada, ou pela tarefa no **histórico** das sessões, que guarda o rastro completo do que foi feito. Olhar para o que mudou é a operação mais frequente de quem trabalha com um agente, e é por isso que ela está a um clique de distância em vez de escondida num menu.
 
-![Histórico das sessões, com o ficheiro editado aberto no diff lado a lado](docs/repositorio/historico.jpg)
+![Histórico das sessões, com o ficheiro editado aberto no diff lado a lado](data/repositorio/historico.jpg)
 
 ## Cada tarefa deixa um ponto a que podes voltar.
 
@@ -32,7 +32,7 @@ A mensagem do ponto nasce **trancada**, e por boa razão: mexer nela não é pre
 
 O envio é do dia seguinte. O que guardaste hoje fica no teu disco e sobe na virada do dia — ou na próxima vez que abrires o projeto. A publicação nunca acontece a meio de uma rodada, para um envio não atropelar trabalho que ainda está a decorrer.
 
-![O painel de git: os pontos por subir do dia e a mensagem do ponto desta tarefa](docs/repositorio/painel-de-git.jpg)
+![O painel de git: os pontos por subir do dia e a mensagem do ponto desta tarefa](data/repositorio/painel-de-git.jpg)
 
 O mesmo painel abre-se com um clique no **ícone do git ao lado da numeração da árvore de ficheiros** — aceso enquanto estiver à vista, tal como o do histórico. O envio pede confirmação antes de sair. O ponto da tarefa é um cabeçalho que se abre: o ícone (o *tooltip* diz *Salvo localmente*, ou *Já enviada para o GitHub* depois de subir), a hash curta e o `+`. A hash do ponto é a única do painel em verde oliva; as outras ficam cinzentas. O campo de escrita só aparece quando há ponto para guardar ou mensagem ainda emendável — ponto já no GitHub abre sem campo, porque uma mensagem publicada já ninguém a muda.
 
@@ -44,7 +44,7 @@ Para partir um ficheiro que cresceu demais, o código não é redigitado: é mov
 
 Trabalho grande entra em plano: as etapas e as tarefas em curso ficam à vista e são riscadas à medida que fecham.
 
-![Plano da tarefa em curso](docs/repositorio/plano-visual.jpg)
+![Plano da tarefa em curso](data/repositorio/plano-visual.jpg)
 
 ## Vê o que constrói.
 
@@ -52,19 +52,19 @@ O preview é um Chromium embutido que o agente opera de verdade: carrega a pági
 
 O mesmo olho serve para ti. Com o **modo inspecionar** ligado, passar o rato por qualquer elemento — na página do preview ou na própria interface do Axio — abre o cartão do que ele é: o seletor, a fonte, a cor, as classes e a localização no código (`src/frontend/index.html:487`, com ligação que abre o ficheiro naquela linha). A **descrição** por baixo do nome não é rótulo genérico: sai do glossário do projeto, logo explica aquele elemento naquele projeto. `Tab` anda pelos campos, `Enter` copia o valor (ou abre o ficheiro), `Shift+clique` deixa o clique passar para o elemento e `Esc` sai.
 
-![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](docs/repositorio/navegador-no-preview-inspecionar.jpg)
+![O preview a navegar na web, com o modo inspecionar a ler um elemento do Axio ao lado](data/repositorio/navegador-no-preview-inspecionar.jpg)
 
 ## Lê formatos de engenharia.
 
 IFC, DXF, PDF, STEP, malhas 3D, DOCX, XLSX, PPTX e imagens, cada um aberto no seu leitor, com abas e ferramentas próprias. E gera: modelos paramétricos para IFC/STEP/STL, desenhos em DXF, documentos e planilhas. O modelo abaixo foi gerado pelo próprio agente e voltou aberto no leitor dele.
 
-![Modelo IFC gerado pelo agente, aberto no visualizador](docs/repositorio/visualizador-ifc.jpg)
+![Modelo IFC gerado pelo agente, aberto no visualizador](data/repositorio/visualizador-ifc.jpg)
 
 ## Corre processos e terminais.
 
 Servidores, instalações e comandos longos correm em segundo plano, cada um no seu cartão, com a saída acompanhada em tempo real — e um terminal PTY interativo com suporte a ConPTY.
 
-![Terminal em modo cards](docs/repositorio/terminal-cards.jpg)
+![Terminal em modo cards](data/repositorio/terminal-cards.jpg)
 
 ## Opera programas nativos
 
@@ -72,7 +72,7 @@ Pela camada de acessibilidade do Windows, o agente abre qualquer programa, encon
 
 Num programa de desenho complexo, o mesmo mecanismo trabalha pelo lado certo — a cena abaixo foi montada no GIMP por script, com o agente a ler a imagem de volta para conferir o resultado:
 
-![Agente a compor no GIMP](docs/repositorio/gimp.jpg)
+![Agente a compor no GIMP](data/repositorio/gimp.jpg)
 
 ## Conhece o que está instalado
 
@@ -80,7 +80,7 @@ Um painel lê o projeto por dentro: as linguagens, as dependências com a versã
 
 E cada pasta e ficheiro da árvore ganha uma **etiqueta** com o papel que cumpre no projeto — `src/backend/routes` vira *endpoints http*, `src/main.js` vira *processo electron*. Quem as escreve é a IA, mas só depois de o motor determinístico medir a árvore, as linguagens e as dependências: ao modelo sobra dar um nome curto ao que já foi medido, a partir do docstring e dos imports. Etiqueta-se apenas o que falta ou mudou — a assinatura de cada nó (data do ficheiro, nomes dos filhos) diz se a etiqueta ainda serve —, a primeira etiquetagem de um projeto é automática e acontece uma só vez, e um olho ao lado do título recolhe a coluna quando não a queres à vista.
 
-![Informações do projeto: stack, dependências e a árvore com os totais](docs/repositorio/informacoes-do-projeto.jpg)
+![Informações do projeto: stack, dependências e a árvore com os totais](data/repositorio/informacoes-do-projeto.jpg)
 
 ## Guarda memória do projeto
 
@@ -90,7 +90,7 @@ Notas, glossário de termos do utilizador e transcrições de sessões ficam num
 
 O caderno do projeto são várias notas em abas, gravadas por projeto, para apontar o que se quer sem saber o nome de nada. Ao lado do título está a varinha: ela pega no texto selecionado (ou na nota inteira) e o agente **vai consultar o código** — árvore, assinaturas, pesquisa, índice semântico — para devolver o mesmo pedido reescrito no vocabulário do projeto, com os nomes reais de funções, ficheiros e ids no lugar das descrições leigas. O glossário e o retrato do projeto vão à frente, para ele ter de procurar cada vez menos; e o texto volta marcado como reescrito pelo agente, para não haver dúvida sobre quem o escreveu.
 
-![Notas do projeto em abas, com a varinha ao lado do título](docs/repositorio/notas.jpg)
+![Notas do projeto em abas, com a varinha ao lado do título](data/repositorio/notas.jpg)
 
 ## Configura-se num sítio só
 
@@ -98,7 +98,7 @@ A janela de Configurações tem duas abas. Em **APIs** colam-se as chaves e liga
 
 Em **Cofre** fica tudo o que eu uso por ti: a identidade, o email — para eu abrir a caixa de entrada e ler os códigos de confirmação — e as contas dos sites que usarmos, **cada uma com a chave de API dela no mesmo cartão**. Um cartão só entra em cena quando é preciso, e o que lhe falta está à vista na própria lista. É **um cofre só, partilhado por todos os projetos**, e vive em `data/cofre.json`, fora do repositório. Os valores são guardados em claro: não há palavra-passe mestra, logo não há cifra que valha. A proteção está no uso — eu recebo sempre a versão tapada e, para escrever uma senha num campo, refiro-a pelo nome: `{{cofre:id.campo}}` é trocado pelo valor no instante do gesto, sem passar pelo meu contexto nem pelo histórico da conversa.
 
-![A janela de Configurações, na aba do Cofre](docs/repositorio/config.jpg)
+![A janela de Configurações, na aba do Cofre](data/repositorio/config.jpg)
 
 ## O que um computer use faz, por outro caminho
 
@@ -114,7 +114,7 @@ O agente também sabe onde a árvore acaba. Numa tela plana como o Paint não h�
 
 O agente pensa em voz alta: o painel mostra o que ele está a considerar, o que testou e onde se enganou, enquanto as ferramentas usadas vão sendo listadas ao lado.
 
-![Raciocínio e ferramentas usadas](docs/repositorio/raciocinio.jpg)
+![Raciocínio e ferramentas usadas](data/repositorio/raciocinio.jpg)
 
 ## Procura no que já foi dito
 
@@ -181,9 +181,12 @@ coder/
 │       └── js/               chat/, editor/, viewer/, titulo
 ├── scripts/build_viewer.mjs  empacota o visualizador de formatos
 ├── data/                     estado do utilizador (segredos ficam fora do git)
+│   └── repositorio/          capturas e marca que este README mostra
 ├── docs/
-│   ├── repositorio/          capturas e marca que este README mostra
 │   └── projetos/             projetos externos abertos pelo agente (fora do git)
 └── gerados/                  tudo o que o agente produz, uma pasta por assunto
+    ├── <projeto>/            material de um projeto aberto de fora (gerados/tibia74)
+    ├── documentos/ planos/ imagens/ exemplos/
+    └── ...
 ```
 

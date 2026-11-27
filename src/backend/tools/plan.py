@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime
 
-from src.backend.services.materiais import destino_datado, pasta_do_material
+from src.backend.services.materiais import destino_datado, rotulo_de_material
 from src.backend.state import estado, emit_event
 from src.backend.tools.registry import register
 
@@ -108,10 +108,9 @@ def _gravar_plano(plano):
         caminho = estado.get("plano_arquivo") or destino_datado(
             "plano", (plano[0].get("titulo") if plano else "") or "plano")
         estado["plano_arquivo"] = caminho
-        pasta_do_material("plano")
-        with open(f"{estado['pasta_raiz']}/{caminho}", "w", encoding="utf-8") as f:
+        with open(caminho, "w", encoding="utf-8") as f:
             f.write(_markdown_do_plano(plano))
-        return f" Gravado em {caminho}."
+        return f" Gravado em {rotulo_de_material(caminho)}."
     except Exception as falha:
         return f" (o plano nao pode ser gravado em disco: {falha})"
 

@@ -106,6 +106,8 @@ def _validar_contencao(alvo, raiz_abs, permitir_extra, permitir_escrita):
     if caminho_contido(alvo, raiz_abs):
         return None
     if permitir_escrita:
+        if caminho_contido(alvo, os.path.join(APP_ROOT, "gerados")):
+            return None
         return "ERRO: escrita fora da pasta do projeto e bloqueada."
     if not permitir_extra:
         return "ERRO: o caminho esta fora da pasta do projeto."

@@ -4,7 +4,19 @@ import os
 import re
 from functools import lru_cache
 
+from src.backend.config import APP_ROOT
+from src.backend.services.materiais import slug
+
 BASE_PADRAO = 'docs/projetos/Tibia74'
+
+
+def pasta_cipsoft(base=BASE_PADRAO):
+    """Pasta dos .mon e do objects.srv: vive no gerados/ do Axio (gerados/tibia74)."""
+    guardada = os.path.join(APP_ROOT, 'gerados', slug(os.path.basename(os.path.normpath(str(base)))),
+                            'monstros', 'cipsoft')
+    if os.path.isdir(guardada):
+        return guardada
+    return f'{base}/gerados/monstros/cipsoft'
 
 SANGUE_PARA_RACE = {'blood': 'blood', 'slime': 'venom', 'bones': 'undead', 'fire': 'fire'}
 
@@ -239,7 +251,7 @@ def _normalizar(nome):
 
 @lru_cache(maxsize=4)
 def objetos_do_srv(base=BASE_PADRAO):
-    caminho = f'{base}/gerados/monstros/cipsoft/objects.srv'
+    caminho = f'{pasta_cipsoft(base)}/objects.srv'
     texto = open(caminho, encoding='latin-1').read()
     tabela = {}
     for bloco in re.finditer(r'TypeID\s*=\s*(\d+)(.*?)(?=\nTypeID|\Z)', texto, re.S):
@@ -260,7 +272,7 @@ def items_740(base=BASE_PADRAO):
 
 
 def _ficheiro_do_mon(base, monstro):
-    pasta = f'{base}/gerados/monstros/cipsoft'
+    pasta = pasta_cipsoft(base)
     if monstro.lower().endswith('.xml'):
         monstro = monstro[:-4]
     nome = _normalizar(monstro)
@@ -1380,7 +1392,7 @@ def _variacao_do_speed(cabecalho, texto):
 @lru_cache(maxsize=4)
 def _outfits_do_mon(base):
     """Outfit de cada .mon -> nome da criatura, para conferir o monster="" das magias."""
-    pasta = f'{base}/gerados/monstros/cipsoft'
+    pasta = pasta_cipsoft(base)
     tabela = {}
     for ficheiro in os.listdir(pasta):
         if not ficheiro.endswith('.mon'):

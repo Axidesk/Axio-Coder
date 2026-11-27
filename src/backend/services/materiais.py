@@ -10,7 +10,9 @@ import re
 import unicodedata
 from datetime import datetime
 
-from src.backend.state import estado
+from src.backend.config import APP_ROOT
+from src.backend.services.file_service import caminho_contido
+from src.backend.state import estado, no_diretorio_do_axio
 
 PASTA_DE_MATERIAL = "gerados"
 
@@ -34,7 +36,7 @@ EXTENSOES_DE_MATERIAL = {
     ".zip", ".7z", ".tar", ".gz", ".mp4", ".mp3", ".wav", ".wmv",
 }
 
-PASTAS_DE_ATIVO = ("docs/repositorio", "src/", "scripts/", "data/")
+PASTAS_DE_ATIVO = ("data/repositorio", "src/", "scripts/", "data/")
 
 
 def slug(texto, limite=48):
@@ -48,20 +50,40 @@ def raiz_do_projeto():
     return estado.get("pasta_raiz", "") or ""
 
 
+def raiz_do_material():
+    """Pasta ABSOLUTA onde nasce todo o material gerado: o gerados/ do Axio.
+
+    Dentro do Axio e o gerados/ da raiz. Com OUTRO projeto aberto e
+    gerados/<projeto>/ do Axio: a pasta do projeto fica limpa, sem um gerados/
+    dentro dela, e o material continua ao alcance porque o caminho e absoluto.
+    """
+    if no_diretorio_do_axio() or not raiz_do_projeto():
+        return os.path.join(APP_ROOT, PASTA_DE_MATERIAL)
+    nome = os.path.basename(os.path.normpath(raiz_do_projeto())) or "projeto"
+    return os.path.join(APP_ROOT, PASTA_DE_MATERIAL, slug(nome))
+
+
 def pasta_do_material(assunto):
-    """Pasta relativa do assunto, criada dentro da raiz do projeto aberto."""
+    """Pasta ABSOLUTA do assunto, criada se faltar."""
     nome = ASSUNTOS.get(str(assunto or "").strip().lower(), str(assunto or "").strip())
-    relativa = f"{PASTA_DE_MATERIAL}/{slug(nome)}"
-    raiz = raiz_do_projeto()
-    if raiz:
-        os.makedirs(os.path.join(raiz, PASTA_DE_MATERIAL, slug(nome)), exist_ok=True)
-    return relativa
+    absoluta = os.path.join(raiz_do_material(), slug(nome))
+    os.makedirs(absoluta, exist_ok=True)
+    return absoluta
 
 
 def destino_de_material(assunto, nome):
-    """Caminho relativo gerados/<assunto>/<nome>, com a pasta ja criada quando ha projeto."""
+    """Caminho ABSOLUTO gerados/<assunto>/<nome>, com a pasta ja criada."""
     pasta = pasta_do_material(assunto)
-    return f"{pasta}/{os.path.basename(str(nome or '').strip()) or 'material'}"
+    return os.path.join(pasta, os.path.basename(str(nome or "").strip()) or "material")
+
+
+def rotulo_de_material(caminho):
+    """Forma curta para mostrar: relativa ao Axio quando o material vive la."""
+    absoluto = os.path.abspath(str(caminho or ""))
+    try:
+        return os.path.relpath(absoluto, APP_ROOT).replace("\\", "/")
+    except ValueError:
+        return absoluto
 
 
 def carimbo(agora=None):
@@ -86,8 +108,16 @@ def aviso_de_destino(caminho_relativo):
     caminho = _normalizar(caminho_relativo)
     if not caminho or not eh_material(caminho):
         return ""
-    if caminho.startswith(f"{PASTA_DE_MATERIAL}/") or caminho.startswith(PASTAS_DE_ATIVO):
+    raiz = raiz_do_projeto()
+    absoluto = caminho if os.path.isabs(caminho) else os.path.join(raiz, caminho)
+    if caminho_contido(absoluto, raiz_do_material()):
         return ""
-    sugestao = destino_de_material("documento", os.path.basename(caminho))
+    try:
+        relativo = os.path.relpath(os.path.abspath(absoluto), os.path.abspath(raiz)).replace("\\", "/")
+    except ValueError:
+        relativo = caminho
+    if relativo.startswith(PASTAS_DE_ATIVO):
+        return ""
+    sugestao = rotulo_de_material(destino_de_material("documento", os.path.basename(caminho)))
     return (f"\nDESTINO DO MATERIAL: '{caminho}' e material gerado e ficou fora de "
             f"{PASTA_DE_MATERIAL}/ - o proximo do mesmo tipo vai para {sugestao}.")
