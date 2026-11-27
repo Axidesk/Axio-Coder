@@ -5,6 +5,7 @@ import sqlite3
 import threading
 import time
 
+from src.backend.config import APP_ROOT
 from src.backend.state import estado, emit_event, memoria_lock, mineracao_em_andamento, caminho_estado_projeto
 from src.backend.memory.store import garantir_pasta_knowledge, nome_arquivo_seguro
 
@@ -418,11 +419,34 @@ def _basenames_fontes():
     ficar O(1) por drawer (ha mais de 100k drawers).
     """
     nomes = set()
-    for base in (caminho_estado_projeto("chats"), garantir_pasta_knowledge()):
-        if base and os.path.isdir(base):
-            for _raiz, _dirs, arquivos in os.walk(base):
-                nomes.update(arquivos)
+    for base in _pastas_de_fontes():
+        for _raiz, _dirs, arquivos in os.walk(base):
+            nomes.update(arquivos)
     return nomes
+
+def _pastas_de_fontes():
+    """Toda a casa de chats e knowledge que uma drawer pode citar.
+
+    Nao basta a pasta do projeto aberto: o material de um projeto pode ter
+    sido separado no .axio dele (docs/projetos/<nome>/.axio) enquanto a
+    sessao corre noutro. Olhar so a pasta atual marcaria essas conversas
+    como orfas e a limpeza apagaria memoria viva de outro projeto.
+    """
+    candidatas = [caminho_estado_projeto("chats"), garantir_pasta_knowledge(),
+                  os.path.join(APP_ROOT, ".axio", "chats"),
+                  os.path.join(APP_ROOT, ".axio", "knowledge")]
+    projetos = os.path.join(APP_ROOT, "docs", "projetos")
+    if os.path.isdir(projetos):
+        for nome in os.listdir(projetos):
+            axio_do_projeto = os.path.join(projetos, nome, ".axio")
+            candidatas.append(os.path.join(axio_do_projeto, "chats"))
+            candidatas.append(os.path.join(axio_do_projeto, "knowledge"))
+            candidatas.append(os.path.join(axio_do_projeto, "conversas_arquivadas"))
+    vistas = []
+    for base in candidatas:
+        if base and os.path.isdir(base) and base not in vistas:
+            vistas.append(base)
+    return vistas
 
 def _source_file_existe(sf, basenames=None):
     """Indica se o arquivo de origem de uma drawer ainda existe.

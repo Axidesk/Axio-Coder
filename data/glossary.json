@@ -3650,7 +3650,11 @@
       "descricao": "Pasta padrao de tudo o que se gera, com o nome do projeto na frente e uma subpasta por assunto, criada sozinha: gerados/coder/planos/, gerados/tibia74/monstros/. Sempre no gerados/ do Axio, em caminho absoluto, mesmo com outro projeto aberto - a pasta do projeto fica limpa. O plano grava-se sozinho em gerados/<projeto>/planos/ e a cada tarefa concluida o mesmo ficheiro e reescrito.",
       "localizacao": {
         "arquivo": "src/backend/services/materiais.py",
-        "linha": 71
+        "linha": 71,
+        "conferido": [
+          1795787072.725,
+          5307
+        ]
       }
     },
     {
