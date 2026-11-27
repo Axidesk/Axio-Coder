@@ -101,7 +101,7 @@ def _markdown_do_plano(plano):
 
 
 def _gravar_plano(plano):
-    """Grava o plano em gerados/planos/ e devolve a linha a juntar a resposta."""
+    """Grava o plano em gerados/<projeto>/planos/ e devolve a linha a juntar a resposta."""
     try:
         if not estado.get("pasta_raiz"):
             return ""

@@ -1,8 +1,9 @@
-"""Destino unico do material que o agente produz: gerados/<assunto>/.
+"""Destino unico do material que o agente produz: gerados/<projeto>/<assunto>/.
 
 A pasta e criada sozinha e o nome e limpo, para que "o que se gera" nunca caia na raiz
-nem se misture com o codigo do produto - em qualquer projeto aberto, porque a raiz vem
-do estado da sessao e nao de um caminho fixo.
+nem se misture com o codigo do produto - em qualquer projeto aberto, porque o projeto vem
+do estado da sessao e nao de um caminho fixo. O Axio e um projeto como os outros: o seu
+material vive em gerados/coder/, e nao numa pasta generica sem dono.
 """
 
 import os
@@ -59,17 +60,23 @@ def raiz_do_gerados():
     return os.path.join(APP_ROOT, PASTA_DE_MATERIAL)
 
 
+def _apelido_do_projeto():
+    """Apelido da pasta do projeto da vez; o do proprio Axio quando se edita o Axio."""
+    raiz = raiz_do_projeto()
+    if no_diretorio_do_axio() or not raiz:
+        raiz = APP_ROOT
+    return slug(os.path.basename(os.path.normpath(raiz))) or "projeto"
+
+
 def raiz_do_material():
     """Pasta ABSOLUTA onde nasce o material DA VEZ: gerados/<projeto>/.
 
-    Dentro do Axio e o gerados/ da raiz. Com OUTRO projeto aberto e
-    gerados/<projeto>/ do Axio: a pasta do projeto fica limpa, sem um gerados/
-    dentro dela, e o material continua ao alcance porque o caminho e absoluto.
+    Cada projeto tem a sua gaveta dentro do gerados/ do Axio - o Tibia74 em
+    gerados/tibia74/, o DRAFTCAD em gerados/draftcad/, o proprio Axio em
+    gerados/coder/. A pasta do projeto aberto fica limpa, sem um gerados/ dentro
+    dela, e o material continua ao alcance porque o caminho e absoluto.
     """
-    if no_diretorio_do_axio() or not raiz_do_projeto():
-        return raiz_do_gerados()
-    nome = os.path.basename(os.path.normpath(raiz_do_projeto())) or "projeto"
-    return os.path.join(raiz_do_gerados(), slug(nome))
+    return os.path.join(raiz_do_gerados(), _apelido_do_projeto())
 
 
 def pasta_do_material(assunto):
