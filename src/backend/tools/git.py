@@ -414,6 +414,10 @@ def _linhas_da_publicacao(raiz, mensagem, ficheiros, tag, empurrar, escopo=""):
             linhas.append("STAGE ANTERIOR LIMPO: estava em stage o que nao foi pedido (" +
                           ", ".join(sobra[:8]) + (f" e mais {len(sobra) - 8}" if len(sobra) > 8 else "") +
                           ") - o commit leva so os caminhos indicados.")
+        ignorados, _ = git_saida(raiz, "check-ignore", "--", *lista)
+        if ignorados and ignorados.strip():
+            linhas.append("IGNORADOS PELO .gitignore: " + ", ".join(ignorados.split()) +
+                          " - estes NAO entram no commit (tire a regra do .gitignore ou publique-os a forca).")
         _, erro = git_saida(raiz, "add", "--", *lista)
         if erro and "did not match any files" in erro:
             erro += " (um dos caminhos ja nao existe no disco - apagado ou movido; passa a PASTA dele)"
@@ -658,9 +662,10 @@ def tool_publicar_git(mensagem, ficheiros="", tag="", empurrar=True, caminho="",
         'notas': {"tipo": "STRING", "desc": "Corpo do Release em Markdown (padrao: gerado das mensagens dos commits)", "padrao": ""},
         'rascunho': {"tipo": "BOOLEAN", "desc": "Guardar como rascunho em vez de publicar", "padrao": False},
         'caminho': {"tipo": "STRING", "desc": "Pasta dentro do repositorio (padrao: a pasta do projeto aberto)", "padrao": ""},
+        'anexos': {"tipo": "STRING", "desc": "Ficheiros a anexar ao Release (o zip do build, o exe, o mapa), um caminho por linha, relativo a pasta do projeto. Cada um sobe num pedido so e a resposta diz o tamanho e o endereco de cada.", "padrao": ""},
     },
 )
-def tool_publicar_release(etiqueta, titulo="", notas="", rascunho=False, caminho=""):
+def tool_publicar_release(etiqueta, titulo="", notas="", rascunho=False, caminho="", anexos=""):
     if not etiqueta:
         return "ERRO: indique a etiqueta do Release (ex: 'v3.1.3')."
     base, falta = _base_do_repositorio(caminho)
@@ -691,7 +696,37 @@ def tool_publicar_release(etiqueta, titulo="", notas="", rascunho=False, caminho
               f"  notas: {len(corpo)} caracteres" + ("" if notas else " (geradas das mensagens dos commits)")]
     if dados.get("draft"):
         linhas.append("  AVISO: ficou como rascunho - so tu o ves ate o publicares.")
+    linhas += _anexar_ao_release(slug, dados.get("id"), anexos, base, token)
     return "\n".join(linhas)
+
+
+def _anexar_ao_release(slug, release_id, anexos, base, token):
+    """Sobe cada ficheiro pedido ao Release e devolve o que aconteceu a cada um."""
+    pedidos = [p.strip() for p in str(anexos or "").replace(";", "\n").splitlines() if p.strip()]
+    if not pedidos:
+        return []
+    if not release_id:
+        return ["ANEXOS: o Release nao devolveu id - nada foi anexado."]
+    linhas = [f"ANEXOS ({len(pedidos)}):"]
+    for pedido in pedidos:
+        alvo = pedido if os.path.isabs(pedido) else os.path.join(base, pedido)
+        if not os.path.isfile(alvo):
+            linhas.append(f"  {pedido}: NAO ENCONTRADO em {alvo}")
+            continue
+        tamanho = os.path.getsize(alvo)
+        dados, erro = github.anexar_ficheiro(slug, release_id, alvo, token)
+        if erro:
+            linhas.append(f"  {os.path.basename(alvo)} ({_tamanho_texto(tamanho)}): FALHOU - {erro}")
+        else:
+            linhas.append(f"  {os.path.basename(alvo)} ({_tamanho_texto(tamanho)}): enviado"
+                          + (f" - {dados.get('browser_download_url')}" if dados.get("browser_download_url") else ""))
+    return linhas
+
+
+def _tamanho_texto(bytes_de_tamanho):
+    if bytes_de_tamanho >= 1048576:
+        return f"{bytes_de_tamanho / 1048576:.1f} MB"
+    return f"{max(1, round(bytes_de_tamanho / 1024))} KB"
 
 
 def _slug_do_remoto(raiz):
@@ -740,28 +775,41 @@ def _ler_remoto(leitor, url):
         return resposta.read()
 
 
-def _pedido_json(url):
-    dados, erro = github.pedido_api(url)
+def _pedido_json(url, token=""):
+    dados, erro = github.pedido_api(url, token)
     if erro:
         raise urllib.error.URLError(erro)
     return dados
+
+
+def _recusa_da_vitrine(caminho, falha, token):
+    """Diz PORQUE a vitrine nao veio: 404 sem chave e repositorio privado, nunca 'nao existe'."""
+    texto = str(falha)
+    if "Not Found" in texto or "404" in texto:
+        if not token:
+            return (f"VITRINE de {caminho}: PRIVADO ou inexistente. Sem chave do GitHub no cofre a API "
+                    "publica responde 404 aos dois casos - guarde uma chave (Configuracoes -> Cofre, "
+                    "cartao 'github', campo 'chave', escopo 'repo') e a vitrine passa a ser lida.")
+        return (f"VITRINE de {caminho}: o GitHub devolveu 404 MESMO com a chave do cofre. Confira o "
+                "dono/nome do repositorio no origin e se a chave tem o escopo 'repo' (sem ele o GitHub "
+                "esconde os privados em vez de os recusar).")
+    return f"VITRINE de {caminho}: nao consegui consultar a API do GitHub ({texto})."
 
 
 def _linhas_da_vitrine(raiz):
     host, caminho = _slug_do_remoto(raiz)
     if "github.com" not in host:
         return [f"VITRINE: o remoto nao e GitHub ('{host or 'sem origin'}') - sem leitura da vitrine."]
+    token = cofre.obter("github", revelar=True, campo="chave") or ""
     try:
-        dados = _pedido_json(f"https://api.github.com/repos/{caminho}")
-        releases = _pedido_json(f"https://api.github.com/repos/{caminho}/releases")
-    except urllib.error.HTTPError as fora:
-        if fora.code == 404:
-            return ["VITRINE: a API do GitHub devolveu 404 - o repositorio remoto nao e publico."]
-        return [f"VITRINE: a API do GitHub recusou a consulta ({fora.code})."]
+        dados = _pedido_json(f"https://api.github.com/repos/{caminho}", token)
+        releases = _pedido_json(f"https://api.github.com/repos/{caminho}/releases", token)
     except Exception as falha:
-        return [f"VITRINE: nao consegui consultar a API do GitHub ({falha})."]
+        return [_recusa_da_vitrine(caminho, falha, token)]
 
     partes = [f"VITRINE de {caminho} (o que o GitHub mostra a quem chega):"]
+    if token:
+        partes.append("  PRIVADO: lido com a chave do cofre - quem nao tem acesso ve 404.")
     em_falta = []
     descricao = (dados.get("description") or "").strip()
     if descricao:

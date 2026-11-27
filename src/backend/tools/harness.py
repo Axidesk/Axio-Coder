@@ -1947,7 +1947,26 @@ def _correr_trecho(chave, trecho, timeout, rotulo="", interpretador="", filtro="
         parcial = _recortar_saida(resultado.stdout, teto)
         return f"{aviso}\n--- stdout (ate ao limite) ---\n{parcial}" if parcial.strip() else aviso
     return _relatorio_execucao(resultado, limite, cfg["linguagem"], filtro, teto,
-                               _nota_interpretador(interpretador, raiz_projeto))
+                               _nota_interpretador(interpretador, raiz_projeto)
+                               + _nota_de_escrita_direta(trecho))
+
+
+_PADROES_DE_ESCRITA = (
+    r"open\s*\([^)]*['\"][wax]\+?['\"]",
+    r"\.write_text\s*\(",
+    r"\.write_bytes\s*\(",
+    r"writeFileSync\s*\(",
+)
+
+
+def _nota_de_escrita_direta(trecho):
+    """Diz que o trecho grava no disco por codigo, e qual e o caminho nativo para isso."""
+    for padrao in _PADROES_DE_ESCRITA:
+        if re.search(padrao, trecho or ""):
+            return ("\\nNOTA: este trecho escreve no disco por codigo. O que ele mudar entra no card no "
+                    "fim do turno e fica na pilha de desfazer; para editar um ficheiro do PROJETO, a via "
+                    "nativa (tool_substituir_texto) mostra o diff na hora e e a preferida.")
+    return ""
 
 @register(
     "tool_executar_python",

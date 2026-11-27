@@ -943,6 +943,46 @@ def _assinaturas_py(fonte):
     return linhas
 
 
+_CARGO_REGISTRY = os.path.join(os.path.expanduser("~"), ".cargo", "registry", "src")
+
+
+def _pastas_do_crate(nome):
+    """As pastas do crate no registo do Cargo, a versao mais recente primeiro."""
+    if not os.path.isdir(_CARGO_REGISTRY):
+        return []
+    achadas = []
+    for regiao in sorted(os.listdir(_CARGO_REGISTRY)):
+        base = os.path.join(_CARGO_REGISTRY, regiao)
+        if not os.path.isdir(base):
+            continue
+        for pasta in sorted(os.listdir(base), reverse=True):
+            if pasta == nome or pasta.startswith(nome + "-"):
+                achadas.append(os.path.join(base, pasta))
+    return achadas
+
+
+def _api_rust(nome, filtro):
+    """O crate Rust instalado, lido do registo do Cargo - o mesmo papel do node_modules para o JS."""
+    pastas = _pastas_do_crate(nome)
+    if not pastas:
+        return ""
+    pasta = pastas[0]
+    rotulo = os.path.basename(pasta)
+    if filtro:
+        trechos = _trechos_nos_caminhos(pasta, _varrer_fontes(pasta, (".rs",), ("target",)), filtro)
+        if not trechos:
+            return (f"CRATE {rotulo} (Rust, em {pasta}): nenhuma linha com '{filtro}' - o nome pode "
+                    "estar noutro crate ou escrito de outra forma.")
+        return f"CRATE {rotulo} (Rust, lido do registo do Cargo):\n" + "\n".join(trechos)
+    fonte = os.path.join(pasta, "src", "lib.rs")
+    if not os.path.isfile(fonte):
+        candidatos = _varrer_fontes(pasta, (".rs",), ("target",))
+        fonte = candidatos[0] if candidatos else ""
+    if not fonte:
+        return f"CRATE {rotulo} (Rust): sem ficheiros .rs em {pasta}."
+    return f"CRATE {rotulo} (Rust, de {fonte}):\n" + _ler_declaracao(fonte, "")
+
+
 def _api_py(raiz, pacote, filtro):
     try:
         especificacao = importlib.util.find_spec(pacote)
@@ -979,7 +1019,7 @@ def _api_py(raiz, pacote, filtro):
     "tool_consultar_api_dependencia",
     'Devolve a API de uma dependencia JA INSTALADA, lida do codigo dela no disco - nao do conhecimento do modelo, que envelhece. Num pacote npm devolve o ficheiro de declaracoes (index.d.ts, ou o campo types) e, sem ele, o README; num modulo Python devolve as assinaturas publicas do topo, extraidas por AST. Use ANTES de escrever codigo contra uma biblioteca de terceiros e sempre que a duvida for "que opcoes, metodos ou propriedades isto tem?": e o caminho para parar de inventar nomes de parametros. Passe filtro quando o ficheiro for grande e quiser so as linhas com um termo (ex: workerFactory, fitToItems, Load). Se o termo NAO existir nas declaracoes, a ferramenta procura-o no codigo-fonte do proprio pacote e devolve ficheiro:linha com o trecho a volta - e o caminho para ver COMO uma funcao da biblioteca esta implementada (ex: _OnResize, FitView) sem andar a abrir node_modules a mao.',
     {
-        'pacote': {"tipo": "STRING", "desc": 'Nome do pacote instalado, tal como se importa (ex: dxf-viewer, playwright, flask).', "padrao": ""},
+        'pacote': {"tipo": "STRING", "desc": 'Nome do pacote instalado, tal como se importa (ex: dxf-viewer, playwright, flask) ou o nome do crate Rust (ex: wry, tauri).', "padrao": ""},
         'filtro': {"tipo": "STRING", "desc": 'Trecho a procurar nas linhas da API (ex: workerFactory). Vazio devolve tudo ate a um teto de 8000 caracteres.', "padrao": ""},
     },
 )
@@ -996,6 +1036,10 @@ def tool_consultar_api_dependencia(pacote="", filtro=""):
     texto = _api_py(raiz or ".", nome, filtro)
     if texto:
         return texto
+    texto = _api_rust(nome, filtro)
+    if texto:
+        return texto
     return (f"'{nome}' nao foi encontrada: nem em node_modules/ do projeto aberto, nem entre os "
-            f"modulos Python instalados. Confirme o nome publicado (o nome importado as vezes difere) "
-            f"ou use tool_verificar_dependencias para ver o que esta instalado.")
+            f"modulos Python instalados, nem no registo do Cargo (~/.cargo/registry/src). Confirme o "
+            f"nome publicado (o nome importado as vezes difere) ou use tool_verificar_dependencias "
+            f"para ver o que esta instalado.")

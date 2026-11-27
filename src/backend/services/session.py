@@ -5,6 +5,7 @@ import time
 import traceback
 
 from src.backend.services.diff import gerar_diff
+from src.backend.services.file_service import registrar_edicao
 from src.backend.services.file_watcher import PASTAS_IGNORADAS, TAMANHO_MAX, e_pasta_de_outro_projeto
 from src.backend.services.persistencia import gravar_json_atomico
 from src.backend.state import estado, caminho_estado_projeto, emit_event
@@ -844,7 +845,32 @@ def escritas_por_script():
             continue
         anterior = conhecido.get(rel)
         mudados.append((rel, anterior.get("conteudo") if isinstance(anterior, dict) else None, depois))
+    _registar_desfazer_dos_scripts(mudados, pasta_raiz)
     return mudados
+
+
+TETO_DESFAZER_DOS_SCRIPTS = 200
+
+
+def _registar_desfazer_dos_scripts(mudados, pasta_raiz):
+    """Da uma entrada de desfazer a cada ficheiro que um script escreveu.
+
+    Sem isto o que um trecho de Python/JS grava no disco entra no card (pelo diff) mas
+    nao na pilha de desfazer: o Ctrl+Z nao o trazia de volta. O teto existe porque cada
+    registo notifica a interface - um script que reescreve 500 XML nao pode disparar 500
+    eventos, e o que ficar de fora e dito no relatorio do turno.
+    """
+    if not mudados:
+        return 0
+    registados = 0
+    for rel, antes, depois in mudados[:TETO_DESFAZER_DOS_SCRIPTS]:
+        caminho = os.path.join(pasta_raiz, rel.replace("/", os.sep))
+        try:
+            registrar_edicao(caminho, antes, depois)
+            registados += 1
+        except Exception:
+            continue
+    return registados
 
 def emitir_diffs_dos_scripts(teto_arquivos=200):
     """Manda para o log da sessao o que os scripts do turno escreveram.

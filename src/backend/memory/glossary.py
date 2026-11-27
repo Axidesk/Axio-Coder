@@ -3,7 +3,7 @@ import json
 
 from src.backend.config import APP_ROOT, caminho_data
 from src.backend.services.persistencia import gravar_json_atomico
-from src.backend.state import estado
+from src.backend.state import estado, projetos_ja_abertos
 
 def _glossary_path():
     return caminho_data("glossary.json")
@@ -81,7 +81,33 @@ def caminho_do_arquivo(arquivo):
         caminho = os.path.join(base, arquivo)
         if os.path.exists(caminho):
             return caminho
+    for pasta in _pastas_de_outros_projetos():
+        if os.path.normcase(os.path.abspath(pasta)) == os.path.normcase(os.path.abspath(APP_ROOT)):
+            continue
+        caminho = os.path.join(pasta, arquivo)
+        if os.path.exists(caminho):
+            return caminho
     return ""
+
+
+_bases_extra = {"marca": None, "pastas": []}
+
+
+def _pastas_de_outros_projetos():
+    """As pastas de projeto registadas, lidas uma vez por mudanca do registo.
+
+    O glossario e GLOBAL (data/glossary.json) e tem termos dos varios projetos do
+    utilizador: um alvo do Tibia74 marcado como ausente enquanto o Axio esta aberto
+    enchia o bloco de pendencias de ruido em todas as rodadas.
+    """
+    try:
+        marca = os.stat(os.path.join(APP_ROOT, "data", "projetos_abertos.json")).st_mtime_ns
+    except OSError:
+        marca = 0
+    if _bases_extra["marca"] != marca:
+        _bases_extra["pastas"] = projetos_ja_abertos()
+        _bases_extra["marca"] = marca
+    return _bases_extra["pastas"]
 
 def _alvo_do_identificador(identificador):
     """Reduz um identificador composto ao token que realmente existe no codigo.

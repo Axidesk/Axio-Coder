@@ -929,11 +929,17 @@ def raio_x_da_injecao(query=None, incluir_vetor=False):
             sims = [h.get("similarity") for h in hits if h.get("similarity") is not None]
             relatorio["busca"] = {
                 "query": query,
+                "wing": wing,
                 "hits": len(hits),
                 "apos_dedup": len(unicos),
                 "removidos_por_dedup": len(hits) - len(unicos),
                 "similaridade_min": round(min(sims), 3) if sims else None,
                 "similaridade_max": round(max(sims), 3) if sims else None,
+                "limiar": dados_busca.get("limiar") if isinstance(dados_busca, dict) else None,
+                "descartados_por_limiar": (dados_busca.get("descartados_por_limiar")
+                                           if isinstance(dados_busca, dict) else None),
+                "melhor_descartado": (dados_busca.get("melhor_descartado")
+                                      if isinstance(dados_busca, dict) else None),
                 "erro": dados_busca.get("error") if isinstance(dados_busca, dict) else None,
             }
         except Exception as e:
@@ -987,5 +993,16 @@ def formatar_raio_x(relatorio):
         else:
             linhas.append(f"BUSCA '{b.get('query')}': {b.get('hits')} hits, {b.get('apos_dedup')} "
                           f"apos dedup ({b.get('removidos_por_dedup')} repetidos), "
-                          f"similaridade {b.get('similaridade_min')}-{b.get('similaridade_max')}")
+                          f"similaridade {b.get('similaridade_min')}-{b.get('similaridade_max')}"
+                          f" [wing {b.get('wing') or 'nenhum'}, limiar {b.get('limiar')}]")
+            if not b.get("hits"):
+                cortados = b.get("descartados_por_limiar")
+                melhor = b.get("melhor_descartado")
+                if cortados:
+                    linhas.append(f"  PORQUE 0: {cortados} candidato(s) ficaram abaixo do limiar "
+                                  f"{b.get('limiar')} (o melhor deu {melhor}). Baixar o limiar ou "
+                                  "alargar o wing traria alguma coisa; o indice nao esta vazio.")
+                else:
+                    linhas.append("  PORQUE 0: o palace nao devolveu candidato nenhum para esta "
+                                  "consulta - nao e o limiar, e o indice ou o wing.")
     return "\n".join(linhas)

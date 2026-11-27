@@ -1600,23 +1600,40 @@ def _acao_esperar(identificador, segundos):
     if not pedido:
         return "ERRO: acao='esperar' precisa de 'janela' (o hwnd, 'pid:<numero>' ou um trecho do titulo)."
     limite = segundos or ESPERA_JANELA_PADRAO
-    fim = time.monotonic() + limite
+    inicio = time.monotonic()
+    fim = inicio + limite
     ultimo = ""
     while time.monotonic() < fim:
         janela, erro = _procurar_no_win32(pedido)
-        if janela is not None:
+        if janela is not None and _janela_pronta(janela):
             try:
                 caixa = janela.rectangle()
                 onde = f"canto ({caixa.left},{caixa.top}), {caixa.width()}x{caixa.height()}"
             except Exception:
                 onde = "caixa ilegivel"
             return (
-                f'A janela "{_texto(janela)}" esta aberta: hwnd {janela.handle}, {onde}.'
+                f'A janela "{_texto(janela)}" esta aberta: hwnd {janela.handle}, {onde}'
+                f" (esperei {time.monotonic() - inicio:.1f}s)."
                 " Use este hwnd em 'janela' nas proximas chamadas."
             )
-        ultimo = erro
+        ultimo = erro or "a janela existe mas ainda nao esta visivel"
         time.sleep(0.4)
-    return f'ERRO: "{pedido}" nao apareceu em {limite:.0f}s. {ultimo}'
+    return f'ERRO: "{pedido}" nao apareceu visivel em {limite:.0f}s. {ultimo}'
+
+
+def _janela_pronta(janela):
+    """A janela existe E tem area no ecra: a que o Win32 devolve antes do programa desenhar mede 0x0."""
+    hwnd = int(getattr(janela, "handle", 0) or 0)
+    if not hwnd:
+        return False
+    try:
+        user32 = ctypes.windll.user32
+        if not user32.IsWindowVisible(hwnd):
+            return False
+        caixa = janela.rectangle()
+        return caixa.width() > 0 and caixa.height() > 0
+    except Exception:
+        return True
 
 
 def _clicar(elemento):
@@ -1920,12 +1937,19 @@ def _teclas_a_janela(janela, tecla, alvo_teclas):
     um jogo ou uma app desenhada a mao precisa, onde nao ha controlo nenhum para focar.
     """
     hwnd = int(getattr(janela, "handle", 0) or 0)
+    aviso_foco = ""
     if hwnd:
         try:
             user32 = ctypes.windll.user32
             if user32.GetForegroundWindow() != hwnd:
                 user32.SetForegroundWindow(hwnd)
                 time.sleep(0.3)
+            if user32.GetForegroundWindow() != hwnd:
+                aviso_foco = (
+                    " ATENCAO: a janela nao ganhou o primeiro plano (o Windows recusa"
+                    " SetForegroundWindow a quem nao tem o foco) - a tecla pode ter ido para a"
+                    " janela que estava a frente."
+                )
         except Exception:
             pass
     passos = _teclas_em_passos(tecla)
@@ -1941,7 +1965,8 @@ def _teclas_a_janela(janela, tecla, alvo_teclas):
         )
     return (
         f'Enviei {tecla!r} (injectado como {alvo_teclas!r}) para a janela "{_texto(janela)}"'
-        " (a propria janela, sem alvo), pelo teclado do sistema. ATENCAO: um atalho nao deixa"
+        " (a propria janela, sem alvo), pelo teclado do sistema." + aviso_foco +
+        " ATENCAO: um atalho nao deixa"
         " marca no texto, por isso isto NAO prova que o alvo reagiu - confirme o efeito"
         " (acao='print' na janela, ou o estado que devia mudar) antes de concluir."
     )

@@ -12,7 +12,7 @@ import webbrowser
 
 from src.backend.services import arvore_processos, executaveis
 from src.backend.services.process_manager import montar_env_processo, tokenizar_linha
-from src.backend.services.saida import recortar_linhas
+from src.backend.services.saida import linhas_com_termo, recortar_linhas
 from src.backend.services.sugestoes import detectar_url_na_saida
 from src.backend.state import emit_event, estado
 from src.backend.tools.registry import register
@@ -25,9 +25,10 @@ from src.backend.tools.registry import register
         'cwd': {"tipo": "STRING", "desc": "Pasta onde o comando corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
         'caminhos_extra': {"tipo": "STRING", "desc": "Pastas a por A FRENTE do PATH, separadas por ';'. Para o compilador de um toolchain que nao esta no PATH desta maquina (ex: o cargo do rustup, em %USERPROFILE%\\.rustup\\toolchains\\<toolchain>\\bin).", "padrao": ""},
         'tempo': {"tipo": "INTEGER", "desc": "Segundos antes de abortar (padrao 30). Compilar um projeto inteiro pede varios minutos.", "padrao": None},
+        'filtro': {"tipo": "STRING", "desc": "Devolve so as linhas que contem algum destes termos, um por linha (ex: 'error:' e 'warning:' num build longo). Nao muda o comando, so o que volta para o chat.", "padrao": ""},
     },
 )
-def tool_executar_comando(comando: str, cwd: str = "", tempo=None, caminhos_extra: str = ""):
+def tool_executar_comando(comando: str, cwd: str = "", tempo=None, caminhos_extra: str = "", filtro: str = ""):
     emit_event("executing", function=f"Executando: {comando}")
     partes = (comando or "").strip().split()
     if not partes:
@@ -37,7 +38,7 @@ def tool_executar_comando(comando: str, cwd: str = "", tempo=None, caminhos_extr
         sugestao = FERRAMENTA_NATIVA.get(cmd_base, "as ferramentas nativas correspondentes")
         return f"ERRO: O comando '{cmd_base}' é proibido. Motivo: existe ferramenta nativa mais segura e rastreável para isso. Use: {sugestao}."
     return tool_executar_processo(comando, modo="aguardar", timeout=tempo or 30, cwd=cwd,
-                                  caminhos_extra=caminhos_extra)
+                                  caminhos_extra=caminhos_extra, filtro=filtro)
 
 def id_processo():
     n = estado.setdefault("_contador_processo", 0) + 1
@@ -556,6 +557,18 @@ def _texto_de_saida(bruto):
     decodificador = _DecodificadorSaida()
     return decodificador.alimentar(bruto) + decodificador.fechar()
 
+def _saida_filtrada(linhas_log, filtro):
+    """So as linhas do registo que contem algum termo do filtro, com a contagem do que ficou de fora."""
+    linhas_log = list(linhas_log or [])
+    termos = [t.strip() for t in str(filtro or "").splitlines() if t.strip()]
+    if not termos:
+        return recortar_linhas(linhas_log)
+    casadas = linhas_com_termo("\n".join(linhas_log), termos)
+    cabeca = f"[filtro {', '.join(termos)}: {len(casadas)} de {len(linhas_log)} linhas]"
+    if not casadas:
+        return cabeca + "\n(nenhuma linha casou o filtro)"
+    return cabeca + "\n" + recortar_linhas(casadas)
+
 def _codificar_entrada_processo(texto):
     """UTF-8 primeiro: os subprocessos arrancam com PYTHONIOENCODING=utf-8, logo e
     UTF-8 que esperam na entrada; a pagina OEM so fica como recurso."""
@@ -882,11 +895,12 @@ def _variaveis_da_linha(texto):
         'cwd': {"tipo": "STRING", "desc": "Pasta onde o processo corre. Vazio usa a pasta do projeto aberta.", "padrao": ""},
         'caminhos_extra': {"tipo": "STRING", "desc": "Pastas a por A FRENTE do PATH, separadas por ';'. Para programas fora do Python que precisam do seu proprio bin para arrancar (um toolchain, um kit do Qt) - o build script dessa linguagem procura o seu compilador no PATH.", "padrao": ""},
         'ambiente': {"tipo": "STRING", "desc": "Variaveis de ambiente a acrescentar ao processo, uma por linha no formato NOME=valor. Para o que nao entra por argumento na linha de comando: um alvo de teste, um caminho de SDK, uma opcao que o programa so le do ambiente. As variaveis daqui ganham as que o Axio ja poe (PATH do venv, PYTHONUTF8).", "padrao": ""},
+        'filtro': {"tipo": "STRING", "desc": "Devolve so as linhas da saida que contem algum destes termos, um por linha (ex: 'error' e 'warning' num build, 'ERRO' numa instalacao). O comando corre inteiro; muda so o que volta para o chat - e a resposta diz quantas linhas de quantas casaram.", "padrao": ""},
     },
     disponivel="edicao",
 )
 def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, cwd: str = "",
-                           caminhos_extra: str = "", ambiente: str = ""):
+                           caminhos_extra: str = "", ambiente: str = "", filtro: str = ""):
     pasta_de_trabalho, erro_pasta = _pasta_de_trabalho(cwd)
     if erro_pasta:
         return erro_pasta
@@ -947,7 +961,7 @@ def tool_executar_processo(comando: str, modo: str = "aguardar", timeout=None, c
         leitor.join(timeout=5)
         reg["status"] = "ok" if popen.returncode == 0 else "erro"
         emit_event("process_finished", pid=pid, exit_code=popen.returncode, status=reg["status"])
-        saida = recortar_linhas(reg["log"])
+        saida = _saida_filtrada(reg["log"], filtro)
         if reg["status"] == "ok":
             base = saida if saida.strip() else "SUCESSO: processo concluído sem saída."
             return f"{base}{nota_porta}\n{nota_ambiente}"

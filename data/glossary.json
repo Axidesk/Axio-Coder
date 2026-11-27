@@ -701,10 +701,10 @@
       "descricao": "Modo limpeza da lixeira: clicar dentro do painel #trash-view poe o botao #btn-trash no estado .trash-purge-btn ('Excluir tudo'), que esvazia a lixeira inteira via rota /api/trash_purge -> limpar_lixeira() (envio em lote para a Lixeira do Windows). Sai do modo ao clicar fora, fechar a lixeira ou esvaziar.",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 840,
+        "linha": 865,
         "conferido": [
-          1790471645.462,
-          34237
+          1795816149.833,
+          35201
         ]
       }
     },
@@ -804,10 +804,10 @@
       "descricao": "Contrato duro: comando irreversivel (git reset --hard, del /s, drop table) e recusado antes de tudo, e cada ferramenta com equivalente nativo e recusada com a dica da ferramenta. Fora isso vale uma lista fixa de executaveis (compiladores, gestores de pacotes, linters, git, midia, rede/sistema) MAIS qualquer .exe que viva DENTRO da pasta do projeto aberto - e o programa que o proprio projeto compilou, e poder arranca-lo e o que permite ler o arranque dele. Um caminho absoluto com espacos continua a ter de vir entre aspas, senao o tokenizador parte-o.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 355,
+        "linha": 356,
         "conferido": [
-          1792452429.886,
-          70672
+          1795816098.41,
+          71904
         ]
       }
     },
@@ -1171,10 +1171,10 @@
       "descricao": "tool_executar_python e tool_executar_js correm o trecho num processo novo (ficheiro temporario do sistema, apagado no fim) e devolvem o relatorio ao modelo; espelham no terminal da doc o que corre (process_started -> process_output -> process_finished, via _espelhar_teste_no_terminal). Substituem o padrao de criar scripts de prova na raiz. Desde 2026-10-01 vivem em src/backend/tools/harness.py (antes no modulo dos processos, process.py): o NUCLEO e _correr_trecho e o mapa _TRECHOS (rotulo, executavel, prefixo, sufixo, snippet, interpretador), por isso uma correcao no timeout ou no relatorio vale para os dois; os handlers sao cascas de 4 linhas. Os textos injetados antes do trecho (cabecalho Python, cabecalho JS e o DOM falso) vivem no mesmo modulo. O cwd do trecho e a raiz do projeto aberto, logo os caminhos relativos sao os mesmos das ferramentas. ARMADILHA: no trecho JS o cwd e a raiz do projeto, MAS um import relativo e resolvido a partir da PASTA DO FICHEIRO TEMPORARIO (%TEMP%) e falha com ERR_MODULE_NOT_FOUND; o cabecalho JS injeta importarProjeto(rel), que resolve o caminho contra o cwd. Para importar um modulo do FRONTEND e preciso stubbares document/window ANTES do await.",
       "localizacao": {
         "arquivo": "src/backend/tools/harness.py",
-        "linha": 1979,
+        "linha": 1998,
         "conferido": [
-          1795192671.644,
-          99406
+          1795816176.84,
+          100172
         ]
       }
     },
@@ -2246,8 +2246,8 @@
         "arquivo": "src/backend/tools/harness.py",
         "linha": 1471,
         "conferido": [
-          1795192671.644,
-          99406
+          1795816176.84,
+          100172
         ]
       }
     },
@@ -2327,10 +2327,10 @@
       "descricao": "Decodificador da saida dos processos geridos: fixa a pagina do stream no primeiro byte nao-ASCII (nao no primeiro bloco) e guarda os bytes cortados a meio por read1(4096). Os subprocessos arrancam com PYTHONUTF8=1 e PYTHONIOENCODING=utf-8, postos por montar_env_processo (src/backend/services/process_manager.py). O sintoma classico era \"Não há\" aparecer como \"NÒo hß\" (cp1252 lido como cp850).",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 517,
+        "linha": 518,
         "conferido": [
-          1792452429.886,
-          70672
+          1795816098.41,
+          71904
         ]
       }
     },
@@ -2799,10 +2799,10 @@
       "descricao": "Ferramenta generica para VER e OPERAR qualquer programa nativo do Windows pela interface (UI Automation, via pywinauto) - uma so ferramenta, zero codigo por programa. Vocabulario igual ao do preview: janelas, mapa, elemento, clicar, escrever, teclas, print. Alvo por '#AutomationId', 'n:<indice do mapa>', 'tipo:Document' ou um trecho do nome. Prefere SEMPRE os padroes UIA (invoke/value/toggle), que nao injectam input e funcionam com o ecra trancado; click_input e type_keys sao ultimo recurso e o retorno diz qual foi usado. Fala com a janela pelo hwnd, onde ela estiver - nao precisa de a embutir no Axio. Onde a arvore acaba (canvas de CAD, viewport 3D, jogo) nao ha alvo por nome.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 2221,
+        "linha": 2246,
         "conferido": [
-          1792631080.517,
-          107134
+          1795816141.903,
+          108180
         ]
       }
     },
@@ -2822,8 +2822,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 1119,
         "conferido": [
-          1792631080.517,
-          107134
+          1795816141.903,
+          108180
         ]
       }
     },
@@ -2842,10 +2842,10 @@
       "descricao": "Gesto de rato por coordenadas do ECRÁ: um press/move/release por segmento, com 20ms de pausa entre eventos. A pausa e obrigatoria para as ferramentas de FORMA (Oval, Retangulo) pegarem no arrasto; sem ela a app desenha so a reta entre o press e o release.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 1885,
+        "linha": 1902,
         "conferido": [
-          1792631080.517,
-          107134
+          1795816141.903,
+          108180
         ]
       }
     },
@@ -3126,10 +3126,10 @@
       "descricao": "Le a API de uma dependencia JA INSTALADA, do codigo dela no disco, em vez do conhecimento do modelo (regra 28). Num pacote npm devolve o ficheiro de declaracoes - o campo types/typings, ou um index.d.ts na raiz, ou o primeiro .d.ts encontrado ate 3 niveis (o dxf-viewer guarda o dele em src/) - e, sem declaracoes, o README. Num modulo Python devolve os nomes publicos de topo por AST, incluindo as REEXPORTACOES (`Flask = app.Flask`), que e o que quase todos os pacotes fazem no __init__.py. Aceita 'filtro' para trazer so as linhas com um termo. Nasceu a 2026-09-21 de um atrito medido: descobrir as opcoes do dxf-viewer custou seis leituras a mao dentro de node_modules.",
       "localizacao": {
         "arquivo": "src/backend/tools/pacotes.py",
-        "linha": 986,
+        "linha": 1026,
         "conferido": [
-          1792189905.116,
-          44824
+          1795816222.045,
+          46723
         ]
       }
     },
@@ -3329,10 +3329,10 @@
       "descricao": "Aba do #editor-tabs que fica com .editor-tab-apagado (color var(--perigo) + line-through no nome) quando o ficheiro ja nao existe no disco. A marca vive no Set tabsApagadas (editor.js) e e aplicada por renderTabs. Quem a acende: marcarAbaApagada, chamada pelo trashPath (via rapida do explorer) e por reconciliarAbas, que pergunta a POST /api/fs_existem quais das abas abertas desapareceram - cobre tambem o agente a apagar, o del no terminal e o ficheiro apagado fora do Axio. Gatilhos de reconciliarAbas: agendarReconciliacaoDeAbas (debounce 300ms) no files_changed (workspace.js:handleSSE) e no focus da janela. limparAbaApagada desmarca quando o ficheiro volta (restauro da lixeira, git checkout) ou quando a aba e reaberta (openFileInEditor).",
       "localizacao": {
         "arquivo": "src/frontend/js/editor/editor.js",
-        "linha": 274,
+        "linha": 299,
         "conferido": [
-          1790471645.462,
-          34237
+          1795816149.833,
+          35201
         ]
       }
     },
@@ -3611,8 +3611,8 @@
         "arquivo": "src/backend/tools/janelas.py",
         "linha": 1042,
         "conferido": [
-          1792631080.517,
-          107134
+          1795816141.903,
+          108180
         ]
       }
     },
@@ -3859,10 +3859,10 @@
       "descricao": "Acao de escrever no repositorio: poe em stage, grava o commit, cria a etiqueta e empurra para o remoto (recusa se houver credencial entre os ficheiros).",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 630,
+        "linha": 634,
         "conferido": [
-          1795298891.437,
-          41982
+          1795816125.051,
+          44844
         ]
       }
     },
@@ -3879,10 +3879,10 @@
       "descricao": "Leitura: raiz, branch e relacao com o remoto, ultimo commit, tags e o que esta em stage. Nao escreve nada.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 587,
+        "linha": 591,
         "conferido": [
-          1795298891.437,
-          41982
+          1795816125.051,
+          44844
         ]
       }
     },
@@ -3959,10 +3959,10 @@
       "descricao": "Le o ficheiro no endereco de leitura do remoto e confere-o contra o disco: pede CADA imagem referenciada com o status HTTP e as dimensoes reais (e o que denuncia a imagem servida por um endereco em cache) e lista os blocos do disco que ainda nao aparecem inteiros no publicado. Uma imagem que o utilizador jura estar desatualizada no GitHub, quando a medida diz que o publicado e byte a byte o do disco, e cache da URL - e o conserto e mudar o nome do ficheiro.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 899,
+        "linha": 947,
         "conferido": [
-          1795298891.437,
-          41982
+          1795816125.051,
+          44844
         ]
       }
     },
@@ -3979,10 +3979,10 @@
       "descricao": "O que o GitHub mostra a quem chega de fora: descricao, topics, licenca, estrelas, quem segue, discussions e os Releases publicados (cruzados com as tags locais). Sai dentro do tool_estado_git.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 750,
+        "linha": 799,
         "conferido": [
-          1795298891.437,
-          41982
+          1795816125.051,
+          44844
         ]
       }
     },
@@ -3999,10 +3999,10 @@
       "descricao": "Publica o Release de uma etiqueta ja empurrada: e o Release (e nao a etiqueta) que aparece na aba /releases e notifica quem segue o repositorio. Le a chave do GitHub do cofre (cartao 'github', campo 'chave') e, sem notas, gera o corpo das mensagens dos commits desde a etiqueta anterior. Correr duas vezes na mesma etiqueta atualiza em vez de duplicar.",
       "localizacao": {
         "arquivo": "src/backend/tools/git.py",
-        "linha": 663,
+        "linha": 668,
         "conferido": [
-          1795298891.437,
-          41982
+          1795816125.051,
+          44844
         ]
       }
     },
@@ -4672,10 +4672,10 @@
       "descricao": "Descodificacao da saida de um subprocesso: em modo texto o decode acontece numa thread leitora e um byte fora do UTF-8 mata-a, deixando o stdout como None (saida perdida). A leitura passa a ser binaria e o texto sai por `_texto_de_saida`, com o mesmo criterio do stream.",
       "localizacao": {
         "arquivo": "src/backend/tools/process.py",
-        "linha": 545,
+        "linha": 546,
         "conferido": [
-          1792452429.886,
-          70672
+          1795816098.41,
+          71904
         ]
       }
     },
@@ -5741,7 +5741,10 @@
       "localizacao": {
         "arquivo": "Server/config.lua",
         "linha": 17,
-        "ausente": true
+        "conferido": [
+          1794664099.379,
+          7226
+        ]
       }
     },
     {
@@ -5797,7 +5800,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 771,
-        "ausente": true
+        "conferido": [
+          1794664595.534,
+          33384
+        ]
       }
     },
     {
@@ -5815,7 +5821,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 407,
-        "ausente": true
+        "conferido": [
+          1794664595.534,
+          33384
+        ]
       }
     },
     {
@@ -5831,7 +5840,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 580,
-        "ausente": true
+        "conferido": [
+          1794664595.534,
+          33384
+        ]
       }
     },
     {
@@ -5848,7 +5860,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 193,
-        "ausente": true
+        "conferido": [
+          1795804441.053,
+          147404
+        ]
       }
     },
     {
@@ -5867,7 +5882,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/interface.js",
         "linha": 327,
-        "ausente": true
+        "conferido": [
+          1793465223.727,
+          14714
+        ]
       }
     },
     {
@@ -5908,7 +5926,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 100,
-        "ausente": true
+        "conferido": [
+          1794780677.671,
+          40095
+        ]
       }
     },
     {
@@ -5919,7 +5940,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/style.css",
         "linha": 5,
-        "ausente": true
+        "conferido": [
+          1794782188.191,
+          58932
+        ]
       }
     },
     {
@@ -5930,12 +5954,11 @@
         "curar com uh na pilha",
         "usar uh com alguem em cima"
       ],
-      "identificador": "ConfigManager::UH_TRAP",
-      "descricao": "Chave `UHTrap` do config.lua (lida em configmanager.cpp:136) que decide quem a runa de cura atinge quando ha mais de uma criatura no mesmo tile: ligada, o alvo e quem esta em cima.",
+      "identificador": "UH_TRAP",
+      "descricao": "Bool do configmanager que faz a runa de cura escolher UMA criatura por tile (a de cima) em vez do conjurador; sem ela quem esta por baixo cura-se sempre.",
       "localizacao": {
         "arquivo": "Solution/src/configmanager.h",
-        "linha": 164,
-        "ausente": true
+        "linha": ""
       }
     },
     {
@@ -5982,8 +6005,11 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 2377,
-        "ausente": true
+        "linha": 2661,
+        "conferido": [
+          1795812882.205,
+          104779
+        ]
       }
     },
     {
@@ -5993,8 +6019,11 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
-        "linha": 2951,
-        "ausente": true
+        "linha": 2953,
+        "conferido": [
+          1795804441.053,
+          147404
+        ]
       }
     },
     {
@@ -6010,7 +6039,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/conteudo.js",
         "linha": 83,
-        "ausente": true
+        "conferido": [
+          1791245421.256,
+          14476
+        ]
       }
     },
     {
@@ -6037,7 +6069,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 633,
-        "ausente": true
+        "conferido": [
+          1794756285.633,
+          71356
+        ]
       }
     },
     {
@@ -6048,7 +6083,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1702,
-        "ausente": true
+        "conferido": [
+          1794756285.633,
+          71356
+        ]
       }
     },
     {
@@ -6063,8 +6101,11 @@
       "descricao": "O painel volta a arrancar o servidor quando ele fecha (espera propria depois de guardar e depois de cair). Substitui o Start Serv.bat. Vale enquanto o painel estiver aberto.",
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
-        "linha": 2907,
-        "ausente": true
+        "linha": 2909,
+        "conferido": [
+          1795804441.053,
+          147404
+        ]
       }
     },
     {
@@ -6081,7 +6122,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 228,
-        "ausente": true
+        "conferido": [
+          1794780677.671,
+          40095
+        ]
       }
     },
     {
@@ -6098,7 +6142,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1012,
-        "ausente": true
+        "conferido": [
+          1793465223.799,
+          53631
+        ]
       }
     },
     {
@@ -6115,7 +6162,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1217,
-        "ausente": true
+        "conferido": [
+          1793465223.799,
+          53631
+        ]
       }
     },
     {
@@ -6126,7 +6176,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1734,
-        "ausente": true
+        "conferido": [
+          1794756285.633,
+          71356
+        ]
       }
     },
     {
@@ -6143,7 +6196,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1039,
-        "ausente": true
+        "conferido": [
+          1793465223.799,
+          53631
+        ]
       }
     },
     {
@@ -6153,8 +6209,11 @@
       "descricao": "",
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 1513,
-        "ausente": true
+        "linha": 1797,
+        "conferido": [
+          1795812882.205,
+          104779
+        ]
       }
     },
     {
@@ -6173,7 +6232,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1096,
-        "ausente": true
+        "conferido": [
+          1793465223.799,
+          53631
+        ]
       }
     },
     {
@@ -6211,7 +6273,10 @@
       "localizacao": {
         "arquivo": "htdocs/data_dir.php",
         "linha": 110,
-        "ausente": true
+        "conferido": [
+          1791039596.176,
+          3871
+        ]
       }
     },
     {
@@ -6222,7 +6287,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 155,
-        "ausente": true
+        "conferido": [
+          1791568332.074,
+          66823
+        ]
       }
     },
     {
@@ -6239,7 +6307,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 819,
-        "ausente": true
+        "conferido": [
+          1791568332.074,
+          66823
+        ]
       }
     },
     {
@@ -6256,7 +6327,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 1027,
-        "ausente": true
+        "conferido": [
+          1791568332.074,
+          66823
+        ]
       }
     },
     {
@@ -6295,10 +6369,10 @@
       "descricao": "Operar um programa nativo (jogo, cliente, app desenhada a mao) por gestos reais: abrir, arrumar as janelas lado a lado, correr um roteiro de cliques/teclas e olhar para o resultado. Os caracteres especiais do teclado vao escapados e as janelas com o mesmo titulo escolhem-se por '#N'.",
       "localizacao": {
         "arquivo": "src/backend/tools/janelas.py",
-        "linha": 2221,
+        "linha": 2246,
         "conferido": [
-          1792631080.517,
-          107134
+          1795816141.903,
+          108180
         ]
       }
     },
@@ -6316,7 +6390,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/xampp.rs",
         "linha": 472,
-        "ausente": true
+        "conferido": [
+          1795804428.067,
+          43731
+        ]
       }
     },
     {
@@ -6353,7 +6430,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 525,
-        "ausente": true
+        "conferido": [
+          1794780677.671,
+          40095
+        ]
       }
     },
     {
@@ -6369,8 +6449,11 @@
       "descricao": "A nota da porta na linha do Servidor fica vermelha quando a sonda de fora (acesso::retrato em src-tauri/src/acesso.rs) devolve 'fechada'. O balao (title) leva a causa: no-ip desatualizado ou porta por abrir no router.",
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
-        "linha": 2997,
-        "ausente": true
+        "linha": 2999,
+        "conferido": [
+          1795804441.053,
+          147404
+        ]
       }
     },
     {
@@ -6386,8 +6469,11 @@
       "descricao": "Como o painel diz que o htdocs do xampp está publicado e como repara uma junção pendurada (rmdir + mklink /J pelo cmd).",
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/xampp.rs",
-        "linha": 791,
-        "ausente": true
+        "linha": 798,
+        "conferido": [
+          1795804428.067,
+          43731
+        ]
       }
     },
     {
@@ -6405,8 +6491,11 @@
       "descricao": "A pasta onde o painel guarda o que e dele, dentro do proprio CPanel (Tools/CPanel/estado): os ajustes em painel.json e o registo dos valores originais do cliente em cliente_original.json. Ja nao vive em Server/data/painel - so a fila da mensagem global continua dentro do servidor, em data/anuncio.lua.",
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 780,
-        "ausente": true
+        "linha": 809,
+        "conferido": [
+          1795812882.205,
+          104779
+        ]
       }
     },
     {
@@ -6425,7 +6514,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/cliente.rs",
         "linha": 141,
-        "ausente": true
+        "conferido": [
+          1791253344.736,
+          40998
+        ]
       }
     },
     {
@@ -6441,8 +6533,11 @@
       "descricao": "O unico ficheiro do painel que fica dentro do servidor: data/anuncio.lua, porque e o canal Lua (data/globalevents/scripts/painel_anuncio.lua) que o le e o apaga. O roteiro do canal e reescrito a cada abertura do painel.",
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 190,
-        "ausente": true
+        "linha": 201,
+        "conferido": [
+          1795812882.205,
+          104779
+        ]
       }
     },
     {
@@ -6459,7 +6554,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/interface.js",
         "linha": 213,
-        "ausente": true
+        "conferido": [
+          1793465223.727,
+          14714
+        ]
       }
     },
     {
@@ -6496,8 +6594,11 @@
       "descricao": "A arvore de pastas do cartao Diretorios: raiz do projeto, as pastas principais e, so no Tools, as subpastas. As etiquetas de cada pasta ficam na coluna da direita (.guia-tag) e o fio vertical/horizontal e o cotovelo sao os pseudo-elementos do .guia-clip.",
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/tutorial.js",
-        "linha": 1149,
-        "ausente": true
+        "linha": 1199,
+        "conferido": [
+          1795804451.46,
+          47341
+        ]
       }
     },
     {
@@ -6512,8 +6613,11 @@
       "descricao": "O comando que acha o Editor_x64.exe dentro da pasta Tools (procurar_editores) e o abre. Botao no cartao Editar mapa do guia.",
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
-        "linha": 880,
-        "ausente": true
+        "linha": 909,
+        "conferido": [
+          1795812882.205,
+          104779
+        ]
       }
     },
     {
@@ -6532,7 +6636,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 125,
-        "ausente": true
+        "conferido": [
+          1795804451.46,
+          47341
+        ]
       }
     },
     {
@@ -6549,7 +6656,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/style.css",
         "linha": 2232,
-        "ausente": true
+        "conferido": [
+          1794782188.191,
+          58932
+        ]
       }
     },
     {
@@ -6585,7 +6695,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 84,
-        "ausente": true
+        "conferido": [
+          1794780677.671,
+          40095
+        ]
       }
     },
     {
@@ -6601,7 +6714,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 540,
-        "ausente": true
+        "conferido": [
+          1794780677.671,
+          40095
+        ]
       }
     },
     {
@@ -6618,7 +6734,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/cliente.rs",
         "linha": 628,
-        "ausente": true
+        "conferido": [
+          1791253344.736,
+          40998
+        ]
       }
     },
     {
@@ -6633,7 +6752,10 @@
       "localizacao": {
         "arquivo": "Solution/src/configmanager.h",
         "linha": 121,
-        "ausente": true
+        "conferido": [
+          1792632688.505,
+          4778
+        ]
       }
     },
     {
@@ -6649,7 +6771,10 @@
       "localizacao": {
         "arquivo": "Server/data/creaturescripts/scripts/login.lua",
         "linha": 5,
-        "ausente": true
+        "conferido": [
+          1791247338.64,
+          1428
+        ]
       }
     },
     {
@@ -6666,7 +6791,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 140,
-        "ausente": true
+        "conferido": [
+          1794664595.534,
+          33384
+        ]
       }
     },
     {
@@ -6683,7 +6811,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 254,
-        "ausente": true
+        "conferido": [
+          1795804451.46,
+          47341
+        ]
       }
     },
     {
@@ -6701,7 +6832,10 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 750,
-        "ausente": true
+        "conferido": [
+          1793465223.799,
+          53631
+        ]
       }
     },
     {
@@ -6741,7 +6875,10 @@
       "localizacao": {
         "arquivo": "Solution/src/npc.cpp",
         "linha": 216,
-        "ausente": true
+        "conferido": [
+          1790559629.622,
+          77962
+        ]
       }
     },
     {
@@ -6758,7 +6895,10 @@
       "localizacao": {
         "arquivo": "Tools/comparar_npc.py",
         "linha": 4,
-        "ausente": true
+        "conferido": [
+          1795804501.232,
+          39493
+        ]
       }
     },
     {
@@ -6779,7 +6919,10 @@
       "localizacao": {
         "arquivo": "Solution/src/commands.cpp",
         "linha": 129,
-        "ausente": true
+        "conferido": [
+          1791847787.419,
+          63870
+        ]
       }
     },
     {
@@ -6839,7 +6982,10 @@
       "localizacao": {
         "arquivo": "Server/config.lua",
         "linha": 98,
-        "ausente": true
+        "conferido": [
+          1794664099.379,
+          7226
+        ]
       }
     },
     {
@@ -6880,7 +7026,10 @@
       "localizacao": {
         "arquivo": "Solution/src/monster.cpp",
         "linha": 949,
-        "ausente": true
+        "conferido": [
+          1795373352.575,
+          41452
+        ]
       }
     }
   ]

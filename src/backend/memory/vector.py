@@ -314,11 +314,22 @@ def minerar_em_segundo_plano(pasta_chats, wing_atual):
         threading.Thread(target=esvaziar_fila_do_vetor, daemon=True).start()
 
 def _filtrar_por_relevancia(data):
+    """Corta o que fica abaixo do limiar e GUARDA o que cortou.
+
+    Sem esta conta, uma busca que devolve 0 hits nao se distingue de um indice vazio
+    nem de um limiar apertado - e a pergunta 'porque e que a memoria nao trouxe nada?'
+    ficava sem resposta.
+    """
     if not data or "results" not in data:
         return data
     data = dict(data)
     hits = data.get("results") or []
-    data["results"] = [h for h in hits if h.get("similarity", 0) >= MIN_SIMILARIDADE_MEMORIA]
+    guardados = [h for h in hits if h.get("similarity", 0) >= MIN_SIMILARIDADE_MEMORIA]
+    descartados = [h.get("similarity") for h in hits if h.get("similarity", 0) < MIN_SIMILARIDADE_MEMORIA]
+    data["results"] = guardados
+    data["limiar"] = MIN_SIMILARIDADE_MEMORIA
+    data["descartados_por_limiar"] = len(descartados)
+    data["melhor_descartado"] = round(max(descartados), 3) if descartados else None
     return data
 
 def buscar_memorias_com_timeout(query, palace_path, wing, n_results=5, timeout=8.0, room=None):

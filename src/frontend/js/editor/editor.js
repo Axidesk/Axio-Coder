@@ -18,6 +18,7 @@ export function loadFileIntoEditor(path, opts) {
         .then(r => r.json())
         .then(data => {
             if (data.error) {
+                if (_ficheiroSumiu(data.error)) return _largarAbaFantasma(path);
                 appendLine('[editor] ' + data.error, 'term-err');
                 state.wsStatus.textContent = 'editor: erro';
                 return false;
@@ -88,6 +89,30 @@ export function loadFileIntoEditor(path, opts) {
             return false;
         });
 }
+const ERRO_DE_FICHEIRO_AUSENTE = /n[ãa]o encontrad|no such file|does not exist|inexistente/i;
+
+function _ficheiroSumiu(mensagem) {
+    return ERRO_DE_FICHEIRO_AUSENTE.test(String(mensagem || ''));
+}
+
+function _largarAbaFantasma(path) {
+    if (state.openTabs.includes(path)) state.openTabs.splice(state.openTabs.indexOf(path), 1);
+    if (state.previewTabPath === path) state.previewTabPath = null;
+    if (state.abaAtiva === path) state.abaAtiva = null;
+    if (state.currentFile === path) {
+        state.currentFile = null;
+        if (state.editor) {
+            state.suppressAutoSave = true;
+            state.editor.setModel(null);
+            state.suppressAutoSave = false;
+        }
+        updateEditorWatermark();
+    }
+    renderTabs();
+    state.wsStatus.textContent = 'editor: aba descartada (o ficheiro ja nao existe)';
+    return false;
+}
+
 function _prepararTrocaDeFicheiro(path) {
     state.suppressAutoSave = true;
     clearHoverLine();
