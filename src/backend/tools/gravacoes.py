@@ -1745,13 +1745,22 @@ def _nomes_de_itens():
     return nomes
 
 
+def _pasta_de_monstros():
+    """A pasta dos XML de monstro do projeto aberto, ou a do Tibia dentro do Axio."""
+    for alvo in ("Server/data/monster", "docs/projetos/Tibia74/Server/data/monster"):
+        try:
+            devolvido = resolver_caminho(alvo)
+        except Exception:
+            continue
+        pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
+        if pasta and os.path.isdir(pasta):
+            return pasta
+    return None
+
+
 def _ficheiro_do_monstro(nome):
-    try:
-        devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
-    except Exception:
-        return None
-    pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-    if not pasta or not os.path.isdir(pasta):
+    pasta = _pasta_de_monstros()
+    if not pasta:
         return None
     procurado = re.sub(r"\s+", " ", nome.strip()).lower()
     direto = os.path.join(pasta, procurado + ".xml")
@@ -1787,12 +1796,8 @@ def _corpo_do_monstro(nome):
 
 def _monstro_do_corpo(corpo):
     """Nome do monstro cujo corpse= e este id (o inverso de _corpo_do_monstro)."""
-    try:
-        devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
-    except Exception:
-        return None
-    pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-    if not pasta or not os.path.isdir(pasta):
+    pasta = _pasta_de_monstros()
+    if not pasta:
         return None
     for ficheiro in sorted(os.listdir(pasta)):
         if not ficheiro.lower().endswith(".xml"):
@@ -1813,12 +1818,8 @@ def _monstros_do_corpo(corpo):
     """Todos os monstros cujo corpse= e este id: o mesmo corpo serve a varios."""
     if "corpos" not in _CACHE:
         indice = {}
-        try:
-            devolvido = resolver_caminho("docs/projetos/Tibia74/Server/data/monster")
-        except Exception:
-            devolvido = None
-        pasta = devolvido[0] if isinstance(devolvido, tuple) else devolvido
-        if pasta and os.path.isdir(pasta):
+        pasta = _pasta_de_monstros()
+        if pasta:
             for ficheiro in sorted(os.listdir(pasta)):
                 if not ficheiro.lower().endswith(".xml"):
                     continue

@@ -7,11 +7,22 @@ from functools import lru_cache
 from src.backend.config import APP_ROOT
 from src.backend.services.materiais import slug
 
-BASE_PADRAO = 'docs/projetos/Tibia74'
+BASE_PADRAO = os.path.join(APP_ROOT, 'docs', 'projetos', 'Tibia74')
 
 
-def pasta_cipsoft(base=BASE_PADRAO):
+def base_do_projeto():
+    """A pasta do Tibia74 em uso: a que esta aberta, ou a copia dentro do Axio."""
+    from src.backend.state import estado
+    raiz = str(estado.get("pasta_raiz") or "")
+    if raiz and (os.path.isdir(os.path.join(raiz, 'Server'))
+                 or os.path.isdir(os.path.join(raiz, 'Solution'))):
+        return raiz
+    return BASE_PADRAO
+
+
+def pasta_cipsoft(base=None):
     """Pasta dos .mon e do objects.srv: vive no gerados/ do Axio (gerados/tibia74)."""
+    base = base or base_do_projeto()
     guardada = os.path.join(APP_ROOT, 'gerados', slug(os.path.basename(os.path.normpath(str(base)))),
                             'monstros', 'cipsoft')
     if os.path.isdir(guardada):

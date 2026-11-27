@@ -483,7 +483,7 @@ def tool_comparar_items_xml(caminho_relativo, comparado, ids=""):
     },
 )
 def tool_validar_monstro(monstros, pasta=""):
-    base = tibia_dados.BASE_PADRAO
+    base = tibia_dados.base_do_projeto()
     if pasta:
         candidato = pasta.replace("\\", "/").rstrip("/")
         raiz = "/Server/data/monster"
@@ -567,7 +567,7 @@ def _ids_por_nome_do_servidor(base):
     },
 )
 def tool_mapear_loot_mon(monstros, pasta=""):
-    base = tibia_dados.BASE_PADRAO
+    base = tibia_dados.base_do_projeto()
     if pasta:
         candidato = pasta.replace("\\", "/").rstrip("/")
         raiz = "/Server/data/monster"
