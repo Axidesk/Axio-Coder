@@ -1,17 +1,19 @@
 import { state } from '../state.js';
 
     async function fetchSessionHistoryData() {
-        const resp = await fetch('/api/session_history');
+        const area = window.__axioAreaAtiva ? window.__axioAreaAtiva() : '';
+        const resp = await fetch('/api/session_history', { __area: area });
         const data = await resp.json();
-        state.sessionHistoryList = data.sessions || [];
+        if (area && window.__axioAreaAtiva && window.__axioAreaAtiva() !== area) return;
+        state.sessionHistoryList = (data.sessions || []).map(s => Object.assign({ __area: area }, s));
         state.sessionDetailCache = {};
         state.porSubirLido = false;
         state.sessionHistoryLoaded = true;
-        await fetchCheckpointState();
+        await fetchCheckpointState(area);
     }
-    async function fetchCheckpointState() {
+    async function fetchCheckpointState(area) {
         try {
-            const resp = await fetch('/api/checkpoint_state');
+            const resp = await fetch('/api/checkpoint_state', { __area: area });
             const data = await resp.json();
             state.currentCheckpointId = data.checkpoint_id || null;
             state.checkpointRestoredAt = data.checkpoint_restored_at || 0;

@@ -538,7 +538,7 @@ let cacheDoUltimoEnviadoValida = false;
     }
     async function carregarIndiceDeSessoes() {
         try {
-            const resp = await fetch('/api/sessions_index');
+            const resp = await fetch('/api/sessions_index', { __area: window.__axioAreaAtiva ? window.__axioAreaAtiva() : '' });
             const data = await resp.json();
             (data.sessions || []).forEach(s => {
                 state.sessionDetailCache[s.filename] = (s.rounds || []).map(r => ({ ...r, __session: s.filename, __leve: true }));
@@ -592,7 +592,7 @@ let cacheDoUltimoEnviadoValida = false;
     async function _buscarRodadaCompleta(saved) {
         for (let tentativa = 0; tentativa < TENTATIVAS_DA_RODADA; tentativa++) {
             try {
-                const resp = await fetch(`/api/session_round?file=${encodeURIComponent(saved.__session)}&id=${encodeURIComponent(saved.id)}`);
+                const resp = await fetch(`/api/session_round?file=${encodeURIComponent(saved.__session)}&id=${encodeURIComponent(saved.id)}`, { __area: saved.__area });
                 if (resp.status === 404) return saved;
                 const data = await resp.json();
                 if (data && !data.error) {

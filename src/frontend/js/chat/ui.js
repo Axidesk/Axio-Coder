@@ -260,6 +260,8 @@ export const INSTRUCAO_LIMPAR_CONTEXTO = 'Salve na memória de longo prazo o que
         state.currentTurnSummary = '';
         state.isGenerating = false;
         state.currentTurnId = null;
+        if (window.__axioSoltarAreaDoTurno) window.__axioSoltarAreaDoTurno(state.areaDoTurnoDoEstado);
+        state.areaDoTurnoDoEstado = '';
         resetSendButton();
         setLogsLoading(false);
         window.currentGroupBalloon = null;

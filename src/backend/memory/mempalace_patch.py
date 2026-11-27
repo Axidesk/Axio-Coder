@@ -1,3 +1,6 @@
+import os
+
+
 def abrir_client(palace_path):
     """Abre (ou reaproveita) o PersistentClient do palace com as migracoes do mempalace 3.9.0.
 
@@ -13,14 +16,38 @@ def abrir_client(palace_path):
 
 
 def aplicar_patch():
-    """No-op desde o mempalace 3.9.0.
+    """Impede o mempalace de reconstruir o client a cada escrita no palace.
 
-    A sobrescrita antiga de ChromaBackend.get_collection ficou redundante e
-    prejudicial: o mempalace 3.9.0 ja cacheia o client (ChromaBackend._client),
-    aplica as migracoes (_prepare_palace_for_open), resolve a embedding function
-    e serializa as escritas (ChromaCollection._write_lock). Sobrescrever o
-    get_collection com a versao antiga abria o PersistentClient direto, sem o
-    pass de migracao, o que fazia palaces antigos (chromadb <=1.5.8) travarem
-    na abertura com chromadb 1.5.9.
+    O ChromaBackend._client guarda o client em cache e reabre-o quando a
+    assinatura (inode, mtime) do chroma.sqlite3 muda. Cada escrita nossa muda o
+    mtime - e quem esta a MEIO de uma escrita, o proprio minerador, fica com a
+    collection a apontar para um System ja parado: o delete das drawers antigas
+    falha com "'RustBindingsAPI' object has no attribute 'bindings'" e a busca
+    semantica cai em "timeout ao acessar banco de memorias".
+
+    Fixar o mtime em zero mantem a detecao da TROCA do ficheiro (inode, o caso
+    do palace reconstruido) e deixa de disparar a cada commit. O ChromaDB le o
+    SQLite em cada consulta, logo nao ha dado em cache a ficar velho.
+
+    O resto do que aqui estava (sobrescrever get_collection) ficou redundante e
+    prejudicial a partir do mempalace 3.9.0: ele ja cacheia o client, aplica as
+    migracoes e serializa as escritas.
     """
-    return None
+    try:
+        from mempalace.backends.chroma import ChromaBackend
+    except Exception:
+        return None
+    if getattr(ChromaBackend, "_axio_sem_mtime", False):
+        return False
+
+    @staticmethod
+    def _db_stat_estavel(palace_path):
+        try:
+            st = os.stat(os.path.join(palace_path, "chroma.sqlite3"))
+            return (st.st_ino, 0.0)
+        except OSError:
+            return (0, 0.0)
+
+    ChromaBackend._db_stat = _db_stat_estavel
+    ChromaBackend._axio_sem_mtime = True
+    return True

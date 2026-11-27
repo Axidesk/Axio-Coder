@@ -133,6 +133,8 @@ async function sendMessage() {
         }
 
         state.currentTurnId = Date.now() + '-' + Math.random().toString(36).slice(2);
+        state.areaDoTurnoDoEstado = window.__axioAreaAtiva ? window.__axioAreaAtiva() : '';
+        if (window.__axioMarcarAreaDoTurno) window.__axioMarcarAreaDoTurno(state.areaDoTurnoDoEstado);
         const payload = { message: text, mode: state.currentMode, use_deepseek: state.selectedModel === 'deepseek' || state.selectedModel === 'deepseek-v4-pro', ai_model: state.selectedModel, turn_id: state.currentTurnId };
         if (state.attachedImages.length > 0) {
             payload.images = state.attachedImages.map(img => ({ base64: img.base64, name: img.name, mime: img.mime }));
@@ -214,6 +216,8 @@ function startSSE() {
         console.error("EventSource failed:", err);
         state.isGenerating = false;
         state.currentTurnId = null;
+        if (window.__axioSoltarAreaDoTurno) window.__axioSoltarAreaDoTurno(state.areaDoTurnoDoEstado);
+        state.areaDoTurnoDoEstado = '';
         resetSendButton();
         setLogsLoading(false);
     };
@@ -757,6 +761,8 @@ async function tratar_done(data) {
     _pararPlanoEmCurso(currentPlanContainer);
     state.isGenerating = false;
     state.currentTurnId = null;
+    if (window.__axioSoltarAreaDoTurno) window.__axioSoltarAreaDoTurno(state.areaDoTurnoDoEstado);
+    state.areaDoTurnoDoEstado = '';
     resetSendButton();
     setLogsLoading(false);
     if (currentGroupBalloon) {

@@ -65,9 +65,36 @@ function recorte(el, quantas) {
     }).join('');
 }
 
+function chaveDaArea() {
+    const fn = window.__axioAreaAtiva;
+    return typeof fn === 'function' ? (fn() || 'principal') : 'principal';
+}
+
+function lerMapa() {
+    let bruto = null;
+    try {
+        bruto = JSON.parse(sessionStorage.getItem(CHAVE) || 'null');
+    } catch (e) {
+        return {};
+    }
+    if (!bruto) return {};
+    if (Array.isArray(bruto) || bruto.paineis) return {};
+    return bruto;
+}
+
+function gravarMapa(mapa) {
+    try {
+        sessionStorage.setItem(CHAVE, JSON.stringify(mapa));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 export function guardarConversa() {
     const partes = paineis();
     if (!partes.length) return false;
+    const chave = chaveDaArea();
     for (const quantas of TAMANHOS_DE_EMERGENCIA) {
         const dados = partes.map((par) => ({
             html: recorte(par.inner, quantas),
@@ -75,23 +102,15 @@ export function guardarConversa() {
         }));
         if (!dados.some((dado) => dado.html)) return false;
         // painel vazio NAO apaga o que ja esta guardado: um bug que limpe a tela nao leva a conversa com ele.
-        try {
-            sessionStorage.setItem(CHAVE, JSON.stringify({ paineis: dados, blocos: capturarBlocos(quantas) }));
-            return true;
-        } catch (e) {
-            // sem espaco: tenta de novo com menos rodadas guardadas
-        }
+        const mapa = lerMapa();
+        mapa[chave] = { paineis: dados, blocos: capturarBlocos(quantas) };
+        if (gravarMapa(mapa)) return true;
     }
     return false;
 }
 
 export function restaurarConversa() {
-    let dados = null;
-    try {
-        dados = JSON.parse(sessionStorage.getItem(CHAVE) || 'null');
-    } catch (e) {
-        dados = null;
-    }
+    const dados = lerMapa()[chaveDaArea()] || null;
     const paineisGuardados = Array.isArray(dados) ? dados : ((dados && dados.paineis) || []);
     const blocosGuardados = (dados && !Array.isArray(dados) && dados.blocos) || {};
     if (!Array.isArray(paineisGuardados) || !paineisGuardados.length) return false;
@@ -126,11 +145,15 @@ export function restaurarConversa() {
 }
 
 export function esquecerConversa() {
-    try {
-        sessionStorage.removeItem(CHAVE);
-    } catch (e) {
-        // sem sessao de janela: nao ha nada guardado para esquecer
+    const mapa = lerMapa();
+    const chave = chaveDaArea();
+    if (!(chave in mapa)) return;
+    delete mapa[chave];
+    if (Object.keys(mapa).length === 0) {
+        try { sessionStorage.removeItem(CHAVE); } catch (e) {}
+        return;
     }
+    gravarMapa(mapa);
 }
 
 export function reiniciarAInterface() {
