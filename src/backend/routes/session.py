@@ -40,6 +40,7 @@ from src.backend.services.session_index import (
     atualizar_indice_de_payload,
     indice_de_log,
     rodada_completa_de_log,
+    sem_prefixo_de_projeto,
 )
 from src.backend.tools.js_contrato import quebras_introduzidas
 
@@ -293,6 +294,14 @@ def session_history():
 
     return jsonify({"sessions": sessoes})
 
+def _rodadas_do_projeto(rounds):
+    """Caminhos das rodadas vistos a partir da pasta aberta, sem o prefixo da hospedeira."""
+    raiz = estado.get("pasta_raiz", "")
+    for rodada in rounds or []:
+        for ficheiro in (rodada.get("files") or []):
+            ficheiro["name"] = sem_prefixo_de_projeto(ficheiro.get("name"), raiz)
+    return rounds
+
 @session_bp.route('/api/sessions_index', methods=['GET'])
 def sessions_index():
     """Indice leve de todas as sessoes: alimenta a pilha do historico e a busca."""
@@ -309,7 +318,7 @@ def sessions_index():
     sessoes = []
     for arq in arquivos:
         indice = indice_de_log(os.path.join(pasta_logs, arq))
-        sessoes.append({"filename": arq, "rounds": (indice or {}).get("rounds", [])})
+        sessoes.append({"filename": arq, "rounds": _rodadas_do_projeto((indice or {}).get("rounds", []))})
     return jsonify({"sessions": sessoes})
 
 @session_bp.route('/api/session_round', methods=['GET'])
@@ -332,7 +341,7 @@ def session_round():
 
     if rodada is None:
         return jsonify({"error": "tarefa não encontrada"}), 404
-    return jsonify(rodada)
+    return jsonify(_rodadas_do_projeto([rodada])[0])
 
 def _gravar_payload(caminho, payload):
     """Grava o payload JSON de um log de sessao.

@@ -844,10 +844,10 @@
       "descricao": "Acao acao='compactar' de tool_gerenciar_banco_vetorial. Roda sqlite3 VACUUM no chroma.sqlite3 sob memoria_lock para devolver ao disco o espaco das drawers apagadas: o SQLite marca as paginas como livres mas NAO encolhe o ficheiro sem VACUUM. Precisa de ate 2x o tamanho do ficheiro em espaco livre.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 857,
+        "linha": 856,
         "conferido": [
-          1795790394.546,
-          40667
+          1795791994.668,
+          40621
         ]
       }
     },
@@ -858,10 +858,10 @@
       "descricao": "Progresso textual das operacoes pesadas do vetor (varredura, limpeza, reparo, compactacao). Gravado por _marcar_progresso em estado[\"vetor_ocupado\"][\"progresso\"] e exibido por _ocupacao_atual no acao='status'. E o unico sinal que sobrevive ao timeout da tool: como a operacao continua em background, o resultado da ferramenta perde-se, mas a marca de ocupacao (com o progresso) continua em RAM ate terminar. A mesma marca serve o minerador de memorias (sem campo de progresso), que a grava enquanto minera - ver o termo \"trava da memoria\".",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 563,
+        "linha": 562,
         "conferido": [
-          1795790394.546,
-          40667
+          1795791994.668,
+          40621
         ]
       }
     },
@@ -940,10 +940,10 @@
       "descricao": "Gate que diz se a pasta de projeto aberta E a raiz do proprio Axio (compara pasta_raiz com APP_ROOT em normcase). O bloco injetado e _bloco_modo_projeto (ai/instructions.py). Em MODO OUTRO PROJETO as ferramentas do agente (src/backend, src/frontend, data) ficam fora do alcance de escrita e a regra 26 suspende-se: nao se edita codigo do Axio nem se promete melhoria. ATENCAO, isto MUDOU a 2026-09-19: o radar de atrito ja NAO ignora a rodada fora do Axio - continua a medir e grava o que apanhou no caderno de melhorias adiadas (APP_ROOT/.axio/melhorias_pendentes.json, via _acumular_pendentes em ai/atrito.py), que volta a ser injetado UMA vez por arranque quando a pasta aberta e outra vez a do Axio (_bloco_pendentes). O projeto do utilizador nao recebe ficheiro nenhum.",
       "localizacao": {
         "arquivo": "src/backend/state.py",
-        "linha": 150,
+        "linha": 189,
         "conferido": [
-          1791637351.076,
-          5274
+          1795791976.695,
+          6820
         ]
       }
     },
@@ -1085,10 +1085,10 @@
       "descricao": "Rota que fixa a pasta de projeto na sessao e a grava para o arranque seguinte: chama `atualizar_settings({\"projeto\": {\"ultima_pasta\": pasta}})` (settings.json, sem reset dos clientes de IA). No frontend, `restaurarPastaSelecionada` (js/chat/files.js) le \"ultima_pasta\" de GET /api/env_info e reabre sozinha no arranque; o dialogo nativo recebe a pasta em uso como `defaultPath` (ipcMain 'select-folder', src/main.js). A rota NAO escreve na barra de estado (nao emite \"Diretorio carregado\"): quem escreve e o frontend, em `abrirPasta(folderPath, recarregando)`, que mostra \"Carregando diretorio...\" e depois \"Diretorio carregado.\" ou \"Diretorio recarregado.\" conforme venha da escolha do utilizador ou do restauro do arranque. `restaurarPastaSelecionada` deduplica a dupla chamada do arranque (renderer ao ligar + onopen do SSE) com a promise em `restauracaoEmCurso`, para nao sairem dois POST /api/set_folder nem dois avisos seguidos.",
       "localizacao": {
         "arquivo": "src/backend/routes/chat.py",
-        "linha": 37,
+        "linha": 38,
         "conferido": [
-          1792452229.807,
-          7793
+          1795792001.771,
+          7892
         ]
       }
     },
@@ -1103,10 +1103,10 @@
       "descricao": "Recusa (texto) quando ja ha operacao pesada no vetor; a marca de ocupacao (estado[\"vetor_ocupado\"]) inclui agora o minerador de memorias, e as gravacoes/exclusoes de notas adiam-se numa fila (_fila_vetor, drenada por esvaziar_fila_do_vetor) em vez de disputarem o memoria_lock.",
       "localizacao": {
         "arquivo": "src/backend/memory/vector.py",
-        "linha": 587,
+        "linha": 586,
         "conferido": [
-          1795790394.546,
-          40667
+          1795791994.668,
+          40621
         ]
       }
     },
@@ -5741,10 +5741,7 @@
       "localizacao": {
         "arquivo": "Server/config.lua",
         "linha": 17,
-        "conferido": [
-          1794664099.379,
-          7226
-        ]
+        "ausente": true
       }
     },
     {
@@ -5800,10 +5797,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 771,
-        "conferido": [
-          1794664595.534,
-          33384
-        ]
+        "ausente": true
       }
     },
     {
@@ -5821,10 +5815,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 407,
-        "conferido": [
-          1794664595.534,
-          33384
-        ]
+        "ausente": true
       }
     },
     {
@@ -5840,10 +5831,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 580,
-        "conferido": [
-          1794664595.534,
-          33384
-        ]
+        "ausente": true
       }
     },
     {
@@ -5860,10 +5848,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 193,
-        "conferido": [
-          1794783076.119,
-          145935
-        ]
+        "ausente": true
       }
     },
     {
@@ -5882,10 +5867,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/interface.js",
         "linha": 327,
-        "conferido": [
-          1793465223.727,
-          14714
-        ]
+        "ausente": true
       }
     },
     {
@@ -5926,10 +5908,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 100,
-        "conferido": [
-          1794780677.671,
-          40095
-        ]
+        "ausente": true
       }
     },
     {
@@ -5940,10 +5919,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/style.css",
         "linha": 5,
-        "conferido": [
-          1794782188.191,
-          58932
-        ]
+        "ausente": true
       }
     },
     {
@@ -5958,7 +5934,8 @@
       "descricao": "Chave `UHTrap` do config.lua (lida em configmanager.cpp:136) que decide quem a runa de cura atinge quando ha mais de uma criatura no mesmo tile: ligada, o alvo e quem esta em cima.",
       "localizacao": {
         "arquivo": "Solution/src/configmanager.h",
-        "linha": 164
+        "linha": 164,
+        "ausente": true
       }
     },
     {
@@ -5967,11 +5944,11 @@
       "identificador": "aplicarVista",
       "descricao": "",
       "localizacao": {
-        "arquivo": "Tools/CPanel/frontend/app.js",
-        "linha": 369,
+        "arquivo": "src/frontend/js/editor/explorer.js",
+        "linha": 105,
         "conferido": [
-          1794783076.119,
-          145935
+          1790449021.136,
+          34701
         ]
       }
     },
@@ -6006,10 +5983,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 2377,
-        "conferido": [
-          1794751026.246,
-          94927
-        ]
+        "ausente": true
       }
     },
     {
@@ -6020,10 +5994,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 2951,
-        "conferido": [
-          1794783076.119,
-          145935
-        ]
+        "ausente": true
       }
     },
     {
@@ -6039,10 +6010,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/conteudo.js",
         "linha": 83,
-        "conferido": [
-          1791245421.256,
-          14476
-        ]
+        "ausente": true
       }
     },
     {
@@ -6069,10 +6037,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 633,
-        "conferido": [
-          1794756285.633,
-          71356
-        ]
+        "ausente": true
       }
     },
     {
@@ -6083,10 +6048,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1702,
-        "conferido": [
-          1794756285.633,
-          71356
-        ]
+        "ausente": true
       }
     },
     {
@@ -6102,10 +6064,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 2907,
-        "conferido": [
-          1794783076.119,
-          145935
-        ]
+        "ausente": true
       }
     },
     {
@@ -6122,10 +6081,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 228,
-        "conferido": [
-          1794780677.671,
-          40095
-        ]
+        "ausente": true
       }
     },
     {
@@ -6142,10 +6098,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1012,
-        "conferido": [
-          1793465223.799,
-          53631
-        ]
+        "ausente": true
       }
     },
     {
@@ -6162,10 +6115,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1217,
-        "conferido": [
-          1793465223.799,
-          53631
-        ]
+        "ausente": true
       }
     },
     {
@@ -6176,10 +6126,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/base.rs",
         "linha": 1734,
-        "conferido": [
-          1794756285.633,
-          71356
-        ]
+        "ausente": true
       }
     },
     {
@@ -6196,10 +6143,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1039,
-        "conferido": [
-          1793465223.799,
-          53631
-        ]
+        "ausente": true
       }
     },
     {
@@ -6210,10 +6154,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 1513,
-        "conferido": [
-          1794751026.246,
-          94927
-        ]
+        "ausente": true
       }
     },
     {
@@ -6232,10 +6173,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 1096,
-        "conferido": [
-          1793465223.799,
-          53631
-        ]
+        "ausente": true
       }
     },
     {
@@ -6273,10 +6211,7 @@
       "localizacao": {
         "arquivo": "htdocs/data_dir.php",
         "linha": 110,
-        "conferido": [
-          1791039596.176,
-          3871
-        ]
+        "ausente": true
       }
     },
     {
@@ -6287,10 +6222,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 155,
-        "conferido": [
-          1791568332.074,
-          66823
-        ]
+        "ausente": true
       }
     },
     {
@@ -6307,10 +6239,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 819,
-        "conferido": [
-          1791568332.074,
-          66823
-        ]
+        "ausente": true
       }
     },
     {
@@ -6327,10 +6256,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/site.js",
         "linha": 1027,
-        "conferido": [
-          1791568332.074,
-          66823
-        ]
+        "ausente": true
       }
     },
     {
@@ -6390,10 +6316,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/xampp.rs",
         "linha": 472,
-        "conferido": [
-          1791144908.224,
-          43197
-        ]
+        "ausente": true
       }
     },
     {
@@ -6430,10 +6353,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 525,
-        "conferido": [
-          1794780677.671,
-          40095
-        ]
+        "ausente": true
       }
     },
     {
@@ -6450,10 +6370,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/app.js",
         "linha": 2997,
-        "conferido": [
-          1794783076.119,
-          145935
-        ]
+        "ausente": true
       }
     },
     {
@@ -6470,10 +6387,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/xampp.rs",
         "linha": 791,
-        "conferido": [
-          1791144908.224,
-          43197
-        ]
+        "ausente": true
       }
     },
     {
@@ -6492,10 +6406,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 780,
-        "conferido": [
-          1794751026.246,
-          94927
-        ]
+        "ausente": true
       }
     },
     {
@@ -6514,10 +6425,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/cliente.rs",
         "linha": 141,
-        "conferido": [
-          1791253344.736,
-          40998
-        ]
+        "ausente": true
       }
     },
     {
@@ -6534,10 +6442,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 190,
-        "conferido": [
-          1794751026.246,
-          94927
-        ]
+        "ausente": true
       }
     },
     {
@@ -6554,10 +6459,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/interface.js",
         "linha": 213,
-        "conferido": [
-          1793465223.727,
-          14714
-        ]
+        "ausente": true
       }
     },
     {
@@ -6595,10 +6497,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 1149,
-        "conferido": [
-          1791568338.441,
-          45453
-        ]
+        "ausente": true
       }
     },
     {
@@ -6614,10 +6513,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/main.rs",
         "linha": 880,
-        "conferido": [
-          1794751026.246,
-          94927
-        ]
+        "ausente": true
       }
     },
     {
@@ -6636,10 +6532,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 125,
-        "conferido": [
-          1791568338.441,
-          45453
-        ]
+        "ausente": true
       }
     },
     {
@@ -6656,10 +6549,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/style.css",
         "linha": 2232,
-        "conferido": [
-          1794782188.191,
-          58932
-        ]
+        "ausente": true
       }
     },
     {
@@ -6695,10 +6585,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 84,
-        "conferido": [
-          1794780677.671,
-          40095
-        ]
+        "ausente": true
       }
     },
     {
@@ -6714,10 +6601,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/index.html",
         "linha": 540,
-        "conferido": [
-          1794780677.671,
-          40095
-        ]
+        "ausente": true
       }
     },
     {
@@ -6734,10 +6618,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/src-tauri/src/cliente.rs",
         "linha": 628,
-        "conferido": [
-          1791253344.736,
-          40998
-        ]
+        "ausente": true
       }
     },
     {
@@ -6752,10 +6633,7 @@
       "localizacao": {
         "arquivo": "Solution/src/configmanager.h",
         "linha": 121,
-        "conferido": [
-          1792632688.505,
-          4778
-        ]
+        "ausente": true
       }
     },
     {
@@ -6771,10 +6649,7 @@
       "localizacao": {
         "arquivo": "Server/data/creaturescripts/scripts/login.lua",
         "linha": 5,
-        "conferido": [
-          1791247338.64,
-          1428
-        ]
+        "ausente": true
       }
     },
     {
@@ -6791,10 +6666,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/config.js",
         "linha": 140,
-        "conferido": [
-          1794664595.534,
-          33384
-        ]
+        "ausente": true
       }
     },
     {
@@ -6811,10 +6683,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/tutorial.js",
         "linha": 254,
-        "conferido": [
-          1791568338.441,
-          45453
-        ]
+        "ausente": true
       }
     },
     {
@@ -6832,10 +6701,7 @@
       "localizacao": {
         "arquivo": "Tools/CPanel/frontend/base.js",
         "linha": 750,
-        "conferido": [
-          1793465223.799,
-          53631
-        ]
+        "ausente": true
       }
     },
     {
@@ -6875,10 +6741,7 @@
       "localizacao": {
         "arquivo": "Solution/src/npc.cpp",
         "linha": 216,
-        "conferido": [
-          1790559629.622,
-          77962
-        ]
+        "ausente": true
       }
     },
     {
@@ -6895,10 +6758,7 @@
       "localizacao": {
         "arquivo": "Tools/comparar_npc.py",
         "linha": 4,
-        "conferido": [
-          1791768095.107,
-          38123
-        ]
+        "ausente": true
       }
     },
     {
@@ -6919,10 +6779,7 @@
       "localizacao": {
         "arquivo": "Solution/src/commands.cpp",
         "linha": 129,
-        "conferido": [
-          1791847787.419,
-          63870
-        ]
+        "ausente": true
       }
     },
     {
@@ -6982,10 +6839,7 @@
       "localizacao": {
         "arquivo": "Server/config.lua",
         "linha": 98,
-        "conferido": [
-          1794664099.379,
-          7226
-        ]
+        "ausente": true
       }
     },
     {
@@ -7005,8 +6859,8 @@
         "arquivo": "src/backend/tools/gravacoes.py",
         "linha": 250,
         "conferido": [
-          1795790838.89,
-          109169
+          1795792046.618,
+          108795
         ]
       }
     },
@@ -7026,10 +6880,7 @@
       "localizacao": {
         "arquivo": "Solution/src/monster.cpp",
         "linha": 949,
-        "conferido": [
-          1795373352.575,
-          41452
-        ]
+        "ausente": true
       }
     }
   ]

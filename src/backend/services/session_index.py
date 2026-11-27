@@ -35,6 +35,25 @@ def _bloqueio_de(caminho):
         return _bloqueios.setdefault(caminho, threading.Lock())
 
 
+def sem_prefixo_de_projeto(rel, raiz):
+    """Tira o prefixo de projeto hospedado ('docs/projetos/<pasta>/') de um caminho.
+
+    Uma rodada feita com o projeto hospedeiro aberto grava os caminhos relativos a
+    ELE; aberto o projeto na pasta dele, esse prefixo aponta para uma pasta que nao
+    existe la e o ficheiro do card deixava de abrir. Corta-se so o prefixo da
+    PROPRIA pasta aberta - o caminho de outro projeto fica como esta.
+    """
+    if not isinstance(rel, str) or not raiz:
+        return rel
+    nome = os.path.basename(os.path.normpath(raiz))
+    if not nome:
+        return rel
+    partes = rel.replace("\\", "/").split("/")
+    if len(partes) > 3 and partes[0] == "docs" and partes[1] == "projetos" and partes[2].lower() == nome.lower():
+        return "/".join(partes[3:])
+    return rel
+
+
 def projetar_rodada(grupo):
     """Reduz uma rodada ao que a lista e a busca precisam, sem o diff renderizado."""
     leve = {campo: grupo.get(campo) for campo in CAMPOS_LEVES}
